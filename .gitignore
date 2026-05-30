@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Model weights / caches (use HF hub, never commit)
+*.pt
+*.safetensors
+*.bin
+*.gguf
+hf_cache/
+.cache/
+activation_cache/
+*.npy
+*.npz
+
+# Large run artifacts (logs/JSON are kept; raw tensors are not)
+autoresearch_results/**/activations/
+autoresearch_results/**/*.pt
+
+# Secrets
+.env
+*.token
+hf_token.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Keep these explicitly
+!autoresearch_results/experiment_log.jsonl
+!autoresearch_results/best_config.json
