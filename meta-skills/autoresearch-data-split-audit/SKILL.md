@@ -237,6 +237,7 @@ When an auditor reports `FAIL`:
 - [`autoresearch-tiered-ladder`](../autoresearch-tiered-ladder/SKILL.md)
   — the split audit gate applies at every rung, not just the final
   evaluation rung.
-- [`autoresearch-reasoning-entry`](../autoresearch-reasoning-entry/SKILL.md)
-  — the pre-run reasoning entry should cite the audit fingerprint as
-  the provenance of the train/val/test split.
+- [`autoresearch-experiment`](../autoresearch-experiment/SKILL.md)
+  — the pre-run reasoning entry (part of the 7-step ritual in the
+  experiment skill) should cite the audit fingerprint as the provenance
+  of the train/val/test split.

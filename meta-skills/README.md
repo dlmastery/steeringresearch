@@ -54,7 +54,13 @@ spine plus `autoresearch-experiment` to run your first principled experiment.
 | **autoresearch-checkpoint** | The commit+push heartbeat: the milestone trigger table that guarantees a crash never loses progress. |
 | **autoresearch-session-resume** | Authoring/consuming the crash-recovery checkpoint document so the next session resumes cold without context loss. |
 | **autoresearch-idea-scaffold** | Scaffolding a new hypothesis sub-project from `ideas/_TEMPLATE/` (config, reasoning, experiments/, dashboard/). |
-| **autoresearch-combo-ladder** | Building the orthogonal-axis additive 2→N stacking ladder (one new orthogonal prior per row; the "everything-on" hybrid is forbidden). |
+| **[autoresearch-combo-ladder](autoresearch-combo-ladder/SKILL.md)** | Building the orthogonal-axis additive 2→N stacking ladder (one new orthogonal prior per row; the "everything-on" hybrid is forbidden). |
+| **[autoresearch-ablation-sweep](autoresearch-ablation-sweep/SKILL.md)** | The structured screening sweep (baselines + single-prior-on + leave-one-out + curated subset) that identifies which design choices are worth hill-climbing. The screening counterpart to the hill-climb evaluation tier. |
+| **[autoresearch-auto-checkpoint-loop](autoresearch-auto-checkpoint-loop/SKILL.md)** | The background auto-commit loop for tasks running longer than 15 minutes. Provides continuous crash safety (bounded interval loss) distinct from the milestone checkpoint. |
+| **[autoresearch-data-contract-validator](autoresearch-data-contract-validator/SKILL.md)** | Pre-run structural gate: asserts that the training and evaluation pipelines share a compatible (input, target) pairing contract — shape, dtype, encoding, value range. Catches the off-by-one alignment and label-encoding bugs the semantic shuffle-test does not catch. |
+| **[autoresearch-modular-block](autoresearch-modular-block/SKILL.md)** | Designing a toggleable Boolean-flag composable block where each flag is one orthogonal design choice. Includes the mandatory all-flag-combinations smoke test that is the UNIT-rung gate. |
+| **[autoresearch-doc-organization](autoresearch-doc-organization/SKILL.md)** | The repo-root discipline: at most 4 canonical root files, a subdir contract for every other file type, and the structure of a front-door README that surfaces both positive and negative findings with equal prominence. |
+| **[autoresearch-experiment-archive](autoresearch-experiment-archive/SKILL.md)** | The per-experiment archive taxonomy: one subdirectory per experiment, mandatory detailed README, self-contained dashboard, and immutability-after-verdict rule. The unit of cold reproducibility. |
 | **autoresearch-winner-archive** | Archiving a KEEP-and-new-global-best config: frozen config, full results, provenance, and the champion pointer update. |
 
 > The supporting skills above are authored in parallel by teammates. The spine
@@ -80,7 +86,9 @@ SKILL.md files reference but do not redefine each time:
   exercising shape/contract, **every Boolean-flag combination**, and the bug
   class it was written to fix. Tests must pass (Rung-0 UNIT green) before any
   background compute launches. A runner that can write a placeholder into a
-  pre-run reasoning field is a bug — the test suite asserts it refuses.
+  pre-run reasoning field is a bug — the test suite asserts it refuses. The
+  all-flag-combinations smoke test is defined in
+  [`autoresearch-modular-block`](autoresearch-modular-block/SKILL.md).
 
 ---
 

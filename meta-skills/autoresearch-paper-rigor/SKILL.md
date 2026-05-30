@@ -132,7 +132,9 @@ When reporting a lift, report BOTH statistics unambiguously:
 
 A hypothesis whose pre-registered falsifier specifies a dataset or
 split that is NOT in the sweep cannot earn a NUMEROLOGY or FALSIFIED
-verdict from that sweep. The correct verdict is `UNTESTED_ON_RIGHT_SPLIT`.
+verdict from that sweep. The correct verdict is `UNTESTED_ON_RIGHT_DATASET`.
+("split" and "dataset" are synonyms here — both refer to the evaluation
+testbed the falsifier was pre-registered against.)
 
 | verdict | meaning |
 |---|---|
@@ -141,9 +143,9 @@ verdict from that sweep. The correct verdict is `UNTESTED_ON_RIGHT_SPLIT`.
 | NUMEROLOGY | passed audit but the mechanism is decorative coincidence |
 | UNFALSIFIABLE | mechanism cannot be tested under any feasible protocol |
 | FALSIFIED | pre-registered falsifier triggered |
-| **UNTESTED_ON_RIGHT_SPLIT** | falsifier specified split/dataset X; sweep ran on Y; verdict deferred |
+| **UNTESTED_ON_RIGHT_DATASET** | falsifier specified split/dataset X; sweep ran on Y; verdict deferred |
 
-The `UNTESTED_ON_RIGHT_SPLIT` tier prevents a reviewer from labelling
+The `UNTESTED_ON_RIGHT_DATASET` tier prevents a reviewer from labelling
 a hypothesis NUMEROLOGY solely because the project happened to run on
 the wrong testbed. The incorrect labelling is a BLOCKER-level finding.
 
@@ -214,7 +216,7 @@ evidence in support of a claim about the project's hypotheses.
   result.
 - **NUMEROLOGY verdict on a hypothesis whose pre-registered falsifier
   specified a different split or dataset.** Use
-  `UNTESTED_ON_RIGHT_SPLIT`.
+  `UNTESTED_ON_RIGHT_DATASET`.
 - **Marketing the positive result without the calibrated limitations
   in the abstract.** Both must receive equal prominence.
 - **n=3 "winner" reported without the SCREENING tag.** n=3 is

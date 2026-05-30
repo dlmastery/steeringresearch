@@ -237,10 +237,21 @@ Where:
   (e.g., ablation axes at Rung 1) are recorded as `null`.
 - `verdict` — one of: `PROMOTE` | `DEMOTE` | `HOLD`.
   - `PROMOTE`: method cleared the gate; approved for rung K+1.
+    Corresponds to experiment verdict `KEEP` (the experiment log
+    records `status == "KEEP"` for promoted experiments; the dashboard
+    `ladder_board` reads `status == "KEEP"` to display the promoted set).
   - `DEMOTE`: method failed the gate; sent back to rung K-1 or
     to a fix campaign.
+    Corresponds to experiment verdict `DISCARD`.
   - `HOLD`: method is at the maximum rung and confirmed as a winner,
     OR is awaiting a re-run before verdict.
+    Corresponds to experiment verdict `NEAR-MISS` (the method is not
+    yet promoted to the next rung but is not discarded either).
+  - **Mapping summary:** `PROMOTE` ↔ `KEEP`; `DEMOTE` ↔ `DISCARD`;
+    `HOLD` ↔ `NEAR-MISS`. The ladder log uses the promotion-action
+    vocabulary; the experiment log uses the outcome vocabulary; the
+    dashboard `ladder_board()` reads `status == "KEEP"` (experiment
+    log field) and renders the method as promoted.
 - `failure_reason` — free text, required when `verdict = DEMOTE`.
   Concise, actionable (e.g., "primary axis collapsed at held-out
   split", "coherence tripwire violated at 1.0× strength",

@@ -64,6 +64,21 @@
   .md blockquote { border-left:3px solid var(--line); margin:6px 0;
             padding:2px 10px; color:var(--mut); }
   .warn { color:#e0795a; font-style:italic; }
+  table.stackmx td.sc { text-align:center; font-weight:600; font-size:11px;
+       white-space:nowrap; }
+  table.stackmx th { white-space:nowrap; }
+  .sc.stack { background:#16331f; color:#7fe0a0; }
+  .sc.care { background:#3a3010; color:#e6c25a; }
+  .sc.compete { background:#3a1616; color:#f08080; }
+  .sc.self { background:#1a1d24; color:var(--mut); }
+  .sc.measured { outline:2px solid #fff; outline-offset:-2px; }
+  .sc .meas { font-size:9px; color:#fff; font-weight:700; }
+  .sc.scl { display:inline-block; padding:1px 6px; border-radius:4px;
+       font-weight:600; }
+  .grid.samples .cell { flex:1 1 340px; }
+  pre.sample { background:#0b1015; border:1px solid var(--line); padding:8px;
+       border-radius:6px; white-space:pre-wrap; word-break:break-word;
+       max-height:340px; overflow:auto; font-size:12px; }
   footer { padding:14px 22px; border-top:1px solid var(--line); color:var(--mut);
            font-size:12px; }
   code { color:var(--accent); }
@@ -117,12 +132,29 @@
   </table></div>
 </section>
 <section>
+  <h2>Stack / compete matrix (mechanism-based prior)</h2>
+  <p class="cap">Pairwise method-composability prior, transcribed from corpus &sect;4 (steering-stackable-vs-competing-analysis). Legend: <span class="sc stack scl">STACK</span> compose cleanly &middot; <span class="sc care scl">CARE</span> stack with care (norm / coherence / shared-pathway budget) &middot; <span class="sc compete scl">COMPETE</span> pick one. <b>This is the design-knowledge prior, not a measured result</b>; where an experiment has measured a pair, the measured verdict is overlaid and labelled on the cell.</p>
+  <div class="tablewrap"><table class="stackmx">
+    <thead><tr><th>family \ family</th><th>CAA/ActAdd</th><th>Angular/Selective</th><th>SAE-feature</th><th>KV-cache</th><th>Attention-score</th><th>DoLa</th><th>CAST gate</th></tr></thead>
+    <tbody>
+<tr><th>CAA/ActAdd</th><td class="sc care" title="prior=CARE">CARE</td><td class="sc compete" title="prior=COMPETE">COMPETE</td><td class="sc care" title="prior=CARE">CARE</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td></tr>
+<tr><th>Angular/Selective</th><td class="sc compete" title="prior=COMPETE">COMPETE</td><td class="sc care" title="prior=CARE">CARE</td><td class="sc compete" title="prior=COMPETE">COMPETE</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td></tr>
+<tr><th>SAE-feature</th><td class="sc care" title="prior=CARE">CARE</td><td class="sc compete" title="prior=COMPETE">COMPETE</td><td class="sc care" title="prior=CARE">CARE</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td></tr>
+<tr><th>KV-cache</th><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc care" title="prior=CARE">CARE</td><td class="sc care" title="prior=CARE">CARE</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td></tr>
+<tr><th>Attention-score</th><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc care" title="prior=CARE">CARE</td><td class="sc compete" title="prior=COMPETE">COMPETE</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td></tr>
+<tr><th>DoLa</th><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc self" title="prior=SELF">—</td><td class="sc stack" title="prior=STACK">STACK</td></tr>
+<tr><th>CAST gate</th><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc stack" title="prior=STACK">STACK</td><td class="sc care" title="prior=CARE">CARE</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">No measured pair verdicts logged yet &mdash; matrix shows the mechanism prior only.</p>
+</section>
+<section>
   <h2>Geometry probes</h2>
   <img class="plot" src="plot_geometry.png" alt="Small-multiples: off-shell displacement Δ‖h‖, effective-rank drop, and norm budget ‖Δh‖/‖h‖ per experiment."><p class="cap">Small-multiples: off-shell displacement Δ‖h‖, effective-rank drop, and norm budget ‖Δh‖/‖h‖ per experiment.</p>
 </section>
 <footer>
   COMPOSITE_FORMULA: <code>composite = behavior_efficacy - lambda_cap  * max(0, mmlu_drop_pp) - lambda_coh  * max(0, dppl_norm) - lambda_coh_rep * max(0, repetition_rate) - lambda_safe * compliance_rate - lambda_sel  * max(0, harmless_refusal_rate) - lambda_geo  * max(0, offshell_displacement)</code><br>
-  composite fingerprint: <code>a9001e87087e</code> &middot; git SHA: <code>98208a2</code> &middot; generated: <time>2026-05-30T16:28:18</time><br>
+  composite fingerprint: <code>a9001e87087e</code> &middot; git SHA: <code>20ce86e</code> &middot; generated: <time>2026-05-30T16:48:52</time><br>
   Internal QA pass &mdash; external review pending.
 </footer>
 </body>

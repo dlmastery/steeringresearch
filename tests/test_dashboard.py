@@ -38,6 +38,9 @@ def _synthetic_rows():
             "effective_rank_steer": 7.2, "norm_budget": 0.1500,
             "fisher_at_layer": 1.2345, "composite_fingerprint": fp,
             "n_seeds": 1, "tier": "SCREENING", "status": "KEEP",
+            "sample_prompt": "Tell me about the ocean.",
+            "sample_steered": "The vast ocean teems with wondrous life.",
+            "sample_unsteered": "The ocean is a body of salt water.",
         },
         {
             "experiment_num": 2,
@@ -215,3 +218,63 @@ def test_ladder_board_and_champion(tmp_path):
     text = master.read_text(encoding="utf-8")
     # champion = highest composite = exp1 (0.4210); its row carries class champion
     assert 'class="champion' in text, "champion row must be highlighted"
+
+
+# ---------------------------------------------------------------------------
+# Surface A — stack/compete matrix on the master
+# ---------------------------------------------------------------------------
+def test_master_has_stack_compete_matrix(tmp_path):
+    _root, master = _build(tmp_path)
+    text = master.read_text(encoding="utf-8")
+    assert "Stack / compete matrix" in text, "master must render the stack/compete matrix card"
+    # the three verdict codes must all appear as cells (transcribed from corpus §4)
+    assert "STACK" in text, "matrix must contain a STACK cell"
+    assert "COMPETE" in text, "matrix must contain a COMPETE cell"
+    assert "CARE" in text, "matrix must contain a CARE (stack-with-care) cell"
+    # the intervention families must be present as row/col headers
+    for fam in ("CAA/ActAdd", "Angular/Selective", "DoLa", "CAST gate"):
+        assert fam in text, f"matrix must list the {fam} family"
+
+
+def test_stack_matrix_measured_overlay():
+    rows = [{
+        "experiment_num": 9,
+        "config": {"intervention_family": "caa", "other_family": "angular"},
+        "pair_verdict": "COMPETE",
+    }]
+    measured = dash.measured_pair_verdicts(rows)
+    assert measured.get(("CAA/ActAdd", "Angular/Selective")) == "COMPETE"
+    html_out = dash.render_stack_matrix(rows)
+    assert "measured: COMPETE" in html_out, "measured verdict must overlay the matrix cell"
+
+
+# ---------------------------------------------------------------------------
+# Surface B — per-experiment sweep curve
+# ---------------------------------------------------------------------------
+def test_experiment_page_has_sweep_curve(tmp_path):
+    root, _master = _build(tmp_path)
+    page = (root / "docs" / "dashboard" / "experiments" / "exp001.html").read_text(encoding="utf-8")
+    assert "Sweep curve" in page, "per-experiment page must have a sweep-curve section"
+    # the embedded PNG (when matplotlib is available) or the graceful note.
+    has_img = 'exp001_sweep.png' in page
+    has_note = "sweep accumulates as more alpha/layer rows are logged" in page
+    assert has_img or has_note, "sweep section must embed the PNG or carry the accumulation note"
+
+
+# ---------------------------------------------------------------------------
+# Surface C — per-experiment side-by-side samples
+# ---------------------------------------------------------------------------
+def test_experiment_page_has_samples_section(tmp_path):
+    root, _master = _build(tmp_path)
+    # exp001 has sample_steered / sample_unsteered -> content rendered
+    page1 = (root / "docs" / "dashboard" / "experiments" / "exp001.html").read_text(encoding="utf-8")
+    assert "Side-by-side samples" in page1, "page must have a samples section"
+    assert "Steered" in page1 and "Unsteered" in page1, "two-column layout must be present"
+    assert "wondrous life" in page1, "steered sample text must be rendered"
+    assert "body of salt water" in page1, "unsteered sample text must be rendered"
+
+    # exp002 has NO samples -> placeholder block, layout still ready
+    page2 = (root / "docs" / "dashboard" / "experiments" / "exp002.html").read_text(encoding="utf-8")
+    assert "Side-by-side samples" in page2
+    assert "no samples captured for this run" in page2, "absent-samples placeholder must render"
+    assert "Steered" in page2 and "Unsteered" in page2, "placeholder must keep two-column layout"

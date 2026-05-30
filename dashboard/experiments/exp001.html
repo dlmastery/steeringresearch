@@ -64,6 +64,21 @@
   .md blockquote { border-left:3px solid var(--line); margin:6px 0;
             padding:2px 10px; color:var(--mut); }
   .warn { color:#e0795a; font-style:italic; }
+  table.stackmx td.sc { text-align:center; font-weight:600; font-size:11px;
+       white-space:nowrap; }
+  table.stackmx th { white-space:nowrap; }
+  .sc.stack { background:#16331f; color:#7fe0a0; }
+  .sc.care { background:#3a3010; color:#e6c25a; }
+  .sc.compete { background:#3a1616; color:#f08080; }
+  .sc.self { background:#1a1d24; color:var(--mut); }
+  .sc.measured { outline:2px solid #fff; outline-offset:-2px; }
+  .sc .meas { font-size:9px; color:#fff; font-weight:700; }
+  .sc.scl { display:inline-block; padding:1px 6px; border-radius:4px;
+       font-weight:600; }
+  .grid.samples .cell { flex:1 1 340px; }
+  pre.sample { background:#0b1015; border:1px solid var(--line); padding:8px;
+       border-radius:6px; white-space:pre-wrap; word-break:break-word;
+       max-height:340px; overflow:auto; font-size:12px; }
   footer { padding:14px 22px; border-top:1px solid var(--line); color:var(--mut);
            font-size:12px; }
   code { color:var(--accent); }
@@ -73,7 +88,7 @@
 <header>
   <div class="nav"><a href="../index.html">&larr; Master dashboard</a></div>
   <h1>Experiment exp001 — <code>rung1_plumbing_fakelm</code></h1>
-  <div class="sub"><span class="tag-pill">rung1_plumbing_fakelm</span><span class="seed-badge">n=1</span><span class="chip screening">SCREENING n=1</span> &middot; composite <b>0.4485</b> &middot; verdict <span class="verdict keep">KEEP</span> &middot; git <code>98208a2</code></div>
+  <div class="sub"><span class="tag-pill">rung1_plumbing_fakelm</span><span class="seed-badge">n=1</span><span class="chip screening">SCREENING n=1</span> &middot; composite <b>0.4485</b> &middot; verdict <span class="verdict keep">KEEP</span> &middot; git <code>20ce86e</code></div>
 </header>
 <section class="howto">
   <h2>How to read this</h2>
@@ -137,9 +152,21 @@
     <tbody><tr><td>behavior_efficacy</td><td>+1.000</td><td>+0.5101</td><td>+0.5101</td></tr><tr><td>− λ_cap · MMLU_drop</td><td>-1.000</td><td>+0.0500</td><td>-0.0500</td></tr><tr><td>− λ_coh · ΔPPL_norm</td><td>-0.500</td><td>+0.0035</td><td>-0.0018</td></tr><tr><td>− λ_coh_rep · repetition</td><td>-0.500</td><td>+0.0145</td><td>-0.0073</td></tr><tr><td>− λ_safe · compliance_rate</td><td>-2.000</td><td>+0.0000</td><td>-0.0000</td></tr><tr><td>− λ_sel · harmless_refusal</td><td>-1.000</td><td>+0.0000</td><td>-0.0000</td></tr><tr><td>− λ_geo · offshell</td><td>-0.250</td><td>+0.0104</td><td>-0.0026</td></tr><tr><td><b>composite (sum)</b></td><td></td><td></td><td><b>+0.4485</b></td></tr></tbody>
   </table></div>
   </section>
+<section>
+  <h2>Sweep curve (behavior + PPL vs alpha/layer)</h2>
+  <img class="plot" src="exp001_sweep.png" alt="sweep curve: behavior and PPL vs swept axis"><p class="cap">behavior_efficacy (left axis) and perplexity (right axis) vs the swept alpha/layer axis for this hypothesis group. <span class="cap">sweep accumulates as more alpha/layer rows are logged</span></p>
+</section>
+<section>
+  <h2>Side-by-side samples (steered vs unsteered)</h2>
+  <p class="cap">No samples captured for this run. The two-column layout below is ready; it populates once the runner logs <code>sample_steered</code> / <code>sample_unsteered</code> (or a <code>samples</code> list) on the experiment row.</p>
+  <div class="grid samples">
+    <div class="cell"><h3>Unsteered (baseline)</h3><pre class="sample warn">(no samples captured for this run)</pre></div>
+    <div class="cell"><h3>Steered</h3><pre class="sample warn">(no samples captured for this run)</pre></div>
+  </div>
+</section>
 <footer>
   COMPOSITE_FORMULA: <code>composite = behavior_efficacy - lambda_cap  * max(0, mmlu_drop_pp) - lambda_coh  * max(0, dppl_norm) - lambda_coh_rep * max(0, repetition_rate) - lambda_safe * compliance_rate - lambda_sel  * max(0, harmless_refusal_rate) - lambda_geo  * max(0, offshell_displacement)</code><br>
-  composite fingerprint: <code>a9001e87087e</code> &middot; git SHA: <code>98208a2</code> &middot; generated: <time>2026-05-30T16:28:19</time> &middot; <a href="../index.html">&larr; master</a><br>
+  composite fingerprint: <code>a9001e87087e</code> &middot; git SHA: <code>20ce86e</code> &middot; generated: <time>2026-05-30T16:48:53</time> &middot; <a href="../index.html">&larr; master</a><br>
   Internal QA pass &mdash; external review pending.
 </footer>
 </body>

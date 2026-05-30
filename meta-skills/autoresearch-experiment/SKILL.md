@@ -122,9 +122,9 @@ python scripts/build_report.py
 
 ## Cross-references
 
-- [`autoresearch-reasoning-entry`](../autoresearch-reasoning-entry/SKILL.md)
-  — Steps 1–4 and 6–7 are validated by this skill's word-count and
-  citation-format gates.
+- (The reasoning-entry gates are part of this skill — Steps 1–4 and
+  6–7 and their word-count and citation-format validation are defined
+  in this SKILL.md directly, not in a separate skill.)
 - [`autoresearch-data-split-audit`](../autoresearch-data-split-audit/SKILL.md)
   — Step 5 (Execute) calls the runner's `audit_or_die()` before any
   model build. New dataset? Run the audit first.

@@ -159,9 +159,10 @@ the master dashboard. It must contain:
 2. **Cells table** — sortable, one row per cell: config_id, each axis
    value, seed, composite metric, delta versus best, wall-clock,
    link to the per-experiment page.
-3. **Per-axis Pareto plot** — small-multiples SVG, one panel per axis,
+3. **Per-axis Pareto plot** — small-multiples PNG, one panel per axis,
    composite on y, axis value on x, colour-coded by the other fixed
-   axes. Reveals non-monotone responses.
+   axes. Reveals non-monotone responses. (PNG not SVG — per the
+   typography hard rule in autoresearch-typography-and-rendering.)
 4. **Seed-stability bar chart** — at the best config: composite for
    each confirmation seed, with the standard deviation annotated.
 5. **Footer** — base config, hill-climb algorithm, total wall-clock,

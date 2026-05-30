@@ -19,6 +19,9 @@ Master panels:
     behavior-vs-safety (baseline/prior rows drawn as star markers; dominated
     rows outlined).
   - Ladder board: per method highest rung + gate cleared/failed + reason.
+  - Stack/compete matrix: the pairwise method-composability prior transcribed
+    from corpus/steering-stackable-vs-competing-analysis.md §4 (STACK/CARE/
+    COMPETE cells), with any measured pair-verdict overlaid.
   - Geometry small-multiples: dNorm, effective-rank-drop, norm-budget.
   - Footer: COMPOSITE_FORMULA + composite_fingerprint() + git SHA + timestamp.
 
@@ -32,7 +35,11 @@ Per-experiment page:
   - The full 7-step reasoning entry rendered from reasoning_annotations.json
     markdown -> HTML via a small GFM-ish converter (no literal ## / ** / |---|
     leaks); the config; all five axis metrics + geometry probes with any CIs;
-    back-links to its hypothesis sub-dashboard and master.
+    a sweep curve (behavior + PPL vs the swept alpha/layer axis for the
+    hypothesis group; single-point fallback when only one row exists); a
+    side-by-side steered-vs-unsteered sample section (consumed from whatever
+    sample_steered / sample_unsteered / samples keys the runner logged, with a
+    ready placeholder when absent); back-links to hypothesis + master.
 
 Hard rules honoured: self-contained HTML, no CDN / JS framework, one inline
 sort/filter script using data-v attributes, PNG (not SVG) plots, no emoji.
@@ -119,6 +126,21 @@ SHARED_CSS = """
   .md blockquote { border-left:3px solid var(--line); margin:6px 0;
             padding:2px 10px; color:var(--mut); }
   .warn { color:#e0795a; font-style:italic; }
+  table.stackmx td.sc { text-align:center; font-weight:600; font-size:11px;
+       white-space:nowrap; }
+  table.stackmx th { white-space:nowrap; }
+  .sc.stack { background:#16331f; color:#7fe0a0; }
+  .sc.care { background:#3a3010; color:#e6c25a; }
+  .sc.compete { background:#3a1616; color:#f08080; }
+  .sc.self { background:#1a1d24; color:var(--mut); }
+  .sc.measured { outline:2px solid #fff; outline-offset:-2px; }
+  .sc .meas { font-size:9px; color:#fff; font-weight:700; }
+  .sc.scl { display:inline-block; padding:1px 6px; border-radius:4px;
+       font-weight:600; }
+  .grid.samples .cell { flex:1 1 340px; }
+  pre.sample { background:#0b1015; border:1px solid var(--line); padding:8px;
+       border-radius:6px; white-space:pre-wrap; word-break:break-word;
+       max-height:340px; overflow:auto; font-size:12px; }
   footer { padding:14px 22px; border-top:1px solid var(--line); color:var(--mut);
            font-size:12px; }
   code { color:var(--accent); }
@@ -660,6 +682,91 @@ def plot_coord_descent(rows: list[dict], out_path: Path) -> bool:
     return True
 
 
+def _sweep_axis(rows: list[dict]) -> tuple[str, list[float]]:
+    """Pick the swept axis ('alpha' or 'layer') for a group of rows.
+
+    Returns (axis_name, distinct_values). The axis with more distinct logged
+    values wins; ties prefer alpha. Empty values => single-point fallback.
+    """
+    def _cfg(r, k):
+        return (r.get("config", {}) or {}).get(k, r.get(k))
+
+    cand = {}
+    for key in ("alpha", "layer"):
+        vals = []
+        for r in rows:
+            try:
+                vals.append(float(_cfg(r, key)))
+            except (TypeError, ValueError):
+                continue
+        cand[key] = vals
+    n_alpha = len(set(cand["alpha"]))
+    n_layer = len(set(cand["layer"]))
+    if n_alpha >= n_layer and n_alpha >= 1:
+        return "alpha", cand["alpha"]
+    if n_layer >= 1:
+        return "layer", cand["layer"]
+    return "alpha", cand["alpha"]
+
+
+def plot_sweep(rows: list[dict], out_path: Path) -> tuple[bool, bool]:
+    """Per-experiment sweep curve: behavior + PPL vs the swept axis (dual-y).
+
+    Groups the supplied sibling rows (already filtered to one hypothesis /
+    behavior) by the swept axis (alpha or layer). Returns
+    (rendered_ok, is_single_point). When only one point exists, a single-point
+    plot is drawn with a note that the sweep accumulates as more alpha/layer
+    rows are logged.
+    """
+    plt = _mpl()
+    if plt is None or not rows:
+        return (False, False)
+
+    def _cfg(r, k):
+        return (r.get("config", {}) or {}).get(k, r.get(k))
+
+    axis, _ = _sweep_axis(rows)
+    pts = []
+    for r in rows:
+        try:
+            x = float(_cfg(r, axis))
+        except (TypeError, ValueError):
+            continue
+        pts.append((x, _num(r, "behavior_efficacy"), _num(r, "perplexity")))
+    if not pts:
+        return (False, False)
+    pts.sort()
+    xs = [p[0] for p in pts]
+    beh = [p[1] for p in pts]
+    ppl = [p[2] for p in pts]
+    single = len(set(xs)) < 2
+
+    fig, ax1 = plt.subplots(figsize=(5.4, 3.2))
+    ax2 = ax1.twinx()
+    style = dict(marker="o", markersize=6)
+    ax1.plot(xs, beh, color="#4ea1ff", label="behavior_efficacy", **style)
+    ax2.plot(xs, ppl, color="#e0795a", linestyle="--", label="perplexity", **style)
+    ax1.set_xlabel(f"swept axis: {axis}", fontsize=9)
+    ax1.set_ylabel("behavior_efficacy", color="#4ea1ff", fontsize=9)
+    ax2.set_ylabel("perplexity (PPL)", color="#e0795a", fontsize=9)
+    ax1.tick_params(axis="y", labelcolor="#4ea1ff", labelsize=7)
+    ax2.tick_params(axis="y", labelcolor="#e0795a", labelsize=7)
+    ax1.tick_params(axis="x", labelsize=7)
+    title = f"Sweep: behavior + PPL vs {axis}"
+    if single:
+        title += " (single point)"
+        ax1.text(0.5, 0.04,
+                 "sweep accumulates as more alpha/layer rows are logged",
+                 transform=ax1.transAxes, ha="center", fontsize=7,
+                 color="#9aa0a6", style="italic")
+    ax1.set_title(title, fontsize=9)
+    ax1.grid(True, alpha=0.2)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=90)
+    plt.close(fig)
+    return (True, single)
+
+
 # ===========================================================================
 # Ladder board
 # ===========================================================================
@@ -686,6 +793,174 @@ def ladder_board(rows: list[dict]) -> list[dict]:
                 "experiment_num": r.get("experiment_num"),
             }
     return sorted(by_tag.values(), key=lambda x: (-x["rung"], x["tag"]))
+
+
+# ===========================================================================
+# Stack / compete decision matrix (Surface A — master dashboard)
+#
+# STATIC mechanism-based prior transcribed verbatim from
+# corpus/steering-stackable-vs-competing-analysis.md §4 (the pairwise
+# decision matrix). Legend: STACK (compose cleanly), CARE (stack with care —
+# norm / coherence / shared-pathway budget), COMPETE (pick one).
+# This is the project's design knowledge, NOT a measured result; the panel is
+# captioned as such. When experiments have *measured* a pair's verdict
+# (row.config.intervention_family vs row.config.other_family + a
+# 'pair_verdict' field), that measured verdict is overlaid on the cell.
+# ===========================================================================
+# Intervention families (rows == cols), in corpus §4 order.
+STACK_FAMILIES = [
+    "CAA/ActAdd",
+    "Angular/Selective",
+    "SAE-feature",
+    "KV-cache",
+    "Attention-score",
+    "DoLa",
+    "CAST gate",
+]
+
+# Verdict codes: "STACK" | "CARE" | "COMPETE" | "SELF" (the diagonal).
+# Transcribed from the corpus §4 matrix (symmetric; diagonal = self-pairing
+# note from the corpus where one exists, else SELF).
+STACK_MATRIX: dict[str, dict[str, str]] = {
+    "CAA/ActAdd": {
+        "CAA/ActAdd": "CARE", "Angular/Selective": "COMPETE", "SAE-feature": "CARE",
+        "KV-cache": "STACK", "Attention-score": "STACK", "DoLa": "STACK",
+        "CAST gate": "STACK",
+    },
+    "Angular/Selective": {
+        "CAA/ActAdd": "COMPETE", "Angular/Selective": "CARE", "SAE-feature": "COMPETE",
+        "KV-cache": "STACK", "Attention-score": "STACK", "DoLa": "STACK",
+        "CAST gate": "STACK",
+    },
+    "SAE-feature": {
+        "CAA/ActAdd": "CARE", "Angular/Selective": "COMPETE", "SAE-feature": "CARE",
+        "KV-cache": "STACK", "Attention-score": "STACK", "DoLa": "STACK",
+        "CAST gate": "STACK",
+    },
+    "KV-cache": {
+        "CAA/ActAdd": "STACK", "Angular/Selective": "STACK", "SAE-feature": "STACK",
+        "KV-cache": "CARE", "Attention-score": "CARE", "DoLa": "STACK",
+        "CAST gate": "STACK",
+    },
+    "Attention-score": {
+        "CAA/ActAdd": "STACK", "Angular/Selective": "STACK", "SAE-feature": "STACK",
+        "KV-cache": "CARE", "Attention-score": "COMPETE", "DoLa": "STACK",
+        "CAST gate": "STACK",
+    },
+    "DoLa": {
+        "CAA/ActAdd": "STACK", "Angular/Selective": "STACK", "SAE-feature": "STACK",
+        "KV-cache": "STACK", "Attention-score": "STACK", "DoLa": "SELF",
+        "CAST gate": "STACK",
+    },
+    "CAST gate": {
+        "CAA/ActAdd": "STACK", "Angular/Selective": "STACK", "SAE-feature": "STACK",
+        "KV-cache": "STACK", "Attention-score": "STACK", "DoLa": "STACK",
+        "CAST gate": "CARE",
+    },
+}
+
+# Human-readable tooltips for the cell content (kept short for the table).
+_STACK_LABEL = {
+    "STACK": "STACK", "CARE": "CARE", "COMPETE": "COMPETE", "SELF": "—",
+}
+
+
+def _normalise_family(name: Optional[str]) -> Optional[str]:
+    """Map a free-text family token from an experiment row to a matrix family."""
+    if not name:
+        return None
+    s = str(name).strip().lower()
+    aliases = {
+        "caa": "CAA/ActAdd", "actadd": "CAA/ActAdd", "additive": "CAA/ActAdd",
+        "caa/actadd": "CAA/ActAdd", "diffmean": "CAA/ActAdd",
+        "angular": "Angular/Selective", "selective": "Angular/Selective",
+        "rotational": "Angular/Selective", "spherical": "Angular/Selective",
+        "angular/selective": "Angular/Selective",
+        "sae": "SAE-feature", "sae-feature": "SAE-feature", "sae-ts": "SAE-feature",
+        "kv": "KV-cache", "kv-cache": "KV-cache", "kvcache": "KV-cache",
+        "attention": "Attention-score", "attention-score": "Attention-score",
+        "pasta": "Attention-score", "spotlight": "Attention-score",
+        "dola": "DoLa", "decoding": "DoLa",
+        "cast": "CAST gate", "cast gate": "CAST gate", "gate": "CAST gate",
+    }
+    if s in aliases:
+        return aliases[s]
+    for key, fam in aliases.items():
+        if key in s:
+            return fam
+    return None
+
+
+def measured_pair_verdicts(rows: list[dict]) -> dict[tuple[str, str], str]:
+    """Overlay layer: any pair a logged experiment actually *measured*.
+
+    A row contributes a measured verdict when its config carries an
+    'intervention_family' + 'other_family' (or 'stack_with') pair plus a
+    'pair_verdict' in {STACK,CARE,COMPETE}. Returns {(famA,famB): VERDICT}
+    keyed symmetrically. Empty when no experiment has measured a pair.
+    """
+    out: dict[tuple[str, str], str] = {}
+    for r in rows:
+        cfg = (r.get("config", {}) or {})
+        a = _normalise_family(cfg.get("intervention_family") or r.get("intervention_family"))
+        b = _normalise_family(cfg.get("other_family") or cfg.get("stack_with")
+                              or r.get("other_family"))
+        verdict = (r.get("pair_verdict") or cfg.get("pair_verdict") or "")
+        verdict = str(verdict).strip().upper()
+        if a and b and verdict in ("STACK", "CARE", "COMPETE"):
+            out[(a, b)] = verdict
+            out[(b, a)] = verdict
+    return out
+
+
+def render_stack_matrix(rows: list[dict]) -> str:
+    """Render the pairwise stack/compete matrix as a self-contained HTML card.
+
+    Static mechanism-based prior (corpus §4) with any measured verdict
+    overlaid (and flagged) on the relevant cell.
+    """
+    measured = measured_pair_verdicts(rows)
+    head = "<th>family \\ family</th>" + "".join(
+        f"<th>{html.escape(c)}</th>" for c in STACK_FAMILIES
+    )
+    body = []
+    for ri in STACK_FAMILIES:
+        cells = [f"<th>{html.escape(ri)}</th>"]
+        for cj in STACK_FAMILIES:
+            prior = STACK_MATRIX.get(ri, {}).get(cj, "SELF")
+            meas = measured.get((ri, cj))
+            cls = prior.lower()
+            label = _STACK_LABEL.get(prior, prior)
+            extra = ""
+            if meas:
+                extra = (f'<br><span class="meas">measured: '
+                         f'{html.escape(meas)}</span>')
+                # measured verdict drives the cell colour when it disagrees.
+                cls = meas.lower() + " measured"
+            cells.append(
+                f'<td class="sc {cls}" title="prior={html.escape(prior)}'
+                f'{(" measured=" + html.escape(meas)) if meas else ""}">'
+                f'{html.escape(label)}{extra}</td>'
+            )
+        body.append("<tr>" + "".join(cells) + "</tr>")
+    body_html = "\n".join(body)
+    return (
+        '<section>\n  <h2>Stack / compete matrix (mechanism-based prior)</h2>\n'
+        '  <p class="cap">Pairwise method-composability prior, transcribed from '
+        'corpus &sect;4 (steering-stackable-vs-competing-analysis). '
+        'Legend: <span class="sc stack scl">STACK</span> compose cleanly &middot; '
+        '<span class="sc care scl">CARE</span> stack with care (norm / coherence / '
+        'shared-pathway budget) &middot; '
+        '<span class="sc compete scl">COMPETE</span> pick one. '
+        '<b>This is the design-knowledge prior, not a measured result</b>; where an '
+        'experiment has measured a pair, the measured verdict is overlaid and '
+        'labelled on the cell.</p>\n'
+        '  <div class="tablewrap"><table class="stackmx">\n'
+        f"    <thead><tr>{head}</tr></thead>\n"
+        f"    <tbody>\n{body_html}\n    </tbody>\n  </table></div>\n"
+        f'  <p class="cap">{"Measured overlays present for " + str(len(measured) // 2) + " pair(s)." if measured else "No measured pair verdicts logged yet &mdash; matrix shows the mechanism prior only."}</p>\n'
+        "</section>\n"
+    )
 
 
 # ===========================================================================
@@ -923,6 +1198,7 @@ def render_master(rows: list[dict], idea_dirs: list[Path],
         "<th>gate</th><th>failure_reason</th></tr></thead>\n"
         f"    <tbody>{ladder_rows}</tbody>\n  </table></div>\n</section>\n"
     )
+    parts.append(render_stack_matrix(rows))
     parts.append(
         '<section>\n  <h2>Geometry probes</h2>\n'
         f'  {img("plot_geometry.png", "Small-multiples: off-shell displacement Δ‖h‖, effective-rank drop, and norm budget ‖Δh‖/‖h‖ per experiment.")}\n'
@@ -1099,7 +1375,99 @@ GEOMETRY_METRICS = [
 ]
 
 
-def render_experiment(row: dict, ann: dict, idea_dirs: list[Path]) -> str:
+def _extract_samples(row: dict) -> list[dict]:
+    """Pull steered-vs-unsteered generation samples out of an experiment row.
+
+    runner.py is NOT edited by this module — we consume whatever keys already
+    exist in the logged JSONL row. Recognised shapes (first match wins):
+
+      * top-level pair:  row["sample_steered"] / row["sample_unsteered"]
+        (optional row["sample_prompt"] gives the shared prompt).
+      * a list:          row["samples"] = [
+            {"prompt": ..., "steered": ..., "unsteered": ...}, ...]
+        (per-item keys may also be "sample_steered"/"sample_unsteered" or
+         "steered_text"/"unsteered_text").
+      * nested under config: same keys inside row["config"].
+
+    Returns a normalised list of {"prompt","steered","unsteered"} dicts; an
+    empty list means no samples were captured for this run.
+    """
+    cfg = row.get("config", {}) or {}
+
+    def _g(d, *keys):
+        for k in keys:
+            v = d.get(k)
+            if v not in (None, ""):
+                return v
+        return None
+
+    # 1. explicit list of samples.
+    samples = row.get("samples") or cfg.get("samples")
+    if isinstance(samples, list) and samples:
+        out = []
+        for it in samples:
+            if not isinstance(it, dict):
+                continue
+            out.append({
+                "prompt": _g(it, "prompt", "sample_prompt", "input") or "",
+                "steered": _g(it, "steered", "sample_steered", "steered_text") or "",
+                "unsteered": _g(it, "unsteered", "sample_unsteered",
+                                "unsteered_text", "baseline") or "",
+            })
+        if out:
+            return out
+
+    # 2. top-level (or config-level) single pair.
+    steered = _g(row, "sample_steered", "steered_text") or _g(cfg, "sample_steered", "steered_text")
+    unsteered = _g(row, "sample_unsteered", "unsteered_text") or _g(cfg, "sample_unsteered", "unsteered_text")
+    prompt = _g(row, "sample_prompt", "prompt") or _g(cfg, "sample_prompt", "prompt") or ""
+    if steered or unsteered:
+        return [{"prompt": prompt, "steered": steered or "", "unsteered": unsteered or ""}]
+    return []
+
+
+def _samples_section(row: dict) -> str:
+    """Two-column steered-vs-unsteered section (placeholder when absent)."""
+    samples = _extract_samples(row)
+    if not samples:
+        return (
+            '<section>\n  <h2>Side-by-side samples (steered vs unsteered)</h2>\n'
+            '  <p class="cap">No samples captured for this run. The two-column '
+            'layout below is ready; it populates once the runner logs '
+            '<code>sample_steered</code> / <code>sample_unsteered</code> (or a '
+            '<code>samples</code> list) on the experiment row.</p>\n'
+            '  <div class="grid samples">\n'
+            '    <div class="cell"><h3>Unsteered (baseline)</h3>'
+            '<pre class="sample warn">(no samples captured for this run)</pre></div>\n'
+            '    <div class="cell"><h3>Steered</h3>'
+            '<pre class="sample warn">(no samples captured for this run)</pre></div>\n'
+            "  </div>\n</section>\n"
+        )
+    blocks = []
+    for i, s in enumerate(samples, 1):
+        prompt_html = (
+            f'  <p class="cap">Prompt {i}: <code>{html.escape(str(s["prompt"]))}</code></p>\n'
+            if s.get("prompt") else ""
+        )
+        blocks.append(
+            prompt_html
+            + '  <div class="grid samples">\n'
+            '    <div class="cell"><h3>Unsteered (baseline)</h3>'
+            f'<pre class="sample">{html.escape(str(s["unsteered"]) or "(empty)")}</pre></div>\n'
+            '    <div class="cell"><h3>Steered</h3>'
+            f'<pre class="sample">{html.escape(str(s["steered"]) or "(empty)")}</pre></div>\n'
+            "  </div>\n"
+        )
+    return (
+        '<section>\n  <h2>Side-by-side samples (steered vs unsteered)</h2>\n'
+        f'  <p class="cap">{len(samples)} captured generation pair(s) from the '
+        "experiment row.</p>\n" + "".join(blocks) + "</section>\n"
+    )
+
+
+def render_experiment(row: dict, ann: dict, idea_dirs: list[Path],
+                      sweep_plot: Optional[str] = None,
+                      sweep_single: bool = False) -> str:
     flat = _flatten(row)
     exp = flat.get("experiment_num")
     exp_id = f"exp{int(exp):03d}" if exp is not None else "exp"
@@ -1252,6 +1620,29 @@ def render_experiment(row: dict, ann: dict, idea_dirs: list[Path]) -> str:
         f"  {recon}</section>\n"
     )
 
+    # Section: per-experiment sweep curve (behavior + PPL vs swept axis)
+    if sweep_plot:
+        note = (' <span class="cap">sweep accumulates as more alpha/layer rows '
+                "are logged</span>") if sweep_single else ""
+        sweep_body = (
+            f'<img class="plot" src="{html.escape(sweep_plot)}" '
+            'alt="sweep curve: behavior and PPL vs swept axis">'
+            f'<p class="cap">behavior_efficacy (left axis) and perplexity '
+            f"(right axis) vs the swept alpha/layer axis for this hypothesis "
+            f"group.{note}</p>"
+        )
+    else:
+        sweep_body = ('<p class="cap">(sweep curve unavailable — matplotlib '
+                      "missing or no alpha/layer value logged for this run; "
+                      "sweep accumulates as more alpha/layer rows are logged.)</p>")
+    parts.append(
+        '<section>\n  <h2>Sweep curve (behavior + PPL vs alpha/layer)</h2>\n'
+        f"  {sweep_body}\n</section>\n"
+    )
+
+    # Section: side-by-side steered vs unsteered samples
+    parts.append(_samples_section(row))
+
     back = '<a href="../index.html">&larr; master</a>'
     if hid is not None:
         back += f' &middot; <a href="../hyp/{html.escape(hid)}.html">&larr; H{html.escape(hid)}</a>'
@@ -1306,15 +1697,45 @@ def build_all_dashboards(results_dir: Path | None = None,
     # ---- C. per-experiment pages (master experiments/ dir + docs mirror) ----
     exp_dir = dash / "experiments"
     docs_exp_dir = docs_dash / "experiments"
+    exp_dir.mkdir(parents=True, exist_ok=True)
+    docs_exp_dir.mkdir(parents=True, exist_ok=True)
+
+    def _sweep_group_key(r: dict) -> str:
+        """Group sibling rows that form an alpha/layer sweep: same hypothesis
+        (resolved dir, else hypothesis_id) + same behavior."""
+        cfg = r.get("config", {}) or {}
+        d = resolve_hypothesis_dir(r, idea_dirs)
+        hyp = (d.name if d is not None
+               else str(cfg.get("hypothesis_id") or r.get("hypothesis_id") or ""))
+        beh = str(cfg.get("behavior") or r.get("behavior") or "")
+        return f"{hyp}|{beh}"
+
+    sweep_groups: dict[str, list[dict]] = {}
+    for r in rows:
+        sweep_groups.setdefault(_sweep_group_key(r), []).append(r)
+
     for row in rows:
         exp = row.get("experiment_num")
         if exp is None:
             continue
         exp_id = f"exp{int(exp):03d}"
         ann = reasoning.get(str(exp), {}) if reasoning else {}
-        page = render_experiment(row, ann, idea_dirs)
+
+        # sweep curve from this experiment's sibling group (alpha/layer sweep).
+        siblings = sweep_groups.get(_sweep_group_key(row), [row])
+        sweep_name = f"{exp_id}_sweep.png"
+        ok, single = plot_sweep(siblings, exp_dir / sweep_name)
+        sweep_plot = sweep_name if ok else None
+
+        page = render_experiment(row, ann, idea_dirs,
+                                 sweep_plot=sweep_plot, sweep_single=single)
         _write(exp_dir / f"{exp_id}.html", page)
         _write(docs_exp_dir / f"{exp_id}.html", page)
+        # mirror the sweep PNG next to the docs page so the embed resolves.
+        if ok:
+            src = exp_dir / sweep_name
+            if src.exists():
+                _write_bytes(docs_exp_dir / sweep_name, src.read_bytes())
 
     # ---- B. per-hypothesis sub-dashboards ----
     # group rows by resolved hypothesis dir
