@@ -51,9 +51,14 @@
 | experiment_num | tag | hypothesis_id | rung | behavior | dMMLU | PPL | CR_jailbreak | over_refusal | composite | delta_norm | eff_rank_drop | norm_budget | part_ratio | verdict | failure_reason |
 |----------------|-----|---------------|------|----------|-------|-----|-------------|-------------|-----------|------------|---------------|-------------|------------|---------|----------------|
 | 0 | EXAMPLE-DO-NOT-USE | E1 | 1 | refusal | -0.50 pp (n=3) | 12.34 (n=3) | 0.0% | 2.1% | 0.7823 | 0.021 | 0.003 | 0.18 | 412 | KEEP | — |
+| 1 | rung1_plumbing_fakelm | INFRA | 1 | happiness (proxy) | -0.05 pp (n=1) | 32.00 (n=1) | 0.0% | 0.0% | 0.4485 | 0.010 | — | — | — | KEEP | — (infra/plumbing on FakeLM, NOT a Gemma steering claim; Rung-0 gate cleared: intervention perturbs stream, state restores, full loop + 3-tier dashboard execute end-to-end) |
 
 > **Row 0 is an EXAMPLE only.** It shows the column format and is NOT a real
-> experimental result. All real experiment rows begin at experiment_num=1.
+> experimental result. **Row 1 is the Rung-0/1 plumbing gate on the offline
+> FakeResidualLM** — it validates the harness + loop, not any Gemma behavior.
+> The first scientific steering rows (E1–E3 on Gemma-3-1B-it) begin once Gemma
+> access is unlocked (see `NEXT_STEPS.md`). All real Gemma rows are tagged with
+> their `Ennn`/`Nnn` hypothesis_id, never `INFRA`.
 
 ---
 

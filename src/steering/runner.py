@@ -289,6 +289,16 @@ def _log_and_checkpoint(entry: dict, description: str) -> None:
     if entry["composite"] > prev_best:
         best_path.write_text(json.dumps(entry, indent=2), encoding="utf-8")
 
+    # Regenerate the three-tier dashboard (master + per-hypothesis + per-exp)
+    # on every experiment (CLAUDE.md §11 / §13: dashboard is pushed every
+    # milestone). Never let a dashboard error abort a logged experiment.
+    try:
+        from .dashboard import build_all_dashboards
+
+        build_all_dashboards(results_dir=RESULTS_DIR, repo_root=RESULTS_DIR.parent)
+    except Exception as exc:  # pragma: no cover - defensive
+        print(f"  WARNING: dashboard regeneration failed: {exc}")
+
 
 def _write_reasoning(entry: dict, description: str, prev_best: float, prev_best_tag) -> None:
     ann_path = RESULTS_DIR / "reasoning_annotations.json"
