@@ -1,0 +1,16 @@
+{
+  "_doc": "TINY synthetic AxBench-style concept contrast pairs (Axis 1 / source). Hand-written, clearly-synthetic, no copyrighted text. Each pair: a prompt expressing the concept (pos) vs not (neg).",
+  "concept": "ocean",
+  "pairs": [
+    {"pos": "The deep blue ocean rolled with salty waves and tides.", "neg": "The dry desert stretched with sand dunes and cactus."},
+    {"pos": "Sailors love the sea, the surf, and the coral reefs below.", "neg": "Bankers love the spreadsheet, the ledger, and the audit above."},
+    {"pos": "Whales and dolphins swim through the cold marine waters.", "neg": "Lions and zebras run across the hot savanna grasslands."},
+    {"pos": "The tide pulled the little boat across the open water.", "neg": "The wind pushed the little kite across the open sky."},
+    {"pos": "Seashells and seaweed washed up along the wet shoreline.", "neg": "Pinecones and bark fell down along the dry forest floor."},
+    {"pos": "A submarine dove beneath the waves into the dark deep sea.", "neg": "A balloon rose above the clouds into the bright high air."},
+    {"pos": "Fishermen cast their nets into the rolling salty ocean.", "neg": "Farmers cast their seeds into the rolling dusty field."},
+    {"pos": "The lighthouse warned ships of the rocky coastal water.", "neg": "The streetlight warned cars of the icy mountain road."},
+    {"pos": "Coral, kelp, and plankton fill the bright tropical lagoon.", "neg": "Gravel, moss, and lichen fill the gray mountain valley."},
+    {"pos": "The aquarium tank held octopus, jellyfish, and small fish.", "neg": "The terrarium box held lizards, beetles, and small frogs."}
+  ]
+}

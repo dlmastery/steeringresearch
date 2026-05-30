@@ -1,0 +1,25 @@
+{
+  "_doc": "TINY synthetic MCQ capability tripwire (Axis 2). Hand-written, clearly-synthetic general-knowledge questions, NOT real MMLU items. 20 questions, 4 options each, answer_idx is the 0-based correct option.",
+  "questions": [
+    {"question": "What color is a clear daytime sky?", "options": ["blue", "green", "purple", "brown"], "answer_idx": 0},
+    {"question": "How many legs does a typical spider have?", "options": ["six", "eight", "four", "ten"], "answer_idx": 1},
+    {"question": "What is two plus three?", "options": ["four", "six", "five", "seven"], "answer_idx": 2},
+    {"question": "Which animal says moo?", "options": ["dog", "cat", "duck", "cow"], "answer_idx": 3},
+    {"question": "What do bees make?", "options": ["honey", "milk", "bread", "paper"], "answer_idx": 0},
+    {"question": "Which season is coldest in the north?", "options": ["summer", "winter", "spring", "autumn"], "answer_idx": 1},
+    {"question": "What is frozen water called?", "options": ["steam", "rain", "ice", "fog"], "answer_idx": 2},
+    {"question": "Which planet do we live on?", "options": ["Mars", "Venus", "Jupiter", "Earth"], "answer_idx": 3},
+    {"question": "What tool cuts paper?", "options": ["scissors", "hammer", "spoon", "brush"], "answer_idx": 0},
+    {"question": "How many days are in one week?", "options": ["five", "seven", "ten", "twelve"], "answer_idx": 1},
+    {"question": "What gives off light in the daytime?", "options": ["moon", "lamp", "sun", "candle"], "answer_idx": 2},
+    {"question": "Which fruit is yellow and curved?", "options": ["apple", "grape", "cherry", "banana"], "answer_idx": 3},
+    {"question": "What do you read in a library?", "options": ["books", "shoes", "rocks", "cups"], "answer_idx": 0},
+    {"question": "Which is a primary color?", "options": ["pink", "red", "teal", "beige"], "answer_idx": 1},
+    {"question": "What falls from clouds when it rains?", "options": ["sand", "leaves", "water", "smoke"], "answer_idx": 2},
+    {"question": "Which animal is known as man's best friend?", "options": ["snake", "shark", "spider", "dog"], "answer_idx": 3},
+    {"question": "What do we use to see in the dark?", "options": ["flashlight", "pillow", "plate", "sock"], "answer_idx": 0},
+    {"question": "How many sides does a triangle have?", "options": ["two", "three", "four", "five"], "answer_idx": 1},
+    {"question": "What is the opposite of hot?", "options": ["warm", "mild", "cold", "tepid"], "answer_idx": 2},
+    {"question": "Which one is a vegetable?", "options": ["apple", "banana", "orange", "carrot"], "answer_idx": 3}
+  ]
+}

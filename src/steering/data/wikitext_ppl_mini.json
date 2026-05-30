@@ -1,0 +1,15 @@
+{
+  "_doc": "TINY synthetic coherence/perplexity passages (Axis 3). Hand-written, clearly-synthetic neutral prose, NOT WikiText. 10 short passages.",
+  "passages": [
+    "The small town sat beside a quiet river where children played each summer afternoon.",
+    "A library keeps many books on tall wooden shelves arranged by subject and author.",
+    "Every morning the baker opened the shop and the warm smell of bread filled the street.",
+    "Mountains rise slowly over millions of years as great plates of rock push together.",
+    "The teacher explained that plants turn sunlight into food through a process called growth.",
+    "On clear nights the stars appear as tiny points of light scattered across the dark sky.",
+    "Trains carry passengers between cities along long steel rails laid across the countryside.",
+    "A gentle rain fell on the garden and the flowers opened their petals toward the gray sky.",
+    "The old clock in the hall ticked steadily, marking each hour with a soft chiming bell.",
+    "Scientists study the weather to understand how wind, heat, and water shape the climate."
+  ]
+}
