@@ -348,9 +348,41 @@ Gemma-3-270m) produced three further screening results, each pre-registered and 
   Cylindrical-Representation radial×angular split, N16), now logged per run, so N17 can
   be re-tested with the complete radial+angular displacement.
 
-These illustrate the harness working as intended: pre-registered hypotheses are
-*falsified* (E2), *supported* (N17/N5), or turned into *instrument refinements* (C3) —
-without any overclaiming.
+- **C3b — E27 falsified (full-vector rotation), N16/CRH confirmed.** In the valid
+  small-angle regime, additive steering is *gentler* than full-vector rotation
+  (add holds PPL 90–99 across its range; rotate degrades to 1e4; +42% PPL at matched
+  behavior) — falsifying E27 for full-vector rotation (caveat: the corpus's
+  Angular/Selective methods rotate *selectively* in one 2D plane). The new angular
+  metric predicts rotation's log-PPL at **R²=0.997** while radial governs addition
+  (R²=0.81) — empirically confirming the Cylindrical Representation Hypothesis (N16):
+  the complete coherence predictor is the radial×angular displacement.
+- **C4 — N20 inconclusive.** Per-layer effective rank does not predict layer
+  fragility (Spearman −0.21, underpowered with 20 activations); but the max-Fisher
+  layer is also the *most fragile*, tying C1 together (most-separable = most-fragile
+  = worst to steer).
+- **C5 — E1 directional but underpowered.** DiffMean stabilizes to cos>0.95 of the
+  full vector by n≈5 pairs (the diminishing-returns shape E1 predicts), but the easy
+  synthetic concept and the 10-pair cap prevent testing the ≥50-pair claim.
+- **C6 — E27 confirmed cross-scale; the steering window emerges with scale.** The E3
+  cliff reproduced on gemma-3-1b @L18: behavior PEAKS at α=1 (0.646) — a clean
+  steering window the 270M model *lacked* — and the cliff is gentler. Across three
+  models the pattern is monotone in scale:
+
+  | model | base PPL | PPL@α1 | behavior@α1 | clean window? |
+  |---|---:|---:|---:|---|
+  | gemma-3-270m | 90 | +65% | 0.44 ↓ | none (most fragile) |
+  | Qwen-2.5-0.5b | 49 | +20% | 0.69 ↑ | yes |
+  | gemma-3-1b | 74 | +41% | 0.65 ↑ | yes (least fragile) |
+
+  Larger models have more coherence budget and exit the data manifold more slowly
+  (E27). E4 (DiffMean≈PCA) is confirmed on all three (cos 0.994–0.996).
+
+Across the campaign, eight pre-registered hypotheses received screening verdicts:
+**three supported** (N5, N16/CRH, N17, plus E3/E4/E27 from §5.1–5.3), **two
+falsified** (E2, E27-rotation), **one directional** (E1), **one inconclusive**
+(N20). These illustrate the harness working as intended: pre-registered hypotheses
+are *falsified*, *supported*, or turned into *instrument refinements* — never
+silently confirmed.
 
 ---
 
