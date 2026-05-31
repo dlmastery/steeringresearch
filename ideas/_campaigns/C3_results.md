@@ -39,3 +39,40 @@ exp#28–36. n=1/cell, SCREENING.
 This is a productive negative result: the loop surfaced (a) an operation-parameter
 incommensurability and (b) an incompleteness in the N17 geometry predictor that the
 corpus's CRH anticipated. Both are queued as concrete fixes.
+
+---
+
+## C3b — small-angle rotation (the valid regime): E27 FALSIFIED + N17 refined
+
+Rotate/add at L16, small angles/coeffs {0.05..0.5}, now logging BOTH radial
+(Δ‖h‖) and angular (1−cos) displacement. exp#37–46.
+
+| op | a | behavior | PPL | radial | angular | composite |
+|----|--|------:|------:|------:|------:|------:|
+| add | 0.05 | 0.470 | 90.5 | 0.000 | 0.0000 | −1.14 |
+| add | 0.1 | 0.528 | 90.9 | 0.001 | 0.0001 | −1.08 |
+| add | 0.2 | **0.565** | 92.8 | 0.002 | 0.0002 | −1.06 |
+| add | 0.5 | 0.485 | 99.1 | 0.007 | 0.0013 | −1.42 |
+| rotate | 0.05 | 0.497 | 100.2 | 0.001 | 0.0011 | −1.42 |
+| rotate | 0.1 | 0.569 | 131.4 | 0.003 | 0.0046 | −1.72 |
+| rotate | 0.2 | 0.460 | 255.4 | 0.002 | 0.0184 | −2.61 |
+| rotate | 0.5 | 0.245 | 11211 | 0.002 | 0.1116 | −63.6 |
+
+**E27 FALSIFIED (screening).** Additive steering is *gentler* than full-vector
+rotation here: `add` holds PPL 90–99 across its whole range, while `rotate`
+degrades 100→131→255→610→11211. At matched behavior ≈0.57, `add@0.2` = PPL 92.8
+vs `rotate@0.1` = PPL 131.4 (+42%). This contradicts E27 / Angular-Steering's
+"rotation is gentler on small models". **Caveat:** this `rotate` rotates the FULL
+hidden state toward v; the corpus Angular/Selective methods rotate selectively in
+a single 2D plane — so this falsifies *full-vector* rotation, not necessarily
+selective-plane rotation. A selective-rotation op is queued as future work.
+
+**N17 refined → N16/CRH confirmed (the methodological win).** Over the mixed
+add+rotate rows: radial Δ‖h‖ predicts log PPL at Pearson **−0.13** (blind to
+rotation), but **angular (1−cos) predicts at +0.998, `log PPL = 4.57 + 43.1·angular`,
+R²=0.997**. Combined with C2 (radial governs additive at R²=0.81), the complete
+coherence predictor is the **radial×angular (cylindrical) displacement** — the
+corpus Cylindrical Representation Hypothesis (N16) confirmed empirically: additive
+steering moves h radially (off the shell), rotation moves it angularly (along the
+shell but to a wrong direction), and each component predicts the perplexity cost
+of its own operation.

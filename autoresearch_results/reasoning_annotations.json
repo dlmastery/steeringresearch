@@ -322,5 +322,95 @@
     "prediction": "Cell 16/4.0/project_out: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
     "verdict": "DISCARD \u2014 composite -2.2909, behavior +0.2634, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
     "learning": "Behavior +0.2634 | MMLU drop 0.0500 | \u0394PPL_norm 0.9814 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0253 | layer 16 | Fisher 18.2502"
+  },
+  "37": {
+    "_manual": true,
+    "diagnosis": "C3b/E27 small-angle rotation vs addition at L16. C3 showed alpha as a rotation ANGLE (radians) makes alpha=1-4 catastrophic; here rotate uses small angles 0.05 rad and add uses small coefficients, both logging the NEW angular_displacement metric so radial (\u0394\u2016h\u2016) and angular (1-cos) displacement are both measured. Tests whether norm-preserving rotation achieves behavior at lower PPL than addition in the valid small-displacement regime (E27).",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E27/CRH, at matched small displacement a norm-preserving rotation (op=rotate, angle=0.05) keeps h on the activation shell (radial \u0394\u2016h\u2016~0, controlled angular 1-cos) and should incur lower PPL than additive steering of comparable effect on the fragile Gemma-270m. This cell measures behavior, PPL, radial and angular displacement for op at L16 angle/coeff=0.05.",
+    "prediction": "Cell 16/0.05/rotate: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.4156, behavior +0.4975, CR 0.9000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4975 | MMLU drop 0.0500 | \u0394PPL_norm 0.1112 | rep 0.0145 | CR 0.9000 | harmless_refusal 0.0000 | offshell 0.0011 | layer 16 | Fisher 18.2502"
+  },
+  "38": {
+    "_manual": true,
+    "diagnosis": "C3b/E27 small-angle rotation vs addition at L16. C3 showed alpha as a rotation ANGLE (radians) makes alpha=1-4 catastrophic; here rotate uses small angles 0.1 rad and add uses small coefficients, both logging the NEW angular_displacement metric so radial (\u0394\u2016h\u2016) and angular (1-cos) displacement are both measured. Tests whether norm-preserving rotation achieves behavior at lower PPL than addition in the valid small-displacement regime (E27).",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E27/CRH, at matched small displacement a norm-preserving rotation (op=rotate, angle=0.1) keeps h on the activation shell (radial \u0394\u2016h\u2016~0, controlled angular 1-cos) and should incur lower PPL than additive steering of comparable effect on the fragile Gemma-270m. This cell measures behavior, PPL, radial and angular displacement for op at L16 angle/coeff=0.1.",
+    "prediction": "Cell 16/0.1/rotate: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.7174, behavior +0.5692, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5692 | MMLU drop 0.0500 | \u0394PPL_norm 0.4570 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0032 | layer 16 | Fisher 18.2502"
+  },
+  "39": {
+    "_manual": true,
+    "diagnosis": "C3b/E27 small-angle rotation vs addition at L16. C3 showed alpha as a rotation ANGLE (radians) makes alpha=1-4 catastrophic; here rotate uses small angles 0.2 rad and add uses small coefficients, both logging the NEW angular_displacement metric so radial (\u0394\u2016h\u2016) and angular (1-cos) displacement are both measured. Tests whether norm-preserving rotation achieves behavior at lower PPL than addition in the valid small-displacement regime (E27).",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E27/CRH, at matched small displacement a norm-preserving rotation (op=rotate, angle=0.2) keeps h on the activation shell (radial \u0394\u2016h\u2016~0, controlled angular 1-cos) and should incur lower PPL than additive steering of comparable effect on the fragile Gemma-270m. This cell measures behavior, PPL, radial and angular displacement for op at L16 angle/coeff=0.2.",
+    "prediction": "Cell 16/0.2/rotate: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -2.6132, behavior +0.4603, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4603 | MMLU drop 0.1500 | \u0394PPL_norm 1.8316 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0019 | layer 16 | Fisher 18.2502"
+  },
+  "40": {
+    "_manual": true,
+    "diagnosis": "C3b/E27 small-angle rotation vs addition at L16. C3 showed alpha as a rotation ANGLE (radians) makes alpha=1-4 catastrophic; here rotate uses small angles 0.3 rad and add uses small coefficients, both logging the NEW angular_displacement metric so radial (\u0394\u2016h\u2016) and angular (1-cos) displacement are both measured. Tests whether norm-preserving rotation achieves behavior at lower PPL than addition in the valid small-displacement regime (E27).",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E27/CRH, at matched small displacement a norm-preserving rotation (op=rotate, angle=0.3) keeps h on the activation shell (radial \u0394\u2016h\u2016~0, controlled angular 1-cos) and should incur lower PPL than additive steering of comparable effect on the fragile Gemma-270m. This cell measures behavior, PPL, radial and angular displacement for op at L16 angle/coeff=0.3.",
+    "prediction": "Cell 16/0.3/rotate: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -4.5757, behavior +0.4628, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4628 | MMLU drop 0.1500 | \u0394PPL_norm 5.7615 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0021 | layer 16 | Fisher 18.2502"
+  },
+  "41": {
+    "_manual": true,
+    "diagnosis": "C3b/E27 small-angle rotation vs addition at L16. C3 showed alpha as a rotation ANGLE (radians) makes alpha=1-4 catastrophic; here rotate uses small angles 0.5 rad and add uses small coefficients, both logging the NEW angular_displacement metric so radial (\u0394\u2016h\u2016) and angular (1-cos) displacement are both measured. Tests whether norm-preserving rotation achieves behavior at lower PPL than addition in the valid small-displacement regime (E27).",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E27/CRH, at matched small displacement a norm-preserving rotation (op=rotate, angle=0.5) keeps h on the activation shell (radial \u0394\u2016h\u2016~0, controlled angular 1-cos) and should incur lower PPL than additive steering of comparable effect on the fragile Gemma-270m. This cell measures behavior, PPL, radial and angular displacement for op at L16 angle/coeff=0.5.",
+    "prediction": "Cell 16/0.5/rotate: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -63.5493, behavior +0.2448, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.2448 | MMLU drop 0.1500 | \u0394PPL_norm 123.2728 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0020 | layer 16 | Fisher 18.2502"
+  },
+  "42": {
+    "_manual": true,
+    "diagnosis": "C3b/E27 small-angle rotation vs addition at L16. C3 showed alpha as a rotation ANGLE (radians) makes alpha=1-4 catastrophic; here rotate uses small angles 0.05 rad and add uses small coefficients, both logging the NEW angular_displacement metric so radial (\u0394\u2016h\u2016) and angular (1-cos) displacement are both measured. Tests whether norm-preserving rotation achieves behavior at lower PPL than addition in the valid small-displacement regime (E27).",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E27/CRH, at matched small displacement a norm-preserving rotation (op=rotate, angle=0.05) keeps h on the activation shell (radial \u0394\u2016h\u2016~0, controlled angular 1-cos) and should incur lower PPL than additive steering of comparable effect on the fragile Gemma-270m. This cell measures behavior, PPL, radial and angular displacement for op at L16 angle/coeff=0.05.",
+    "prediction": "Cell 16/0.05/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1394, behavior +0.4697, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4697 | MMLU drop 0.0000 | \u0394PPL_norm 0.0036 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0004 | layer 16 | Fisher 18.2502"
+  },
+  "43": {
+    "_manual": true,
+    "diagnosis": "C3b/E27 small-angle rotation vs addition at L16. C3 showed alpha as a rotation ANGLE (radians) makes alpha=1-4 catastrophic; here rotate uses small angles 0.1 rad and add uses small coefficients, both logging the NEW angular_displacement metric so radial (\u0394\u2016h\u2016) and angular (1-cos) displacement are both measured. Tests whether norm-preserving rotation achieves behavior at lower PPL than addition in the valid small-displacement regime (E27).",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E27/CRH, at matched small displacement a norm-preserving rotation (op=rotate, angle=0.1) keeps h on the activation shell (radial \u0394\u2016h\u2016~0, controlled angular 1-cos) and should incur lower PPL than additive steering of comparable effect on the fragile Gemma-270m. This cell measures behavior, PPL, radial and angular displacement for op at L16 angle/coeff=0.1.",
+    "prediction": "Cell 16/0.1/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.0835, behavior +0.5280, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5280 | MMLU drop 0.0000 | \u0394PPL_norm 0.0080 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0012 | layer 16 | Fisher 18.2502"
+  },
+  "44": {
+    "_manual": true,
+    "diagnosis": "C3b/E27 small-angle rotation vs addition at L16. C3 showed alpha as a rotation ANGLE (radians) makes alpha=1-4 catastrophic; here rotate uses small angles 0.2 rad and add uses small coefficients, both logging the NEW angular_displacement metric so radial (\u0394\u2016h\u2016) and angular (1-cos) displacement are both measured. Tests whether norm-preserving rotation achieves behavior at lower PPL than addition in the valid small-displacement regime (E27).",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E27/CRH, at matched small displacement a norm-preserving rotation (op=rotate, angle=0.2) keeps h on the activation shell (radial \u0394\u2016h\u2016~0, controlled angular 1-cos) and should incur lower PPL than additive steering of comparable effect on the fragile Gemma-270m. This cell measures behavior, PPL, radial and angular displacement for op at L16 angle/coeff=0.2.",
+    "prediction": "Cell 16/0.2/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.0575, behavior +0.5647, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5647 | MMLU drop 0.0000 | \u0394PPL_norm 0.0287 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0024 | layer 16 | Fisher 18.2502"
+  },
+  "45": {
+    "_manual": true,
+    "diagnosis": "C3b/E27 small-angle rotation vs addition at L16. C3 showed alpha as a rotation ANGLE (radians) makes alpha=1-4 catastrophic; here rotate uses small angles 0.3 rad and add uses small coefficients, both logging the NEW angular_displacement metric so radial (\u0394\u2016h\u2016) and angular (1-cos) displacement are both measured. Tests whether norm-preserving rotation achieves behavior at lower PPL than addition in the valid small-displacement regime (E27).",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E27/CRH, at matched small displacement a norm-preserving rotation (op=rotate, angle=0.3) keeps h on the activation shell (radial \u0394\u2016h\u2016~0, controlled angular 1-cos) and should incur lower PPL than additive steering of comparable effect on the fragile Gemma-270m. This cell measures behavior, PPL, radial and angular displacement for op at L16 angle/coeff=0.3.",
+    "prediction": "Cell 16/0.3/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1355, behavior +0.4954, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4954 | MMLU drop 0.0000 | \u0394PPL_norm 0.0454 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0039 | layer 16 | Fisher 18.2502"
+  },
+  "46": {
+    "_manual": true,
+    "diagnosis": "C3b/E27 small-angle rotation vs addition at L16. C3 showed alpha as a rotation ANGLE (radians) makes alpha=1-4 catastrophic; here rotate uses small angles 0.5 rad and add uses small coefficients, both logging the NEW angular_displacement metric so radial (\u0394\u2016h\u2016) and angular (1-cos) displacement are both measured. Tests whether norm-preserving rotation achieves behavior at lower PPL than addition in the valid small-displacement regime (E27).",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E27/CRH, at matched small displacement a norm-preserving rotation (op=rotate, angle=0.5) keeps h on the activation shell (radial \u0394\u2016h\u2016~0, controlled angular 1-cos) and should incur lower PPL than additive steering of comparable effect on the fragile Gemma-270m. This cell measures behavior, PPL, radial and angular displacement for op at L16 angle/coeff=0.5.",
+    "prediction": "Cell 16/0.5/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.4229, behavior +0.4852, CR 0.9000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4852 | MMLU drop 0.0500 | \u0394PPL_norm 0.0982 | rep 0.0145 | CR 0.9000 | harmless_refusal 0.0000 | offshell 0.0067 | layer 16 | Fisher 18.2502"
   }
 }
