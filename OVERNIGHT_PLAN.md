@@ -17,7 +17,7 @@ geometric/coherence ones (E2, E3, N5, N17, N20, E27/rotation).
 
 | # | id | hypothesis | sweep | primary readout | status |
 |---|----|-----------|-------|-----------------|--------|
-| C1 | E2 | optimal layer = max linear separability; but best BEHAVIOR layer may differ from max-Fisher | layer ∈ {2,4,6,8,10,12,14,16}, α=2, add | behavior & PPL & offshell vs layer | queued |
+| C1 | E2 ✓FALSIFIED | optimal layer = max linear separability; but best BEHAVIOR layer may differ from max-Fisher | layer ∈ {2,4,6,8,10,12,14,16}, α=2, add | behavior & PPL & offshell vs layer | DONE |
 | C2 | N17/N5 | off-shell Δ‖h‖ (not raw α) predicts incoherence; PPL collapses onto one curve vs ‖Δh‖/‖h‖ | reuse C1+E3 rows | corr(offshell, logPPL); data-collapse | queued |
 | C3 | E27/E23 | rotation preserves coherence better than addition on small models at matched displacement | op ∈ {add, rotate, project_out}, layer=best(C1), α grid | PPL @ matched offshell | queued |
 | C4 | N20 | per-layer effective-rank drop predicts that layer's fragility (cheap, behavior-free) | layer sweep, measure eff-rank drop vs PPL slope | corr(effrank_drop, cliff steepness) | queued |
@@ -30,3 +30,8 @@ geometric/coherence ones (E2, E3, N5, N17, N20, E27/rotation).
 - Update FINDINGS (S-n) + IDEA_TABLE status + ledger per campaign.
 - If a sweep crashes, diagnose (don't retry blindly); record the failure.
 - Geometry numbers are real; behavior numbers carry the proxy caveat.
+
+
+## Completion (all campaigns run)
+
+C1–C6 complete (exp#20–59). Verdicts: 3 SUPPORTED (N5, N16/CRH, N17), 2 FALSIFIED (E2, E27-rotation), 1 DIRECTIONAL (E1), 1 INCONCLUSIVE (N20), plus cross-scale E27/E4 SUPPORTED. All SCREENING (n=1). See `ideas/_campaigns/` + FINDINGS S-1..S-8.
