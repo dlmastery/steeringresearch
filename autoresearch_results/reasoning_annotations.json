@@ -484,5 +484,50 @@
     "prediction": "Cell 16/4.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
     "verdict": "DISCARD \u2014 composite -7.7545, behavior +0.2957, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
     "learning": "Behavior +0.2957 | MMLU drop 0.2000 | \u0394PPL_norm 11.6306 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.1104 | layer 16 | Fisher 18.2502"
+  },
+  "55": {
+    "_manual": true,
+    "diagnosis": "C6 cross-scale: reproduce the E3 alpha-cliff on gemma-3-1b (the STANDARD-rung model, 26 layers) at max-Fisher L18, to compare cliff sharpness vs gemma-3-270m @L12 and test E27 scale-fragility (is the larger 1B model LESS fragile / does it have a cleaner steering window than the 270m?). E4 already confirmed cross-scale (cos=0.9945). alpha=0.0.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E27, the larger gemma-3-1b should exit the manifold LESS easily than gemma-3-270m: at matched alpha its PPL cliff should be gentler and it may retain a clean steering window (behavior up before coherence collapses) that the 270m lacked. This cell at L18 alpha=0.0 measures behavior, PPL and radial+angular displacement for the cross-scale comparison.",
+    "prediction": "Cell 18/0.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1072, behavior +0.5000, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5000 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 18 | Fisher 36.3461"
+  },
+  "56": {
+    "_manual": true,
+    "diagnosis": "C6 cross-scale: reproduce the E3 alpha-cliff on gemma-3-1b (the STANDARD-rung model, 26 layers) at max-Fisher L18, to compare cliff sharpness vs gemma-3-270m @L12 and test E27 scale-fragility (is the larger 1B model LESS fragile / does it have a cleaner steering window than the 270m?). E4 already confirmed cross-scale (cos=0.9945). alpha=1.0.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E27, the larger gemma-3-1b should exit the manifold LESS easily than gemma-3-270m: at matched alpha its PPL cliff should be gentler and it may retain a clean steering window (behavior up before coherence collapses) that the 270m lacked. This cell at L18 alpha=1.0 measures behavior, PPL and radial+angular displacement for the cross-scale comparison.",
+    "prediction": "Cell 18/1.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -0.8907, behavior +0.6463, CR 0.6000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.6463 | MMLU drop 0.0000 | \u0394PPL_norm 0.4060 | rep 0.0145 | CR 0.6000 | harmless_refusal 0.1250 | offshell 0.0068 | layer 18 | Fisher 36.3461"
+  },
+  "57": {
+    "_manual": true,
+    "diagnosis": "C6 cross-scale: reproduce the E3 alpha-cliff on gemma-3-1b (the STANDARD-rung model, 26 layers) at max-Fisher L18, to compare cliff sharpness vs gemma-3-270m @L12 and test E27 scale-fragility (is the larger 1B model LESS fragile / does it have a cleaner steering window than the 270m?). E4 already confirmed cross-scale (cos=0.9945). alpha=2.0.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E27, the larger gemma-3-1b should exit the manifold LESS easily than gemma-3-270m: at matched alpha its PPL cliff should be gentler and it may retain a clean steering window (behavior up before coherence collapses) that the 270m lacked. This cell at L18 alpha=2.0 measures behavior, PPL and radial+angular displacement for the cross-scale comparison.",
+    "prediction": "Cell 18/2.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -2.0140, behavior +0.4532, CR 0.7000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4532 | MMLU drop 0.1500 | \u0394PPL_norm 1.8110 | rep 0.0145 | CR 0.7000 | harmless_refusal 0.0000 | offshell 0.0178 | layer 18 | Fisher 36.3461"
+  },
+  "58": {
+    "_manual": true,
+    "diagnosis": "C6 cross-scale: reproduce the E3 alpha-cliff on gemma-3-1b (the STANDARD-rung model, 26 layers) at max-Fisher L18, to compare cliff sharpness vs gemma-3-270m @L12 and test E27 scale-fragility (is the larger 1B model LESS fragile / does it have a cleaner steering window than the 270m?). E4 already confirmed cross-scale (cos=0.9945). alpha=4.0.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E27, the larger gemma-3-1b should exit the manifold LESS easily than gemma-3-270m: at matched alpha its PPL cliff should be gentler and it may retain a clean steering window (behavior up before coherence collapses) that the 270m lacked. This cell at L18 alpha=4.0 measures behavior, PPL and radial+angular displacement for the cross-scale comparison.",
+    "prediction": "Cell 18/4.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -11.6014, behavior +0.4288, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4288 | MMLU drop 0.2500 | \u0394PPL_norm 19.5200 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0518 | layer 18 | Fisher 36.3461"
+  },
+  "59": {
+    "_manual": true,
+    "diagnosis": "C6 cross-scale: reproduce the E3 alpha-cliff on gemma-3-1b (the STANDARD-rung model, 26 layers) at max-Fisher L18, to compare cliff sharpness vs gemma-3-270m @L12 and test E27 scale-fragility (is the larger 1B model LESS fragile / does it have a cleaner steering window than the 270m?). E4 already confirmed cross-scale (cos=0.9945). alpha=8.0.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E27, the larger gemma-3-1b should exit the manifold LESS easily than gemma-3-270m: at matched alpha its PPL cliff should be gentler and it may retain a clean steering window (behavior up before coherence collapses) that the 270m lacked. This cell at L18 alpha=8.0 measures behavior, PPL and radial+angular displacement for the cross-scale comparison.",
+    "prediction": "Cell 18/8.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -312.9117, behavior +0.4645, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4645 | MMLU drop 0.3500 | \u0394PPL_norm 621.9510 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.1738 | layer 18 | Fisher 36.3461"
   }
 }
