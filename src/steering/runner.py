@@ -494,7 +494,7 @@ def main() -> None:
     parser.add_argument("--layer", type=int, default=None,
                         help="injection layer; default = max-Fisher layer")
     parser.add_argument("--alpha", type=float, default=4.0)
-    parser.add_argument("--operation", default="add", choices=["add", "rotate", "project_out"])
+    parser.add_argument("--operation", default="add", choices=["add", "relative_add", "rotate", "project_out"])
     parser.add_argument("--source", default="diffmean", choices=["diffmean", "pca"])
     parser.add_argument("--behavior", default="ocean")
     parser.add_argument("--seed", type=int, default=0)

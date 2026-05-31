@@ -53,6 +53,17 @@ def apply_operation(
     if operation == "add":
         return h + alpha * v
 
+    if operation == "relative_add":
+        # E7 relative steering (campaigns C7/C8): the meaningful control variable is
+        # displacement RELATIVE to the residual norm, not absolute alpha. Add a
+        # vector whose magnitude is alpha * ||h|| per position, along the unit
+        # direction. alpha is then the fractional displacement (alpha=0.1 => a
+        # 10%-of-||h|| nudge), comparable across sources/layers/models regardless of
+        # the raw vector norm or the (large, scale-varying) ||h||.
+        v_hat = _unit(v)
+        h_norm = h.norm(dim=-1, keepdim=True)  # [...,1]
+        return h + alpha * h_norm * v_hat
+
     if operation == "project_out":
         v_hat = _unit(v)
         # h - (h . v_hat) v_hat ; alpha scales how much of the projection we remove
