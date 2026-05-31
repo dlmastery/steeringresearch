@@ -583,5 +583,167 @@
     "prediction": "Cell 16/2.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
     "verdict": "DISCARD \u2014 composite -1.1072, behavior +0.5000, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
     "learning": "Behavior +0.5000 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 18.2502"
+  },
+  "66": {
+    "_manual": true,
+    "diagnosis": "C8/E36 (FIXED): unit-NORMALIZED diffmean vs pca at L16. C7 showed raw diffmean (~10x norm) vs unit pca made matched-alpha unfair; here BOTH vectors are unit-normalized so alpha is a source-comparable displacement coefficient (E7 relative steering). alpha range 5-40 to span the cliff in unit-displacement terms. source=diffmean alpha=5.0. Predict: since cos(diffmean,pca)=0.99, normalized diffmean and pca should steer near-identically (behavior+PPL within noise) -> confirms E4 implies E36.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "With both sources unit-normalized, alpha is the actual displacement magnitude; since the diffmean and pca directions are >0.99 cosine-aligned at L16, normalized diffmean and pca should produce near-identical behavior and PPL at matched alpha. A divergence would mean the residual <1% angular difference is disproportionately important (manifold sensitivity). source=diffmean alpha=5.0.",
+    "prediction": "Cell 16/5.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1072, behavior +0.5000, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5000 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 18.2502"
+  },
+  "67": {
+    "_manual": true,
+    "diagnosis": "C8/E36 (FIXED): unit-NORMALIZED diffmean vs pca at L16. C7 showed raw diffmean (~10x norm) vs unit pca made matched-alpha unfair; here BOTH vectors are unit-normalized so alpha is a source-comparable displacement coefficient (E7 relative steering). alpha range 5-40 to span the cliff in unit-displacement terms. source=diffmean alpha=10.0. Predict: since cos(diffmean,pca)=0.99, normalized diffmean and pca should steer near-identically (behavior+PPL within noise) -> confirms E4 implies E36.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "With both sources unit-normalized, alpha is the actual displacement magnitude; since the diffmean and pca directions are >0.99 cosine-aligned at L16, normalized diffmean and pca should produce near-identical behavior and PPL at matched alpha. A divergence would mean the residual <1% angular difference is disproportionately important (manifold sensitivity). source=diffmean alpha=10.0.",
+    "prediction": "Cell 16/10.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1079, behavior +0.5000, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5000 | MMLU drop 0.0000 | \u0394PPL_norm 0.0012 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 18.2502"
+  },
+  "68": {
+    "_manual": true,
+    "diagnosis": "C8/E36 (FIXED): unit-NORMALIZED diffmean vs pca at L16. C7 showed raw diffmean (~10x norm) vs unit pca made matched-alpha unfair; here BOTH vectors are unit-normalized so alpha is a source-comparable displacement coefficient (E7 relative steering). alpha range 5-40 to span the cliff in unit-displacement terms. source=diffmean alpha=20.0. Predict: since cos(diffmean,pca)=0.99, normalized diffmean and pca should steer near-identically (behavior+PPL within noise) -> confirms E4 implies E36.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "With both sources unit-normalized, alpha is the actual displacement magnitude; since the diffmean and pca directions are >0.99 cosine-aligned at L16, normalized diffmean and pca should produce near-identical behavior and PPL at matched alpha. A divergence would mean the residual <1% angular difference is disproportionately important (manifold sensitivity). source=diffmean alpha=20.0.",
+    "prediction": "Cell 16/20.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1075, behavior +0.5000, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5000 | MMLU drop 0.0000 | \u0394PPL_norm 0.0004 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0004 | layer 16 | Fisher 18.2502"
+  },
+  "69": {
+    "_manual": true,
+    "diagnosis": "C8/E36 (FIXED): unit-NORMALIZED diffmean vs pca at L16. C7 showed raw diffmean (~10x norm) vs unit pca made matched-alpha unfair; here BOTH vectors are unit-normalized so alpha is a source-comparable displacement coefficient (E7 relative steering). alpha range 5-40 to span the cliff in unit-displacement terms. source=diffmean alpha=40.0. Predict: since cos(diffmean,pca)=0.99, normalized diffmean and pca should steer near-identically (behavior+PPL within noise) -> confirms E4 implies E36.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "With both sources unit-normalized, alpha is the actual displacement magnitude; since the diffmean and pca directions are >0.99 cosine-aligned at L16, normalized diffmean and pca should produce near-identical behavior and PPL at matched alpha. A divergence would mean the residual <1% angular difference is disproportionately important (manifold sensitivity). source=diffmean alpha=40.0.",
+    "prediction": "Cell 16/40.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1073, behavior +0.5000, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5000 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0004 | layer 16 | Fisher 18.2502"
+  },
+  "70": {
+    "_manual": true,
+    "diagnosis": "C8/E36 (FIXED): unit-NORMALIZED diffmean vs pca at L16. C7 showed raw diffmean (~10x norm) vs unit pca made matched-alpha unfair; here BOTH vectors are unit-normalized so alpha is a source-comparable displacement coefficient (E7 relative steering). alpha range 5-40 to span the cliff in unit-displacement terms. source=pca alpha=5.0. Predict: since cos(diffmean,pca)=0.99, normalized diffmean and pca should steer near-identically (behavior+PPL within noise) -> confirms E4 implies E36.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "With both sources unit-normalized, alpha is the actual displacement magnitude; since the diffmean and pca directions are >0.99 cosine-aligned at L16, normalized diffmean and pca should produce near-identical behavior and PPL at matched alpha. A divergence would mean the residual <1% angular difference is disproportionately important (manifold sensitivity). source=pca alpha=5.0.",
+    "prediction": "Cell 16/5.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1072, behavior +0.5000, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5000 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 18.2502"
+  },
+  "71": {
+    "_manual": true,
+    "diagnosis": "C8/E36 (FIXED): unit-NORMALIZED diffmean vs pca at L16. C7 showed raw diffmean (~10x norm) vs unit pca made matched-alpha unfair; here BOTH vectors are unit-normalized so alpha is a source-comparable displacement coefficient (E7 relative steering). alpha range 5-40 to span the cliff in unit-displacement terms. source=pca alpha=10.0. Predict: since cos(diffmean,pca)=0.99, normalized diffmean and pca should steer near-identically (behavior+PPL within noise) -> confirms E4 implies E36.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "With both sources unit-normalized, alpha is the actual displacement magnitude; since the diffmean and pca directions are >0.99 cosine-aligned at L16, normalized diffmean and pca should produce near-identical behavior and PPL at matched alpha. A divergence would mean the residual <1% angular difference is disproportionately important (manifold sensitivity). source=pca alpha=10.0.",
+    "prediction": "Cell 16/10.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1087, behavior +0.5000, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5000 | MMLU drop 0.0000 | \u0394PPL_norm 0.0030 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 18.2502"
+  },
+  "72": {
+    "_manual": true,
+    "diagnosis": "C8/E36 (FIXED): unit-NORMALIZED diffmean vs pca at L16. C7 showed raw diffmean (~10x norm) vs unit pca made matched-alpha unfair; here BOTH vectors are unit-normalized so alpha is a source-comparable displacement coefficient (E7 relative steering). alpha range 5-40 to span the cliff in unit-displacement terms. source=pca alpha=20.0. Predict: since cos(diffmean,pca)=0.99, normalized diffmean and pca should steer near-identically (behavior+PPL within noise) -> confirms E4 implies E36.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "With both sources unit-normalized, alpha is the actual displacement magnitude; since the diffmean and pca directions are >0.99 cosine-aligned at L16, normalized diffmean and pca should produce near-identical behavior and PPL at matched alpha. A divergence would mean the residual <1% angular difference is disproportionately important (manifold sensitivity). source=pca alpha=20.0.",
+    "prediction": "Cell 16/20.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1376, behavior +0.4697, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4697 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0004 | layer 16 | Fisher 18.2502"
+  },
+  "73": {
+    "_manual": true,
+    "diagnosis": "C8/E36 (FIXED): unit-NORMALIZED diffmean vs pca at L16. C7 showed raw diffmean (~10x norm) vs unit pca made matched-alpha unfair; here BOTH vectors are unit-normalized so alpha is a source-comparable displacement coefficient (E7 relative steering). alpha range 5-40 to span the cliff in unit-displacement terms. source=pca alpha=40.0. Predict: since cos(diffmean,pca)=0.99, normalized diffmean and pca should steer near-identically (behavior+PPL within noise) -> confirms E4 implies E36.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "With both sources unit-normalized, alpha is the actual displacement magnitude; since the diffmean and pca directions are >0.99 cosine-aligned at L16, normalized diffmean and pca should produce near-identical behavior and PPL at matched alpha. A divergence would mean the residual <1% angular difference is disproportionately important (manifold sensitivity). source=pca alpha=40.0.",
+    "prediction": "Cell 16/40.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1376, behavior +0.4697, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4697 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0004 | layer 16 | Fisher 18.2502"
+  },
+  "74": {
+    "_manual": true,
+    "diagnosis": "C9b/E7 relative-displacement cliff at L16 (relative_add now registered). dh=alpha*||h||*v_hat so alpha is fractional displacement; sweep 2-40% of ||h|| for diffmean and pca. Predict clean monotone cliff with knee at relative-disp ~0.02-0.1 (N17/C2); diffmean~=pca (cos=0.99). alpha=0.02 source=diffmean.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Relative steering (fraction of ||h||) gives a clean ||h||-independent cliff (E7); the >0.99-aligned diffmean and pca steer identically at matched fractional alpha. alpha=0.02 source=diffmean.",
+    "prediction": "Cell 16/0.02/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.0876, behavior +0.5317, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5317 | MMLU drop 0.0000 | \u0394PPL_norm 0.0231 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0020 | layer 16 | Fisher 18.2502"
+  },
+  "75": {
+    "_manual": true,
+    "diagnosis": "C9b/E7 relative-displacement cliff at L16 (relative_add now registered). dh=alpha*||h||*v_hat so alpha is fractional displacement; sweep 2-40% of ||h|| for diffmean and pca. Predict clean monotone cliff with knee at relative-disp ~0.02-0.1 (N17/C2); diffmean~=pca (cos=0.99). alpha=0.05 source=diffmean.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Relative steering (fraction of ||h||) gives a clean ||h||-independent cliff (E7); the >0.99-aligned diffmean and pca steer identically at matched fractional alpha. alpha=0.05 source=diffmean.",
+    "prediction": "Cell 16/0.05/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.4181, behavior +0.4447, CR 0.9000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4447 | MMLU drop 0.0000 | \u0394PPL_norm 0.1083 | rep 0.0145 | CR 0.9000 | harmless_refusal 0.0000 | offshell 0.0054 | layer 16 | Fisher 18.2502"
+  },
+  "76": {
+    "_manual": true,
+    "diagnosis": "C9b/E7 relative-displacement cliff at L16 (relative_add now registered). dh=alpha*||h||*v_hat so alpha is fractional displacement; sweep 2-40% of ||h|| for diffmean and pca. Predict clean monotone cliff with knee at relative-disp ~0.02-0.1 (N17/C2); diffmean~=pca (cos=0.99). alpha=0.1 source=diffmean.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Relative steering (fraction of ||h||) gives a clean ||h||-independent cliff (E7); the >0.99-aligned diffmean and pca steer identically at matched fractional alpha. alpha=0.1 source=diffmean.",
+    "prediction": "Cell 16/0.1/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.6772, behavior +0.6138, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.6138 | MMLU drop 0.0500 | \u0394PPL_norm 0.4625 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0101 | layer 16 | Fisher 18.2502"
+  },
+  "77": {
+    "_manual": true,
+    "diagnosis": "C9b/E7 relative-displacement cliff at L16 (relative_add now registered). dh=alpha*||h||*v_hat so alpha is fractional displacement; sweep 2-40% of ||h|| for diffmean and pca. Predict clean monotone cliff with knee at relative-disp ~0.02-0.1 (N17/C2); diffmean~=pca (cos=0.99). alpha=0.2 source=diffmean.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Relative steering (fraction of ||h||) gives a clean ||h||-independent cliff (E7); the >0.99-aligned diffmean and pca steer identically at matched fractional alpha. alpha=0.2 source=diffmean.",
+    "prediction": "Cell 16/0.2/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -2.2702, behavior +0.5042, CR 0.9000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5042 | MMLU drop 0.1000 | \u0394PPL_norm 1.7181 | rep 0.0145 | CR 0.9000 | harmless_refusal 0.0000 | offshell 0.0325 | layer 16 | Fisher 18.2502"
+  },
+  "78": {
+    "_manual": true,
+    "diagnosis": "C9b/E7 relative-displacement cliff at L16 (relative_add now registered). dh=alpha*||h||*v_hat so alpha is fractional displacement; sweep 2-40% of ||h|| for diffmean and pca. Predict clean monotone cliff with knee at relative-disp ~0.02-0.1 (N17/C2); diffmean~=pca (cos=0.99). alpha=0.4 source=diffmean.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Relative steering (fraction of ||h||) gives a clean ||h||-independent cliff (E7); the >0.99-aligned diffmean and pca steer identically at matched fractional alpha. alpha=0.4 source=diffmean.",
+    "prediction": "Cell 16/0.4/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -10.3566, behavior +0.3186, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.3186 | MMLU drop 0.1500 | \u0394PPL_norm 16.9883 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0952 | layer 16 | Fisher 18.2502"
+  },
+  "79": {
+    "_manual": true,
+    "diagnosis": "C9b/E7 relative-displacement cliff at L16 (relative_add now registered). dh=alpha*||h||*v_hat so alpha is fractional displacement; sweep 2-40% of ||h|| for diffmean and pca. Predict clean monotone cliff with knee at relative-disp ~0.02-0.1 (N17/C2); diffmean~=pca (cos=0.99). alpha=0.02 source=pca.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Relative steering (fraction of ||h||) gives a clean ||h||-independent cliff (E7); the >0.99-aligned diffmean and pca steer identically at matched fractional alpha. alpha=0.02 source=pca.",
+    "prediction": "Cell 16/0.02/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.2884, behavior +0.5317, CR 0.9000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5317 | MMLU drop 0.0000 | \u0394PPL_norm 0.0247 | rep 0.0145 | CR 0.9000 | harmless_refusal 0.0000 | offshell 0.0020 | layer 16 | Fisher 18.2502"
+  },
+  "80": {
+    "_manual": true,
+    "diagnosis": "C9b/E7 relative-displacement cliff at L16 (relative_add now registered). dh=alpha*||h||*v_hat so alpha is fractional displacement; sweep 2-40% of ||h|| for diffmean and pca. Predict clean monotone cliff with knee at relative-disp ~0.02-0.1 (N17/C2); diffmean~=pca (cos=0.99). alpha=0.05 source=pca.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Relative steering (fraction of ||h||) gives a clean ||h||-independent cliff (E7); the >0.99-aligned diffmean and pca steer identically at matched fractional alpha. alpha=0.05 source=pca.",
+    "prediction": "Cell 16/0.05/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.6309, behavior +0.4387, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4387 | MMLU drop 0.0000 | \u0394PPL_norm 0.1224 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0047 | layer 16 | Fisher 18.2502"
+  },
+  "81": {
+    "_manual": true,
+    "diagnosis": "C9b/E7 relative-displacement cliff at L16 (relative_add now registered). dh=alpha*||h||*v_hat so alpha is fractional displacement; sweep 2-40% of ||h|| for diffmean and pca. Predict clean monotone cliff with knee at relative-disp ~0.02-0.1 (N17/C2); diffmean~=pca (cos=0.99). alpha=0.1 source=pca.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Relative steering (fraction of ||h||) gives a clean ||h||-independent cliff (E7); the >0.99-aligned diffmean and pca steer identically at matched fractional alpha. alpha=0.1 source=pca.",
+    "prediction": "Cell 16/0.1/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.6534, behavior +0.5912, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5912 | MMLU drop 0.0000 | \u0394PPL_norm 0.4697 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0101 | layer 16 | Fisher 18.2502"
+  },
+  "82": {
+    "_manual": true,
+    "diagnosis": "C9b/E7 relative-displacement cliff at L16 (relative_add now registered). dh=alpha*||h||*v_hat so alpha is fractional displacement; sweep 2-40% of ||h|| for diffmean and pca. Predict clean monotone cliff with knee at relative-disp ~0.02-0.1 (N17/C2); diffmean~=pca (cos=0.99). alpha=0.2 source=pca.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Relative steering (fraction of ||h||) gives a clean ||h||-independent cliff (E7); the >0.99-aligned diffmean and pca steer identically at matched fractional alpha. alpha=0.2 source=pca.",
+    "prediction": "Cell 16/0.2/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -2.3047, behavior +0.4752, CR 0.9000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4752 | MMLU drop 0.0500 | \u0394PPL_norm 1.8312 | rep 0.0145 | CR 0.9000 | harmless_refusal 0.0000 | offshell 0.0282 | layer 16 | Fisher 18.2502"
+  },
+  "83": {
+    "_manual": true,
+    "diagnosis": "C9b/E7 relative-displacement cliff at L16 (relative_add now registered). dh=alpha*||h||*v_hat so alpha is fractional displacement; sweep 2-40% of ||h|| for diffmean and pca. Predict clean monotone cliff with knee at relative-disp ~0.02-0.1 (N17/C2); diffmean~=pca (cos=0.99). alpha=0.4 source=pca.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Relative steering (fraction of ||h||) gives a clean ||h||-independent cliff (E7); the >0.99-aligned diffmean and pca steer identically at matched fractional alpha. alpha=0.4 source=pca.",
+    "prediction": "Cell 16/0.4/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -11.0764, behavior +0.3043, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.3043 | MMLU drop 0.1000 | \u0394PPL_norm 18.5016 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0908 | layer 16 | Fisher 18.2502"
   }
 }

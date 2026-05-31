@@ -1,0 +1,76 @@
+{
+  "hyp": "E7",
+  "model": "models/google/gemma-3-270m-it",
+  "rows": [
+    {
+      "layer": 16,
+      "alpha": 0.02,
+      "op": "relative_add",
+      "source": "diffmean",
+      "error": "operation must be one of ('add', 'rotate', 'project_out')"
+    },
+    {
+      "layer": 16,
+      "alpha": 0.05,
+      "op": "relative_add",
+      "source": "diffmean",
+      "error": "operation must be one of ('add', 'rotate', 'project_out')"
+    },
+    {
+      "layer": 16,
+      "alpha": 0.1,
+      "op": "relative_add",
+      "source": "diffmean",
+      "error": "operation must be one of ('add', 'rotate', 'project_out')"
+    },
+    {
+      "layer": 16,
+      "alpha": 0.2,
+      "op": "relative_add",
+      "source": "diffmean",
+      "error": "operation must be one of ('add', 'rotate', 'project_out')"
+    },
+    {
+      "layer": 16,
+      "alpha": 0.4,
+      "op": "relative_add",
+      "source": "diffmean",
+      "error": "operation must be one of ('add', 'rotate', 'project_out')"
+    },
+    {
+      "layer": 16,
+      "alpha": 0.02,
+      "op": "relative_add",
+      "source": "pca",
+      "error": "operation must be one of ('add', 'rotate', 'project_out')"
+    },
+    {
+      "layer": 16,
+      "alpha": 0.05,
+      "op": "relative_add",
+      "source": "pca",
+      "error": "operation must be one of ('add', 'rotate', 'project_out')"
+    },
+    {
+      "layer": 16,
+      "alpha": 0.1,
+      "op": "relative_add",
+      "source": "pca",
+      "error": "operation must be one of ('add', 'rotate', 'project_out')"
+    },
+    {
+      "layer": 16,
+      "alpha": 0.2,
+      "op": "relative_add",
+      "source": "pca",
+      "error": "operation must be one of ('add', 'rotate', 'project_out')"
+    },
+    {
+      "layer": 16,
+      "alpha": 0.4,
+      "op": "relative_add",
+      "source": "pca",
+      "error": "operation must be one of ('add', 'rotate', 'project_out')"
+    }
+  ]
+}

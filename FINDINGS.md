@@ -99,7 +99,9 @@ window emerges with scale" supported across 3 models / 2 architectures**. E4
 confirmed on the 3rd model (cos=0.9945). CR 0.80→1.00 (Rogue-Scalpel). n=1. See
 `ideas/_campaigns/C6_results.md`.
 
-> **All eight observations are SCREENING on ≤1B models with synthetic
+**S-9 (E7 + E36 SUPPORTED via relative steering, SCREENING ONLY).** Adding `relative_add` (Δh=α·‖h‖·v̂; α=fractional displacement) gives a clean, ‖h‖-independent cliff on Gemma-270m @L16 (exp C9b): behavior peaks at **α≈0.1 (10% displacement)**, knee consistent with N17/C2. At matched fractional α, **DiffMean and PCA-top1 steer near-identically** (behavior ±0.02, PPL ±8%) — E4's 0.99 cosine ⇒ equivalent steering (E36); the earlier raw-α gaps were norm artifacts. n=1. See `ideas/_campaigns/C9_results.md`.
+
+> **All nine observations are SCREENING on ≤1B models with synthetic
 > mini-data and (for S-2) a circular behavior proxy.** They establish mechanism
 > direction, not magnitude. The instrument fixes and the full required-experiment
 > list are tracked below.
