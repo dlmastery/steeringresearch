@@ -30,9 +30,14 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from steering.runner import RESULTS_DIR, run_single_experiment  # noqa: E402
 
-MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
-LAYER = 21          # max-Fisher layer from the bring-up smoke (Fisher=25.6)
-ALPHAS = [0.0, 1.0, 2.0, 4.0, 8.0]   # focused re-run with REAL instruments
+# Primary target = tiny Gemma (per user). Falls back to the Qwen-0.5B bring-up
+# surrogate only if Gemma is not yet in the HF cache (download currently blocked
+# by an SSL-intercepting proxy — see NEXT_STEPS.md). LAYER is re-selected by
+# max-Fisher at run time for whichever model loads.
+import os as _os
+MODEL = _os.environ.get("E3_MODEL", "google/gemma-3-270m-it")
+LAYER = int(_os.environ.get("E3_LAYER", "21"))  # override per model; Gemma-270m has fewer layers
+ALPHAS = [0.0, 1.0, 2.0, 4.0, 8.0]   # real-instrument cliff sweep
 BEHAVIOR = "ocean"  # the dominant concept axis in axbench_mini
 TAG_PREFIX = "E3real"  # generation-based behavior + real safety generation
 

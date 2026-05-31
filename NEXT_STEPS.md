@@ -7,7 +7,35 @@ loop + 3-tier dashboard execute end-to-end). The first *scientific* steering
 runs (E1–E3 on **Gemma-3-1B-it**) are blocked on two one-time, user-side
 prerequisites that I cannot do non-interactively:
 
-## 1. Install the 4-bit quantization dependency
+## 0. Get Gemma into the local cache (the current blocker)
+
+The harness defaults to **tiny Gemma `google/gemma-3-270m-it`** (smoke) /
+`gemma-3-1b-it` (standard). Gemma is **not yet cached** and this environment's
+network **blocks the HF download**: an SSL-intercepting proxy breaks cert
+verification, and even with the OS trust store the file fetch can't connect.
+Once Gemma is in `~/.cache/huggingface/hub/`, the harness loads it offline
+automatically (that is exactly how it used the cached Qwen).
+
+Fix the SSL + download, in a session/terminal where your proxy works:
+```powershell
+pip install truststore                       # use the Windows OS trust store
+huggingface-cli login                         # accept the Gemma license first at the model page
+# tiny + standard:
+huggingface-cli download google/gemma-3-270m-it
+huggingface-cli download google/gemma-3-1b-it
+```
+If cert errors persist, set `REQUESTS_CA_BUNDLE` to your corporate root CA, or
+run the download from a network without SSL inspection. Verify:
+```powershell
+python -c "import truststore; truststore.inject_into_ssl(); import sys; sys.path.insert(0,'src'); from steering.model import load_model; m,t=load_model('google/gemma-3-270m-it', quant='none'); print('Gemma OK')"
+```
+Then reproduce the E3 cliff on Gemma:
+```powershell
+$env:E3_MODEL="google/gemma-3-270m-it"; $env:PYTHONPATH="src"
+python ideas/30_alpha_coherence_cliff/run_e3.py     # one model load per process recommended
+```
+
+## 1. (Optional) Install the 4-bit quantization dependency
 ```powershell
 pip install bitsandbytes accelerate
 ```

@@ -17,7 +17,7 @@ from typing import Any
 import torch
 import torch.nn as nn
 
-DEFAULT_MODEL = "google/gemma-3-1b-it"
+DEFAULT_MODEL = "google/gemma-3-270m-it"  # tiny Gemma (smoke); gemma-3-1b-it = standard
 SUPPORTED_MODELS = (
     "google/gemma-3-1b-it",
     "google/gemma-2-2b-it",
@@ -109,8 +109,39 @@ def load_model(name: str = DEFAULT_MODEL, quant: str = "4bit", device: str | Non
             model = model.to(device)
         model.eval()
         return model, tokenizer
-    except Exception as err:  # gated / offline / missing weights
-        raise RuntimeError(_GATED_HELP.format(name=name, err=err)) from err
+    except Exception as err:  # gated / SSL / connection / OOM / missing weights
+        # Honest, mode-specific diagnosis (ICML_REVIEW spirit: do not cry "gated"
+        # when the real cause is SSL interception, a dead connection, or OOM).
+        msg = str(err).lower()
+        if "certificate" in msg or "ssl" in msg:
+            hint = (
+                f"SSL certificate verification failed loading '{name}' — an "
+                f"SSL-intercepting proxy/middlebox is in the path. Fix: "
+                f"`pip install truststore` then inject the OS trust store, or set "
+                f"REQUESTS_CA_BUNDLE to your corporate root CA. NOT a gating issue."
+            )
+        elif "couldn't connect" in msg or "max retries" in msg or "connection" in msg or "timed out" in msg:
+            hint = (
+                f"Network could not reach huggingface.co to download '{name}' "
+                f"(connection blocked/offline). If the model is gated, also accept "
+                f"its license + `huggingface-cli login`. Pre-download it where the "
+                f"network works: `huggingface-cli download {name}` — once in the HF "
+                f"cache the harness loads it offline automatically."
+            )
+        elif "paging file" in msg or "out of memory" in msg or "1455" in msg or "cuda" in msg and "memory" in msg:
+            hint = (
+                f"Out-of-memory / paging-file exhaustion loading '{name}'. Load ONE "
+                f"model per process (don't reload N times in a loop), or quantise "
+                f"(pip install bitsandbytes; quant='4bit'). NOT a gating issue."
+            )
+        elif "gated" in msg or "401" in msg or "403" in msg or "authoriz" in msg or "access" in msg:
+            hint = _GATED_HELP.format(name=name, err=err)
+        else:
+            hint = (
+                f"Could not load '{name}'. Underlying error: {err}\n"
+                f"For OFFLINE work use load_model(name='fake')."
+            )
+        raise RuntimeError(hint) from err
 
 
 def get_residual_layers(model: nn.Module) -> list[nn.Module]:
