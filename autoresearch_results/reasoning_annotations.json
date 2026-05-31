@@ -529,5 +529,59 @@
     "prediction": "Cell 18/8.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
     "verdict": "DISCARD \u2014 composite -312.9117, behavior +0.4645, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
     "learning": "Behavior +0.4645 | MMLU drop 0.3500 | \u0394PPL_norm 621.9510 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.1738 | layer 18 | Fisher 36.3461"
+  },
+  "60": {
+    "_manual": true,
+    "diagnosis": "C7/E36 source comparison at L16 on Gemma-270m: cos(diffmean,pca)=0.99 (E4), but do the two SOURCES steer equally? E36 claims SAE/derived vectors underperform raw DiffMean unless output-selected; here we compare DiffMean vs PCA-top1 steering at matched (layer,alpha) on behavior+PPL. Also adds N17 data points (offshell/angular vs PPL). source=diffmean alpha=0.5.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E4 the DiffMean and PCA-top1 vectors are >0.99 cosine-aligned at L16, so they should steer near-identically (behavior + PPL within noise). If PCA underperforms despite high cosine, the small angular difference matters disproportionately (manifold sensitivity). source=diffmean at L16 alpha=0.5 measures behavior, PPL, radial+angular displacement.",
+    "prediction": "Cell 16/0.5/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.4229, behavior +0.4852, CR 0.9000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4852 | MMLU drop 0.0500 | \u0394PPL_norm 0.0982 | rep 0.0145 | CR 0.9000 | harmless_refusal 0.0000 | offshell 0.0067 | layer 16 | Fisher 18.2502"
+  },
+  "61": {
+    "_manual": true,
+    "diagnosis": "C7/E36 source comparison at L16 on Gemma-270m: cos(diffmean,pca)=0.99 (E4), but do the two SOURCES steer equally? E36 claims SAE/derived vectors underperform raw DiffMean unless output-selected; here we compare DiffMean vs PCA-top1 steering at matched (layer,alpha) on behavior+PPL. Also adds N17 data points (offshell/angular vs PPL). source=diffmean alpha=1.0.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E4 the DiffMean and PCA-top1 vectors are >0.99 cosine-aligned at L16, so they should steer near-identically (behavior + PPL within noise). If PCA underperforms despite high cosine, the small angular difference matters disproportionately (manifold sensitivity). source=diffmean at L16 alpha=1.0 measures behavior, PPL, radial+angular displacement.",
+    "prediction": "Cell 16/1.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.7572, behavior +0.4683, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4683 | MMLU drop 0.0500 | \u0394PPL_norm 0.3302 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0125 | layer 16 | Fisher 18.2502"
+  },
+  "62": {
+    "_manual": true,
+    "diagnosis": "C7/E36 source comparison at L16 on Gemma-270m: cos(diffmean,pca)=0.99 (E4), but do the two SOURCES steer equally? E36 claims SAE/derived vectors underperform raw DiffMean unless output-selected; here we compare DiffMean vs PCA-top1 steering at matched (layer,alpha) on behavior+PPL. Also adds N17 data points (offshell/angular vs PPL). source=diffmean alpha=2.0.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E4 the DiffMean and PCA-top1 vectors are >0.99 cosine-aligned at L16, so they should steer near-identically (behavior + PPL within noise). If PCA underperforms despite high cosine, the small angular difference matters disproportionately (manifold sensitivity). source=diffmean at L16 alpha=2.0 measures behavior, PPL, radial+angular displacement.",
+    "prediction": "Cell 16/2.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -2.2706, behavior +0.5340, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5340 | MMLU drop 0.1500 | \u0394PPL_norm 1.2754 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0383 | layer 16 | Fisher 18.2502"
+  },
+  "63": {
+    "_manual": true,
+    "diagnosis": "C7/E36 source comparison at L16 on Gemma-270m: cos(diffmean,pca)=0.99 (E4), but do the two SOURCES steer equally? E36 claims SAE/derived vectors underperform raw DiffMean unless output-selected; here we compare DiffMean vs PCA-top1 steering at matched (layer,alpha) on behavior+PPL. Also adds N17 data points (offshell/angular vs PPL). source=pca alpha=0.5.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E4 the DiffMean and PCA-top1 vectors are >0.99 cosine-aligned at L16, so they should steer near-identically (behavior + PPL within noise). If PCA underperforms despite high cosine, the small angular difference matters disproportionately (manifold sensitivity). source=pca at L16 alpha=0.5 measures behavior, PPL, radial+angular displacement.",
+    "prediction": "Cell 16/0.5/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1072, behavior +0.5000, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5000 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 18.2502"
+  },
+  "64": {
+    "_manual": true,
+    "diagnosis": "C7/E36 source comparison at L16 on Gemma-270m: cos(diffmean,pca)=0.99 (E4), but do the two SOURCES steer equally? E36 claims SAE/derived vectors underperform raw DiffMean unless output-selected; here we compare DiffMean vs PCA-top1 steering at matched (layer,alpha) on behavior+PPL. Also adds N17 data points (offshell/angular vs PPL). source=pca alpha=1.0.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E4 the DiffMean and PCA-top1 vectors are >0.99 cosine-aligned at L16, so they should steer near-identically (behavior + PPL within noise). If PCA underperforms despite high cosine, the small angular difference matters disproportionately (manifold sensitivity). source=pca at L16 alpha=1.0 measures behavior, PPL, radial+angular displacement.",
+    "prediction": "Cell 16/1.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1375, behavior +0.4697, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4697 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 18.2502"
+  },
+  "65": {
+    "_manual": true,
+    "diagnosis": "C7/E36 source comparison at L16 on Gemma-270m: cos(diffmean,pca)=0.99 (E4), but do the two SOURCES steer equally? E36 claims SAE/derived vectors underperform raw DiffMean unless output-selected; here we compare DiffMean vs PCA-top1 steering at matched (layer,alpha) on behavior+PPL. Also adds N17 data points (offshell/angular vs PPL). source=pca alpha=2.0.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per E4 the DiffMean and PCA-top1 vectors are >0.99 cosine-aligned at L16, so they should steer near-identically (behavior + PPL within noise). If PCA underperforms despite high cosine, the small angular difference matters disproportionately (manifold sensitivity). source=pca at L16 alpha=2.0 measures behavior, PPL, radial+angular displacement.",
+    "prediction": "Cell 16/2.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1072, behavior +0.5000, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5000 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 18.2502"
   }
 }

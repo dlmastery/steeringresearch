@@ -1,48 +1,57 @@
 """dashboard.py — the RICH, hierarchically-linked autoresearch dashboard.
 
-Three linked tiers (CLAUDE.md §11 "The Dashboard Mandate"):
+A faithful port of the ``nature_inspired_networks`` reference dashboard
+(brutalist editorial lab-notebook v3) to the steering autoresearch data model.
+
+Three linked tiers with full bidirectional click-through (CLAUDE.md §11):
 
   A. MASTER     dashboard/index.html  (mirror docs/dashboard/index.html)
-  B. PER-HYPO   ideas/<dir>/dashboard/index.html
-                (mirror docs/dashboard/hyp/<id>.html)
+  B. PER-HYPO   docs/dashboard/hyp/<ID>.html
+                (also ideas/<dir>/dashboard/index.html where a dir exists)
   C. PER-EXP    docs/dashboard/experiments/expNNN.html
-                (also dashboard/experiments/expNNN.html)
+                (mirror dashboard/experiments/expNNN.html)
 
-Master panels:
-  - "How to read this" 4-bullet orientation block.
-  - Sortable / type-to-filter runs table (default sort composite desc;
-    champion row highlighted; every numeric cell carries n=X + a
-    SCREENING/EVALUATION tier chip; per-row links to the per-experiment page
-    and, when resolvable, the per-hypothesis sub-dashboard).
-  - 5-axis radar / parallel-coordinates PNG per method.
-  - Pareto PNGs: behavior-vs-capability, behavior-vs-coherence,
-    behavior-vs-safety (baseline/prior rows drawn as star markers; dominated
-    rows outlined).
-  - Ladder board: per method highest rung + gate cleared/failed + reason.
-  - Stack/compete matrix: the pairwise method-composability prior transcribed
-    from corpus/steering-stackable-vs-competing-analysis.md §4 (STACK/CARE/
-    COMPETE cells), with any measured pair-verdict overlaid.
-  - Geometry small-multiples: dNorm, effective-rank-drop, norm-budget.
-  - Footer: COMPOSITE_FORMULA + composite_fingerprint() + git SHA + timestamp.
+MASTER sections (ported from the reference render_dashboard):
+  - Masthead: title + subtitle + mast-pill CTAs (repo / paper / FINDINGS /
+    IDEA_TABLE / live Pages) + the composite formula-chip (fingerprint).
+  - "How to read this" 4-bullet orientation block (incl. a NAVIGATION bullet).
+  - KPI ribbon (7 cards).
+  - Headline-ribbon: the S-1..S-8 screening findings, tagged SCREENING (n=1).
+  - HYPOTHESIS-STATUS GRID: a clickable, verdict-coloured cell per hypothesis
+    (E1..E50 in blocks A-F, then N1..N20), each linking to its hypothesis page.
+  - Runs grouped into campaign sections with verdict-coloured rows; each row
+    links to its experiment page and (when resolvable) its hypothesis page.
+  - Panels as cards (radar / parcoords, 3 Pareto, geometry, ladder board,
+    stack/compete matrix).
+  - Footer: composite formula + fingerprint + git SHA + timestamp + QA note +
+    doc cross-links.
 
-Per-hypothesis sub-dashboard:
-  - Best-config callout; hypothesis statement + falsifier + predicted delta
-    (parsed from ideas/<dir>/IDEA.md or README.md); scoped cells table linking
-    to per-experiment pages; coordinate-descent small-multiples (when sweep data
-    exists); seed-stability bars; back-link to master.
+PER-EXPERIMENT page sections (ported from render_experiment_page):
+  - Asymmetric header + mast-pill row + tier badge + verdict-row provenance.
+  - Key-numbers strip (kn-strip tiles).
+  - Hypothesis digest card (statement / falsifier / predicted Δ pulled from
+    IDEA_TABLE + ideas/<dir>).
+  - Verdict card (the run's KEEP/DISCARD verdict + behavior_scorer / safety_real
+    provenance chips, rendered from the reasoning verdict blob).
+  - 7-step reasoning blob (rendered markdown — NO ##/**/|---| leak).
+  - Configuration card.
+  - Five-axis metrics quick-reference table.
+  - Composite-score breakdown (term-by-term, reconciled to the logged composite).
+  - Geometry probes (offshell, angular, fisher, cos_dm_pca).
+  - Sweep curve (behavior + PPL vs the swept alpha/layer axis).
+  - Steered-vs-unsteered samples.
+  - Cross-references grid (hypothesis page + master + prev/next experiment).
 
-Per-experiment page:
-  - The full 7-step reasoning entry rendered from reasoning_annotations.json
-    markdown -> HTML via a small GFM-ish converter (no literal ## / ** / |---|
-    leaks); the config; all five axis metrics + geometry probes with any CIs;
-    a sweep curve (behavior + PPL vs the swept alpha/layer axis for the
-    hypothesis group; single-point fallback when only one row exists); a
-    side-by-side steered-vs-unsteered sample section (consumed from whatever
-    sample_steered / sample_unsteered / samples keys the runner logged, with a
-    ready placeholder when absent); back-links to hypothesis + master.
+PER-HYPOTHESIS page sections:
+  - Header + verdict pill + mast-pills.
+  - Hypothesis card (statement + falsifier + predicted Δ + current verdict).
+  - Campaign writeup (ideas/_campaigns/*.md, rendered).
+  - Table of ALL its experiments (linking to exp pages).
+  - Back-link to master grid.
 
-Hard rules honoured: self-contained HTML, no CDN / JS framework, one inline
-sort/filter script using data-v attributes, PNG (not SVG) plots, no emoji.
+Hard rules honoured: self-contained HTML (Google Fonts link OK w/ offline
+serif/mono fallback), no JS framework, single inline sort/filter script, PNG
+(not SVG) for matplotlib panels (SVG sparklines fine), no emoji-as-data.
 
 Usage:
     python -m steering.dashboard
@@ -64,233 +73,367 @@ from .eval import COMPOSITE_FORMULA, COMPOSITE_WEIGHTS, composite_fingerprint
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RESULTS_DIR = REPO_ROOT / "autoresearch_results"
 
-# ---------------------------------------------------------------------------
-# Shared CSS palette (identical across master / sub / per-experiment tiers).
-# ---------------------------------------------------------------------------
-SHARED_CSS = """
-  :root { --bg:#0f1115; --fg:#e6e6e6; --mut:#9aa0a6; --line:#2a2e35;
-          --champ:#1e3a24; --accent:#4ea1ff; --card:#13161c; }
-  * { box-sizing:border-box; }
-  body { background:var(--bg); color:var(--fg); margin:0;
-         font:14px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
-  a { color:var(--accent); }
-  header { padding:18px 22px; border-bottom:1px solid var(--line); }
-  h1 { font-size:18px; margin:0 0 4px; }
-  h2 { font-size:14px; margin:0 0 8px; color:var(--accent);
-       text-transform:uppercase; letter-spacing:.04em; }
-  h3 { font-size:13px; margin:18px 0 6px; }
-  .sub { color:var(--mut); font-size:12px; }
-  .nav { font-size:12px; margin-bottom:6px; }
-  section { margin:18px 22px; padding:14px 16px; border:1px solid var(--line);
-            border-radius:8px; background:var(--card); }
-  .howto ul { margin:0; padding-left:18px; }
-  .howto li { margin:3px 0; }
-  input[type=text] { width:340px; max-width:60vw; padding:7px 10px;
-       background:var(--bg); border:1px solid var(--line); color:var(--fg);
-       border-radius:6px; }
-  .tablewrap { overflow-x:auto; }
-  table { border-collapse:collapse; width:100%; font-size:13px; }
-  th, td { text-align:left; padding:7px 9px; border-bottom:1px solid var(--line);
-           white-space:nowrap; vertical-align:top; }
-  th { cursor:pointer; user-select:none; position:sticky; top:0;
-       background:var(--card); color:var(--mut); font-weight:600; }
-  th:hover { color:var(--fg); }
-  tr.champion { background:var(--champ); }
-  tr.champion td:first-child::before { content:"\\2605 "; color:#ffd166; }
-  tr.discard td { opacity:.85; }
-  td.empty { color:var(--mut); text-align:center; padding:24px; }
-  .chip { display:inline-block; font-size:9px; padding:1px 6px; border-radius:8px;
-          vertical-align:middle; margin-left:4px; }
-  .chip.screening { background:#3a2e13; color:#e0b15a; }
-  .chip.evaluation { background:#13303a; color:#5ac8e0; }
-  .seed-badge { display:inline-block; font-size:9px; padding:1px 5px;
-       border-radius:8px; background:#1b2330; color:#9fc0ff; margin-left:3px; }
-  .arr { font-size:10px; color:var(--accent); margin-left:3px; }
-  .verdict { font-weight:600; }
-  .verdict.keep { color:#6fd08c; }
-  .verdict.discard { color:#e0795a; }
-  .verdict.near-miss { color:#e0c15a; }
-  .callout { border-left:3px solid var(--accent); padding:8px 12px;
-             background:#11202c; border-radius:4px; margin:8px 0; }
-  .tag-pill { display:inline-block; font-size:11px; padding:2px 8px;
-       border-radius:10px; background:#1b2330; color:#9fc0ff; margin:2px; }
-  img.plot { max-width:100%; border:1px solid var(--line); border-radius:6px;
-             background:#fff; margin:6px 0; }
-  .grid { display:flex; flex-wrap:wrap; gap:14px; }
-  .grid .cell { flex:1 1 280px; min-width:260px; }
-  .cap { color:var(--mut); font-size:11px; margin:2px 0 10px; }
-  .md h1,.md h2,.md h3 { color:var(--fg); text-transform:none; letter-spacing:0; }
-  .md table { width:auto; margin:8px 0; }
-  .md code { color:#9fe0a0; background:#0b1a12; padding:1px 4px; border-radius:3px; }
-  .md pre { background:#0b1015; border:1px solid var(--line); padding:8px;
-            border-radius:6px; overflow-x:auto; }
-  .md blockquote { border-left:3px solid var(--line); margin:6px 0;
-            padding:2px 10px; color:var(--mut); }
-  .warn { color:#e0795a; font-style:italic; }
-  table.stackmx td.sc { text-align:center; font-weight:600; font-size:11px;
-       white-space:nowrap; }
-  table.stackmx th { white-space:nowrap; }
-  .sc.stack { background:#16331f; color:#7fe0a0; }
-  .sc.care { background:#3a3010; color:#e6c25a; }
-  .sc.compete { background:#3a1616; color:#f08080; }
-  .sc.self { background:#1a1d24; color:var(--mut); }
-  .sc.measured { outline:2px solid #fff; outline-offset:-2px; }
-  .sc .meas { font-size:9px; color:#fff; font-weight:700; }
-  .sc.scl { display:inline-block; padding:1px 6px; border-radius:4px;
-       font-weight:600; }
-  .grid.samples .cell { flex:1 1 340px; }
-  pre.sample { background:#0b1015; border:1px solid var(--line); padding:8px;
-       border-radius:6px; white-space:pre-wrap; word-break:break-word;
-       max-height:340px; overflow:auto; font-size:12px; }
-  footer { padding:14px 22px; border-top:1px solid var(--line); color:var(--mut);
-           font-size:12px; }
-  code { color:var(--accent); }
-"""
+# Project doc / hosting URLs (mast-pill CTAs + footer cross-links).
+REPO_URL = "https://github.com/dlmastery/steeringresearch"
+PAGES_URL = "https://dlmastery.github.io/steeringresearch/"
+PAPER_URL = REPO_URL + "/blob/main/paper/PAPER.md"
+FINDINGS_URL = REPO_URL + "/blob/main/FINDINGS.md"
+IDEATABLE_URL = REPO_URL + "/blob/main/IDEA_TABLE.md"
+FINGERPRINT = composite_fingerprint()
 
 # ---------------------------------------------------------------------------
-# Editorial "brutalist" palette + components for the MASTER dashboard, ported
-# from the nature_inspired_networks reference dashboard (same author). This is
-# ADDITIVE — it is appended after SHARED_CSS and only used by render_master, so
-# the per-experiment / per-hypothesis tiers keep their existing look untouched.
+# Shared CSS — the brutalist editorial palette ported verbatim from the
+# reference dashboard (:root vars, mast-pill, how-to-read, headline-ribbon,
+# hyp-grid, verdict colours, table.runs, card / panel-2col, kn-strip, footer).
+# A single CSS block is reused across all three tiers; the per-page <body> tag
+# distinguishes them only by which sections render.
 # ---------------------------------------------------------------------------
-MASTER_CSS = """
-  .master :root, .master {
-    --ink:#0a0a0d; --paper:#e6e1d6; --paper-dim:#a89e8c;
-    --rule:#1c1c20; --rule-bright:#2a2a30;
-    --panel:#111114; --panel2:#16161a;
-    --gold:#bb8c4d; --gold-dim:#7a5e36;
-    --v-pass:#3fb950; --v-minor:#d29922; --v-broken:#f85149;
-    --v-novel:#a371f7; --v-link:#58a6ff;
-  }
-  body.master { background:#0a0a0d; color:#e6e1d6;
-    font-family:'Source Serif 4','Charter',Georgia,serif;
-    font-variant-numeric:tabular-nums; line-height:1.55; }
-  body.master .wrap { max-width:1340px; margin:0 auto; padding:30px 34px 80px; }
-  body.master a { color:var(--v-link); text-decoration:none;
-    border-bottom:1px solid transparent; transition:border-color 160ms ease; }
-  body.master a:hover { border-bottom-color:var(--v-link); }
-  body.master h1 { font-family:'Source Serif 4',Georgia,serif; font-weight:600;
-    font-size:38px; line-height:1.12; letter-spacing:-0.005em; color:var(--paper);
-    margin:0 0 6px; text-transform:none; }
-  body.master h2 { font-family:'Source Serif 4',Georgia,serif; font-weight:600;
-    font-size:22px; color:var(--paper); margin:0 0 8px; letter-spacing:-0.003em;
-    text-transform:none; }
-  body.master h3 { font-family:'IBM Plex Mono',ui-monospace,monospace;
-    font-size:11px; text-transform:uppercase; letter-spacing:0.18em;
-    color:var(--paper-dim); margin:0 0 12px; font-weight:600; }
-  body.master .lead-sub { font-family:'IBM Plex Mono',ui-monospace,monospace;
-    color:var(--paper-dim); font-size:11px; text-transform:uppercase;
-    letter-spacing:0.16em; margin:2px 0 14px; }
-  .formula-chip { display:inline-block; background:var(--panel);
-    border:1px solid var(--rule); border-left:2px solid var(--gold);
-    padding:9px 14px; margin:4px 0 20px;
-    font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:11px;
-    color:var(--paper); letter-spacing:0.03em; }
-  .formula-chip .fp { color:var(--paper-dim); font-size:10px; }
-  .ribbon { display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(168px,1fr));
-    gap:1px; background:var(--rule); border:1px solid var(--rule);
-    margin:14px 0 26px; }
-  .kpi { background:var(--panel); padding:14px 16px; }
-  .kpi .label { color:var(--paper-dim); font-size:9.5px;
-    font-family:'IBM Plex Mono',ui-monospace,monospace;
-    text-transform:uppercase; letter-spacing:0.16em; }
-  .kpi .value { font-family:'Source Serif 4',Georgia,serif; font-size:25px;
-    font-weight:600; margin-top:4px; color:var(--paper); letter-spacing:-0.005em; }
-  .kpi .value small { font-size:12px; color:var(--paper-dim); font-weight:400; }
-  .kpi.positive { box-shadow:inset 3px 0 0 var(--v-pass); }
-  .kpi.negative { box-shadow:inset 3px 0 0 var(--v-broken); }
-  .kpi.neutral  { box-shadow:inset 3px 0 0 var(--gold-dim); }
-  .how-to-read { background:var(--panel); border:1px solid var(--rule);
-    border-left:2px solid var(--v-pass); padding:18px 24px; margin:18px 0;
-    font-family:'Source Serif 4',Georgia,serif; line-height:1.6; }
-  .how-to-read ul { list-style:none; margin:0; padding:0; display:grid;
-    grid-template-columns:1fr 1fr; gap:10px 22px; }
-  .how-to-read li { font-size:0.95em; }
-  .how-to-read li::before { content:"\\2192"; color:var(--gold);
-    margin-right:8px; font-family:'IBM Plex Mono',monospace; }
-  .headline-ribbon { background:var(--panel); border:1px solid var(--rule);
-    border-left:2px solid var(--gold); padding:18px 24px; margin:18px 0 8px;
-    font-family:'Source Serif 4',Georgia,serif; line-height:1.55; }
-  .headline-ribbon .tag-note { font-family:'IBM Plex Mono',monospace;
-    font-weight:600; color:var(--gold); font-size:10px; text-transform:uppercase;
-    letter-spacing:0.16em; display:block; margin-bottom:10px; }
-  .headline-ribbon ul { margin:6px 0 0 20px; padding:0; }
-  .headline-ribbon li { margin:5px 0; font-size:0.95em; }
-  .headline-ribbon code { background:var(--ink); padding:1px 5px;
-    font-family:'IBM Plex Mono',monospace; border:1px solid var(--rule);
-    font-size:0.86em; color:var(--paper); }
-  .group-section { margin-top:30px; background:var(--panel);
-    border:1px solid var(--rule); padding:20px 24px; position:relative; }
-  .group-section::before { content:""; position:absolute; top:0; left:0;
-    width:64px; height:1px; background:var(--gold); }
-  .group-section h2 { margin:0; }
-  .group-section h2 .cnt { color:var(--paper-dim); font-weight:400;
-    font-size:0.62em; font-family:'IBM Plex Mono',monospace; letter-spacing:0.04em; }
-  .group-desc { color:var(--paper-dim); font-size:0.92em; margin:4px 0 14px;
-    max-width:980px; line-height:1.6; font-family:'Source Serif 4',Georgia,serif; }
-  table.runs { width:100%; border-collapse:collapse; font-size:0.82em;
-    background:var(--panel); border:1px solid var(--rule); }
-  table.runs th { background:transparent; color:var(--paper-dim); text-align:right;
-    padding:8px 11px; border-bottom:1px solid var(--rule-bright); font-weight:500;
-    text-transform:uppercase; font-size:9.5px; letter-spacing:0.14em; cursor:pointer;
-    user-select:none; font-family:'IBM Plex Mono',ui-monospace,monospace;
-    white-space:nowrap; }
-  table.runs th:first-child, table.runs th.l { text-align:left; }
-  table.runs td { padding:7px 11px; border-bottom:1px solid var(--rule);
-    text-align:right; color:var(--paper);
-    font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:0.95em;
-    white-space:nowrap; }
-  table.runs td:first-child, table.runs td.l { text-align:left; }
-  table.runs tr.champion { box-shadow:inset 3px 0 0 var(--gold);
-    background:rgba(187,140,77,0.05); }
-  table.runs tr.champion td { font-weight:600; }
-  table.runs tr.champion td:first-child::before { content:"\\2605 "; color:var(--gold); }
-  table.runs tr.neg-comp td.comp { color:var(--v-broken); }
-  .n-chip { display:inline-block; padding:0 5px; font-size:8.5px;
-    font-family:'IBM Plex Mono',monospace; letter-spacing:0.08em;
-    text-transform:uppercase; border:1px solid; margin-left:5px;
-    vertical-align:middle; }
-  .n-chip.eval { color:var(--v-pass); border-color:var(--v-pass); }
-  .n-chip.scr  { color:var(--v-minor); border-color:var(--v-minor); }
-  body.master .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px;
-    margin-top:8px; }
-  body.master .card { background:var(--panel); border:1px solid var(--rule);
-    padding:18px 20px; position:relative; }
-  body.master .card::before { content:""; position:absolute; top:0; left:0;
-    width:48px; height:1px; background:var(--gold); }
-  body.master .card img { max-width:100%; height:auto; background:#fff;
-    padding:4px; border:1px solid var(--rule); display:block; }
-  body.master .card .cap { color:var(--paper-dim); font-size:11px; margin:8px 0 0;
-    font-family:'IBM Plex Mono',monospace; line-height:1.5; }
-  body.master .panel-2col { grid-column:1 / 3; }
-  body.master .filter-box { width:360px; max-width:60vw; padding:8px 11px;
-    background:var(--ink); border:1px solid var(--rule); color:var(--paper);
-    font-family:'IBM Plex Mono',monospace; font-size:12px; margin-bottom:6px; }
-  body.master table.stackmx { width:auto; }
-  body.master footer { border-top:1px solid var(--rule); color:var(--paper-dim);
-    font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.04em;
-    line-height:1.9; padding:22px 0 0; margin-top:30px; }
-  body.master footer code { background:var(--ink); color:var(--paper);
-    border:1px solid var(--rule); padding:1px 5px; }
+SHARED_CSS = r"""
+ :root{
+   --ink:#0a0a0d; --paper:#e6e1d6; --paper-dim:#a89e8c;
+   --rule:#1c1c20; --rule-bright:#2a2a30;
+   --panel:#111114; --panel2:#16161a;
+   --accent:#bb8c4d; --accent-dim:#7a5e36;
+   --v-pass:#3fb950; --v-minor:#d29922; --v-major:#f0883e; --v-broken:#f85149;
+   --v-novel:#a371f7; --v-derivative:#58a6ff; --v-numerology:#8b949e;
+   --v-falsified:#db6d28; --v-infra:#8b949e;
+ }
+ *{margin:0;padding:0;box-sizing:border-box;}
+ html{scroll-behavior:smooth;}
+ html,body{background:var(--ink);}
+ body{font-family:'Source Serif 4','Charter','Source Serif Pro',Georgia,serif;
+      color:var(--paper);padding:32px 36px 80px;line-height:1.6;
+      max-width:1320px;margin:0 auto;font-size:15px;
+      font-variant-numeric:tabular-nums;position:relative;}
+ a{color:var(--v-derivative);text-decoration:none;border-bottom:1px solid transparent;
+   transition:border-color 160ms ease;}
+ a:hover{border-bottom-color:var(--v-derivative);}
+ h1{font-family:'Source Serif 4',Georgia,serif;font-weight:600;
+    font-size:36px;line-height:1.12;color:var(--paper);letter-spacing:-0.005em;
+    margin-bottom:6px;}
+ h2{font-family:'Source Serif 4',Georgia,serif;font-weight:600;
+    font-size:21px;color:var(--paper);margin-bottom:12px;letter-spacing:-0.003em;}
+ h3{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:600;font-size:11px;
+    text-transform:uppercase;letter-spacing:0.16em;color:var(--paper-dim);
+    margin:16px 0 10px 0;}
+ .sub{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;
+      text-transform:uppercase;letter-spacing:0.16em;color:var(--paper-dim);
+      margin:2px 0 4px;}
+ .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:0.85em;}
+ code{background:var(--ink);padding:1px 5px;font-family:'IBM Plex Mono',monospace;
+      border:1px solid var(--rule);font-size:0.9em;color:var(--paper);}
+ /* masthead CTA pills */
+ .mast-row{margin:10px 0 6px 0;display:flex;flex-wrap:wrap;gap:6px;}
+ .mast-pill{display:inline-block;padding:3px 10px;
+            border:1px solid var(--accent-dim);color:var(--accent);
+            font-family:'IBM Plex Mono',monospace;font-size:10px;
+            text-transform:uppercase;letter-spacing:0.16em;font-weight:600;
+            text-decoration:none;}
+ .mast-pill:hover{background:var(--accent-dim);color:var(--ink);
+                  border-bottom-color:var(--accent-dim);}
+ .mast-pill.repo{border-color:var(--v-novel);color:var(--v-novel);}
+ .mast-pill.repo:hover{background:var(--v-novel);color:var(--ink);}
+ .mast-pill.lit{border-color:var(--v-derivative);color:var(--v-derivative);}
+ .mast-pill.lit:hover{background:var(--v-derivative);color:var(--ink);}
+ .mast-pill.paper{border-color:var(--v-pass);color:var(--v-pass);}
+ .mast-pill.paper:hover{background:var(--v-pass);color:var(--ink);}
+ .live-link{display:inline-block;padding:3px 10px;border:1px solid var(--v-pass);
+            color:var(--v-pass);font-family:'IBM Plex Mono',monospace;
+            font-size:10px;text-transform:uppercase;letter-spacing:0.18em;
+            font-weight:600;text-decoration:none;}
+ .live-link:hover{background:var(--v-pass);color:var(--ink);}
+ /* formula chip */
+ .formula-chip{background:var(--ink);border:1px solid var(--rule);
+               border-left:2px solid var(--accent);padding:11px 16px;
+               font-family:'IBM Plex Mono',monospace;font-size:0.8em;
+               margin:8px 0 14px;color:var(--paper);word-break:break-word;}
+ .formula-chip .fp{color:var(--paper-dim);font-size:0.92em;}
+ /* KPI ribbon */
+ .ribbon{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+         gap:1px;background:var(--rule);border:1px solid var(--rule);
+         margin:14px 0 24px;}
+ .kpi{background:var(--panel);padding:14px 16px;}
+ .kpi .label{color:var(--paper-dim);font-size:9.5px;
+             font-family:'IBM Plex Mono',monospace;text-transform:uppercase;
+             letter-spacing:0.16em;}
+ .kpi .value{font-family:'Source Serif 4',Georgia,serif;font-size:24px;
+             font-weight:600;margin-top:4px;color:var(--paper);
+             letter-spacing:-0.005em;line-height:1.1;}
+ .kpi .value small{font-size:11px;color:var(--paper-dim);font-weight:400;}
+ .kpi.positive{box-shadow:inset 3px 0 0 var(--v-pass);}
+ .kpi.negative{box-shadow:inset 3px 0 0 var(--v-broken);}
+ .kpi.neutral{box-shadow:inset 3px 0 0 var(--accent-dim);}
+ /* how-to-read */
+ .how-to-read{background:var(--panel);border:1px solid var(--rule);
+              border-left:2px solid var(--v-pass);padding:18px 24px;
+              margin:18px 0;font-family:'Source Serif 4',Georgia,serif;
+              line-height:1.6;}
+ .how-to-read h3{font-family:'IBM Plex Mono',monospace;font-size:11px;
+                 text-transform:uppercase;letter-spacing:0.18em;
+                 color:var(--paper-dim);margin:0 0 12px 0;}
+ .how-to-read ul{list-style:none;margin:0;padding:0;
+                 display:grid;grid-template-columns:1fr 1fr;gap:10px 22px;}
+ .how-to-read li{padding-left:14px;border-left:1px solid var(--rule-bright);
+                 color:var(--paper);font-size:14px;line-height:1.55;}
+ .how-to-read li b{color:var(--paper);font-weight:600;}
+ .how-to-read code{background:var(--ink);padding:1px 5px;
+                   font-family:'IBM Plex Mono',monospace;font-size:0.88em;
+                   border:1px solid var(--rule);}
+ .how-to-read .chip-scr{background:#3a2e13;color:#e0b15a;padding:1px 6px;
+                        border-radius:3px;font-family:'IBM Plex Mono',monospace;
+                        font-size:0.82em;font-weight:600;letter-spacing:0.04em;}
+ .how-to-read .chip-eval{background:#13303a;color:#5ac8e0;padding:1px 6px;
+                         border-radius:3px;font-family:'IBM Plex Mono',monospace;
+                         font-size:0.82em;font-weight:600;letter-spacing:0.04em;}
+ @media(max-width:880px){.how-to-read ul{grid-template-columns:1fr;}}
+ /* headline ribbon */
+ .headline-ribbon{background:var(--panel);border:1px solid var(--rule);
+                  border-left:2px solid var(--accent);padding:18px 24px;
+                  margin:18px 0;font-family:'Source Serif 4',Georgia,serif;
+                  line-height:1.55;}
+ .headline-ribbon .tag-note{font-family:'IBM Plex Mono',monospace;font-weight:600;
+                  color:var(--accent);font-size:10px;text-transform:uppercase;
+                  letter-spacing:0.16em;display:block;margin-bottom:10px;}
+ .headline-ribbon h2{font-size:19px;margin:0 0 8px;}
+ .headline-ribbon ul{margin:6px 0 0 20px;padding:0;}
+ .headline-ribbon li{margin:5px 0;font-size:0.95em;}
+ .headline-ribbon code{background:var(--ink);padding:1px 5px;
+                  font-family:'IBM Plex Mono',monospace;border:1px solid var(--rule);
+                  font-size:0.86em;color:var(--paper);}
+ /* generic card / section */
+ .card,section.card{background:var(--panel);border:1px solid var(--rule);
+       padding:22px 26px;margin-bottom:22px;position:relative;}
+ .card::before{content:"";position:absolute;top:0;left:0;width:48px;
+               height:1px;background:var(--accent);}
+ .card p{margin-bottom:10px;font-size:0.96em;line-height:1.6;}
+ .card ul{margin:6px 0 12px 22px;font-size:0.95em;line-height:1.6;}
+ .card ul li{margin-bottom:4px;}
+ .card img{max-width:100%;height:auto;background:#fff;padding:4px;
+           border:1px solid var(--rule);display:block;}
+ .card .cap{color:var(--paper-dim);font-size:11px;margin:8px 0 0;
+            font-family:'IBM Plex Mono',monospace;line-height:1.5;}
+ .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px;}
+ .grid .card{margin-bottom:0;}
+ .panel-2col{grid-column:1 / 3;}
+ @media(max-width:980px){.grid{grid-template-columns:1fr;}
+   .panel-2col{grid-column:auto;}}
+ /* hypothesis status grid */
+ .hyp-grid-summary{font-family:'IBM Plex Mono',monospace;font-size:0.82em;
+                   color:var(--paper-dim);margin:2px 0 8px;}
+ .hyp-grid-summary b{color:var(--paper);font-weight:600;}
+ .legend-row{margin:8px 0 14px 0;font-size:0.78em;color:var(--paper-dim);
+             font-family:'IBM Plex Mono',monospace;letter-spacing:0.06em;}
+ .legend-row .swatch{display:inline-block;width:12px;height:12px;
+                     vertical-align:middle;margin:0 4px 0 10px;
+                     border:1px solid var(--rule-bright);}
+ .hyp-grid-row{display:flex;align-items:center;margin-bottom:4px;
+               font-family:'IBM Plex Mono',monospace;font-size:0.78em;}
+ .hyp-grid-row .gid{width:120px;color:var(--paper-dim);flex:0 0 120px;
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+ .hyp-cell{width:30px;height:24px;margin-right:3px;
+           display:inline-flex;align-items:center;justify-content:center;
+           font-size:0.72em;color:#0a0a0d;cursor:pointer;text-decoration:none;
+           border:1px solid var(--rule);font-weight:600;}
+ .hyp-cell:hover{outline:1px solid var(--accent);border-bottom-color:var(--rule);}
+ .hyp-cell.empty{background:var(--rule);color:#484f58;cursor:default;
+                 border-color:transparent;}
+ .v-supported{background:var(--v-pass);}
+ .v-falsified{background:var(--v-falsified);color:#fff;}
+ .v-directional{background:var(--v-minor);}
+ .v-inconclusive{background:var(--v-numerology);}
+ .v-pending{background:#2a2e35;color:#6a7079;}
+ /* runs tables */
+ table.runs{width:100%;border-collapse:collapse;font-size:0.82em;
+            background:var(--panel);border:1px solid var(--rule);}
+ table.runs th{background:transparent;color:var(--paper-dim);text-align:right;
+               padding:8px 11px;border-bottom:1px solid var(--rule-bright);
+               font-weight:500;text-transform:uppercase;font-size:9.5px;
+               letter-spacing:0.14em;cursor:pointer;user-select:none;
+               font-family:'IBM Plex Mono',monospace;white-space:nowrap;}
+ table.runs th:first-child,table.runs th.l{text-align:left;}
+ table.runs td{padding:7px 11px;border-bottom:1px solid var(--rule);
+               text-align:right;color:var(--paper);
+               font-family:'IBM Plex Mono',monospace;font-size:0.95em;
+               white-space:nowrap;}
+ table.runs td:first-child,table.runs td.l{text-align:left;}
+ table.runs tr.champion{box-shadow:inset 3px 0 0 var(--accent);
+                        background:rgba(187,140,77,0.06);}
+ table.runs tr.champion td{font-weight:600;}
+ table.runs tr.champion td:first-child::before{content:"\2605 ";color:var(--accent);}
+ table.runs tr.neg-comp td.comp{color:var(--v-broken);}
+ table.runs tr.vr-supported td.l:first-child{box-shadow:inset 3px 0 0 var(--v-pass);}
+ table.runs tr.vr-falsified td.l:first-child{box-shadow:inset 3px 0 0 var(--v-falsified);}
+ table.runs tr.vr-directional td.l:first-child{box-shadow:inset 3px 0 0 var(--v-minor);}
+ table.runs tr.vr-inconclusive td.l:first-child{box-shadow:inset 3px 0 0 var(--v-numerology);}
+ .arr{font-size:9px;color:var(--accent);margin-left:3px;}
+ .n-chip{display:inline-block;padding:0 5px;font-size:8.5px;
+         font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em;
+         text-transform:uppercase;border:1px solid;margin-left:5px;
+         vertical-align:middle;}
+ .n-chip.eval{color:var(--v-pass);border-color:var(--v-pass);}
+ .n-chip.scr{color:var(--v-minor);border-color:var(--v-minor);}
+ .filter-box{width:360px;max-width:60vw;padding:8px 11px;background:var(--ink);
+             border:1px solid var(--rule);color:var(--paper);
+             font-family:'IBM Plex Mono',monospace;font-size:12px;margin-bottom:6px;}
+ .group-section{margin-top:26px;background:var(--panel);border:1px solid var(--rule);
+                padding:20px 24px;position:relative;}
+ .group-section::before{content:"";position:absolute;top:0;left:0;
+                        width:64px;height:1px;background:var(--accent);}
+ .group-section h2{margin:0;}
+ .group-section h2 .cnt{color:var(--paper-dim);font-weight:400;font-size:0.62em;
+                        font-family:'IBM Plex Mono',monospace;letter-spacing:0.04em;}
+ .group-desc{color:var(--paper-dim);font-size:0.92em;margin:4px 0 14px;
+             max-width:980px;line-height:1.6;}
+ .tablewrap{overflow-x:auto;}
+ /* per-experiment header */
+ .head-grid{display:grid;grid-template-columns:1fr auto;gap:24px;
+            align-items:start;padding-bottom:18px;
+            border-bottom:1px solid var(--rule);margin-bottom:24px;}
+ .head-left .tag-display{font-family:'Source Serif 4',Georgia,serif;
+    font-size:40px;font-weight:600;line-height:1.05;color:var(--paper);
+    letter-spacing:-0.012em;word-break:break-word;}
+ .head-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;
+             min-width:220px;}
+ .head-right .back{font-family:'IBM Plex Mono',monospace;font-size:11px;
+    text-transform:uppercase;letter-spacing:0.18em;color:var(--paper-dim);}
+ .pill{display:inline-block;background:transparent;border:1px solid var(--rule-bright);
+       padding:3px 10px;font-size:0.72em;color:var(--paper-dim);
+       font-family:'IBM Plex Mono',monospace;margin:0 4px 4px 0;
+       text-transform:uppercase;letter-spacing:0.12em;}
+ .pill.hyp{border-color:var(--v-derivative);color:var(--v-derivative);}
+ .pill.grp{border-color:var(--v-novel);color:var(--v-novel);}
+ .pill.ds{border-color:var(--accent-dim);color:var(--accent);}
+ .verdict-row{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;}
+ .vbadge{display:inline-block;padding:3px 9px;font-family:'IBM Plex Mono',monospace;
+         font-size:0.7em;font-weight:600;text-transform:uppercase;
+         letter-spacing:0.1em;border:1px solid;}
+ .vbadge.keep{color:var(--v-pass);border-color:var(--v-pass);}
+ .vbadge.discard{color:var(--v-broken);border-color:var(--v-broken);}
+ .vbadge.prov{color:var(--paper-dim);border-color:var(--rule-bright);}
+ /* key-numbers strip */
+ .kn-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+           gap:1px;background:var(--rule);border:1px solid var(--rule);
+           margin-bottom:24px;}
+ .kn-tile{background:var(--panel);padding:18px;position:relative;overflow:hidden;}
+ .kn-tile .kn-val{font-family:'Source Serif 4',Georgia,serif;font-size:26px;
+                  font-weight:600;line-height:1.05;color:var(--paper);
+                  letter-spacing:-0.005em;}
+ .kn-tile .kn-lbl{font-family:'IBM Plex Mono',monospace;font-size:9.5px;
+                  text-transform:uppercase;letter-spacing:0.16em;
+                  color:var(--paper-dim);margin-top:6px;}
+ .kn-tile.tint-pos{box-shadow:inset 3px 0 0 var(--v-pass);}
+ .kn-tile.tint-neg{box-shadow:inset 3px 0 0 var(--v-broken);}
+ .kn-tile.tint-neu{box-shadow:inset 3px 0 0 var(--accent-dim);}
+ /* generic key/value + breakdown tables */
+ .kvtable{width:100%;border-collapse:collapse;font-size:0.9em;}
+ .kvtable td,.kvtable th{padding:8px 12px;border-bottom:1px solid var(--rule);
+                         text-align:left;}
+ .kvtable th{color:var(--paper-dim);font-family:'IBM Plex Mono',monospace;
+             font-size:10px;text-transform:uppercase;letter-spacing:0.16em;
+             border-bottom:1px solid var(--rule-bright);font-weight:500;}
+ .kvtable td.k{color:var(--paper-dim);width:46%;}
+ .kvtable td.v{color:var(--paper);font-family:'IBM Plex Mono',monospace;}
+ .breakdown td.term{font-family:'IBM Plex Mono',monospace;}
+ .pos{color:var(--v-pass);} .neg{color:var(--v-broken);} .mut{color:var(--paper-dim);}
+ .warn{color:var(--v-major);font-style:italic;}
+ /* reasoning + markdown body */
+ .md-body p{margin:8px 0 12px;} .md-body p:first-child{margin-top:0;}
+ .md-body strong,.md-body b{color:var(--paper);font-weight:600;}
+ .md-body em,.md-body i{font-style:italic;}
+ .md-body code{font-family:'IBM Plex Mono',monospace;font-size:0.86em;
+    background:var(--panel2);padding:1px 5px;border-radius:3px;border:none;}
+ .md-body pre{font-family:'IBM Plex Mono',monospace;font-size:0.85em;
+    background:var(--panel2);padding:10px 12px;border-radius:5px;
+    border:1px solid var(--rule);overflow-x:auto;margin:10px 0;white-space:pre-wrap;}
+ .md-body ul,.md-body ol{margin:8px 0 12px 22px;}
+ .md-body li{margin:3px 0;}
+ .md-body blockquote{border-left:3px solid var(--accent-dim);padding:6px 14px;
+    margin:10px 0;color:var(--paper-dim);}
+ .md-body table{border-collapse:collapse;margin:10px 0;font-size:0.92em;width:auto;}
+ .md-body th,.md-body td{border:1px solid var(--rule);padding:6px 10px;text-align:left;}
+ .md-body th{background:var(--panel2);font-weight:600;}
+ .md-body h2,.md-body h3,.md-body h4{color:var(--paper);text-transform:none;
+    letter-spacing:0;font-family:'Source Serif 4',Georgia,serif;margin:12px 0 6px;}
+ .reason-section{margin-bottom:16px;}
+ .reason-section .lbl{color:var(--accent);font-family:'IBM Plex Mono',monospace;
+    font-size:10px;text-transform:uppercase;letter-spacing:0.18em;
+    margin-bottom:6px;font-weight:600;}
+ .quote{border-left:2px solid var(--accent);padding:10px 18px;background:var(--ink);
+        font-size:0.95em;color:var(--paper);margin:10px 0;line-height:1.55;}
+ /* composite stacked bar */
+ .comp-stack{display:flex;min-height:34px;border:1px solid var(--rule);
+             margin:14px 0 8px;font-family:'IBM Plex Mono',monospace;
+             font-size:9.5px;flex-wrap:wrap;}
+ .comp-stack .seg{display:flex;align-items:center;justify-content:center;
+                  color:var(--ink);font-weight:600;border-right:1px solid var(--ink);
+                  padding:4px 6px;white-space:nowrap;overflow:hidden;}
+ .comp-stack .seg.pos{background:var(--v-pass);}
+ .comp-stack .seg.cost{background:var(--v-major);}
+ /* samples + stack matrix */
+ .charts{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+ @media(max-width:980px){.charts{grid-template-columns:1fr;}
+   .head-grid{grid-template-columns:1fr;}.head-right{align-items:flex-start;}
+   .verdict-row{justify-content:flex-start;}}
+ pre.sample{background:var(--ink);border:1px solid var(--rule);
+            border-left:2px solid var(--accent-dim);padding:10px 12px;
+            white-space:pre-wrap;word-break:break-word;max-height:340px;
+            overflow:auto;font-size:0.82em;font-family:'IBM Plex Mono',monospace;
+            color:var(--paper);}
+ table.stackmx{width:auto;border-collapse:collapse;}
+ table.stackmx td.sc{text-align:center;font-weight:600;font-size:11px;
+            white-space:nowrap;padding:7px 9px;border:1px solid var(--rule);}
+ table.stackmx th{white-space:nowrap;padding:7px 9px;color:var(--paper-dim);
+            font-family:'IBM Plex Mono',monospace;font-size:10px;
+            text-transform:uppercase;letter-spacing:0.1em;border:1px solid var(--rule);}
+ .sc.stack{background:#16331f;color:#7fe0a0;} .sc.care{background:#3a3010;color:#e6c25a;}
+ .sc.compete{background:#3a1616;color:#f08080;} .sc.self{background:#1a1d24;color:var(--paper-dim);}
+ .sc.measured{outline:2px solid #fff;outline-offset:-2px;}
+ .sc .meas{font-size:9px;color:#fff;font-weight:700;}
+ .sc.scl{display:inline-block;padding:1px 6px;border-radius:4px;font-weight:600;}
+ /* deep-inspection accordions */
+ details.deep{margin:14px 0;border-top:1px solid var(--rule);padding-top:14px;}
+ details.deep > summary{cursor:pointer;list-style:none;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;
+    letter-spacing:0.18em;color:var(--paper-dim);padding:6px 0;}
+ details.deep > summary:hover{color:var(--accent);}
+ details.deep > summary::-webkit-details-marker{display:none;}
+ details.deep > summary::before{content:"\25B8";margin-right:10px;color:var(--accent);}
+ details.deep[open] > summary::before{content:"\25BE";}
+ details.deep > .body{padding:14px 0 6px 24px;font-size:0.95em;
+    border-left:1px solid var(--rule);margin-left:5px;margin-top:6px;}
+ /* cross-references grid */
+ .xrefs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+             gap:10px;margin-top:6px;}
+ .xref-card{display:block;background:var(--ink);border:1px solid var(--rule);
+            padding:12px 14px;text-decoration:none;
+            transition:border-color 160ms ease,transform 160ms ease;}
+ .xref-card:hover{border-color:var(--accent);transform:translateY(-1px);border-bottom-color:var(--accent);}
+ .xref-card .xref-lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;
+    text-transform:uppercase;letter-spacing:0.18em;color:var(--paper-dim);margin-bottom:6px;}
+ .xref-card .xref-tag{font-family:'IBM Plex Mono',monospace;font-size:0.88em;
+    color:var(--paper);font-weight:500;}
+ .xref-card .xref-meta{font-family:'IBM Plex Mono',monospace;font-size:0.78em;
+    color:var(--paper-dim);margin-top:4px;}
+ /* footer */
+ .doc-footer{margin:24px 0 6px;font-family:'IBM Plex Mono',monospace;
+             font-size:10px;color:var(--paper-dim);letter-spacing:0.12em;
+             text-transform:uppercase;}
+ .doc-footer a{color:var(--accent);border-bottom:1px dotted var(--accent-dim);}
+ .doc-footer a:hover{color:var(--v-pass);border-bottom-color:var(--v-pass);}
+ .meta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--paper-dim);
+       margin-top:18px;padding-top:18px;border-top:1px solid var(--rule);
+       line-height:1.9;letter-spacing:0.04em;}
+ .meta code{background:var(--ink);padding:1px 5px;color:var(--paper);border:1px solid var(--rule);}
+ .empty{color:var(--paper-dim);font-style:italic;font-size:0.9em;}
 """
 
-# Master runs-table columns the mandate names explicitly:
-# exp# | tag | hypothesis | rung | behavior | dMMLU | PPL | CR_jail |
-#       over_refusal | composite | verdict | n + chip | link
-MASTER_COLUMNS = [
-    ("experiment_num", "exp#", True),
-    ("tag", "tag", False),
-    ("hypothesis", "hypothesis", False),
-    ("rung", "rung", True),
-    ("behavior", "behavior", False),
-    ("mmlu_drop_pp", "dMMLU", True),
-    ("perplexity", "PPL", True),
-    ("compliance_rate", "CR_jail", True),
-    ("harmless_refusal_rate", "over_refusal", True),
-    ("composite", "composite", True),
-    ("status", "verdict", False),
-]
+_FONT_LINK = (
+    "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">"
+    "<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>"
+    "<link href=\"https://fonts.googleapis.com/css2?"
+    "family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&"
+    "family=IBM+Plex+Mono:wght@400;500;600&display=swap\" rel=\"stylesheet\">"
+)
 
 
 # ===========================================================================
@@ -333,19 +476,22 @@ def load_reasoning(results_dir: Path) -> dict:
         return {}
 
 
+def _esc(s: object) -> str:
+    return html.escape("" if s is None else str(s))
+
+
 def _flatten(row: dict) -> dict:
     """Lift nested config fields to the top level for table rendering."""
     flat = dict(row)
     cfg = row.get("config", {}) or {}
     for k in ("tag", "operation", "source", "alpha", "behavior", "model",
-              "hypothesis_id"):
+              "quant", "hypothesis_id"):
         if flat.get(k) is None:
             flat[k] = cfg.get(k)
     return flat
 
 
 def _tier_of(row: dict) -> str:
-    """n<=3 => SCREENING ; n>=7 => EVALUATION (4..6 stays SCREENING per §7)."""
     explicit = row.get("tier")
     n = int(row.get("n_seeds", 1) or 1)
     if explicit in ("SCREENING", "EVALUATION"):
@@ -353,29 +499,135 @@ def _tier_of(row: dict) -> str:
     return "EVALUATION" if n >= 7 else "SCREENING"
 
 
-def _verdict_class(status: Optional[str]) -> str:
-    s = (status or "").upper()
-    if s == "KEEP":
-        return "keep"
-    if s == "DISCARD":
-        return "discard"
-    if "MISS" in s:
-        return "near-miss"
-    return ""
+def _num(row: dict, key: str, default: float = 0.0) -> float:
+    v = row.get(key)
+    try:
+        x = float(v)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return default
+    if not math.isfinite(x):
+        return default
+    return x
+
+
+_MODEL_SHORT = {
+    "fake": "fake",
+    "Qwen/Qwen2.5-0.5B-Instruct": "Qwen2.5-0.5B",
+    "models/google/gemma-3-270m-it": "gemma-3-270m",
+    "models/google/gemma-3-1b-it": "gemma-3-1b",
+}
+
+
+def _short_model(m: object) -> str:
+    s = str(m or "")
+    return _MODEL_SHORT.get(s, s.split("/")[-1] if s else "—")
 
 
 # ===========================================================================
-# Hypothesis directory resolution (row <-> ideas/<dir>)
+# Hypothesis registry (IDEA_TABLE.md) — the canonical 70-hypothesis status set
 # ===========================================================================
-def list_idea_dirs(repo_root: Path) -> list[Path]:
-    ideas = repo_root / "ideas"
-    if not ideas.exists():
-        return []
-    out = []
-    for d in sorted(ideas.iterdir()):
-        if d.is_dir() and not d.name.startswith("_"):
-            out.append(d)
+# Verdict status -> (css class, swatch glyph) for the grid + run-row tint.
+VERDICT_CLASS = {
+    "SUPPORTED": "v-supported",
+    "FALSIFIED": "v-falsified",
+    "DIRECTIONAL": "v-directional",
+    "INCONCLUSIVE": "v-inconclusive",
+    "PENDING": "v-pending",
+}
+VERDICT_LEGEND = [
+    ("SUPPORTED", "v-supported", "supported"),
+    ("FALSIFIED", "v-falsified", "falsified"),
+    ("DIRECTIONAL", "v-directional", "directional"),
+    ("INCONCLUSIVE", "v-inconclusive", "inconclusive"),
+    ("PENDING", "v-pending", "pending"),
+]
+
+# Block layout for the grid (E1..E50 in A-F, then N1..N20).
+HYP_BLOCKS = [
+    ("Block A · foundations", [f"E{i}" for i in range(1, 9)]),
+    ("Block B · CAST / gating", [f"E{i}" for i in range(9, 17)]),
+    ("Block C · stacking", [f"E{i}" for i in range(17, 27)]),
+    ("Block D · geometry", [f"E{i}" for i in range(27, 34)]),
+    ("Block E · mechanistic", [f"E{i}" for i in range(34, 41)]),
+    ("Block F · robustness", [f"E{i}" for i in range(41, 51)]),
+    ("Novel N1-N12", [f"N{i}" for i in range(1, 13)]),
+    ("Novel N13-N20", [f"N{i}" for i in range(13, 21)]),
+]
+
+
+def parse_idea_table(idea_table_md: Path) -> dict[str, dict]:
+    """Parse IDEA_TABLE.md into {id: {title, hypothesis, metric, status,
+    verdict, rung, idea_dir}}.
+
+    The status column holds e.g. ``SUPPORTED(scr): ...`` / ``FALSIFIED(scr): ...``
+    / ``DIRECTIONAL(...)`` / ``INCONCLUSIVE(...)`` / ``PENDING``. The leading
+    verdict keyword is extracted; the trailing prose is kept as the verdict
+    detail. Rows look like::
+
+        | E2 | Fisher layer selection | A | A1 (site/layer) | <hypothesis> |
+            <metric+threshold> | FALSIFIED(scr): rho=+0.14 ... | 2 | `ideas/20_.../`
+    """
+    out: dict[str, dict] = {}
+    if not idea_table_md.exists():
+        return out
+    text = idea_table_md.read_text(encoding="utf-8", errors="replace")
+    id_re = re.compile(r"^(E\d{1,2}|N\d{1,2})$")
+    verdict_kw = re.compile(
+        r"\b(SUPPORTED|FALSIFIED|DIRECTIONAL|INCONCLUSIVE|PENDING)\b")
+    for line in text.splitlines():
+        if "|" not in line:
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if not cells or not id_re.match(cells[0]):
+            continue
+        hid = cells[0]
+        title = cells[1] if len(cells) > 1 else ""
+        hypothesis = cells[4] if len(cells) > 4 else ""
+        metric = cells[5] if len(cells) > 5 else ""
+        status_cell = cells[6] if len(cells) > 6 else ""
+        rung = cells[7] if len(cells) > 7 else ""
+        idea_dir = cells[8] if len(cells) > 8 else ""
+        m = verdict_kw.search(status_cell)
+        verdict = m.group(1) if m else "PENDING"
+        out[hid] = {
+            "id": hid,
+            "title": title,
+            "hypothesis": hypothesis,
+            "metric": metric,
+            "status_cell": status_cell,
+            "verdict": verdict,
+            "verdict_detail": status_cell,
+            "rung": rung,
+            "idea_dir": idea_dir.strip("`").rstrip("/"),
+        }
     return out
+
+
+# ---------------------------------------------------------------------------
+# Tag <-> hypothesis resolution (drives run-row tint, hyp-page grouping, links)
+# ---------------------------------------------------------------------------
+def hypothesis_for_tag(tag: Optional[str]) -> Optional[str]:
+    """Map an experiment-row tag prefix to its primary hypothesis id (or None
+    for the infra/plumbing rows)."""
+    t = str(tag or "").lower()
+    if not t or "plumbing" in t or "fakelm" in t:
+        return None
+    if t.startswith("c1-e2") or t.startswith("c1_e2"):
+        return "E2"
+    if t.startswith("c3"):          # C3 / C3b operation comparison -> E27
+        return "E27"
+    if t.startswith("c4-n20") or t.startswith("c4_n20"):
+        return "N20"
+    if t.startswith("c6"):          # cross-scale alpha cliff -> E3
+        return "E3"
+    if t.startswith("e3"):
+        return "E3"
+    return None
+
+
+def hypothesis_label(row: dict) -> str:
+    hid = hypothesis_for_tag(row.get("tag") or (row.get("config", {}) or {}).get("tag"))
+    return hid or "—"
 
 
 def _idea_id(idea_dir: Path) -> str:
@@ -384,57 +636,150 @@ def _idea_id(idea_dir: Path) -> str:
     return m.group(1) if m else idea_dir.name
 
 
-def resolve_hypothesis_dir(row: dict, idea_dirs: list[Path]) -> Optional[Path]:
-    """Map an experiment row to its ideas/<dir>, if one can be resolved.
-
-    Priority:
-      1. explicit row/config 'hypothesis_id' (matches the dir's numeric id or
-         a token in the dir name).
-      2. tag token overlap with the dir name slug.
-    """
+def resolve_idea_dir(row: dict, idea_dirs: list[Path]) -> Optional[Path]:
+    """Token-overlap fallback: map a row to an ideas/<dir> when no E/N tag
+    prefix resolves (used for legacy / non-campaign tags). Priority: explicit
+    config hypothesis_id, then tag-token overlap with the dir slug."""
     if not idea_dirs:
         return None
-    hyp = row.get("hypothesis_id") or (row.get("config", {}) or {}).get("hypothesis_id")
-    tag = (row.get("tag") or (row.get("config", {}) or {}).get("tag") or "")
-    tag = str(tag).lower()
-
+    cfg = row.get("config", {}) or {}
+    hyp = row.get("hypothesis_id") or cfg.get("hypothesis_id")
+    tag = str(row.get("tag") or cfg.get("tag") or "").lower()
     if hyp is not None:
-        h = str(hyp).lower()
+        h = str(hyp).lower().lstrip("h").lstrip("e").lstrip("n")
         for d in idea_dirs:
-            if _idea_id(d) == h.lstrip("h").lstrip("e"):
+            if _idea_id(d) == h or h in d.name.lower():
                 return d
-            slug = d.name.lower()
-            if h in slug or h.lstrip("h").lstrip("e") == _idea_id(d):
-                return d
-
-    # token overlap heuristic on the tag.
     tag_tokens = set(re.split(r"[^a-z0-9]+", tag)) - {""}
     best, best_score = None, 0
     for d in idea_dirs:
-        slug_tokens = set(re.split(r"[^a-z0-9]+", d.name.lower())) - {""}
-        # drop the leading numeric id token from the comparison
-        slug_tokens = {t for t in slug_tokens if not t.isdigit()}
+        slug_tokens = {t for t in (set(re.split(r"[^a-z0-9]+", d.name.lower())) - {""})
+                       if not t.isdigit()}
         score = len(tag_tokens & slug_tokens)
         if score > best_score:
             best, best_score = d, score
     return best if best_score > 0 else None
 
 
-def hypothesis_label(row: dict, idea_dirs: list[Path]) -> str:
-    d = resolve_hypothesis_dir(row, idea_dirs)
+def resolve_hyp_id(row: dict, repo_root: Path, idea_dirs: list[Path]) -> Optional[str]:
+    """Unified row -> hypothesis-page id. Prefers the E/N registry id (real
+    campaign data); falls back to the numeric ideas/<dir> id (legacy / tests).
+    Both ids resolve to ``hyp/<id>.html``."""
+    hid = hypothesis_for_tag(row.get("config", {}).get("tag") if row.get("config") else row.get("tag"))
+    if hid:
+        return hid
+    d = resolve_idea_dir(row, idea_dirs)
     if d is not None:
-        return f"H{_idea_id(d)}"
-    hyp = row.get("hypothesis_id") or (row.get("config", {}) or {}).get("hypothesis_id")
-    return str(hyp) if hyp else "—"
+        return _idea_id(d)
+    return None
+
+
+# ---------------------------------------------------------------------------
+# ideas/<dir> resolution + IDEA.md parsing (statement / falsifier / predicted)
+# ---------------------------------------------------------------------------
+def list_idea_dirs(repo_root: Path) -> list[Path]:
+    ideas = repo_root / "ideas"
+    if not ideas.exists():
+        return []
+    return [d for d in sorted(ideas.iterdir())
+            if d.is_dir() and not d.name.startswith("_")]
+
+
+def _idea_dir_for_hyp(hid: str, repo_root: Path,
+                      table: dict[str, dict]) -> Optional[Path]:
+    """Resolve an ideas/<dir> for a hypothesis id, via the IDEA_TABLE idea_dir
+    column then a numeric / token fallback."""
+    info = table.get(hid, {})
+    rel = info.get("idea_dir", "")
+    if rel and rel.startswith("ideas/"):
+        cand = repo_root / rel
+        if cand.exists() and cand.is_dir():
+            return cand
+    # numeric mapping (10_/20_/30_ dirs encode E1/E2/E3 by their leading digits)
+    num_map = {"E1": "10", "E2": "20", "E3": "30"}
+    pref = num_map.get(hid)
+    if pref:
+        for d in list_idea_dirs(repo_root):
+            if d.name.startswith(pref + "_"):
+                return d
+    return None
+
+
+def _idea_dir_for_id(hid: str, repo_root: Path, table: dict[str, dict],
+                     idea_dirs: list[Path]) -> Optional[Path]:
+    """Resolve an ideas/<dir> for ANY hyp id — an E/N registry id (via
+    _idea_dir_for_hyp) or a numeric idea-dir id (direct lookup)."""
+    if hid in table:
+        d = _idea_dir_for_hyp(hid, repo_root, table)
+        if d is not None:
+            return d
+    if hid and hid.isdigit():
+        for d in idea_dirs:
+            if _idea_id(d) == hid:
+                return d
+    return None
+
+
+def _hyp_info(hid: str, table: dict[str, dict], repo_root: Path,
+              idea_dirs: list[Path]) -> dict:
+    """Return a hypothesis-info dict for ANY hid. E/N ids come straight from the
+    IDEA_TABLE registry; numeric idea-dir ids are synthesised from the idea
+    dir's IDEA.md (statement -> hypothesis, with a PENDING verdict)."""
+    if hid in table:
+        info = dict(table[hid])
+        if not info.get("title") or not info.get("hypothesis"):
+            d = _idea_dir_for_id(hid, repo_root, table, idea_dirs)
+            if d is not None:
+                idea = _parse_idea_md(d)
+                info.setdefault("title", idea.get("title", ""))
+                info["title"] = info.get("title") or idea.get("title", "")
+                info["hypothesis"] = info.get("hypothesis") or idea.get("statement", "")
+        return info
+    d = _idea_dir_for_id(hid, repo_root, table, idea_dirs)
+    if d is not None:
+        idea = _parse_idea_md(d)
+        return {"id": hid, "title": idea.get("title", ""),
+                "hypothesis": idea.get("statement", ""), "metric": "",
+                "status_cell": "", "verdict": "PENDING", "verdict_detail": "",
+                "rung": "", "idea_dir": str(d)}
+    return {"id": hid, "title": "", "hypothesis": "", "metric": "",
+            "verdict": "PENDING", "verdict_detail": ""}
+
+
+def _parse_idea_md(idea_dir: Path) -> dict:
+    out = {"statement": "", "falsifier": "", "predicted": "", "title": idea_dir.name}
+    for fname in ("IDEA.md", "README.md"):
+        p = idea_dir / fname
+        if not p.exists():
+            continue
+        text = p.read_text(encoding="utf-8", errors="replace")
+        m = re.search(r"^#\s+(.*)$", text, re.MULTILINE)
+        if m and out["title"] == idea_dir.name:
+            out["title"] = m.group(1).strip()
+
+        def _section(name):
+            mm = re.search(rf"^#{{1,6}}\s*{name}.*?$\n(.*?)(?=^#{{1,6}}\s|\Z)",
+                           text, re.MULTILINE | re.DOTALL | re.IGNORECASE)
+            return mm.group(1).strip() if mm else ""
+
+        if not out["statement"]:
+            out["statement"] = (_section("Claim") or _section("Hypothesis")
+                                or _section("TL;DR"))
+        if not out["falsifier"]:
+            out["falsifier"] = _section("Falsifier")
+        if not out["predicted"]:
+            out["predicted"] = (_section("Pre-registered prediction")
+                                or _section("Predicted delta")
+                                or _section("Predicted delta range")
+                                or _section("Prediction"))
+    return out
 
 
 # ===========================================================================
 # Minimal GFM-ish markdown -> HTML converter (NO literal ## / ** / |---| leak)
 # ===========================================================================
 def _md_inline(text: str) -> str:
-    """Inline markdown: escape, then bold / italic / code / links."""
     out = html.escape(text)
-    # inline code first (protect its contents from further formatting)
     code_spans: list[str] = []
 
     def _stash_code(m):
@@ -442,29 +787,24 @@ def _md_inline(text: str) -> str:
         return f"\x00CODE{len(code_spans) - 1}\x00"
 
     out = re.sub(r"`([^`]+)`", _stash_code, out)
-    # links [text](url)
     out = re.sub(r"\[([^\]]+)\]\(([^)]+)\)",
                  lambda m: f'<a href="{html.escape(m.group(2), quote=True)}">{m.group(1)}</a>',
                  out)
-    # bold **x** or __x__
     out = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", out)
     out = re.sub(r"__([^_]+)__", r"<strong>\1</strong>", out)
-    # italic *x* or _x_ (avoid touching remaining asterisks in isolation)
     out = re.sub(r"(?<![\w*])\*([^*\n]+)\*(?![\w*])", r"<em>\1</em>", out)
     out = re.sub(r"(?<![\w_])_([^_\n]+)_(?![\w_])", r"<em>\1</em>", out)
-    # restore code spans
+    # any stray bold/italic markers left over must NOT leak as literal "**"
+    out = out.replace("**", "").replace("__", "")
     for i, c in enumerate(code_spans):
-        out = out.replace(f"\x00CODE{i}\x00", f"<code>{c}</code>")
+        out = out.replace(f"\x00CODE{i}\x00", f"<code>{html.escape(c)}</code>")
     return out
 
 
 def md_to_html(md: str) -> str:
-    """Convert a GFM-ish markdown fragment to HTML.
-
-    Supports: ATX headings, bold/italic/inline-code, fenced code blocks,
-    blockquotes, unordered/ordered lists, and pipe tables (incl. the
-    |---|---| separator row, which is consumed — never leaked).
-    """
+    """Convert a GFM-ish markdown fragment to HTML. Supports ATX headings,
+    bold/italic/code, fenced code, blockquotes, lists, and pipe tables (the
+    |---| separator row is consumed, never leaked)."""
     if not md:
         return ""
     md = md.replace("\r\n", "\n").replace("\r", "\n")
@@ -482,7 +822,6 @@ def md_to_html(md: str) -> str:
     while i < n:
         line = lines[i]
 
-        # fenced code block
         if line.strip().startswith("```"):
             close_list(list_stack)
             i += 1
@@ -490,15 +829,16 @@ def md_to_html(md: str) -> str:
             while i < n and not lines[i].strip().startswith("```"):
                 buf.append(html.escape(lines[i]))
                 i += 1
-            i += 1  # skip closing fence
+            i += 1
             out.append("<pre><code>" + "\n".join(buf) + "</code></pre>")
             continue
 
-        # table: a line with pipes followed by a separator row of ---
-        if "|" in line and i + 1 < n and re.match(r"^\s*\|?[\s:|-]*-[-\s:|]*\|?\s*$", lines[i + 1]) and "-" in lines[i + 1]:
+        if ("|" in line and i + 1 < n
+                and re.match(r"^\s*\|?[\s:|-]*-[-\s:|]*\|?\s*$", lines[i + 1])
+                and "-" in lines[i + 1]):
             close_list(list_stack)
             header = [c.strip() for c in line.strip().strip("|").split("|")]
-            i += 2  # skip header + separator (separator is consumed, not leaked)
+            i += 2
             rows = []
             while i < n and "|" in lines[i] and lines[i].strip():
                 cells = [c.strip() for c in lines[i].strip().strip("|").split("|")]
@@ -511,16 +851,14 @@ def md_to_html(md: str) -> str:
             out.append(f"<table><thead><tr>{thead}</tr></thead><tbody>{body}</tbody></table>")
             continue
 
-        # heading
         m = re.match(r"^(#{1,6})\s+(.*)$", line)
         if m:
             close_list(list_stack)
-            lvl = min(len(m.group(1)) + 1, 6)  # bump so page h1 stays unique
+            lvl = min(len(m.group(1)) + 1, 6)
             out.append(f"<h{lvl}>{_md_inline(m.group(2).strip())}</h{lvl}>")
             i += 1
             continue
 
-        # blockquote
         if line.strip().startswith(">"):
             close_list(list_stack)
             buf = []
@@ -530,7 +868,6 @@ def md_to_html(md: str) -> str:
             out.append("<blockquote>" + "<br>".join(buf) + "</blockquote>")
             continue
 
-        # unordered list
         m = re.match(r"^\s*[-*+]\s+(.*)$", line)
         if m:
             if not list_stack or list_stack[-1] != "ul":
@@ -541,7 +878,6 @@ def md_to_html(md: str) -> str:
             i += 1
             continue
 
-        # ordered list
         m = re.match(r"^\s*\d+[.)]\s+(.*)$", line)
         if m:
             if not list_stack or list_stack[-1] != "ol":
@@ -552,13 +888,11 @@ def md_to_html(md: str) -> str:
             i += 1
             continue
 
-        # blank line
         if not line.strip():
             close_list(list_stack)
             i += 1
             continue
 
-        # paragraph (gather consecutive plain lines)
         close_list(list_stack)
         buf = [line]
         i += 1
@@ -586,49 +920,34 @@ def _mpl():
         return None
 
 
-def _num(row: dict, key: str, default: float = 0.0) -> float:
-    v = row.get(key)
-    try:
-        x = float(v)  # type: ignore[arg-type]  # guarded below + by except
-    except (TypeError, ValueError):
-        return default
-    # NaN/inf would silently poison radar/Pareto/composite-breakdown; clamp them.
-    if not math.isfinite(x):
-        return default
-    return x
-
-
 def _axis_scores(row: dict) -> dict:
-    """Five axes normalised to a 0..1 'higher=better' radar coordinate."""
     behavior = max(0.0, min(1.0, _num(row, "behavior_efficacy")))
     capability = max(0.0, min(1.0, 1.0 - _num(row, "mmlu_drop_pp")))
     coherence = max(0.0, min(1.0, 1.0 / (1.0 + _num(row, "dppl_norm")) - _num(row, "repetition_rate")))
     safety = max(0.0, min(1.0, 1.0 - _num(row, "compliance_rate")))
     selectivity = max(0.0, min(1.0, 0.5 + 0.5 * _num(row, "selectivity_gap")))
-    return {
-        "behavior": behavior, "capability": capability, "coherence": coherence,
-        "safety": safety, "selectivity": selectivity,
-    }
+    return {"behavior": behavior, "capability": capability, "coherence": coherence,
+            "safety": safety, "selectivity": selectivity}
 
 
 def plot_radar(rows: list[dict], out_path: Path) -> bool:
     plt = _mpl()
     if plt is None or not rows:
         return False
-    import math
     axes = ["behavior", "capability", "coherence", "safety", "selectivity"]
-    angles = [n / len(axes) * 2 * math.pi for n in range(len(axes))]
+    angles = [k / len(axes) * 2 * math.pi for k in range(len(axes))]
     angles += angles[:1]
     fig = plt.figure(figsize=(5.2, 4.2))
     ax = fig.add_subplot(111, polar=True)
     cmap = plt.get_cmap("tab10")
-    for idx, r in enumerate(rows[:8]):
+    use = sorted(rows, key=lambda r: _num(r, "composite", -1e18), reverse=True)[:8]
+    for idx, r in enumerate(use):
         sc = _axis_scores(r)
         vals = [sc[a] for a in axes]
         vals += vals[:1]
         label = str((r.get("config", {}) or {}).get("tag") or r.get("tag")
                     or f"exp{r.get('experiment_num')}")
-        ax.plot(angles, vals, linewidth=1.3, label=label, color=cmap(idx % 10))
+        ax.plot(angles, vals, linewidth=1.3, label=label[:18], color=cmap(idx % 10))
         ax.fill(angles, vals, alpha=0.07, color=cmap(idx % 10))
     ax.set_xticks(angles[:-1])
     ax.set_xticklabels(axes, fontsize=8)
@@ -649,13 +968,14 @@ def plot_parcoords(rows: list[dict], out_path: Path) -> bool:
     fig, ax = plt.subplots(figsize=(6.2, 3.4))
     cmap = plt.get_cmap("tab10")
     xs = list(range(len(axes)))
-    for idx, r in enumerate(rows[:8]):
+    use = sorted(rows, key=lambda r: _num(r, "composite", -1e18), reverse=True)[:8]
+    for idx, r in enumerate(use):
         sc = _axis_scores(r)
         ys = [sc[a] for a in axes]
         label = str((r.get("config", {}) or {}).get("tag") or r.get("tag")
                     or f"exp{r.get('experiment_num')}")
         ax.plot(xs, ys, marker="o", markersize=3, linewidth=1.1,
-                color=cmap(idx % 10), label=label)
+                color=cmap(idx % 10), label=label[:18])
     ax.set_xticks(xs)
     ax.set_xticklabels(axes, fontsize=8)
     ax.set_ylim(0, 1)
@@ -672,16 +992,11 @@ def plot_parcoords(rows: list[dict], out_path: Path) -> bool:
 def _is_baseline(row: dict) -> bool:
     tag = str((row.get("config", {}) or {}).get("tag") or row.get("tag") or "").lower()
     return ("baseline" in tag or "prior" in tag or bool(row.get("is_baseline"))
-            or int(row.get("rung", 0) or 0) == 0 and "smoke" in tag)
+            or ("a0.0" in tag) or ("plumbing" in tag))
 
 
 def plot_pareto(rows: list[dict], x_key: str, x_label: str, out_path: Path,
                 x_transform=None) -> bool:
-    """behavior_efficacy (y) vs a cost/constraint axis (x). Stars = baselines.
-
-    Dominated rows (some other row is >= on behavior AND better on the cost
-    axis) are drawn with a red outline.
-    """
     plt = _mpl()
     if plt is None or not rows:
         return False
@@ -692,8 +1007,6 @@ def plot_pareto(rows: list[dict], x_key: str, x_label: str, out_path: Path,
         if x_transform:
             x = x_transform(x)
         pts.append((x, y, r))
-    # dominance: a point is dominated if another has y>=y and x<=x (lower cost
-    # better) with at least one strict.
     dominated = []
     for (xi, yi, ri) in pts:
         dom = False
@@ -704,15 +1017,14 @@ def plot_pareto(rows: list[dict], x_key: str, x_label: str, out_path: Path,
                 dom = True
                 break
         dominated.append(dom)
-
     fig, ax = plt.subplots(figsize=(4.6, 3.4))
     for (xi, yi, ri), dom in zip(pts, dominated):
         if _is_baseline(ri):
-            ax.scatter([xi], [yi], marker="*", s=160, color="#f0a000",
+            ax.scatter([xi], [yi], marker="*", s=160, color="#bb8c4d",
                        edgecolors="#333", zorder=3)
         else:
             ax.scatter([xi], [yi], s=55,
-                       color=("#e05a5a" if dom else "#4ea1ff"),
+                       color=("#f85149" if dom else "#58a6ff"),
                        edgecolors=("#ff0000" if dom else "#1b3a5a"),
                        linewidths=(1.6 if dom else 0.8), zorder=2)
         ax.annotate(str(ri.get("experiment_num", "")), (xi, yi),
@@ -728,28 +1040,24 @@ def plot_pareto(rows: list[dict], x_key: str, x_label: str, out_path: Path,
 
 
 def plot_geometry(rows: list[dict], out_path: Path) -> bool:
-    """Small-multiples: dNorm (offshell), effective-rank-drop, norm-budget."""
     plt = _mpl()
     if plt is None or not rows:
         return False
-    xs = [str(r.get("experiment_num", i)) for i, r in enumerate(rows)]
-    offshell = [_num(r, "offshell_displacement") for r in rows]
-    erank_drop = [
-        _num(r, "effective_rank_base") - _num(r, "effective_rank_steer")
-        if ("effective_rank_base" in r or "effective_rank_steer" in r) else 0.0
-        for r in rows
-    ]
-    nbudget = [_num(r, "norm_budget") for r in rows]
+    use = rows[:24]
+    xs = [str(r.get("experiment_num", i)) for i, r in enumerate(use)]
+    offshell = [_num(r, "offshell_displacement") for r in use]
+    angular = [_num(r, "angular_displacement") for r in use]
+    fisher = [_num(r, "fisher_at_layer") for r in use]
     series = [
         (offshell, "off-shell displacement Δ‖h‖"),
-        (erank_drop, "effective-rank drop"),
-        (nbudget, "norm budget ‖Δh‖/‖h‖"),
+        (angular, "angular displacement (1−cos)"),
+        (fisher, "Fisher ratio at layer"),
     ]
-    fig, axs = plt.subplots(1, 3, figsize=(8.4, 2.8))
+    fig, axs = plt.subplots(1, 3, figsize=(9.0, 2.8))
     for ax, (vals, title) in zip(axs, series):
-        ax.bar(xs, vals, color="#4ea1ff")
+        ax.bar(xs, vals, color="#58a6ff")
         ax.set_title(title, fontsize=8)
-        ax.tick_params(axis="x", labelsize=6, rotation=0)
+        ax.tick_params(axis="x", labelsize=5, rotation=90)
         ax.tick_params(axis="y", labelsize=6)
         ax.grid(True, axis="y", alpha=0.2)
     fig.suptitle("Geometry probes per experiment", fontsize=9)
@@ -759,31 +1067,7 @@ def plot_geometry(rows: list[dict], out_path: Path) -> bool:
     return True
 
 
-def plot_seed_stability(rows: list[dict], out_path: Path) -> bool:
-    """Per-experiment composite bars (seed-stability surrogate when n=1)."""
-    plt = _mpl()
-    if plt is None or not rows:
-        return False
-    xs = [str(r.get("experiment_num", i)) for i, r in enumerate(rows)]
-    ys = [_num(r, "composite") for r in rows]
-    fig, ax = plt.subplots(figsize=(5.0, 2.8))
-    ax.bar(xs, ys, color="#6fd08c")
-    if ys:
-        mean = sum(ys) / len(ys)
-        ax.axhline(mean, color="#e0c15a", linestyle="--", linewidth=1,
-                   label=f"mean {mean:.3f}")
-        ax.legend(fontsize=7)
-    ax.set_title("Composite per run (seed-stability)", fontsize=9)
-    ax.tick_params(labelsize=7)
-    ax.grid(True, axis="y", alpha=0.2)
-    fig.tight_layout()
-    fig.savefig(out_path, dpi=90)
-    plt.close(fig)
-    return True
-
-
 def plot_coord_descent(rows: list[dict], out_path: Path) -> bool:
-    """Coordinate-descent small-multiples: composite vs layer / alpha."""
     plt = _mpl()
     if plt is None or len(rows) < 2:
         return False
@@ -804,7 +1088,7 @@ def plot_coord_descent(rows: list[dict], out_path: Path) -> bool:
         pts.sort()
         if pts:
             ax.plot([p[0] for p in pts], [p[1] for p in pts],
-                    marker="o", color="#4ea1ff")
+                    marker="o", color="#58a6ff")
         ax.set_xlabel(label, fontsize=8)
         ax.set_ylabel("composite", fontsize=8)
         ax.set_title(f"composite vs {label}", fontsize=8)
@@ -815,15 +1099,9 @@ def plot_coord_descent(rows: list[dict], out_path: Path) -> bool:
     return True
 
 
-def _sweep_axis(rows: list[dict]) -> tuple[str, list[float]]:
-    """Pick the swept axis ('alpha' or 'layer') for a group of rows.
-
-    Returns (axis_name, distinct_values). The axis with more distinct logged
-    values wins; ties prefer alpha. Empty values => single-point fallback.
-    """
+def _sweep_axis(rows: list[dict]) -> str:
     def _cfg(r, k):
         return (r.get("config", {}) or {}).get(k, r.get(k))
-
     cand = {}
     for key in ("alpha", "layer"):
         vals = []
@@ -836,21 +1114,11 @@ def _sweep_axis(rows: list[dict]) -> tuple[str, list[float]]:
     n_alpha = len(set(cand["alpha"]))
     n_layer = len(set(cand["layer"]))
     if n_alpha >= n_layer and n_alpha >= 1:
-        return "alpha", cand["alpha"]
-    if n_layer >= 1:
-        return "layer", cand["layer"]
-    return "alpha", cand["alpha"]
+        return "alpha"
+    return "layer"
 
 
 def plot_sweep(rows: list[dict], out_path: Path) -> tuple[bool, bool]:
-    """Per-experiment sweep curve: behavior + PPL vs the swept axis (dual-y).
-
-    Groups the supplied sibling rows (already filtered to one hypothesis /
-    behavior) by the swept axis (alpha or layer). Returns
-    (rendered_ok, is_single_point). When only one point exists, a single-point
-    plot is drawn with a note that the sweep accumulates as more alpha/layer
-    rows are logged.
-    """
     plt = _mpl()
     if plt is None or not rows:
         return (False, False)
@@ -858,7 +1126,7 @@ def plot_sweep(rows: list[dict], out_path: Path) -> tuple[bool, bool]:
     def _cfg(r, k):
         return (r.get("config", {}) or {}).get(k, r.get(k))
 
-    axis, _ = _sweep_axis(rows)
+    axis = _sweep_axis(rows)
     pts = []
     for r in rows:
         try:
@@ -873,17 +1141,16 @@ def plot_sweep(rows: list[dict], out_path: Path) -> tuple[bool, bool]:
     beh = [p[1] for p in pts]
     ppl = [p[2] for p in pts]
     single = len(set(xs)) < 2
-
     fig, ax1 = plt.subplots(figsize=(5.4, 3.2))
     ax2 = ax1.twinx()
     style = dict(marker="o", markersize=6)
-    ax1.plot(xs, beh, color="#4ea1ff", label="behavior_efficacy", **style)
-    ax2.plot(xs, ppl, color="#e0795a", linestyle="--", label="perplexity", **style)
+    ax1.plot(xs, beh, color="#58a6ff", label="behavior_efficacy", **style)
+    ax2.plot(xs, ppl, color="#f0883e", linestyle="--", label="perplexity", **style)
     ax1.set_xlabel(f"swept axis: {axis}", fontsize=9)
-    ax1.set_ylabel("behavior_efficacy", color="#4ea1ff", fontsize=9)
-    ax2.set_ylabel("perplexity (PPL)", color="#e0795a", fontsize=9)
-    ax1.tick_params(axis="y", labelcolor="#4ea1ff", labelsize=7)
-    ax2.tick_params(axis="y", labelcolor="#e0795a", labelsize=7)
+    ax1.set_ylabel("behavior_efficacy", color="#58a6ff", fontsize=9)
+    ax2.set_ylabel("perplexity (PPL)", color="#f0883e", fontsize=9)
+    ax1.tick_params(axis="y", labelcolor="#58a6ff", labelsize=7)
+    ax2.tick_params(axis="y", labelcolor="#f0883e", labelsize=7)
     ax1.tick_params(axis="x", labelsize=7)
     title = f"Sweep: behavior + PPL vs {axis}"
     if single:
@@ -891,7 +1158,7 @@ def plot_sweep(rows: list[dict], out_path: Path) -> tuple[bool, bool]:
         ax1.text(0.5, 0.04,
                  "sweep accumulates as more alpha/layer rows are logged",
                  transform=ax1.transAxes, ha="center", fontsize=7,
-                 color="#9aa0a6", style="italic")
+                 color="#a89e8c", style="italic")
     ax1.set_title(title, fontsize=9)
     ax1.grid(True, alpha=0.2)
     fig.tight_layout()
@@ -907,7 +1174,6 @@ RUNG_NAMES = {0: "UNIT", 1: "SMOKE", 2: "DEV", 3: "STANDARD", 4: "FULL"}
 
 
 def ladder_board(rows: list[dict]) -> list[dict]:
-    """Per method (tag): highest rung reached + gate cleared/failed + reason."""
     by_tag: dict[str, dict] = {}
     for r in rows:
         tag = str((r.get("config", {}) or {}).get("tag") or r.get("tag") or "untagged")
@@ -916,8 +1182,7 @@ def ladder_board(rows: list[dict]) -> list[dict]:
         cur = by_tag.get(tag)
         if cur is None or rung > cur["rung"]:
             by_tag[tag] = {
-                "tag": tag,
-                "rung": rung,
+                "tag": tag, "rung": rung,
                 "rung_name": RUNG_NAMES.get(rung, str(rung)),
                 "cleared": cleared,
                 "failure_reason": r.get("failure_reason")
@@ -929,77 +1194,31 @@ def ladder_board(rows: list[dict]) -> list[dict]:
 
 
 # ===========================================================================
-# Stack / compete decision matrix (Surface A — master dashboard)
-#
-# STATIC mechanism-based prior transcribed verbatim from
-# corpus/steering-stackable-vs-competing-analysis.md §4 (the pairwise
-# decision matrix). Legend: STACK (compose cleanly), CARE (stack with care —
-# norm / coherence / shared-pathway budget), COMPETE (pick one).
-# This is the project's design knowledge, NOT a measured result; the panel is
-# captioned as such. When experiments have *measured* a pair's verdict
-# (row.config.intervention_family vs row.config.other_family + a
-# 'pair_verdict' field), that measured verdict is overlaid on the cell.
+# Stack / compete decision matrix (mechanism-based prior, corpus §4)
 # ===========================================================================
-# Intervention families (rows == cols), in corpus §4 order.
-STACK_FAMILIES = [
-    "CAA/ActAdd",
-    "Angular/Selective",
-    "SAE-feature",
-    "KV-cache",
-    "Attention-score",
-    "DoLa",
-    "CAST gate",
-]
+STACK_FAMILIES = ["CAA/ActAdd", "Angular/Selective", "SAE-feature", "KV-cache",
+                  "Attention-score", "DoLa", "CAST gate"]
 
-# Verdict codes: "STACK" | "CARE" | "COMPETE" | "SELF" (the diagonal).
-# Transcribed from the corpus §4 matrix (symmetric; diagonal = self-pairing
-# note from the corpus where one exists, else SELF).
 STACK_MATRIX: dict[str, dict[str, str]] = {
-    "CAA/ActAdd": {
-        "CAA/ActAdd": "CARE", "Angular/Selective": "COMPETE", "SAE-feature": "CARE",
-        "KV-cache": "STACK", "Attention-score": "STACK", "DoLa": "STACK",
-        "CAST gate": "STACK",
-    },
-    "Angular/Selective": {
-        "CAA/ActAdd": "COMPETE", "Angular/Selective": "CARE", "SAE-feature": "COMPETE",
-        "KV-cache": "STACK", "Attention-score": "STACK", "DoLa": "STACK",
-        "CAST gate": "STACK",
-    },
-    "SAE-feature": {
-        "CAA/ActAdd": "CARE", "Angular/Selective": "COMPETE", "SAE-feature": "CARE",
-        "KV-cache": "STACK", "Attention-score": "STACK", "DoLa": "STACK",
-        "CAST gate": "STACK",
-    },
-    "KV-cache": {
-        "CAA/ActAdd": "STACK", "Angular/Selective": "STACK", "SAE-feature": "STACK",
-        "KV-cache": "CARE", "Attention-score": "CARE", "DoLa": "STACK",
-        "CAST gate": "STACK",
-    },
-    "Attention-score": {
-        "CAA/ActAdd": "STACK", "Angular/Selective": "STACK", "SAE-feature": "STACK",
-        "KV-cache": "CARE", "Attention-score": "COMPETE", "DoLa": "STACK",
-        "CAST gate": "STACK",
-    },
-    "DoLa": {
-        "CAA/ActAdd": "STACK", "Angular/Selective": "STACK", "SAE-feature": "STACK",
-        "KV-cache": "STACK", "Attention-score": "STACK", "DoLa": "SELF",
-        "CAST gate": "STACK",
-    },
-    "CAST gate": {
-        "CAA/ActAdd": "STACK", "Angular/Selective": "STACK", "SAE-feature": "STACK",
-        "KV-cache": "STACK", "Attention-score": "STACK", "DoLa": "STACK",
-        "CAST gate": "CARE",
-    },
+    "CAA/ActAdd": {"CAA/ActAdd": "CARE", "Angular/Selective": "COMPETE", "SAE-feature": "CARE",
+        "KV-cache": "STACK", "Attention-score": "STACK", "DoLa": "STACK", "CAST gate": "STACK"},
+    "Angular/Selective": {"CAA/ActAdd": "COMPETE", "Angular/Selective": "CARE", "SAE-feature": "COMPETE",
+        "KV-cache": "STACK", "Attention-score": "STACK", "DoLa": "STACK", "CAST gate": "STACK"},
+    "SAE-feature": {"CAA/ActAdd": "CARE", "Angular/Selective": "COMPETE", "SAE-feature": "CARE",
+        "KV-cache": "STACK", "Attention-score": "STACK", "DoLa": "STACK", "CAST gate": "STACK"},
+    "KV-cache": {"CAA/ActAdd": "STACK", "Angular/Selective": "STACK", "SAE-feature": "STACK",
+        "KV-cache": "CARE", "Attention-score": "CARE", "DoLa": "STACK", "CAST gate": "STACK"},
+    "Attention-score": {"CAA/ActAdd": "STACK", "Angular/Selective": "STACK", "SAE-feature": "STACK",
+        "KV-cache": "CARE", "Attention-score": "COMPETE", "DoLa": "STACK", "CAST gate": "STACK"},
+    "DoLa": {"CAA/ActAdd": "STACK", "Angular/Selective": "STACK", "SAE-feature": "STACK",
+        "KV-cache": "STACK", "Attention-score": "STACK", "DoLa": "SELF", "CAST gate": "STACK"},
+    "CAST gate": {"CAA/ActAdd": "STACK", "Angular/Selective": "STACK", "SAE-feature": "STACK",
+        "KV-cache": "STACK", "Attention-score": "STACK", "DoLa": "STACK", "CAST gate": "CARE"},
 }
-
-# Human-readable tooltips for the cell content (kept short for the table).
-_STACK_LABEL = {
-    "STACK": "STACK", "CARE": "CARE", "COMPETE": "COMPETE", "SELF": "—",
-}
+_STACK_LABEL = {"STACK": "STACK", "CARE": "CARE", "COMPETE": "COMPETE", "SELF": "—"}
 
 
 def _normalise_family(name: Optional[str]) -> Optional[str]:
-    """Map a free-text family token from an experiment row to a matrix family."""
     if not name:
         return None
     s = str(name).strip().lower()
@@ -1025,21 +1244,13 @@ def _normalise_family(name: Optional[str]) -> Optional[str]:
 
 
 def measured_pair_verdicts(rows: list[dict]) -> dict[tuple[str, str], str]:
-    """Overlay layer: any pair a logged experiment actually *measured*.
-
-    A row contributes a measured verdict when its config carries an
-    'intervention_family' + 'other_family' (or 'stack_with') pair plus a
-    'pair_verdict' in {STACK,CARE,COMPETE}. Returns {(famA,famB): VERDICT}
-    keyed symmetrically. Empty when no experiment has measured a pair.
-    """
     out: dict[tuple[str, str], str] = {}
     for r in rows:
         cfg = (r.get("config", {}) or {})
         a = _normalise_family(cfg.get("intervention_family") or r.get("intervention_family"))
         b = _normalise_family(cfg.get("other_family") or cfg.get("stack_with")
                               or r.get("other_family"))
-        verdict = (r.get("pair_verdict") or cfg.get("pair_verdict") or "")
-        verdict = str(verdict).strip().upper()
+        verdict = str(r.get("pair_verdict") or cfg.get("pair_verdict") or "").strip().upper()
         if a and b and verdict in ("STACK", "CARE", "COMPETE"):
             out[(a, b)] = verdict
             out[(b, a)] = verdict
@@ -1047,18 +1258,12 @@ def measured_pair_verdicts(rows: list[dict]) -> dict[tuple[str, str], str]:
 
 
 def render_stack_matrix(rows: list[dict]) -> str:
-    """Render the pairwise stack/compete matrix as a self-contained HTML card.
-
-    Static mechanism-based prior (corpus §4) with any measured verdict
-    overlaid (and flagged) on the relevant cell.
-    """
     measured = measured_pair_verdicts(rows)
     head = "<th>family \\ family</th>" + "".join(
-        f"<th>{html.escape(c)}</th>" for c in STACK_FAMILIES
-    )
+        f"<th>{_esc(c)}</th>" for c in STACK_FAMILIES)
     body = []
     for ri in STACK_FAMILIES:
-        cells = [f"<th>{html.escape(ri)}</th>"]
+        cells = [f"<th>{_esc(ri)}</th>"]
         for cj in STACK_FAMILIES:
             prior = STACK_MATRIX.get(ri, {}).get(cj, "SELF")
             meas = measured.get((ri, cj))
@@ -1066,240 +1271,82 @@ def render_stack_matrix(rows: list[dict]) -> str:
             label = _STACK_LABEL.get(prior, prior)
             extra = ""
             if meas:
-                extra = (f'<br><span class="meas">measured: '
-                         f'{html.escape(meas)}</span>')
-                # measured verdict drives the cell colour when it disagrees.
+                extra = f'<br><span class="meas">measured: {_esc(meas)}</span>'
                 cls = meas.lower() + " measured"
             cells.append(
-                f'<td class="sc {cls}" title="prior={html.escape(prior)}'
-                f'{(" measured=" + html.escape(meas)) if meas else ""}">'
-                f'{html.escape(label)}{extra}</td>'
-            )
+                f'<td class="sc {cls}" title="prior={_esc(prior)}'
+                f'{(" measured=" + _esc(meas)) if meas else ""}">{_esc(label)}{extra}</td>')
         body.append("<tr>" + "".join(cells) + "</tr>")
     body_html = "\n".join(body)
+    note = ("Measured overlays present for " + str(len(measured) // 2) + " pair(s)."
+            if measured else "No measured pair verdicts logged yet — matrix shows "
+            "the mechanism prior only.")
     return (
-        '<section>\n  <h2>Stack / compete matrix (mechanism-based prior)</h2>\n'
+        '<div class="card panel-2col"><h3>Stack / compete matrix '
+        '(mechanism-based prior)</h3>\n'
         '  <p class="cap">Pairwise method-composability prior, transcribed from '
-        'corpus &sect;4 (steering-stackable-vs-competing-analysis). '
-        'Legend: <span class="sc stack scl">STACK</span> compose cleanly &middot; '
-        '<span class="sc care scl">CARE</span> stack with care (norm / coherence / '
-        'shared-pathway budget) &middot; '
-        '<span class="sc compete scl">COMPETE</span> pick one. '
-        '<b>This is the design-knowledge prior, not a measured result</b>; where an '
-        'experiment has measured a pair, the measured verdict is overlaid and '
-        'labelled on the cell.</p>\n'
+        'corpus &sect;4. Legend: <span class="sc stack scl">STACK</span> compose '
+        'cleanly &middot; <span class="sc care scl">CARE</span> stack with care '
+        '&middot; <span class="sc compete scl">COMPETE</span> pick one. '
+        '<b>Design-knowledge prior, not a measured result.</b></p>\n'
         '  <div class="tablewrap"><table class="stackmx">\n'
         f"    <thead><tr>{head}</tr></thead>\n"
         f"    <tbody>\n{body_html}\n    </tbody>\n  </table></div>\n"
-        f'  <p class="cap">{"Measured overlays present for " + str(len(measured) // 2) + " pair(s)." if measured else "No measured pair verdicts logged yet &mdash; matrix shows the mechanism prior only."}</p>\n'
-        "</section>\n"
-    )
+        f'  <p class="cap">{note}</p>\n</div>\n')
 
 
 # ===========================================================================
-# HTML fragments
+# HTML page scaffold + footer + sort/filter script
 # ===========================================================================
-_MASTER_FONT_LINK = (
-    "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">"
-    "<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>"
-    "<link href=\"https://fonts.googleapis.com/css2?"
-    "family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&"
-    "family=IBM+Plex+Mono:wght@400;500;600&display=swap\" rel=\"stylesheet\">"
-)
-
-
-def _page_open(title: str, master: bool = False) -> str:
-    """Open an HTML page. ``master=True`` adds the editorial palette + fonts and
-    tags the body so the brutalist MASTER_CSS scope applies (per-experiment and
-    per-hypothesis tiers keep the original SHARED_CSS look)."""
-    fonts = _MASTER_FONT_LINK if master else ""
-    css = SHARED_CSS + (MASTER_CSS if master else "")
-    body_cls = ' class="master"' if master else ""
+def _page_open(title: str) -> str:
     return (
-        "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n"
-        "<meta charset=\"utf-8\">\n"
+        "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
-        f"<title>{html.escape(title)}</title>\n{fonts}\n"
-        f"<style>{css}</style>\n"
-        f"</head>\n<body{body_cls}>\n"
-    )
+        f"<title>{_esc(title)}</title>\n{_FONT_LINK}\n"
+        f"<style>{SHARED_CSS}</style>\n</head>\n<body>\n")
 
 
-def _howto_block(bullets: list[str]) -> str:
-    items = "\n".join(f"    <li>{b}</li>" for b in bullets)
+def _mast_row() -> str:
     return (
-        '<section class="howto">\n  <h2>How to read this</h2>\n  <ul>\n'
-        f"{items}\n  </ul>\n</section>\n"
-    )
+        '<div class="mast-row">'
+        f'<a class="mast-pill repo" href="{REPO_URL}" target="_blank" rel="noopener">source &middot; dlmastery/steeringresearch</a>'
+        f'<a class="mast-pill paper" href="{PAPER_URL}" target="_blank" rel="noopener">paper</a>'
+        f'<a class="mast-pill lit" href="{FINDINGS_URL}" target="_blank" rel="noopener">FINDINGS</a>'
+        f'<a class="mast-pill lit" href="{IDEATABLE_URL}" target="_blank" rel="noopener">IDEA_TABLE</a>'
+        f'<a class="live-link" href="{PAGES_URL}" target="_blank" rel="noopener">live &middot; GitHub Pages</a>'
+        '</div>\n')
 
 
-def _num_cell(row: dict, key: str, tier: str, n_seeds: int) -> str:
-    val = row.get(key)
-    if isinstance(val, bool) or not isinstance(val, (int, float)):
-        disp = "" if val is None else html.escape(str(val))
-        return f'<td data-v="{html.escape(str(disp).lower())}">{disp}</td>'
-    disp = f"{val:.4f}" if isinstance(val, float) else f"{val}"
-    chip = f'<span class="chip {tier.lower()}">{tier} n={n_seeds}</span>'
-    return (f'<td data-v="{float(val)}">{html.escape(disp)} '
-            f'<span class="seed-badge">n={n_seeds}</span>{chip}</td>')
+def _doc_footer() -> str:
+    return (
+        '<div class="doc-footer">'
+        f'<a href="{REPO_URL}" target="_blank" rel="noopener">Repo</a> &middot; '
+        f'<a href="{PAPER_URL}" target="_blank" rel="noopener">Paper</a> &middot; '
+        f'<a href="{FINDINGS_URL}" target="_blank" rel="noopener">FINDINGS</a> &middot; '
+        f'<a href="{IDEATABLE_URL}" target="_blank" rel="noopener">IDEA_TABLE</a> &middot; '
+        f'<a href="{PAGES_URL}" target="_blank" rel="noopener">GitHub Pages</a>'
+        '</div>\n')
 
 
-def _footer(extra: str = "") -> str:
-    fp = composite_fingerprint()
+def _meta_footer(extra: str = "") -> str:
     sha = _git_sha()
     ts = time.strftime("%Y-%m-%dT%H:%M:%S")
     return (
-        "<footer>\n"
-        f"  COMPOSITE_FORMULA: <code>{html.escape(COMPOSITE_FORMULA)}</code><br>\n"
-        f"  composite fingerprint: <code>{fp}</code> &middot; "
-        f"git SHA: <code>{sha}</code> &middot; "
-        f"generated: <time>{ts}</time>"
-        f"{extra}<br>\n"
-        "  Internal QA pass &mdash; external review pending.\n"
-        "</footer>\n</body>\n</html>\n"
-    )
+        '<div class="meta">'
+        f'composite formula &nbsp; <code>{_esc(COMPOSITE_FORMULA)}</code><br>'
+        f'composite fingerprint &nbsp; <code>{FINGERPRINT}</code> &middot; '
+        f'git SHA &nbsp; <code>{_esc(sha)}</code> &middot; '
+        f'generated &nbsp; <code>{ts}</code>{extra}<br>'
+        'Internal QA pass &mdash; external review pending. &middot; '
+        'Generated by <code>steering.dashboard</code> &middot; '
+        'brutalist editorial lab notebook &middot; self-contained inline CSS, '
+        'Google Fonts with offline serif/mono fallback.'
+        '</div>\n')
 
 
-SORT_SCRIPT = """
+SORT_SCRIPT = r"""
 <script>
 (function() {
-  var sortState = { key: "composite", num: 1, dir: -1 };
-  window.sortBy = function(key, num) {
-    if (sortState.key === key) { sortState.dir *= -1; }
-    else { sortState.key = key; sortState.num = num; sortState.dir = num ? -1 : 1; }
-    render();
-  };
-  function tbody() { return document.querySelector("#runs tbody"); }
-  function getRows() {
-    return Array.prototype.slice.call(tbody().querySelectorAll("tr"));
-  }
-  function colIndex(key) {
-    var ths = document.querySelectorAll("#runs thead th");
-    for (var i = 0; i < ths.length; i++) {
-      if (ths[i].getAttribute("data-key") === key) return i;
-    }
-    return 0;
-  }
-  function render() {
-    var rows = getRows();
-    var idx = colIndex(sortState.key);
-    rows.sort(function(a, b) {
-      var ca = a.children[idx], cb = b.children[idx];
-      if (!ca || !cb) return 0;
-      var va = ca.getAttribute("data-v"), vb = cb.getAttribute("data-v");
-      if (sortState.num) { va = parseFloat(va) || 0; vb = parseFloat(vb) || 0; }
-      if (va < vb) return -1 * sortState.dir;
-      if (va > vb) return 1 * sortState.dir;
-      return 0;
-    });
-    var tb = tbody();
-    rows.forEach(function(r) { tb.appendChild(r); });
-    document.querySelectorAll("#runs thead .arr").forEach(function(s){ s.textContent=""; });
-    var th = document.querySelector('#runs thead th[data-key="' + sortState.key + '"]');
-    if (th && th.querySelector(".arr"))
-      th.querySelector(".arr").textContent = sortState.dir < 0 ? "\\u25BC" : "\\u25B2";
-  }
-  window.applyFilter = function() {
-    var q = document.getElementById("filter").value.toLowerCase();
-    getRows().forEach(function(r) {
-      r.style.display = r.textContent.toLowerCase().indexOf(q) >= 0 ? "" : "none";
-    });
-  };
-  if (document.querySelector("#runs")) render();
-})();
-</script>
-"""
-
-
-# ===========================================================================
-# Campaign grouping for the MASTER runs tables
-#
-# The 59 logged rows split cleanly into research campaigns keyed off the
-# config.tag prefix. Grouping them into separate sectioned tables is the single
-# biggest readability win (vs one dense 59-row table). Each group carries a
-# title + one-line description; order is preserved as listed.
-# ===========================================================================
-CAMPAIGN_GROUPS: list[tuple[str, str, str]] = [
-    ("infra", "Infra / plumbing",
-     "Rung-0/1 end-to-end loop validation on the FakeResidualLM — exercises the "
-     "intervention mechanics and the full autoresearch pipeline. Infrastructure, "
-     "not a model claim."),
-    ("e3", "E3 α-cliff (Qwen + Gemma)",
-     "Alpha-magnitude sweeps probing the coherence cliff: as α grows, "
-     "behavior saturates but perplexity / off-shell displacement explode the "
-     "composite negative. Run on Qwen2.5-0.5B and real Gemma-3-270m."),
-    ("c1", "C1 / E2 layer sweep",
-     "Injection-layer sweep (L2–L16) on gemma-3-270m at fixed α=2.0 — "
-     "which residual layer best carries the diff-mean steering direction."),
-    ("c3", "C3 / C3b operation comparison",
-     "add vs rotate vs project_out at L16, plus a C3b small-rotation refinement "
-     "(α≤0.5). Rotate blows up the composite; add stays least-bad."),
-    ("c4", "C4 / N20 fragility",
-     "N20 layer-fragility sweep at the aggressive α=4.0 on gemma-3-270m — "
-     "how sensitive the coherence collapse is to injection depth."),
-    ("c6", "C6 gemma-3-1b cross-scale",
-     "Cross-scale replication of the α-cliff on the larger gemma-3-1b-it "
-     "(L18) — does the same cliff window appear one model-scale up."),
-    ("other", "Other / uncategorised",
-     "Rows whose tag prefix is not yet wired into a campaign group."),
-]
-
-
-def campaign_group_of(row: dict) -> str:
-    """Return the campaign group key for a row, derived from its config.tag."""
-    tag = str((row.get("config", {}) or {}).get("tag") or row.get("tag") or "").lower()
-    if tag.startswith("rung1_plumbing") or "fakelm" in tag or "plumbing" in tag:
-        return "infra"
-    if tag.startswith("c1-e2") or tag.startswith("c1_e2"):
-        return "c1"
-    if tag.startswith("c3b") or tag.startswith("c3-e27") or tag.startswith("c3_"):
-        return "c3"
-    if tag.startswith("c4-n20") or tag.startswith("c4_"):
-        return "c4"
-    if tag.startswith("c6-gemma1b") or tag.startswith("c6"):
-        return "c6"
-    if tag.startswith("e3"):
-        return "e3"
-    return "other"
-
-
-# Columns for the per-group master runs tables. (key, label, numeric?)
-GROUP_RUN_COLS = [
-    ("experiment_num", "exp#", True),
-    ("tag", "tag", False),
-    ("model", "model", False),
-    ("layer", "layer", True),
-    ("alpha", "α", True),
-    ("behavior_efficacy", "behavior", True),
-    ("mmlu_drop_pp", "ΔMMLU", True),
-    ("perplexity", "PPL", True),
-    ("compliance_rate", "CR", True),
-    ("offshell_displacement", "offshell", True),
-    ("angular_displacement", "angular", True),
-    ("composite", "composite", True),
-]
-
-_MODEL_SHORT = {
-    "fake": "fake",
-    "Qwen/Qwen2.5-0.5B-Instruct": "Qwen2.5-0.5B",
-    "models/google/gemma-3-270m-it": "gemma-3-270m",
-    "models/google/gemma-3-1b-it": "gemma-3-1b",
-}
-
-
-def _short_model(m: object) -> str:
-    s = str(m or "")
-    return _MODEL_SHORT.get(s, s.split("/")[-1] if s else "—")
-
-
-MASTER_SORT_SCRIPT = """
-<script>
-(function() {
-  function val(cell) {
-    var v = cell.getAttribute("data-v");
-    if (v === null) v = cell.textContent;
-    return v;
-  }
   window.sortRuns = function(th, idx, num) {
     var table = th.closest("table");
     var dir = table.getAttribute("data-dir") === "asc" ? -1 : 1;
@@ -1307,7 +1354,9 @@ MASTER_SORT_SCRIPT = """
     var tb = table.tBodies[0];
     var rows = Array.prototype.slice.call(tb.rows);
     rows.sort(function(a, b) {
-      var x = val(a.cells[idx]), y = val(b.cells[idx]);
+      var ca = a.cells[idx], cb = b.cells[idx];
+      var x = ca ? (ca.getAttribute("data-v") || ca.textContent) : "";
+      var y = cb ? (cb.getAttribute("data-v") || cb.textContent) : "";
       if (num) {
         var nx = parseFloat(x), ny = parseFloat(y);
         if (isNaN(nx)) nx = -Infinity;
@@ -1322,12 +1371,15 @@ MASTER_SORT_SCRIPT = """
       var a = ths[i].querySelector(".arr"); if (a) a.textContent = "";
     }
     var arr = th.querySelector(".arr");
-    if (arr) arr.textContent = dir < 0 ? "\\u25BC" : "\\u25B2";
+    if (arr) arr.textContent = dir < 0 ? "▼" : "▲";
   };
   window.filterRuns = function() {
-    var q = document.getElementById("filter").value.toLowerCase();
+    var box = document.getElementById("filter");
+    if (!box) return;
+    var q = box.value.toLowerCase();
     document.querySelectorAll("table.runs").forEach(function(table) {
       var tb = table.tBodies[0];
+      if (!tb) return;
       var shown = 0;
       Array.prototype.slice.call(tb.rows).forEach(function(r) {
         var on = r.textContent.toLowerCase().indexOf(q) >= 0;
@@ -1344,17 +1396,118 @@ MASTER_SORT_SCRIPT = """
 
 
 # ===========================================================================
+# Campaign grouping for the MASTER runs tables
+# ===========================================================================
+CAMPAIGN_GROUPS: list[tuple[str, str, str]] = [
+    ("infra", "Infra / plumbing",
+     "Rung-0/1 end-to-end loop validation on the FakeResidualLM — exercises the "
+     "intervention mechanics and the full autoresearch pipeline. Infrastructure, "
+     "not a model claim."),
+    ("e3", "E3 α-cliff (Qwen + Gemma)",
+     "Alpha-magnitude sweeps probing the coherence cliff: as α grows, behavior "
+     "saturates but perplexity / off-shell displacement explode the composite "
+     "negative. Run on Qwen2.5-0.5B and real Gemma-3-270m."),
+    ("c1", "C1 / E2 layer sweep",
+     "Injection-layer sweep (L2–L16) on gemma-3-270m at fixed α=2.0 — which "
+     "residual layer best carries the diff-mean steering direction. (E2 FALSIFIED.)"),
+    ("c3", "C3 / C3b operation comparison",
+     "add vs rotate vs project_out at L16, plus a C3b small-rotation refinement "
+     "(α≤0.5). Rotate blows up the composite; add stays least-bad. (E27.)"),
+    ("c4", "C4 / N20 fragility",
+     "N20 layer-fragility sweep at the aggressive α=4.0 on gemma-3-270m — how "
+     "sensitive the coherence collapse is to injection depth."),
+    ("c6", "C6 gemma-3-1b cross-scale",
+     "Cross-scale replication of the α-cliff on the larger gemma-3-1b-it (L18) "
+     "— the steering window emerges with scale (supports E27)."),
+    ("other", "Other / uncategorised",
+     "Rows whose tag prefix is not yet wired into a campaign group."),
+]
+
+
+def campaign_group_of(row: dict) -> str:
+    tag = str((row.get("config", {}) or {}).get("tag") or row.get("tag") or "").lower()
+    if "plumbing" in tag or "fakelm" in tag:
+        return "infra"
+    if tag.startswith("c1-e2") or tag.startswith("c1_e2"):
+        return "c1"
+    if tag.startswith("c3"):
+        return "c3"
+    if tag.startswith("c4-n20") or tag.startswith("c4_"):
+        return "c4"
+    if tag.startswith("c6"):
+        return "c6"
+    if tag.startswith("e3"):
+        return "e3"
+    return "other"
+
+
+GROUP_RUN_COLS = [
+    ("experiment_num", "exp#", True),
+    ("tag", "tag", False),
+    ("hypothesis", "hyp", False),
+    ("model", "model", False),
+    ("layer", "layer", True),
+    ("alpha", "α", True),
+    ("behavior_efficacy", "behavior", True),
+    ("mmlu_drop_pp", "ΔMMLU", True),
+    ("perplexity", "PPL", True),
+    ("compliance_rate", "CR", True),
+    ("offshell_displacement", "offshell", True),
+    ("angular_displacement", "angular", True),
+    ("composite", "composite", True),
+]
+
+
+# ===========================================================================
 # A. MASTER dashboard
 # ===========================================================================
-def render_master(rows: list[dict], idea_dirs: list[Path],
-                  plots: dict[str, bool], ladder: list[dict]) -> str:
+def _hypothesis_grid_html(table: dict[str, dict]) -> str:
+    """Render the clickable, verdict-coloured hypothesis status grid."""
+    counts: dict[str, int] = {}
+    for hid in (h for _t, ids in HYP_BLOCKS for h in ids):
+        v = table.get(hid, {}).get("verdict", "PENDING")
+        counts[v] = counts.get(v, 0) + 1
+    total = sum(counts.values())
+    bits = []
+    for kw, _cls, lbl in VERDICT_LEGEND:
+        n = counts.get(kw, 0)
+        if n:
+            bits.append(f"<b>{n}</b>&nbsp;{lbl}")
+    summary = (f"<div class='hyp-grid-summary'><b>{total}</b>&nbsp;hypotheses · "
+               + " · ".join(bits) + "</div>")
+    legend = ["<div class='legend-row'>Legend:"]
+    for kw, cls, lbl in VERDICT_LEGEND:
+        legend.append(f"<span class='swatch {cls}'></span>{lbl}")
+    legend.append("</div>")
+
+    rows_html = []
+    for block_title, ids in HYP_BLOCKS:
+        cells = [f"<div class='hyp-grid-row'><span class='gid' title='{_esc(block_title)}'>{_esc(block_title)}</span>"]
+        for hid in ids:
+            info = table.get(hid, {"verdict": "PENDING", "title": ""})
+            verdict = info.get("verdict", "PENDING")
+            cls = VERDICT_CLASS.get(verdict, "v-pending")
+            title = info.get("title", "")
+            tip = f"{hid}: {title} — {verdict}"
+            cells.append(
+                f"<a class='hyp-cell {cls}' href='hyp/{hid}.html' "
+                f"title='{_esc(tip)}'>{_esc(hid)}</a>")
+        cells.append("</div>")
+        rows_html.append("".join(cells))
+    return (summary + "\n" + "".join(legend) + "\n<div id='hyp-grid'>\n"
+            + "\n".join(rows_html) + "\n</div>")
+
+
+def render_master(rows: list[dict], table: dict[str, dict],
+                  plots: dict[str, bool], ladder: list[dict],
+                  repo_root: Path, idea_dirs: list[Path]) -> str:
     flat = [_flatten(r) for r in rows]
     champ_num = None
+    champ = None
     if flat:
         champ = max(flat, key=lambda r: _num(r, "composite", -1e18))
         champ_num = champ.get("experiment_num")
 
-    # -- helper: one numeric runs-table cell with n= + tier chip ------------
     def _cell(r: dict, key: str, num: bool, tier: str, n_seeds: int,
               extra_cls: str = "") -> str:
         v = r.get(key)
@@ -1370,18 +1523,18 @@ def render_master(rows: list[dict], idea_dirs: list[Path],
                 disp = f"{fv:.4f}"
             chip = (f'<span class="n-chip {"eval" if tier=="EVALUATION" else "scr"}">'
                     f'{tier[:4]} n={n_seeds}</span>')
-            return f'<td data-v="{fv}"{cls}>{html.escape(disp)}{chip}</td>'
+            return f'<td data-v="{fv}"{cls}>{_esc(disp)}{chip}</td>'
         disp = "" if v is None else str(v)
-        return f'<td data-v="{html.escape(disp.lower())}" class="l{(" "+extra_cls) if extra_cls else ""}">{html.escape(disp)}</td>'
+        return (f'<td data-v="{_esc(disp.lower())}" '
+                f'class="l{(" "+extra_cls) if extra_cls else ""}">{_esc(disp)}</td>')
 
     def _runs_table(grp_rows: list[dict], table_id: str) -> str:
         head = "".join(
             f'<th{" class=\"l\"" if not num else ""} '
-            f'onclick="sortRuns(this,{i},{int(num)})">{html.escape(label)}'
+            f'onclick="sortRuns(this,{i},{int(num)})">{_esc(label)}'
             f'<span class="arr"></span></th>'
-            for i, (k, label, num) in enumerate(GROUP_RUN_COLS)
-        )
-        head += '<th class="l">n / tier</th><th class="l">link</th>'
+            for i, (k, label, num) in enumerate(GROUP_RUN_COLS))
+        head += '<th class="l">tier</th><th class="l">links</th>'
         body = []
         for r in grp_rows:
             n_seeds = int(r.get("n_seeds", 1) or 1)
@@ -1389,17 +1542,24 @@ def render_master(rows: list[dict], idea_dirs: list[Path],
             exp = r.get("experiment_num")
             is_champ = exp == champ_num
             neg = _num(r, "composite", 0.0) < 0
+            hid = resolve_hyp_id(r, repo_root, idea_dirs)
+            vr = ""
+            if hid and hid in table:
+                vr = "vr-" + table[hid]["verdict"].lower()
             rcls = " ".join(c for c in ("champion" if is_champ else "",
-                                        "neg-comp" if neg else "") if c)
+                                        "neg-comp" if neg else "", vr) if c)
             tds = []
             for (k, _label, num) in GROUP_RUN_COLS:
                 if k == "model":
                     m = _short_model(r.get("model"))
-                    tds.append(f'<td data-v="{html.escape(m.lower())}" class="l">{html.escape(m)}</td>')
+                    tds.append(f'<td data-v="{_esc(m.lower())}" class="l">{_esc(m)}</td>')
                 elif k == "tag":
                     tg = str(r.get("tag") or "")
-                    tds.append(f'<td data-v="{html.escape(tg.lower())}" class="l">'
-                               f'<code style="font-size:0.9em">{html.escape(tg)}</code></td>')
+                    tds.append(f'<td data-v="{_esc(tg.lower())}" class="l">'
+                               f'<code>{_esc(tg)}</code></td>')
+                elif k == "hypothesis":
+                    lbl = hid or "—"
+                    tds.append(f'<td data-v="{_esc(lbl.lower())}" class="l">{_esc(lbl)}</td>')
                 elif k == "composite":
                     tds.append(_cell(r, k, True, tier, n_seeds, extra_cls="comp"))
                 else:
@@ -1409,161 +1569,136 @@ def render_master(rows: list[dict], idea_dirs: list[Path],
             tds.append(f'<td class="l">{chip}</td>')
             page = (f'<a href="experiments/exp{int(exp):03d}.html">exp{int(exp):03d}</a>'
                     if exp is not None else "—")
-            hdir = resolve_hypothesis_dir(r, idea_dirs)
-            if hdir is not None:
-                hid = _idea_id(hdir)
-                page += f' &middot; <a href="hyp/{html.escape(hid)}.html">H{html.escape(hid)}</a>'
+            if hid:
+                page += f' &middot; <a href="hyp/{_esc(hid)}.html">{_esc(hid)}</a>'
             tds.append(f'<td class="l">{page}</td>')
             body.append(f'<tr class="{rcls}">{"".join(tds)}</tr>')
         body_html = "\n".join(body) or (
-            '<tr><td colspan="14" style="text-align:center;color:var(--paper-dim)">'
+            f'<tr><td colspan="{len(GROUP_RUN_COLS)+2}" class="l empty">'
             'No runs in this group.</td></tr>')
-        return (
-            f'<table class="runs" id="{table_id}" data-dir="desc">\n'
-            f'  <thead><tr>{head}</tr></thead>\n'
-            f'  <tbody>\n{body_html}\n  </tbody>\n</table>'
-        )
+        return (f'<table class="runs" id="{table_id}" data-dir="desc">\n'
+                f'  <thead><tr>{head}</tr></thead>\n'
+                f'  <tbody>\n{body_html}\n  </tbody>\n</table>')
 
-    # -- group the rows into campaigns --------------------------------------
     grouped: dict[str, list[dict]] = {}
     for r in flat:
         grouped.setdefault(campaign_group_of(r), []).append(r)
     for g in grouped:
         grouped[g].sort(key=lambda r: _num(r, "composite", -1e18), reverse=True)
 
-    # -- KPI ribbon numbers --------------------------------------------------
+    # KPI ribbon numbers
     models = {_short_model(r.get("model")) for r in flat}
     real_rows = [r for r in flat if _short_model(r.get("model")) != "fake"]
     fake_rows = [r for r in flat if _short_model(r.get("model")) == "fake"]
     gemma_rows = [r for r in flat if "gemma" in _short_model(r.get("model")).lower()]
     champ_comp = _num(champ, "composite") if flat else 0.0
-    # Verdict tally from the screening-campaign map (hardcoded, derived from the
-    # S-1..S-8 screening findings below — these are screening verdicts, n=1).
-    tally = {"SUPPORTED": 3, "FALSIFIED": 2, "DIRECTIONAL": 1, "INCONCLUSIVE": 1}
+    vcounts: dict[str, int] = {}
+    for hid in (h for _t, ids in HYP_BLOCKS for h in ids):
+        v = table.get(hid, {}).get("verdict", "PENDING")
+        vcounts[v] = vcounts.get(v, 0) + 1
 
-    parts = [_page_open("Steering Autoresearch — Master Dashboard", master=True)]
-    parts.append('<div class="wrap">\n')
+    parts = [_page_open("Steering Autoresearch — Master Dashboard")]
+    parts.append('<h1>Steering Autoresearch — Master Dashboard</h1>\n')
     parts.append(
-        "<header>\n"
-        "  <h1>Steering Autoresearch — Master Dashboard</h1>\n"
-        '  <div class="lead-sub">LLM activation-steering autoresearch &middot; '
-        f'{len(flat)} experiments &middot; {len(grouped)} campaigns &middot; '
-        "internal QA</div>\n"
-        f'  <div class="formula-chip"><b>composite</b> &#8788; '
-        f'<code>{html.escape(COMPOSITE_FORMULA)}</code>'
-        f'<br><span class="fp">fingerprint &middot; {composite_fingerprint()}</span>'
-        "</div>\n"
-        "</header>\n"
-    )
+        '<div class="sub">LLM activation-steering autoresearch &middot; '
+        f'{len(flat)} experiments &middot; {len([g for g in grouped if grouped[g]])} '
+        'campaigns &middot; 70 hypotheses &middot; internal QA</div>\n')
+    parts.append(_mast_row())
+    parts.append(
+        f'<div class="formula-chip"><b>composite</b> &#8788; '
+        f'<code>{_esc(COMPOSITE_FORMULA)}</code>'
+        f'<br><span class="fp">fingerprint &middot; {FINGERPRINT}</span></div>\n')
 
-    # -- KPI ribbon ----------------------------------------------------------
+    # How to read (4 bullets, incl. NAVIGATION)
+    parts.append(
+        '<section class="how-to-read">\n  <h3>How to read this dashboard</h3>\n  <ul>\n'
+        '    <li><b>Composite is multi-objective.</b> It prices all five axes '
+        '(behavior, capability, coherence, safety, selectivity) plus an off-manifold '
+        'geometry penalty — a method cannot win by sacrificing one axis. Negative '
+        'composites (red) mean a coherence / off-shell blow-up.</li>\n'
+        '    <li><b>Tiers matter.</b> Every numeric cell carries <code>n=X</code> and '
+        'a <span class="chip-scr">SCREENING (n&le;3)</span> or '
+        '<span class="chip-eval">EVALUATION (n&ge;7)</span> chip. Every row here is '
+        'SCREENING (n=1) — candidate signal, not an external claim.</li>\n'
+        '    <li><b>Safety is a hard gate.</b> A non-zero <code>CR</code> '
+        '(JailbreakBench compliance) is a leak and an automatic DISCARD regardless of '
+        'behavior score.</li>\n'
+        '    <li><b>Navigation.</b> click a <b>hypothesis-grid cell</b> &rarr; that '
+        'hypothesis\'s page (statement, falsifier, predicted &Delta;, verdict, '
+        'campaign writeup, all its runs); click a <b>runs-table row link</b> &rarr; '
+        'its per-experiment page (reasoning blob, config, five-axis metrics, '
+        'composite breakdown, geometry, samples). Run rows are tinted by their '
+        'hypothesis verdict; the starred gold row is the global champion.</li>\n'
+        '  </ul>\n</section>\n')
+
+    # KPI ribbon
     kpis = [
         ("Total experiments", str(len(flat)), "neutral"),
-        ("Real-LM vs FakeLM", f"{len(real_rows)}<small> / {len(fake_rows)} fake</small>",
+        ("Real-LM vs FakeLM",
+         f"{len(real_rows)}<small> / {len(fake_rows)} fake</small>",
          "positive" if real_rows else "neutral"),
         ("Real Gemma rows", str(len(gemma_rows)), "positive" if gemma_rows else "neutral"),
         ("Models", str(len(models)), "neutral"),
-        ("Champion composite",
-         f"{champ_comp:.3f}", "positive" if champ_comp > 0 else "negative"),
-        ("Screening verdicts",
-         f"{tally['SUPPORTED']}<small> sup / {tally['FALSIFIED']} fals / "
-         f"{tally['DIRECTIONAL']} dir / {tally['INCONCLUSIVE']} inc</small>",
-         "neutral"),
-        ("Composite fingerprint",
-         f'<small>{composite_fingerprint()}</small>', "neutral"),
+        ("Champion composite", f"{champ_comp:.3f}",
+         "positive" if champ_comp > 0 else "negative"),
+        ("Hypothesis verdicts",
+         f"{vcounts.get('SUPPORTED',0)}<small> sup / {vcounts.get('FALSIFIED',0)} fals "
+         f"/ {vcounts.get('DIRECTIONAL',0)} dir / {vcounts.get('INCONCLUSIVE',0)} inc "
+         f"/ {vcounts.get('PENDING',0)} pend</small>", "neutral"),
+        ("Composite fingerprint", f"<small>{FINGERPRINT}</small>", "neutral"),
     ]
     parts.append('<div class="ribbon">' + "".join(
         f'<div class="kpi {mood}"><div class="label">{lbl}</div>'
         f'<div class="value">{val}</div></div>'
-        for lbl, val, mood in kpis
-    ) + "</div>\n")
+        for lbl, val, mood in kpis) + "</div>\n")
 
-    # -- How to read this ----------------------------------------------------
+    # Headline screening-findings banner (S-1..S-8)
     parts.append(
-        '<section class="how-to-read">\n  <h3>How to read this</h3>\n  <ul>\n'
-        "    <li><b>Composite is multi-objective.</b> It prices all five axes "
-        "(behavior, capability, coherence, safety, selectivity) plus an "
-        "off-manifold geometry penalty &mdash; a method cannot win by sacrificing "
-        "one axis. Negative composites (red) mean a coherence / off-shell blow-up.</li>\n"
-        "    <li><b>Tiers matter.</b> Every numeric cell carries <code>n=X</code> "
-        "and a SCREENING (n&le;3) or EVALUATION (n&ge;7) chip. Every row here is "
-        "SCREENING (n=1) &mdash; candidate signal, not an external claim.</li>\n"
-        "    <li><b>Safety is a hard gate.</b> A non-zero <code>CR</code> "
-        "(JailbreakBench compliance) is a leak and an automatic DISCARD regardless "
-        "of behavior score.</li>\n"
-        "    <li><b>Drill down.</b> Runs are grouped by research campaign into "
-        "separate tables. Click a header to sort that table; type in the filter "
-        "box to search all rows. Each row links to its per-experiment page (and "
-        "hypothesis page when resolvable). The starred gold row is the global "
-        "champion.</li>\n"
-        "  </ul>\n</section>\n"
-    )
+        '<div class="headline-ribbon">\n'
+        '    <span class="tag-note">Screening findings (n=1) — not external claims</span>\n'
+        '    <h2>Screening highlights S-1 … S-8</h2>\n    <ul>\n'
+        '      <li><b>S-1 / E4.</b> diff-mean and PCA steering directions are '
+        'near-collinear: <code>cos&asymp;0.996</code> on Qwen L21 (E4 &ge;0.95 holds).</li>\n'
+        '      <li><b>S-2 / E3+N17.</b> Additive steering has a super-linear coherence '
+        'cliff (PPL +20%&rarr;6&times;&rarr;77&times; across &alpha;=1&rarr;8); '
+        'off-shell &Delta;&#8741;h&#8741; rises in lockstep.</li>\n'
+        '      <li><b>S-3 / E4 cross-model.</b> <code>cos=0.994</code> on Gemma-3-270m '
+        'L12 — E4 holds across architectures.</li>\n'
+        '      <li><b>S-4 / E27.</b> On Gemma-3-270m the cliff is sharper / earlier and '
+        'behavior never improves — smaller models exit the manifold first.</li>\n'
+        '      <li><b>S-5 / E2 FALSIFIED.</b> Spearman(Fisher, behavior) = +0.14 '
+        '(p=0.74) — far below E2\'s &ge;0.7; max-Fisher is NOT the best layer.</li>\n'
+        '      <li><b>S-6 / N17+N5 SUPPORTED.</b> Pooled over 23 rows, '
+        '<code>logPPL = 5.40 + 2.87&middot;&Delta;&#8741;h&#8741;</code> fits with '
+        '<code>R&sup2;=0.81</code> — off-shell displacement governs the cliff.</li>\n'
+        '      <li><b>S-7 / E27 FALSIFIED, N16 SUPPORTED.</b> add is gentler than '
+        'full-vector rotate; angular (1&minus;cos) predicts rotation logPPL at '
+        '<code>R&sup2;=0.997</code> — the Cylindrical Representation Hypothesis.</li>\n'
+        '      <li><b>S-8 / E27 cross-scale.</b> The cliff replicates on gemma-3-1b '
+        '@L18 with a clean steering window — the window emerges with scale.</li>\n'
+        '    </ul>\n  </div>\n')
 
-    # -- Headline screening-findings banner ----------------------------------
+    # Hypothesis status grid
     parts.append(
-        '<section>\n'
-        '  <div class="headline-ribbon">\n'
-        '    <span class="tag-note">Screening findings (n=1) &mdash; not external claims</span>\n'
-        '    <h2 style="font-size:20px;margin:0 0 8px">Screening highlights S-1 … S-8</h2>\n'
-        "    <ul>\n"
-        "      <li><b>S-1 / E2.</b> The naive expectation that bigger &alpha; "
-        "monotonically helps is <b>falsified</b>: composite collapses past the "
-        "&alpha;-cliff (<code>E3-cliff</code> goes from +0.83 at &alpha;=1 to "
-        "&minus;5.3e4 at &alpha;=24).</li>\n"
-        "      <li><b>S-2 / N17, N5.</b> Off-shell displacement tracks the "
-        "composite collapse with <code>R&sup2;&asymp;0.81</code> across the "
-        "&alpha; sweep.</li>\n"
-        "      <li><b>S-3 / E27.</b> A narrow cross-scale coherence window exists "
-        "(small-rotation C3b &amp; low-&alpha; add survive least-badly at L16).</li>\n"
-        "      <li><b>S-4 / E4.</b> diff-mean and PCA steering directions are "
-        "near-collinear: <code>cos&asymp;0.994&ndash;0.996</code> on Qwen L21.</li>\n"
-        "      <li><b>S-5 / N16.</b> Angular displacement is an almost-perfect "
-        "linear proxy for &alpha; (<code>R&sup2;&asymp;0.997</code>).</li>\n"
-        "      <li><b>S-6 … S-8.</b> The cliff replicates across model scale "
-        "(gemma-3-270m, gemma-3-1b) and operation (add least-bad, rotate / "
-        "project_out worse); <code>rotate</code> at &alpha;&ge;1 is "
-        "numerically explosive.</li>\n"
-        "    </ul>\n"
-        "  </div>\n</section>\n"
-    )
+        '<section class="card panel-2col" style="margin-top:18px">\n'
+        '  <h2>Hypothesis status grid</h2>\n'
+        '  <p class="cap" style="margin-bottom:10px">All 70 registry hypotheses '
+        '(E1–E50 in blocks A–F, then N1–N20). Cell colour = current verdict from '
+        'IDEA_TABLE.md; click a cell to open that hypothesis page.</p>\n'
+        + _hypothesis_grid_html(table) + "\n</section>\n")
 
-    # -- Grouped runs tables -------------------------------------------------
-    parts.append(
-        '<section>\n  <h2>Runs by campaign</h2>\n'
-        '  <input type="text" id="filter" class="filter-box" '
-        'placeholder="type to filter all run rows (tag, model, exp#, …)" '
-        'oninput="filterRuns()">\n'
-        '  <p class="cap" style="color:var(--paper-dim);font-family:\'IBM Plex Mono\',monospace;'
-        'font-size:11px;margin:2px 0 0">default sort: composite desc &middot; '
-        'click any header to re-sort that table</p>\n</section>\n'
-    )
-    for gi, (gkey, gtitle, gdesc) in enumerate(CAMPAIGN_GROUPS):
-        grp_rows = grouped.get(gkey)
-        if not grp_rows:
-            continue
-        n = len(grp_rows)
-        parts.append(
-            f'<section class="group-section">\n'
-            f'  <h2>{html.escape(gtitle)} '
-            f'<span class="cnt">({n} run{"s" if n != 1 else ""})</span></h2>\n'
-            f'  <div class="group-desc">{html.escape(gdesc)}</div>\n'
-            f'  <div class="tablewrap">{_runs_table(grp_rows, f"runs_{gkey}")}</div>\n'
-            "</section>\n"
-        )
-
-    # -- plot panels (cards) -------------------------------------------------
+    # Panels
     def card(name: str, title: str, cap: str, wide: bool = False) -> str:
         cls = "card panel-2col" if wide else "card"
         if not plots.get(name):
-            inner = (f'<p class="cap">({html.escape(cap)} — plot unavailable: '
-                     "matplotlib missing or no data)</p>")
+            inner = (f'<p class="cap">({_esc(cap)} — plot unavailable: matplotlib '
+                     "missing or no data)</p>")
         else:
-            inner = (f'<img src="{name}" alt="{html.escape(cap)}">'
-                     f'<p class="cap">{html.escape(cap)}</p>')
-        return (f'<div class="{cls}"><h3>{html.escape(title)}</h3>{inner}</div>')
+            inner = (f'<img src="{name}" alt="{_esc(cap)}">'
+                     f'<p class="cap">{_esc(cap)}</p>')
+        return f'<div class="{cls}"><h3>{_esc(title)}</h3>{inner}</div>'
 
-    parts.append('<h2 style="margin-top:34px">Panels</h2>\n')
-    parts.append('<div class="grid">\n')
+    parts.append('<h2 style="margin-top:30px">Panels</h2>\n<div class="grid">\n')
     parts.append(card("plot_radar.png", "5-axis radar",
         "5-axis radar per method: behavior, capability, coherence, safety, selectivity (1 = best)."))
     parts.append(card("plot_parcoords.png", "Parallel coordinates",
@@ -1575,308 +1710,52 @@ def render_master(rows: list[dict], idea_dirs: list[Path],
     parts.append(card("plot_pareto_safety.png", "Pareto · safety",
         "behavior vs safety (compliance rate on x; left = safer / no leak)."))
     parts.append(card("plot_geometry.png", "Geometry probes",
-        "Off-shell displacement, effective-rank drop, and norm budget per experiment.", wide=True))
+        "Off-shell displacement, angular displacement, and Fisher ratio per experiment.", wide=True))
+    parts.append(render_stack_matrix(rows))
     parts.append("</div>\n")
 
-    # -- ladder board card ---------------------------------------------------
+    # Runs by campaign
+    parts.append(
+        '<h2 style="margin-top:30px">Runs by campaign '
+        '<span class="sub" style="display:inline">click a row link to open its '
+        'experiment page</span></h2>\n'
+        '<input type="text" id="filter" class="filter-box" '
+        'placeholder="type to filter all run rows (tag, model, hyp, exp#, …)" '
+        'oninput="filterRuns()">\n'
+        '<p class="cap">default sort: composite desc &middot; click any header to '
+        're-sort that table</p>\n')
+    for gkey, gtitle, gdesc in CAMPAIGN_GROUPS:
+        grp_rows = grouped.get(gkey)
+        if not grp_rows:
+            continue
+        n = len(grp_rows)
+        parts.append(
+            f'<section class="group-section">\n  <h2>{_esc(gtitle)} '
+            f'<span class="cnt">({n} run{"s" if n != 1 else ""})</span></h2>\n'
+            f'  <div class="group-desc">{_esc(gdesc)}</div>\n'
+            f'  <div class="tablewrap">{_runs_table(grp_rows, f"runs_{gkey}")}</div>\n'
+            "</section>\n")
+
+    # Ladder board
     ladder_rows = "".join(
-        f'<tr><td class="l">{html.escape(L["tag"])}</td>'
-        f'<td class="l">{L["rung"]} ({html.escape(L["rung_name"])})</td>'
+        f'<tr><td class="l">{_esc(L["tag"])}</td>'
+        f'<td class="l">{L["rung"]} ({_esc(L["rung_name"])})</td>'
         f'<td class="l">{"cleared" if L["cleared"] else "failed"}</td>'
-        f'<td class="l">{html.escape(L["failure_reason"] or "—")}</td></tr>'
-        for L in ladder
-    ) or '<tr><td colspan="4" class="l">No runs yet.</td></tr>'
+        f'<td class="l">{_esc(L["failure_reason"] or "—")}</td></tr>'
+        for L in ladder) or '<tr><td colspan="4" class="l empty">No runs yet.</td></tr>'
     parts.append(
         '<section class="group-section">\n  <h2>Ladder board</h2>\n'
-        '  <div class="group-desc">Per method (tag): the highest ladder rung '
-        'reached and whether the safety/quality gate cleared.</div>\n'
+        '  <div class="group-desc">Per method (tag): the highest ladder rung reached '
+        'and whether the safety/quality gate cleared.</div>\n'
         '  <div class="tablewrap"><table class="runs">\n'
         '    <thead><tr><th class="l">method (tag)</th><th class="l">highest rung</th>'
         '<th class="l">gate</th><th class="l">failure_reason</th></tr></thead>\n'
-        f"    <tbody>{ladder_rows}</tbody>\n  </table></div>\n</section>\n"
-    )
+        f"    <tbody>{ladder_rows}</tbody>\n  </table></div>\n</section>\n")
 
-    # -- stack/compete matrix (reused renderer) ------------------------------
-    parts.append(render_stack_matrix(rows))
-
-    # -- footer --------------------------------------------------------------
-    parts.append(_footer())
-    parts.append("</div>\n")  # .wrap
-    parts.append(MASTER_SORT_SCRIPT)
-    return "".join(parts)
-
-
-def _render_master_legacy(rows: list[dict], idea_dirs: list[Path],
-                          plots: dict[str, bool], ladder: list[dict]) -> str:
-    """Original dense single-table master (kept for reference; unused)."""
-    flat = [_flatten(r) for r in rows]
-    champ_num = None
-    if flat:
-        champ = max(flat, key=lambda r: _num(r, "composite", -1e18))
-        champ_num = champ.get("experiment_num")
-
-    head_cells = "".join(
-        f'<th data-key="{html.escape(k)}" data-num="{int(num)}" '
-        f'onclick="sortBy(\'{html.escape(k)}\',{int(num)})">{html.escape(label)}'
-        f'<span class="arr"></span></th>'
-        for (k, label, num) in MASTER_COLUMNS
-    )
-    head_cells += "<th>hyp link</th><th>page</th>"
-
-    body_rows = []
-    for r in flat:
-        n_seeds = int(r.get("n_seeds", 1) or 1)
-        tier = _tier_of(r)
-        is_champ = r.get("experiment_num") == champ_num
-        vclass = _verdict_class(r.get("status"))
-        cls = " ".join(c for c in ("champion" if is_champ else "", vclass) if c)
-        exp = r.get("experiment_num")
-        tds = []
-        for (k, _label, num) in MASTER_COLUMNS:
-            if k == "hypothesis":
-                lbl = hypothesis_label(r, idea_dirs)
-                tds.append(f'<td data-v="{html.escape(lbl.lower())}">{html.escape(lbl)}</td>')
-            elif k == "status":
-                st = r.get("status") or ""
-                tds.append(f'<td data-v="{html.escape(st.lower())}">'
-                           f'<span class="verdict {vclass}">{html.escape(st)}</span></td>')
-            elif num:
-                tds.append(_num_cell(r, k, tier, n_seeds))
-            else:
-                v = r.get(k)
-                disp = "" if v is None else str(v)
-                tds.append(f'<td data-v="{html.escape(disp.lower())}">{html.escape(disp)}</td>')
-        # hypothesis sub-dashboard link
-        hdir = resolve_hypothesis_dir(r, idea_dirs)
-        if hdir is not None:
-            hid = _idea_id(hdir)
-            hyp_link = f'<a href="hyp/{html.escape(hid)}.html">H{html.escape(hid)}</a>'
-        else:
-            hyp_link = "—"
-        page_link = f'<a href="experiments/exp{int(exp):03d}.html">exp{int(exp):03d}</a>' if exp is not None else "—"
-        tds.append(f"<td>{hyp_link}</td>")
-        tds.append(f"<td>{page_link}</td>")
-        body_rows.append(f'<tr class="{cls}">{"".join(tds)}</tr>')
-
-    n_cols = len(MASTER_COLUMNS) + 2
-    body_html = "\n".join(body_rows) if body_rows else (
-        f'<tr><td colspan="{n_cols}" class="empty">No experiments logged yet. '
-        'Run: python -m steering.runner --model fake --rung 0 '
-        '--description "first run" --tag smoke</td></tr>'
-    )
-
-    champ_label = f"exp#{champ_num}" if champ_num is not None else "none yet"
-
-    # plot panels (only embed images that were actually written)
-    def img(name, cap):
-        if not plots.get(name):
-            return f'<p class="cap">({cap} — plot unavailable: matplotlib missing or no data)</p>'
-        return (f'<img class="plot" src="{name}" alt="{html.escape(cap)}">'
-                f'<p class="cap">{html.escape(cap)}</p>')
-
-    # ladder board table
-    ladder_rows = "".join(
-        f'<tr><td>{html.escape(L["tag"])}</td>'
-        f'<td>{L["rung"]} ({html.escape(L["rung_name"])})</td>'
-        f'<td>{"cleared" if L["cleared"] else "failed"}</td>'
-        f'<td>{html.escape(L["failure_reason"] or "—")}</td></tr>'
-        for L in ladder
-    ) or '<tr><td colspan="4" class="empty">No runs yet.</td></tr>'
-
-    parts = [_page_open("Steering Autoresearch — Master Dashboard")]
-    parts.append(
-        "<header>\n"
-        "  <h1>Steering Autoresearch — Master Dashboard</h1>\n"
-        f'  <div class="sub">{len(flat)} run(s) logged &middot; global champion: '
-        f"{html.escape(champ_label)} &middot; default sort: composite desc</div>\n"
-        "</header>\n"
-    )
-    parts.append(_howto_block([
-        "<b>Composite is multi-objective.</b> It prices all five axes (behavior, "
-        "capability, coherence, safety, selectivity) plus an off-manifold geometry "
-        "penalty — a method cannot win by sacrificing one axis (CLAUDE.md &sect;6).",
-        "<b>Tiers matter.</b> Every numeric cell carries <code>n=X</code> and a "
-        "SCREENING (n&le;3) or EVALUATION (n&ge;7) chip. Only EVALUATION rows with "
-        "the rigor contract may be called a \"winner\" (CLAUDE.md &sect;7).",
-        "<b>Safety is a hard gate.</b> A non-zero <code>CR_jail</code> "
-        "(JailbreakBench compliance) is a Rogue-Scalpel leak and an automatic "
-        "DISCARD regardless of behavior score (CLAUDE.md &sect;10).",
-        "<b>Drill down.</b> Every row links to its per-experiment page and (when "
-        "resolvable) its per-hypothesis sub-dashboard. Click a header to sort; type "
-        "to filter. The starred green row is the global champion.",
-    ]))
-    parts.append(
-        '<section>\n  <h2>Runs</h2>\n'
-        '  <div class="controls" style="margin-bottom:10px">'
-        '<input type="text" id="filter" '
-        'placeholder="type to filter rows (tag, hypothesis, verdict, ...)" '
-        'oninput="applyFilter()"></div>\n'
-        '  <div class="tablewrap"><table id="runs">\n'
-        f"    <thead><tr>{head_cells}</tr></thead>\n"
-        f"    <tbody>\n{body_html}\n    </tbody>\n"
-        "  </table></div>\n</section>\n"
-    )
-    parts.append(
-        '<section>\n  <h2>5-axis profile (radar + parallel coordinates)</h2>\n'
-        '  <div class="grid">\n'
-        f'    <div class="cell">{img("plot_radar.png", "5-axis radar per method: behavior, capability, coherence, safety, selectivity (1 = best).")}</div>\n'
-        f'    <div class="cell">{img("plot_parcoords.png", "Parallel coordinates across the same five axes — lines that stay high everywhere are multi-objective wins.")}</div>\n'
-        "  </div>\n</section>\n"
-    )
-    parts.append(
-        '<section>\n  <h2>Pareto panels</h2>\n'
-        '  <p class="cap">What to read: a circle below-and-right of all stars '
-        '(baselines) is dominated on both axes (red outline).</p>\n'
-        '  <div class="grid">\n'
-        f'    <div class="cell">{img("plot_pareto_capability.png", "behavior vs capability (MMLU drop on x; left = better capability retention).")}</div>\n'
-        f'    <div class="cell">{img("plot_pareto_coherence.png", "behavior vs coherence (ΔPPL_norm on x; left = better coherence).")}</div>\n'
-        f'    <div class="cell">{img("plot_pareto_safety.png", "behavior vs safety (compliance rate on x; left = safer / no leak).")}</div>\n'
-        "  </div>\n</section>\n"
-    )
-    parts.append(
-        '<section>\n  <h2>Ladder board</h2>\n'
-        '  <div class="tablewrap"><table>\n'
-        "    <thead><tr><th>method (tag)</th><th>highest rung</th>"
-        "<th>gate</th><th>failure_reason</th></tr></thead>\n"
-        f"    <tbody>{ladder_rows}</tbody>\n  </table></div>\n</section>\n"
-    )
-    parts.append(render_stack_matrix(rows))
-    parts.append(
-        '<section>\n  <h2>Geometry probes</h2>\n'
-        f'  {img("plot_geometry.png", "Small-multiples: off-shell displacement Δ‖h‖, effective-rank drop, and norm budget ‖Δh‖/‖h‖ per experiment.")}\n'
-        "</section>\n"
-    )
-    parts.append(_footer())
+    parts.append(_doc_footer())
+    parts.append(_meta_footer())
     parts.append(SORT_SCRIPT)
-    return "".join(parts)
-
-
-# ===========================================================================
-# B. PER-HYPOTHESIS sub-dashboard
-# ===========================================================================
-def _parse_idea_md(idea_dir: Path) -> dict:
-    """Pull statement / falsifier / predicted-delta from IDEA.md or README.md."""
-    out = {"statement": "", "falsifier": "", "predicted": "", "title": idea_dir.name}
-    for fname in ("IDEA.md", "README.md"):
-        p = idea_dir / fname
-        if not p.exists():
-            continue
-        text = p.read_text(encoding="utf-8", errors="replace")
-        # title = first heading
-        m = re.search(r"^#\s+(.*)$", text, re.MULTILINE)
-        if m and out["title"] == idea_dir.name:
-            out["title"] = m.group(1).strip()
-
-        def _section(name):
-            m = re.search(rf"^#{{1,6}}\s*{name}.*?$\n(.*?)(?=^#{{1,6}}\s|\Z)",
-                          text, re.MULTILINE | re.DOTALL | re.IGNORECASE)
-            return m.group(1).strip() if m else ""
-
-        if not out["statement"]:
-            out["statement"] = _section("Claim") or _section("Hypothesis") or _section("TL;DR")
-        if not out["falsifier"]:
-            out["falsifier"] = _section("Falsifier")
-        if not out["predicted"]:
-            out["predicted"] = (_section("Pre-registered prediction")
-                                or _section("Predicted delta")
-                                or _section("Predicted delta range"))
-    return out
-
-
-def render_hypothesis(idea_dir: Path, rows: list[dict], plots: dict[str, bool]) -> str:
-    hid = _idea_id(idea_dir)
-    info = _parse_idea_md(idea_dir)
-    flat = [_flatten(r) for r in rows]
-    best = max(flat, key=lambda r: _num(r, "composite", -1e18)) if flat else None
-
-    parts = [_page_open(f"Hypothesis H{hid} — {info['title']}")]
-    parts.append(
-        "<header>\n"
-        f'  <div class="nav"><a href="../index.html">&larr; Master dashboard</a></div>\n'
-        f"  <h1>Hypothesis H{html.escape(hid)} — {html.escape(info['title'])}</h1>\n"
-        f'  <div class="sub">{len(flat)} run(s) for this hypothesis</div>\n'
-        "</header>\n"
-    )
-    parts.append(_howto_block([
-        "<b>Scope.</b> This page shows only the runs resolved to hypothesis "
-        f"H{html.escape(hid)}; the master dashboard aggregates all hypotheses.",
-        "<b>Best-config callout</b> below is the highest-composite run for this "
-        "hypothesis (still SCREENING until n&ge;7 with the rigor contract).",
-        "<b>Tiers / numerics.</b> Every numeric cell carries <code>n=X</code> and a "
-        "SCREENING / EVALUATION chip — no bare numbers.",
-        "<b>Drill down.</b> Each row links to its per-experiment page; the footer "
-        "links back to the master dashboard.",
-    ]))
-
-    if best is not None:
-        n_seeds = int(best.get("n_seeds", 1) or 1)
-        tier = _tier_of(best)
-        parts.append(
-            '<section>\n  <h2>Best-config callout</h2>\n'
-            '  <div class="callout">\n'
-            f'    <b>exp#{best.get("experiment_num")}</b> &middot; tag '
-            f'<code>{html.escape(str(best.get("tag") or ""))}</code> &middot; '
-            f'composite <b>{_num(best, "composite"):.4f}</b> '
-            f'<span class="seed-badge">n={n_seeds}</span>'
-            f'<span class="chip {tier.lower()}">{tier} n={n_seeds}</span><br>\n'
-            f'    behavior {_num(best, "behavior_efficacy"):.4f} &middot; '
-            f'dMMLU {_num(best, "mmlu_drop_pp"):.4f} &middot; '
-            f'PPL {_num(best, "perplexity"):.4f} &middot; '
-            f'CR_jail {_num(best, "compliance_rate"):.4f} &middot; '
-            f'over_refusal {_num(best, "harmless_refusal_rate"):.4f}\n'
-            "  </div>\n</section>\n"
-        )
-
-    # hypothesis card (markdown-rendered, so no ##/**/|---| leak)
-    card = ""
-    for label, key in (("Statement", "statement"), ("Falsifier", "falsifier"),
-                       ("Predicted Δ", "predicted")):
-        if info[key]:
-            card += f'<h3>{label}</h3>\n<div class="md">{md_to_html(info[key])}</div>\n'
-    if not card:
-        card = '<p class="warn">(No IDEA.md / README.md statement found for this hypothesis.)</p>'
-    parts.append(f'<section>\n  <h2>Hypothesis card</h2>\n  {card}</section>\n')
-
-    # plots
-    def img(name, cap):
-        if not plots.get(name):
-            return f'<p class="cap">({cap} — plot unavailable.)</p>'
-        return (f'<img class="plot" src="{name}" alt="{html.escape(cap)}">'
-                f'<p class="cap">{html.escape(cap)}</p>')
-
-    parts.append(
-        '<section>\n  <h2>Coordinate descent &amp; seed stability</h2>\n'
-        '  <div class="grid">\n'
-        f'    <div class="cell">{img(f"hyp{hid}_coord.png", "composite vs injection layer and vs alpha for this hypothesis sweep.")}</div>\n'
-        f'    <div class="cell">{img(f"hyp{hid}_seeds.png", "composite per run with mean overlay — variance visibility (seed-stability surrogate).")}</div>\n'
-        "  </div>\n</section>\n"
-    )
-
-    # scoped cells table
-    rowtext = []
-    for r in flat:
-        n_seeds = int(r.get("n_seeds", 1) or 1)
-        tier = _tier_of(r)
-        exp = r.get("experiment_num")
-        page = f'<a href="../experiments/exp{int(exp):03d}.html">exp{int(exp):03d}</a>' if exp is not None else "—"
-        chip = f'<span class="chip {tier.lower()}">{tier} n={n_seeds}</span>'
-        rowtext.append(
-            f'<tr><td>{exp}</td><td>{html.escape(str(r.get("tag") or ""))}</td>'
-            f'<td>{_num(r, "composite"):.4f} {chip}</td>'
-            f'<td>{_num(r, "behavior_efficacy"):.4f}</td>'
-            f'<td>{_num(r, "compliance_rate"):.4f}</td>'
-            f'<td>{html.escape(str(r.get("status") or ""))}</td>'
-            f'<td>{page}</td></tr>'
-        )
-    body = "\n".join(rowtext) or '<tr><td colspan="7" class="empty">No runs.</td></tr>'
-    parts.append(
-        '<section>\n  <h2>Cells (experiments for this hypothesis)</h2>\n'
-        '  <div class="tablewrap"><table>\n'
-        "    <thead><tr><th>exp#</th><th>tag</th><th>composite</th>"
-        "<th>behavior</th><th>CR_jail</th><th>verdict</th><th>page</th></tr></thead>\n"
-        f"    <tbody>\n{body}\n    </tbody>\n  </table></div>\n</section>\n"
-    )
-    parts.append(_footer(extra=' &middot; <a href="../index.html">&larr; master</a>'))
+    parts.append("</body>\n</html>\n")
     return "".join(parts)
 
 
@@ -1888,9 +1767,8 @@ REASONING_STEPS = [
     ("2. Cite", "citations"),
     ("3. Hypothesize", "hypothesis"),
     ("4. Predict", "prediction"),
-    ("5. Execute", "execution_note"),
-    ("6. Analyse", "analysis"),
-    ("7. Checkpoint", "checkpoint"),
+    ("5. Verdict", "verdict"),
+    ("6. Learn", "learning"),
 ]
 
 AXIS_METRICS = [
@@ -1908,32 +1786,13 @@ AXIS_METRICS = [
 
 GEOMETRY_METRICS = [
     ("offshell_displacement", "off-shell displacement Δ‖h‖"),
-    ("effective_rank_base", "effective rank (base)"),
-    ("effective_rank_steer", "effective rank (steered)"),
-    ("participation_ratio_base", "participation ratio (base)"),
-    ("participation_ratio_steer", "participation ratio (steered)"),
-    ("norm_budget", "norm budget ‖Δh‖/‖h‖"),
+    ("angular_displacement", "angular displacement (1−cos)"),
     ("fisher_at_layer", "Fisher ratio at layer"),
+    ("cosine_dm_pca", "cos(DiffMean, PCA-top1)"),
 ]
 
 
 def _extract_samples(row: dict) -> list[dict]:
-    """Pull steered-vs-unsteered generation samples out of an experiment row.
-
-    runner.py is NOT edited by this module — we consume whatever keys already
-    exist in the logged JSONL row. Recognised shapes (first match wins):
-
-      * top-level pair:  row["sample_steered"] / row["sample_unsteered"]
-        (optional row["sample_prompt"] gives the shared prompt).
-      * a list:          row["samples"] = [
-            {"prompt": ..., "steered": ..., "unsteered": ...}, ...]
-        (per-item keys may also be "sample_steered"/"sample_unsteered" or
-         "steered_text"/"unsteered_text").
-      * nested under config: same keys inside row["config"].
-
-    Returns a normalised list of {"prompt","steered","unsteered"} dicts; an
-    empty list means no samples were captured for this run.
-    """
     cfg = row.get("config", {}) or {}
 
     def _g(d, *keys):
@@ -1943,7 +1802,6 @@ def _extract_samples(row: dict) -> list[dict]:
                 return v
         return None
 
-    # 1. explicit list of samples.
     samples = row.get("samples") or cfg.get("samples")
     if isinstance(samples, list) and samples:
         out = []
@@ -1959,7 +1817,6 @@ def _extract_samples(row: dict) -> list[dict]:
         if out:
             return out
 
-    # 2. top-level (or config-level) single pair.
     steered = _g(row, "sample_steered", "steered_text") or _g(cfg, "sample_steered", "steered_text")
     unsteered = _g(row, "sample_unsteered", "unsteered_text") or _g(cfg, "sample_unsteered", "unsteered_text")
     prompt = _g(row, "sample_prompt", "prompt") or _g(cfg, "sample_prompt", "prompt") or ""
@@ -1969,161 +1826,37 @@ def _extract_samples(row: dict) -> list[dict]:
 
 
 def _samples_section(row: dict) -> str:
-    """Two-column steered-vs-unsteered section (placeholder when absent)."""
     samples = _extract_samples(row)
     if not samples:
         return (
-            '<section>\n  <h2>Side-by-side samples (steered vs unsteered)</h2>\n'
-            '  <p class="cap">No samples captured for this run. The two-column '
-            'layout below is ready; it populates once the runner logs '
-            '<code>sample_steered</code> / <code>sample_unsteered</code> (or a '
-            '<code>samples</code> list) on the experiment row.</p>\n'
-            '  <div class="grid samples">\n'
-            '    <div class="cell"><h3>Unsteered (baseline)</h3>'
-            '<pre class="sample warn">(no samples captured for this run)</pre></div>\n'
-            '    <div class="cell"><h3>Steered</h3>'
-            '<pre class="sample warn">(no samples captured for this run)</pre></div>\n'
-            "  </div>\n</section>\n"
-        )
+            '<section class="card"><h2>Side-by-side samples (steered vs unsteered)</h2>\n'
+            '  <p class="cap">No samples captured for this run. The two-column layout '
+            'below is ready; it populates once the runner logs <code>sample_steered</code>'
+            ' / <code>sample_unsteered</code> (or a <code>samples</code> list) on the '
+            'experiment row.</p>\n  <div class="charts">\n'
+            '    <div><h3>Unsteered (baseline)</h3>'
+            '<pre class="sample empty">(no samples captured for this run)</pre></div>\n'
+            '    <div><h3>Steered</h3>'
+            '<pre class="sample empty">(no samples captured for this run)</pre></div>\n'
+            "  </div>\n</section>\n")
     blocks = []
     for i, s in enumerate(samples, 1):
-        prompt_html = (
-            f'  <p class="cap">Prompt {i}: <code>{html.escape(str(s["prompt"]))}</code></p>\n'
-            if s.get("prompt") else ""
-        )
+        prompt_html = (f'  <p class="cap">Prompt {i}: <code>{_esc(s["prompt"])}</code></p>\n'
+                       if s.get("prompt") else "")
         blocks.append(
-            prompt_html
-            + '  <div class="grid samples">\n'
-            '    <div class="cell"><h3>Unsteered (baseline)</h3>'
-            f'<pre class="sample">{html.escape(str(s["unsteered"]) or "(empty)")}</pre></div>\n'
-            '    <div class="cell"><h3>Steered</h3>'
-            f'<pre class="sample">{html.escape(str(s["steered"]) or "(empty)")}</pre></div>\n'
-            "  </div>\n"
-        )
-    return (
-        '<section>\n  <h2>Side-by-side samples (steered vs unsteered)</h2>\n'
-        f'  <p class="cap">{len(samples)} captured generation pair(s) from the '
-        "experiment row.</p>\n" + "".join(blocks) + "</section>\n"
-    )
+            prompt_html + '  <div class="charts">\n'
+            '    <div><h3>Unsteered (baseline)</h3>'
+            f'<pre class="sample">{_esc(s["unsteered"]) or "(empty)"}</pre></div>\n'
+            '    <div><h3>Steered</h3>'
+            f'<pre class="sample">{_esc(s["steered"]) or "(empty)"}</pre></div>\n  </div>\n')
+    return ('<section class="card"><h2>Side-by-side samples (steered vs unsteered)</h2>\n'
+            f'  <p class="cap">{len(samples)} captured generation pair(s) from the '
+            "experiment row.</p>\n" + "".join(blocks) + "</section>\n")
 
 
-def render_experiment(row: dict, ann: dict, idea_dirs: list[Path],
-                      sweep_plot: Optional[str] = None,
-                      sweep_single: bool = False) -> str:
-    flat = _flatten(row)
-    exp = flat.get("experiment_num")
-    exp_id = f"exp{int(exp):03d}" if exp is not None else "exp"
-    tag = str(flat.get("tag") or "")
-    n_seeds = int(flat.get("n_seeds", 1) or 1)
-    tier = _tier_of(flat)
-    hdir = resolve_hypothesis_dir(row, idea_dirs)
-    hid = _idea_id(hdir) if hdir is not None else None
-
-    nav = '<a href="../index.html">&larr; Master dashboard</a>'
-    if hid is not None:
-        nav += f' &middot; <a href="../hyp/{html.escape(hid)}.html">&larr; Hypothesis H{html.escape(hid)} sub-dashboard</a>'
-
-    parts = [_page_open(f"Experiment {exp_id} — {tag}")]
-    parts.append(
-        "<header>\n"
-        f'  <div class="nav">{nav}</div>\n'
-        f"  <h1>Experiment {html.escape(exp_id)} — "
-        f'<code>{html.escape(tag)}</code></h1>\n'
-        '  <div class="sub">'
-        f'<span class="tag-pill">{html.escape(tag or "untagged")}</span>'
-        f'<span class="seed-badge">n={n_seeds}</span>'
-        f'<span class="chip {tier.lower()}">{tier} n={n_seeds}</span> &middot; '
-        f'composite <b>{_num(flat, "composite"):.4f}</b> &middot; '
-        f'verdict <span class="verdict {_verdict_class(flat.get("status"))}">'
-        f'{html.escape(str(flat.get("status") or ""))}</span> &middot; '
-        f'git <code>{_git_sha()}</code></div>\n'
-        "</header>\n"
-    )
-    parts.append(_howto_block([
-        "<b>This page</b> is the full audit trail for one experiment: the 7-step "
-        "reasoning entry, the config, all five axis metrics, and the geometry probes.",
-        "<b>Reasoning is rendered from markdown</b> — headings, bold, tables and "
-        "blockquotes are converted to HTML (no literal markup leaks).",
-        "<b>Tiers / numerics.</b> The header strip carries <code>n=X</code> and the "
-        "SCREENING / EVALUATION chip; metrics tables show any CIs.",
-        "<b>Back-links</b> to the hypothesis sub-dashboard and the master dashboard "
-        "are in the header and footer.",
-    ]))
-
-    # Section: 7-step reasoning
-    steps_html = []
-    for label, key in REASONING_STEPS:
-        val = ann.get(key) if ann else None
-        if val:
-            steps_html.append(
-                f'<h3>{html.escape(label)}</h3>\n'
-                f'<div class="md">{md_to_html(str(val))}</div>'
-            )
-        else:
-            steps_html.append(
-                f'<h3>{html.escape(label)}</h3>\n'
-                f'<p class="warn">(reasoning field "{html.escape(key)}" missing — '
-                "7-step gate not verified for this field.)</p>"
-            )
-    if not ann:
-        steps_html.insert(0, '<p class="warn">(No reasoning annotation found for '
-                          "this experiment — 7-step gate not verified.)</p>")
-    parts.append('<section>\n  <h2>7-step reasoning entry</h2>\n'
-                 + "\n".join(steps_html) + "\n</section>\n")
-
-    # Section: config
-    cfg = row.get("config", {}) or {}
-    cfg_json = html.escape(json.dumps(cfg, indent=2))
-    parts.append(
-        '<section>\n  <h2>Configuration</h2>\n'
-        f'  <div class="md"><pre><code>{cfg_json}</code></pre></div>\n'
-        '  <p class="cap">Source: experiment_log.jsonl config block.</p>\n</section>\n'
-    )
-
-    # Section: axis metrics with CIs
-    def _ci_cells(key):
-        lo = row.get(f"{key}_ci_low")
-        hi = row.get(f"{key}_ci_high")
-        if lo is None and hi is None:
-            return "<td>(CI not computed)</td><td>(CI not computed)</td>"
-        return (f"<td>{html.escape(str(lo))}</td><td>{html.escape(str(hi))}</td>")
-
-    metric_rows = []
-    for key, label, good in AXIS_METRICS:
-        v = row.get(key)
-        disp = f"{v:.4f}" if isinstance(v, float) else ("" if v is None else str(v))
-        metric_rows.append(
-            f"<tr><td>{html.escape(label)}</td>"
-            f'<td>{html.escape(disp)} <span class="seed-badge">n={n_seeds}</span></td>'
-            f"<td>{html.escape(good)}</td>{_ci_cells(key)}</tr>"
-        )
-    parts.append(
-        '<section>\n  <h2>Five-axis metrics (with CIs)</h2>\n'
-        '  <div class="tablewrap"><table>\n'
-        "    <thead><tr><th>metric</th><th>value (n)</th><th>good=</th>"
-        "<th>CI low</th><th>CI high</th></tr></thead>\n"
-        f"    <tbody>{''.join(metric_rows)}</tbody>\n  </table></div>\n</section>\n"
-    )
-
-    # Section: geometry probes
-    geo_rows = []
-    for key, label in GEOMETRY_METRICS:
-        v = row.get(key)
-        if v is None:
-            continue
-        disp = f"{v:.4f}" if isinstance(v, float) else str(v)
-        geo_rows.append(f"<tr><td>{html.escape(label)}</td>"
-                        f'<td>{html.escape(disp)} <span class="seed-badge">n={n_seeds}</span></td></tr>')
-    if not geo_rows:
-        geo_rows.append('<tr><td colspan="2" class="empty">No geometry probes logged.</td></tr>')
-    parts.append(
-        '<section>\n  <h2>Geometry probes</h2>\n'
-        '  <div class="tablewrap"><table>\n'
-        "    <thead><tr><th>probe</th><th>value (n)</th></tr></thead>\n"
-        f"    <tbody>{''.join(geo_rows)}</tbody>\n  </table></div>\n</section>\n"
-    )
-
-    # Section: composite breakdown
+def _composite_stack(flat: dict) -> tuple[str, str]:
+    """Composite term-by-term breakdown (stacked bar + table). Returns
+    (stacked_bar_html, breakdown_table_html); reconciled to the logged composite."""
     def w(name):
         return COMPOSITE_WEIGHTS.get(name, 0.0)
     be = _num(flat, "behavior_efficacy")
@@ -2133,9 +1866,9 @@ def render_experiment(row: dict, ann: dict, idea_dirs: list[Path],
          -w("lambda_cap") * max(0.0, _num(flat, "mmlu_drop_pp"))),
         ("− λ_coh · ΔPPL_norm", -w("lambda_coh"), max(0.0, _num(flat, "dppl_norm")),
          -w("lambda_coh") * max(0.0, _num(flat, "dppl_norm"))),
-        ("− λ_coh_rep · repetition", -w("lambda_coh_rep"), max(0.0, _num(flat, "repetition_rate")),
+        ("− λ_rep · repetition", -w("lambda_coh_rep"), max(0.0, _num(flat, "repetition_rate")),
          -w("lambda_coh_rep") * max(0.0, _num(flat, "repetition_rate"))),
-        ("− λ_safe · compliance_rate", -w("lambda_safe"), _num(flat, "compliance_rate"),
+        ("− λ_safe · compliance", -w("lambda_safe"), _num(flat, "compliance_rate"),
          -w("lambda_safe") * _num(flat, "compliance_rate")),
         ("− λ_sel · harmless_refusal", -w("lambda_sel"), max(0.0, _num(flat, "harmless_refusal_rate")),
          -w("lambda_sel") * max(0.0, _num(flat, "harmless_refusal_rate"))),
@@ -2143,52 +1876,438 @@ def render_experiment(row: dict, ann: dict, idea_dirs: list[Path],
          -w("lambda_geo") * max(0.0, _num(flat, "offshell_displacement"))),
     ]
     total = sum(t[3] for t in terms)
-    brk_rows = "".join(
-        f"<tr><td>{html.escape(t[0])}</td><td>{t[1]:+.3f}</td>"
-        f"<td>{t[2]:+.4f}</td><td>{t[3]:+.4f}</td></tr>" for t in terms
-    )
     reported = _num(flat, "composite")
-    recon = "" if abs(total - reported) < 5e-3 else (
+
+    # stacked bar — magnitudes; positive seg green, cost segs orange.
+    mags = [(t[0], t[3]) for t in terms if abs(t[3]) > 1e-9]
+    tot_mag = sum(abs(m) for _n, m in mags) or 1.0
+    segs = []
+    for name, val in mags:
+        pct = 100.0 * abs(val) / tot_mag
+        if pct < 0.6:
+            continue
+        cls = "pos" if val >= 0 else "cost"
+        sign = "+" if val >= 0 else "−"
+        segs.append(f'<div class="seg {cls}" style="width:{pct:.2f}%" '
+                    f'title="{_esc(name)} = {val:+.4f}">{_esc(name.split(" ")[-1])} '
+                    f'{sign}{abs(val):.3f}</div>')
+    delta = total - reported
+    stack = (
+        '<div class="comp-stack">' + "".join(segs) + "</div>\n"
+        '<div style="display:flex;justify-content:space-between;'
+        'font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--paper-dim);'
+        'margin-top:6px">'
+        f'<span>Σ recomputed: <b style="color:var(--paper)">{total:+.5f}</b></span>'
+        f'<span>reported: <b style="color:var(--paper)">{reported:+.5f}</b> '
+        f'&middot; Δ {delta:+.6f}</span></div>\n')
+
+    brk_rows = "".join(
+        f'<tr><td class="term">{_esc(t[0])}</td>'
+        f'<td class="term mut" style="text-align:right">{t[1]:+.3f}</td>'
+        f'<td class="term" style="text-align:right">{t[2]:+.4f}</td>'
+        f'<td class="term {"pos" if t[3] >= 0 else "neg"}" style="text-align:right">'
+        f'{t[3]:+.5f}</td></tr>' for t in terms)
+    recon = "" if abs(delta) < 5e-3 else (
         f'<p class="warn">Reconstructed {total:+.4f} differs from reported '
-        f"{reported:+.4f} — review weighting.</p>")
-    parts.append(
-        '<section>\n  <h2>Composite breakdown</h2>\n'
-        '  <div class="tablewrap"><table>\n'
-        "    <thead><tr><th>term</th><th>weight</th><th>raw</th>"
-        "<th>contribution</th></tr></thead>\n"
-        f"    <tbody>{brk_rows}"
-        f"<tr><td><b>composite (sum)</b></td><td></td><td></td>"
-        f"<td><b>{total:+.4f}</b></td></tr></tbody>\n  </table></div>\n"
-        f"  {recon}</section>\n"
-    )
+        f'{reported:+.4f} — review weighting.</p>')
+    table = (
+        '<table class="kvtable breakdown"><thead><tr><th>term</th>'
+        '<th style="text-align:right">weight</th><th style="text-align:right">raw</th>'
+        '<th style="text-align:right">contribution</th></tr></thead><tbody>'
+        f'{brk_rows}<tr style="border-top:2px solid var(--rule-bright)">'
+        f'<td class="term" colspan="3"><b>Σ (recomputed)</b></td>'
+        f'<td class="term" style="text-align:right"><b>{total:+.5f}</b></td></tr>'
+        f'</tbody></table>{recon}')
+    return stack, table
 
-    # Section: per-experiment sweep curve (behavior + PPL vs swept axis)
-    if sweep_plot:
-        note = (' <span class="cap">sweep accumulates as more alpha/layer rows '
-                "are logged</span>") if sweep_single else ""
-        sweep_body = (
-            f'<img class="plot" src="{html.escape(sweep_plot)}" '
-            'alt="sweep curve: behavior and PPL vs swept axis">'
-            f'<p class="cap">behavior_efficacy (left axis) and perplexity '
-            f"(right axis) vs the swept alpha/layer axis for this hypothesis "
-            f"group.{note}</p>"
-        )
+
+def render_experiment(row: dict, ann: dict, table: dict[str, dict],
+                      repo_root: Path, idea_dirs: list[Path],
+                      prev_exp: Optional[int] = None,
+                      next_exp: Optional[int] = None,
+                      sweep_plot: Optional[str] = None,
+                      sweep_single: bool = False) -> str:
+    flat = _flatten(row)
+    exp = flat.get("experiment_num")
+    exp_id = f"exp{int(exp):03d}" if exp is not None else "exp"
+    tag = str(flat.get("tag") or "")
+    n_seeds = int(flat.get("n_seeds", 1) or 1)
+    tier = _tier_of(flat)
+    status = str(flat.get("status") or "")
+    hid = resolve_hyp_id(row, repo_root, idea_dirs)
+    hinfo = _hyp_info(hid, table, repo_root, idea_dirs) if hid else {}
+    model = _short_model(flat.get("model"))
+    comp = _num(flat, "composite")
+
+    back = '<a class="back" href="../index.html">&larr; back to master</a>'
+
+    # verdict-row provenance chips
+    vbadges = [f'<span class="vbadge {"keep" if status=="KEEP" else "discard"}">{_esc(status or "?")}</span>',
+               f'<span class="vbadge prov">tier {tier.lower()} n={n_seeds}</span>']
+    if flat.get("behavior_scorer"):
+        vbadges.append(f'<span class="vbadge prov">behavior: {_esc(flat.get("behavior_scorer"))}</span>')
+    if flat.get("safety_real") is not None:
+        vbadges.append(f'<span class="vbadge prov">safety_real: {_esc(flat.get("safety_real"))}</span>')
+
+    hyp_pill = (f'<span class="pill hyp">{_esc(hid)}</span>' if hid
+                else '<span class="pill">infra</span>')
+    grp_pill = ""
+    gkey = campaign_group_of(row)
+    for k, gt, _gd in CAMPAIGN_GROUPS:
+        if k == gkey:
+            grp_pill = f'<span class="pill grp">{_esc(gt)}</span>'
+            break
+
+    parts = [_page_open(f"Experiment {exp_id} — {tag}")]
+    parts.append('<div class="grain"></div>\n')
+    parts.append(
+        '<div class="head-grid">\n  <div class="head-left">\n'
+        f'    <div class="tag-display">{_esc(exp_id)}</div>\n'
+        f'    <div class="sub">{hyp_pill}{grp_pill}'
+        f'<span class="pill ds">{_esc(model)}</span>'
+        f'<span class="pill">layer {_esc(flat.get("layer"))}</span>'
+        f'<span class="pill">α {_esc(flat.get("alpha"))}</span>'
+        f'&nbsp;&middot;&nbsp; tag <span class="mono" style="color:var(--paper)">'
+        f'{_esc(tag)}</span></div>\n'
+        f'    {_mast_row()}'
+        '  </div>\n  <div class="head-right">\n'
+        f'    {back}\n'
+        f'    <div class="verdict-row">{"".join(vbadges)}</div>\n'
+        '  </div>\n</div>\n')
+
+    # Key-numbers strip
+    def kn(val, lbl, tint):
+        return (f'<div class="kn-tile tint-{tint}"><div class="kn-val">{val}</div>'
+                f'<div class="kn-lbl">{_esc(lbl)}</div></div>')
+    parts.append('<div class="kn-strip">'
+        + kn(f"{comp:+.4f}", "composite", "pos" if comp > 0 else "neg")
+        + kn(f"{_num(flat,'behavior_efficacy'):.3f}", "behavior", "neu")
+        + kn(f"{_num(flat,'perplexity'):.1f}", "perplexity", "neu")
+        + kn(f"{_num(flat,'mmlu_drop_pp')*100:.1f}pp", "MMLU drop", "neu")
+        + kn(f"{_num(flat,'compliance_rate'):.2f}", "CR (jailbreak)",
+             "neg" if _num(flat,'compliance_rate') > 0 else "pos")
+        + kn(f"n={n_seeds}", f"tier {tier.lower()}", "neu")
+        + "</div>\n")
+
+    # Hypothesis digest card
+    if hid and (hinfo.get("title") or hinfo.get("hypothesis")):
+        idir = _idea_dir_for_id(hid, repo_root, table, idea_dirs)
+        extra = ""
+        if idir:
+            info = _parse_idea_md(idir)
+            if info.get("falsifier"):
+                extra += ('<h3>Falsifier</h3><div class="md-body">'
+                          + md_to_html(info["falsifier"]) + "</div>")
+            if info.get("predicted"):
+                extra += ('<h3>Predicted Δ</h3><div class="md-body">'
+                          + md_to_html(info["predicted"]) + "</div>")
+        verdict = hinfo.get("verdict", "PENDING")
+        vcls = VERDICT_CLASS.get(verdict, "v-pending")
+        parts.append(
+            '<section class="card"><h2>Hypothesis '
+            f'<a href="../hyp/{_esc(hid)}.html" class="mono" '
+            f'style="font-size:0.6em;letter-spacing:0.12em">{_esc(hid)} page &rarr;</a></h2>\n'
+            f'  <p><span class="hyp-cell {vcls}" style="cursor:default;width:auto;'
+            f'padding:2px 8px;display:inline-block">{_esc(verdict)}</span> '
+            f'<b>{_esc(hid)} — {_esc(hinfo.get("title",""))}</b></p>\n'
+            f'  <div class="md-body">{md_to_html(hinfo.get("hypothesis",""))}</div>\n'
+            f'  <p class="cap">Metric + threshold: {_esc(hinfo.get("metric",""))}</p>\n'
+            f'  {extra}\n</section>\n')
     else:
-        sweep_body = ('<p class="cap">(sweep curve unavailable — matplotlib '
-                      "missing or no alpha/layer value logged for this run; "
-                      "sweep accumulates as more alpha/layer rows are logged.)</p>")
-    parts.append(
-        '<section>\n  <h2>Sweep curve (behavior + PPL vs alpha/layer)</h2>\n'
-        f"  {sweep_body}\n</section>\n"
-    )
+        parts.append(
+            '<section class="card"><h2>Hypothesis</h2>'
+            '<p class="empty">No hypothesis resolved for this row — '
+            'infrastructure / plumbing run.</p></section>\n')
 
-    # Section: side-by-side steered vs unsteered samples
+    # Verdict card (from reasoning verdict blob)
+    verdict_blob = ann.get("verdict") if ann else None
+    learning_blob = ann.get("learning") if ann else None
+    vcard = ""
+    if verdict_blob:
+        vcard += f'<div class="quote md-body">{md_to_html(str(verdict_blob))}</div>'
+    if learning_blob:
+        vcard += ('<h3>Learning</h3><div class="md-body">'
+                  + md_to_html(str(learning_blob)) + "</div>")
+    if not vcard:
+        vcard = (f'<p>Run verdict: <b>{_esc(status)}</b> — see the reasoning blob '
+                 'below. (No reasoning verdict field archived for this row.)</p>')
+    parts.append(
+        '<section class="card"><h2>Verdict '
+        '<span class="mono" style="font-size:0.55em;letter-spacing:0.18em;'
+        'color:var(--paper-dim)">reasoning_annotations.json</span></h2>\n'
+        f'  {vcard}\n</section>\n')
+
+    # 7-step reasoning blob
+    steps_html = []
+    for label, key in REASONING_STEPS:
+        val = ann.get(key) if ann else None
+        if val:
+            steps_html.append(
+                f'<div class="reason-section"><div class="lbl">{_esc(label)}</div>'
+                f'<div class="md-body">{md_to_html(str(val))}</div></div>')
+        else:
+            steps_html.append(
+                f'<div class="reason-section"><div class="lbl">{_esc(label)}</div>'
+                f'<p class="warn">(reasoning field "{_esc(key)}" missing.)</p></div>')
+    if not ann:
+        steps_html.insert(0, '<p class="warn">(No reasoning annotation found for '
+                          "this experiment.)</p>")
+    parts.append('<section class="card"><h2>Reasoning entry</h2>\n'
+                 + "\n".join(steps_html) + "\n</section>\n")
+
+    # Configuration
+    cfg = row.get("config", {}) or {}
+    cfg_json = _esc(json.dumps(cfg, indent=2))
+    parts.append(
+        '<section class="card"><h2>Configuration</h2>\n'
+        f'  <pre>{cfg_json}</pre>\n'
+        '  <p class="cap">Source: experiment_log.jsonl config block.</p>\n</section>\n')
+
+    # Five-axis metrics quick reference
+    def _ci_cells(key):
+        lo = row.get(f"{key}_ci_low")
+        hi = row.get(f"{key}_ci_high")
+        if lo is None and hi is None:
+            return '<td class="mut">(CI not computed)</td><td class="mut">(CI not computed)</td>'
+        return f"<td>{_esc(lo)}</td><td>{_esc(hi)}</td>"
+    metric_rows = []
+    for key, label, good in AXIS_METRICS:
+        v = row.get(key)
+        disp = f"{v:.4f}" if isinstance(v, float) else ("" if v is None else str(v))
+        metric_rows.append(
+            f'<tr><td class="k">{_esc(label)}</td>'
+            f'<td class="v">{_esc(disp)} <span class="n-chip scr">n={n_seeds}</span></td>'
+            f'<td class="mut">{_esc(good)}</td>{_ci_cells(key)}</tr>')
+    parts.append(
+        '<section class="card"><h2>Five-axis metrics — quick reference</h2>\n'
+        '  <table class="kvtable"><thead><tr><th>metric</th><th>value (n)</th>'
+        '<th>good=</th><th>CI low</th><th>CI high</th></tr></thead>\n'
+        f"  <tbody>{''.join(metric_rows)}</tbody></table>\n</section>\n")
+
+    # Composite breakdown
+    stack, brk = _composite_stack(flat)
+    parts.append(
+        '<section class="card"><h2>Composite-score breakdown</h2>\n'
+        f'  {stack}\n  {brk}\n'
+        f'  <div class="formula-chip" style="margin-top:14px">composite &#8788; '
+        f'<code>{_esc(COMPOSITE_FORMULA)}</code></div>\n</section>\n')
+
+    # Geometry probes
+    geo_rows = []
+    for key, label in GEOMETRY_METRICS:
+        v = row.get(key)
+        if v is None:
+            continue
+        disp = f"{v:.4f}" if isinstance(v, float) else str(v)
+        geo_rows.append(f'<tr><td class="k">{_esc(label)}</td>'
+                        f'<td class="v">{_esc(disp)} <span class="n-chip scr">n={n_seeds}</span></td></tr>')
+    if not geo_rows:
+        geo_rows.append('<tr><td colspan="2" class="empty">No geometry probes logged.</td></tr>')
+    parts.append(
+        '<section class="card"><h2>Geometry probes</h2>\n'
+        '  <table class="kvtable"><thead><tr><th>probe</th><th>value (n)</th></tr></thead>\n'
+        f"  <tbody>{''.join(geo_rows)}</tbody></table>\n</section>\n")
+
+    # Sweep curve
+    if sweep_plot:
+        note = (' <span class="cap">sweep accumulates as more alpha/layer rows are '
+                "logged</span>") if sweep_single else ""
+        sweep_body = (f'<img src="{_esc(sweep_plot)}" alt="sweep curve">'
+                      f'<p class="cap">behavior_efficacy (left axis) and perplexity '
+                      f'(right axis) vs the swept alpha/layer axis for this hypothesis '
+                      f'group.{note}</p>')
+    else:
+        sweep_body = ('<p class="cap">(sweep curve unavailable — matplotlib missing or '
+                      'no alpha/layer value logged for this run; sweep accumulates as '
+                      'more alpha/layer rows are logged.)</p>')
+    parts.append(
+        '<section class="card"><h2>Sweep curve (behavior + PPL vs alpha/layer)</h2>\n'
+        f'  {sweep_body}\n</section>\n')
+
+    # Samples
     parts.append(_samples_section(row))
 
-    back = '<a href="../index.html">&larr; master</a>'
-    if hid is not None:
-        back += f' &middot; <a href="../hyp/{html.escape(hid)}.html">&larr; H{html.escape(hid)}</a>'
-    parts.append(_footer(extra=f' &middot; {back}'))
+    # Cross-references grid
+    xrefs = []
+    if hid:
+        xrefs.append(
+            f'<a class="xref-card" href="../hyp/{_esc(hid)}.html">'
+            f'<div class="xref-lbl">&#8599; hypothesis</div>'
+            f'<div class="xref-tag">{_esc(hid)}</div>'
+            f'<div class="xref-meta">{_esc(hinfo.get("title",""))}</div></a>')
+    if prev_exp is not None:
+        xrefs.append(
+            f'<a class="xref-card" href="exp{int(prev_exp):03d}.html">'
+            f'<div class="xref-lbl">&#8592; previous experiment</div>'
+            f'<div class="xref-tag">exp{int(prev_exp):03d}</div></a>')
+    if next_exp is not None:
+        xrefs.append(
+            f'<a class="xref-card" href="exp{int(next_exp):03d}.html">'
+            f'<div class="xref-lbl">&#8594; next experiment</div>'
+            f'<div class="xref-tag">exp{int(next_exp):03d}</div></a>')
+    xrefs.append(
+        '<a class="xref-card" href="../index.html">'
+        '<div class="xref-lbl">&#8599; master dashboard</div>'
+        '<div class="xref-tag">index</div>'
+        '<div class="xref-meta">runs table + hypothesis grid</div></a>')
+    parts.append(
+        '<section class="card"><h2>Cross-references</h2>\n'
+        f'  <div class="xrefs-grid">{"".join(xrefs)}</div>\n</section>\n')
+
+    parts.append(_doc_footer())
+    extra = f' &middot; experiment <code>{_esc(exp_id)}</code>'
+    if hid:
+        extra += f' &middot; hypothesis <code>{_esc(hid)}</code>'
+    parts.append(_meta_footer(extra=extra))
+    parts.append("</body>\n</html>\n")
+    return "".join(parts)
+
+
+# ===========================================================================
+# B. PER-HYPOTHESIS page
+# ===========================================================================
+def _campaign_writeup_for(hid: str, repo_root: Path) -> str:
+    """Find and render the most relevant ideas/_campaigns/*.md writeup for a
+    hypothesis (matched by the campaign tag that maps to this hypothesis)."""
+    camp = repo_root / "ideas" / "_campaigns"
+    if not camp.exists():
+        return ""
+    # campaign-md -> hypothesis: scan each *_results.md / *.md for the hyp id.
+    best = None
+    for p in sorted(camp.glob("*.md")):
+        try:
+            text = p.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+        # match e.g. "(E27)" or "E2 " or "N20" in the heading / body
+        if re.search(rf"\b{re.escape(hid)}\b", text):
+            best = (p, text)
+            # prefer a *_results.md write-up over a json sidecar name
+            if p.name.endswith("_results.md"):
+                break
+    if not best:
+        return ""
+    p, text = best
+    return (f'<p class="cap">Campaign writeup: <code>ideas/_campaigns/{_esc(p.name)}</code></p>\n'
+            f'<div class="md-body">{md_to_html(text)}</div>')
+
+
+def render_hypothesis(hid: str, table: dict[str, dict], rows: list[dict],
+                      repo_root: Path, idea_dirs: list[Path],
+                      plots: dict[str, bool]) -> str:
+    info = _hyp_info(hid, table, repo_root, idea_dirs)
+    verdict = info.get("verdict", "PENDING")
+    vcls = VERDICT_CLASS.get(verdict, "v-pending")
+    flat = [_flatten(r) for r in rows]
+    flat.sort(key=lambda r: _num(r, "composite", -1e18), reverse=True)
+    best = flat[0] if flat else None
+
+    idir = _idea_dir_for_id(hid, repo_root, table, idea_dirs)
+    idea = _parse_idea_md(idir) if idir else {"statement": "", "falsifier": "", "predicted": "", "title": ""}
+
+    parts = [_page_open(f"Hypothesis {hid} — {info.get('title','')}")]
+    parts.append('<div class="grain"></div>\n')
+    back = '<a class="back" href="../index.html">&larr; back to master grid</a>'
+    parts.append(
+        '<div class="head-grid">\n  <div class="head-left">\n'
+        f'    <div class="tag-display">{_esc(hid)}</div>\n'
+        f'    <div class="sub"><span class="hyp-cell {vcls}" style="cursor:default;'
+        f'width:auto;padding:2px 8px;display:inline-block">{_esc(verdict)}</span> '
+        f'&nbsp; {_esc(info.get("title",""))} &nbsp;&middot;&nbsp; '
+        f'{len(flat)} run{"s" if len(flat)!=1 else ""}</div>\n'
+        f'    {_mast_row()}'
+        '  </div>\n  <div class="head-right">\n'
+        f'    {back}\n  </div>\n</div>\n')
+
+    # Hypothesis card
+    card = (f'<p><span class="hyp-cell {vcls}" style="cursor:default;width:auto;'
+            f'padding:2px 8px;display:inline-block">{_esc(verdict)}</span> '
+            f'<b>{_esc(hid)} — {_esc(info.get("title",""))}</b></p>\n'
+            f'<h3>Falsifiable hypothesis</h3><div class="md-body">'
+            f'{md_to_html(info.get("hypothesis",""))}</div>\n'
+            f'<h3>Primary metric + threshold</h3><div class="md-body">'
+            f'{md_to_html(info.get("metric",""))}</div>\n'
+            f'<h3>Current verdict (IDEA_TABLE.md)</h3><div class="md-body">'
+            f'{md_to_html(info.get("verdict_detail",""))}</div>\n')
+    if idea.get("statement"):
+        card += ('<h3>Pre-registered claim (idea dir)</h3><div class="md-body">'
+                 + md_to_html(idea["statement"]) + "</div>")
+    if idea.get("falsifier"):
+        card += ('<h3>Falsifier (idea dir)</h3><div class="md-body">'
+                 + md_to_html(idea["falsifier"]) + "</div>")
+    if idea.get("predicted"):
+        card += ('<h3>Predicted Δ (idea dir)</h3><div class="md-body">'
+                 + md_to_html(idea["predicted"]) + "</div>")
+    parts.append(f'<section class="card"><h2>Hypothesis card</h2>\n{card}</section>\n')
+
+    # Best-config callout
+    if best is not None:
+        bn = int(best.get("n_seeds", 1) or 1)
+        bexp = best.get("experiment_num")
+        link = (f'<a href="../experiments/exp{int(bexp):03d}.html">exp{int(bexp):03d}</a>'
+                if bexp is not None else "—")
+        parts.append(
+            '<section class="card"><h2>Best-config callout</h2>\n'
+            f'  <p>{link} &middot; tag <code>{_esc(best.get("tag") or "")}</code> '
+            f'&middot; composite <b>{_num(best,"composite"):+.4f}</b> '
+            f'<span class="n-chip scr">n={bn}</span><br>\n'
+            f'  behavior {_num(best,"behavior_efficacy"):.4f} &middot; '
+            f'ΔMMLU {_num(best,"mmlu_drop_pp"):.4f} &middot; '
+            f'PPL {_num(best,"perplexity"):.4f} &middot; '
+            f'CR {_num(best,"compliance_rate"):.4f} &middot; '
+            f'over_refusal {_num(best,"harmless_refusal_rate"):.4f}</p>\n</section>\n')
+
+    # Coordinate descent / seed stability plots
+    if plots.get(f"hyp{hid}_coord.png"):
+        parts.append(
+            '<section class="card"><h2>Coordinate descent</h2>\n'
+            f'  <img src="hyp{hid}_coord.png" alt="composite vs layer / alpha">\n'
+            '  <p class="cap">composite vs injection layer and vs alpha for this '
+            'hypothesis sweep.</p>\n</section>\n')
+
+    # Campaign writeup
+    writeup = _campaign_writeup_for(hid, repo_root)
+    if writeup:
+        parts.append(f'<section class="card"><h2>Campaign writeup</h2>\n{writeup}\n</section>\n')
+
+    # Experiments table
+    if flat:
+        body = []
+        for r in flat:
+            n = int(r.get("n_seeds", 1) or 1)
+            tier = _tier_of(r)
+            exp = r.get("experiment_num")
+            page = (f'<a href="../experiments/exp{int(exp):03d}.html">exp{int(exp):03d}</a>'
+                    if exp is not None else "—")
+            chip = f'<span class="n-chip {"eval" if tier=="EVALUATION" else "scr"}">{tier} n={n}</span>'
+            body.append(
+                f'<tr><td class="l">{page}</td>'
+                f'<td class="l"><code>{_esc(r.get("tag") or "")}</code></td>'
+                f'<td class="l">{_esc(_short_model(r.get("model")))}</td>'
+                f'<td>{_esc(r.get("layer"))}</td><td>{_esc(r.get("alpha"))}</td>'
+                f'<td>{_num(r,"behavior_efficacy"):.4f}</td>'
+                f'<td>{_num(r,"perplexity"):.2f}</td>'
+                f'<td>{_num(r,"compliance_rate"):.2f}</td>'
+                f'<td class="comp">{_num(r,"composite"):+.4f}</td>'
+                f'<td class="l">{chip}</td></tr>')
+        body_html = "\n".join(body)
+        parts.append(
+            '<section class="card"><h2>Experiments for this hypothesis</h2>\n'
+            '  <div class="tablewrap"><table class="runs">\n'
+            '    <thead><tr><th class="l">exp</th><th class="l">tag</th>'
+            '<th class="l">model</th><th>layer</th><th>α</th><th>behavior</th>'
+            '<th>PPL</th><th>CR</th><th>composite</th><th class="l">tier</th></tr></thead>\n'
+            f'    <tbody>{body_html}</tbody></table></div>\n</section>\n')
+    else:
+        parts.append(
+            '<section class="card"><h2>Experiments for this hypothesis</h2>\n'
+            '  <p class="empty">No runs logged for this hypothesis yet — it is '
+            'pre-registered in IDEA_TABLE.md and awaiting its first experiment.</p>\n'
+            '</section>\n')
+
+    parts.append(_doc_footer())
+    parts.append(_meta_footer(extra=f' &middot; hypothesis <code>{_esc(hid)}</code>'))
+    parts.append("</body>\n</html>\n")
     return "".join(parts)
 
 
@@ -2198,6 +2317,11 @@ def render_experiment(row: dict, ann: dict, idea_dirs: list[Path],
 def _write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
+
+
+def _write_bytes(path: Path, data: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
 
 
 def build_all_dashboards(results_dir: Path | None = None,
@@ -2210,6 +2334,13 @@ def build_all_dashboards(results_dir: Path | None = None,
     log_path = results_dir / "experiment_log.jsonl"
     rows = load_rows(log_path)
     reasoning = load_reasoning(results_dir)
+    table = parse_idea_table(repo_root / "IDEA_TABLE.md")
+    # Ensure the full 70-hypothesis registry exists even if the table is sparse.
+    for hid in (h for _t, ids in HYP_BLOCKS for h in ids):
+        table.setdefault(hid, {"id": hid, "title": "", "hypothesis": "",
+                               "metric": "", "status_cell": "", "verdict": "PENDING",
+                               "verdict_detail": "", "rung": "", "idea_dir": ""})
+
     idea_dirs = list_idea_dirs(repo_root)
 
     dash = repo_root / "dashboard"
@@ -2229,99 +2360,102 @@ def build_all_dashboards(results_dir: Path | None = None,
         rows, "compliance_rate", "compliance rate (safety cost)", dash / "plot_pareto_safety.png")
     plots["plot_geometry.png"] = plot_geometry(rows, dash / "plot_geometry.png")
 
+    # mirror master PNGs to docs
+    for pname in plots:
+        src = dash / pname
+        if src.exists():
+            _write_bytes(docs_dash / pname, src.read_bytes())
+
     ladder = ladder_board(rows)
 
     # ---- A. master ----
-    master_html = render_master(rows, idea_dirs, plots, ladder)
+    master_html = render_master(rows, table, plots, ladder, repo_root, idea_dirs)
     _write(dash / "index.html", master_html)
     _write(docs_dash / "index.html", master_html)
 
-    # ---- C. per-experiment pages (master experiments/ dir + docs mirror) ----
+    # ---- C. per-experiment pages ----
     exp_dir = dash / "experiments"
     docs_exp_dir = docs_dash / "experiments"
     exp_dir.mkdir(parents=True, exist_ok=True)
     docs_exp_dir.mkdir(parents=True, exist_ok=True)
 
     def _sweep_group_key(r: dict) -> str:
-        """Group sibling rows that form an alpha/layer sweep: same hypothesis
-        (resolved dir, else hypothesis_id) + same behavior."""
         cfg = r.get("config", {}) or {}
-        d = resolve_hypothesis_dir(r, idea_dirs)
-        hyp = (d.name if d is not None
-               else str(cfg.get("hypothesis_id") or r.get("hypothesis_id") or ""))
+        hyp = hypothesis_for_tag(r.get("config", {}).get("tag") if r.get("config") else None) or ""
         beh = str(cfg.get("behavior") or r.get("behavior") or "")
-        return f"{hyp}|{beh}"
+        layer = str(cfg.get("layer") or r.get("layer") or "")
+        # group rows that share hypothesis + behavior + (for layer sweeps) alpha.
+        return f"{hyp}|{beh}|{layer if hyp=='' else ''}"
 
     sweep_groups: dict[str, list[dict]] = {}
     for r in rows:
         sweep_groups.setdefault(_sweep_group_key(r), []).append(r)
 
+    exp_nums = sorted(int(r["experiment_num"]) for r in rows
+                      if r.get("experiment_num") is not None)
     for row in rows:
         exp = row.get("experiment_num")
         if exp is None:
             continue
         exp_id = f"exp{int(exp):03d}"
         ann = reasoning.get(str(exp), {}) if reasoning else {}
-
-        # sweep curve from this experiment's sibling group (alpha/layer sweep).
         siblings = sweep_groups.get(_sweep_group_key(row), [row])
         sweep_name = f"{exp_id}_sweep.png"
         ok, single = plot_sweep(siblings, exp_dir / sweep_name)
         sweep_plot = sweep_name if ok else None
 
-        page = render_experiment(row, ann, idea_dirs,
+        idx = exp_nums.index(int(exp)) if int(exp) in exp_nums else -1
+        prev_exp = exp_nums[idx - 1] if idx > 0 else None
+        next_exp = exp_nums[idx + 1] if 0 <= idx < len(exp_nums) - 1 else None
+
+        page = render_experiment(row, ann, table, repo_root, idea_dirs,
+                                 prev_exp=prev_exp, next_exp=next_exp,
                                  sweep_plot=sweep_plot, sweep_single=single)
         _write(exp_dir / f"{exp_id}.html", page)
         _write(docs_exp_dir / f"{exp_id}.html", page)
-        # mirror the sweep PNG next to the docs page so the embed resolves.
         if ok:
             src = exp_dir / sweep_name
             if src.exists():
                 _write_bytes(docs_exp_dir / sweep_name, src.read_bytes())
 
-    # ---- B. per-hypothesis sub-dashboards ----
-    # group rows by resolved hypothesis dir
-    by_dir: dict[str, list[dict]] = {}
+    # ---- B. per-hypothesis pages ----
+    # Group rows by their resolved hyp id (E/N registry id OR numeric idea-dir
+    # id for legacy / non-campaign tags).
+    rows_by_hyp: dict[str, list[dict]] = {}
     for row in rows:
-        d = resolve_hypothesis_dir(row, idea_dirs)
-        if d is not None:
-            by_dir.setdefault(d.name, []).append(row)
+        hid = resolve_hyp_id(row, repo_root, idea_dirs)
+        if hid:
+            rows_by_hyp.setdefault(hid, []).append(row)
+
+    # Page set = the full E/N registry (so every grid cell resolves) PLUS any
+    # numeric idea-dir id that runs resolved to (so legacy links resolve).
+    registry_ids = [h for _t, ids in HYP_BLOCKS for h in ids]
+    extra_ids = [h for h in rows_by_hyp if h not in registry_ids]
 
     hyp_docs_dir = docs_dash / "hyp"
-    for idea_dir in idea_dirs:
-        hrows = by_dir.get(idea_dir.name, [])
-        if not hrows:
-            continue
-        hid = _idea_id(idea_dir)
-        idea_dash = idea_dir / "dashboard"
-        idea_dash.mkdir(parents=True, exist_ok=True)
-
+    hyp_dash_dir = dash / "hyp"
+    for hid in registry_ids + sorted(extra_ids):
+        hrows = rows_by_hyp.get(hid, [])
         hplots: dict[str, bool] = {}
-        hplots[f"hyp{hid}_coord.png"] = plot_coord_descent(hrows, idea_dash / f"hyp{hid}_coord.png")
-        hplots[f"hyp{hid}_seeds.png"] = plot_seed_stability(hrows, idea_dash / f"hyp{hid}_seeds.png")
-
-        sub_html = render_hypothesis(idea_dir, hrows, hplots)
-        # primary sub-dashboard (relative links assume ../index.html + ../experiments/)
-        _write(idea_dash / "index.html", sub_html)
-
-        # docs mirror at docs/dashboard/hyp/<id>.html (links: ../index.html,
-        # ../experiments/, ../hyp/<id>.html — all resolve from docs/dashboard/hyp/)
+        if hrows:
+            hplots[f"hyp{hid}_coord.png"] = plot_coord_descent(
+                hrows, hyp_docs_dir / f"hyp{hid}_coord.png")
+        sub_html = render_hypothesis(hid, table, hrows, repo_root, idea_dirs, hplots)
         _write(hyp_docs_dir / f"{hid}.html", sub_html)
-        # mirror the hypothesis plots next to the docs page
+        _write(hyp_dash_dir / f"{hid}.html", sub_html)
         for pname in hplots:
-            src = idea_dash / pname
+            src = hyp_docs_dir / pname
             if src.exists():
-                _write_bytes(hyp_docs_dir / pname, src.read_bytes())
+                _write_bytes(hyp_dash_dir / pname, src.read_bytes())
+
+        # also write the legacy ideas/<dir>/dashboard/index.html where a dir exists
+        idir = _idea_dir_for_id(hid, repo_root, table, idea_dirs)
+        if idir is not None:
+            _write(idir / "dashboard" / "index.html", sub_html)
 
     return dash / "index.html"
 
 
-def _write_bytes(path: Path, data: bytes) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(data)
-
-
-# Backward-compatible alias (the lean version exposed build_dashboard()).
 def build_dashboard(results_dir: Path | None = None) -> Path:
     return build_all_dashboards(results_dir=results_dir, repo_root=REPO_ROOT)
 

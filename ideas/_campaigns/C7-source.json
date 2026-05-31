@@ -1,0 +1,90 @@
+{
+  "hyp": "E36",
+  "model": "models/google/gemma-3-270m-it",
+  "rows": [
+    {
+      "exp": 60,
+      "layer": 16,
+      "alpha": 0.5,
+      "op": "add",
+      "source": "diffmean",
+      "behavior": 0.4852,
+      "ppl": 99.0732,
+      "dppl_norm": 0.0982,
+      "cr": 0.9,
+      "offshell": 0.0067,
+      "fisher": 18.2502,
+      "composite": -1.4229
+    },
+    {
+      "exp": 61,
+      "layer": 16,
+      "alpha": 1.0,
+      "op": "add",
+      "source": "diffmean",
+      "behavior": 0.4683,
+      "ppl": 119.9942,
+      "dppl_norm": 0.3302,
+      "cr": 1.0,
+      "offshell": 0.0125,
+      "fisher": 18.2502,
+      "composite": -1.7572
+    },
+    {
+      "exp": 62,
+      "layer": 16,
+      "alpha": 2.0,
+      "op": "add",
+      "source": "diffmean",
+      "behavior": 0.534,
+      "ppl": 205.2632,
+      "dppl_norm": 1.2754,
+      "cr": 1.0,
+      "offshell": 0.0383,
+      "fisher": 18.2502,
+      "composite": -2.2706
+    },
+    {
+      "exp": 63,
+      "layer": 16,
+      "alpha": 0.5,
+      "op": "add",
+      "source": "pca",
+      "behavior": 0.5,
+      "ppl": 89.6253,
+      "dppl_norm": 0.0,
+      "cr": 0.8,
+      "offshell": 0.0,
+      "fisher": 18.2502,
+      "composite": -1.1072
+    },
+    {
+      "exp": 64,
+      "layer": 16,
+      "alpha": 1.0,
+      "op": "add",
+      "source": "pca",
+      "behavior": 0.4697,
+      "ppl": 89.627,
+      "dppl_norm": 0.0,
+      "cr": 0.8,
+      "offshell": 0.0,
+      "fisher": 18.2502,
+      "composite": -1.1375
+    },
+    {
+      "exp": 65,
+      "layer": 16,
+      "alpha": 2.0,
+      "op": "add",
+      "source": "pca",
+      "behavior": 0.5,
+      "ppl": 89.9766,
+      "dppl_norm": 0.0,
+      "cr": 0.8,
+      "offshell": 0.0,
+      "fisher": 18.2502,
+      "composite": -1.1072
+    }
+  ]
+}
