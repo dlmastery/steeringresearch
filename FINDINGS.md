@@ -22,11 +22,11 @@
 
 ## Status
 
-**No EXTERNAL-READY findings yet — 59 experiments run, all SCREENING (n=1).**
+**No EXTERNAL-READY findings yet — 83 experiments run, all SCREENING (n=1).**
 
-Experiments exp#1–59 have run on real Gemma-3-270m / Gemma-3-1b and Qwen-2.5-0.5b
-(see EXPERIMENT_LEDGER.md). They produced **eight screening observations (S-1…S-8
-below)** spanning E2/E3/E4/E27/N5/N16/N17/N20. **None has cleared the rung-3
+Experiments exp#1–83 have run on real Gemma-3-270m / Gemma-3-1b and Qwen-2.5-0.5b
+(see EXPERIMENT_LEDGER.md). They produced **nine screening observations (S-1…S-9
+below)** spanning E2/E3/E4/E7/E27/E36/N5/N16/N17/N20. **None has cleared the rung-3
 evaluation gate** (n≥7 + paired Wilcoxon + bootstrap CI + Holm-Bonferroni +
 prompting baseline + real AxBench/judge), so by the program's own rigor floor
 there are **zero external-ready findings**. The screening observations below
