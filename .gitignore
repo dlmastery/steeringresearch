@@ -37,3 +37,6 @@ Thumbs.db
 !autoresearch_results/best_config.json
 
 .hf_token
+
+# downloaded model weights/tokenizers (re-fetch via scripts/hf_fetch.py)
+models/
