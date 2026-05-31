@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Optional, Sequence
 
@@ -30,12 +31,27 @@ from .hooks import probe_activations
 from .model import get_residual_layers
 
 
-def _encode(tokenizer, text: str) -> torch.Tensor:
-    """Encode a prompt to an input_ids tensor [1, seq]."""
+def _encode(tokenizer, text: str, model: Optional[nn.Module] = None) -> torch.Tensor:
+    """Encode a prompt to an input_ids tensor [1, seq] on the model's device.
+
+    Handles BOTH the offline FakeTokenizer (returns a plain dict) and real HF
+    tokenizers (return a BatchEncoding, which is NOT a dict subclass in current
+    transformers — hence the explicit attribute check). Moves ids to the model's
+    device so real CUDA models don't hit a device mismatch (FakeLM is CPU).
+    """
     out = tokenizer(text, return_tensors="pt")
-    if isinstance(out, dict):
-        return out["input_ids"]
-    return out
+    if hasattr(out, "input_ids"):
+        ids = out.input_ids
+    elif isinstance(out, dict):
+        ids = out["input_ids"]
+    else:
+        ids = out
+    if model is not None:
+        try:
+            ids = ids.to(next(model.parameters()).device)
+        except StopIteration:
+            pass
+    return ids
 
 
 def _mean_over_answer_tokens(acts: torch.Tensor) -> torch.Tensor:
@@ -66,13 +82,14 @@ def collect_activations(
     neg_by_layer: dict[int, list] = {li: [] for li in layers}
 
     for pos_text, neg_text in pairs:
-        pos_ids = _encode(tokenizer, pos_text)
-        neg_ids = _encode(tokenizer, neg_text)
+        pos_ids = _encode(tokenizer, pos_text, model)
+        neg_ids = _encode(tokenizer, neg_text, model)
         pos_acts = probe_activations(model, pos_ids, layers)
         neg_acts = probe_activations(model, neg_ids, layers)
         for li in layers:
-            pos_by_layer[li].append(_mean_over_answer_tokens(pos_acts[li]).numpy())
-            neg_by_layer[li].append(_mean_over_answer_tokens(neg_acts[li]).numpy())
+            # .float().cpu(): real models are bf16 on CUDA; numpy supports neither.
+            pos_by_layer[li].append(_mean_over_answer_tokens(pos_acts[li]).float().cpu().numpy())
+            neg_by_layer[li].append(_mean_over_answer_tokens(neg_acts[li]).float().cpu().numpy())
 
     return {
         li: {
@@ -110,7 +127,10 @@ def collect_activations_cached(
     cache_dir.mkdir(parents=True, exist_ok=True)
     sig = _pairs_signature(pairs)
     layer_tag = "all" if layers is None else "-".join(map(str, layers))
-    cache_path = cache_dir / f"acts_{model_tag}_{sig}_{layer_tag}.npz"
+    # Sanitise the model tag: HF ids contain "/" which would create a phantom
+    # subdirectory in the npz path (real-model bug the fake tag never hit).
+    safe_tag = re.sub(r"[^0-9A-Za-z._-]", "_", str(model_tag))
+    cache_path = cache_dir / f"acts_{safe_tag}_{sig}_{layer_tag}.npz"
 
     if cache_path.exists():
         data = np.load(cache_path)

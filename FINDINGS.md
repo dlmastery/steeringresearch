@@ -37,7 +37,38 @@ are complete. The first experiments (E1-E3 infrastructure block) have not yet ru
 > and full evaluation but cannot be cited or presented as results. Label each with
 > the experiment tag, n, and "SCREENING ONLY -- not an external claim."
 
-*(No screening observations yet -- no experiments run.)*
+**S-1 (E4, SCREENING ONLY — not an external claim).** On Qwen2.5-0.5B-Instruct,
+`cos(DiffMean, PCA-top1) = 0.996` at the max-Fisher layer (L21) — consistent with
+E4's pre-registered ">0.95" threshold. tag=bring-up, n=1. *Gate to external:
+n≥7, multiple behaviors, Gemma reproduction.*
+
+**S-2 (E3 + N17, SCREENING ONLY — not an external claim).** On Qwen2.5-0.5B @L21,
+additive steering shows a **super-linear coherence cliff**: PPL +20%→+82%→6×→77×
+across α=1→2→4→8, knee at α≈1–2; the fingerprinted composite peaks at α≈1.
+**Off-shell Δ‖h‖ rises monotonically in lockstep with PPL** (N17: geometry probe
+predicts the cliff). tags=`E3-cliff-a*`, exp#2–9, n=1. See
+`ideas/30_alpha_coherence_cliff/results.md`. *Gate to external: real
+generation-based behavior + real safety + n≥7 + prompting baseline + Gemma.*
+
+> **Both observations are SCREENING on a non-Gemma 0.5B model with synthetic
+> mini-data and (for S-2) a circular behavior proxy.** They establish mechanism
+> direction, not magnitude. The instrument fixes and the full required-experiment
+> list are tracked below.
+
+## Required experiments before ANY external claim (from `audits/ICML_REVIEW.md`)
+
+The ICML-area-chair review (Reject 3/10 as a claims-source today; Borderline 6/10
+methodology) requires, before promotion off SCREENING:
+
+1. **Real behavior efficacy** — replace the projection proxy with an independent
+   LLM-judge / AxBench scorer on **real generated text**, human-calibrated. (In
+   progress: generation-based concept-incorporation scorer.)
+2. **Real safety + selectivity** — generate on real JailbreakBench + XSTest, judge
+   SAFE/UNSAFE, prove baseline CR≈0% and that auto-DISCARD can fire. Delete the
+   `_fake_responses` stub. (In progress.)
+3. **n≥7 seeds on real Gemma-2-2B** with real AxBench/MMLU/WikiText + a **prompting
+   baseline**, the full rigor contract (Wilcoxon + bootstrap CI + Holm-Bonferroni
+   + ordinal gate), a held-out-concept split, and a shuffle-test negative control.
 
 ---
 

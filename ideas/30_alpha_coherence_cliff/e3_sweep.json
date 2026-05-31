@@ -1,0 +1,90 @@
+{
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "layer": 21,
+  "behavior": "ocean",
+  "base_ppl": 48.8563,
+  "cliff_alpha": 2.0,
+  "rows": [
+    {
+      "alpha": 0.0,
+      "exp": 2,
+      "behavior": 0.5,
+      "ppl": 48.8563,
+      "dppl_norm": 0.0,
+      "mmlu_drop_pp": 0.0,
+      "offshell": 0.0,
+      "composite": 0.4928
+    },
+    {
+      "alpha": 1.0,
+      "exp": 3,
+      "behavior": 1.0,
+      "ppl": 58.7025,
+      "dppl_norm": 0.2015,
+      "mmlu_drop_pp": 0.05,
+      "offshell": 0.0334,
+      "composite": 0.8336
+    },
+    {
+      "alpha": 2.0,
+      "exp": 4,
+      "behavior": 1.0,
+      "ppl": 88.9726,
+      "dppl_norm": 0.8211,
+      "mmlu_drop_pp": 0.2,
+      "offshell": 0.1021,
+      "composite": 0.3567
+    },
+    {
+      "alpha": 4.0,
+      "exp": 5,
+      "behavior": 1.0,
+      "ppl": 293.5637,
+      "dppl_norm": 5.0087,
+      "mmlu_drop_pp": 0.3,
+      "offshell": 0.3184,
+      "composite": -1.8912
+    },
+    {
+      "alpha": 8.0,
+      "exp": 6,
+      "behavior": 1.0,
+      "ppl": 3787.4414,
+      "dppl_norm": 76.5221,
+      "mmlu_drop_pp": 0.45,
+      "offshell": 0.9219,
+      "composite": -37.9488
+    },
+    {
+      "alpha": 12.0,
+      "exp": 7,
+      "behavior": 1.0,
+      "ppl": 39617.339,
+      "dppl_norm": 809.8954,
+      "mmlu_drop_pp": 0.45,
+      "offshell": 1.625,
+      "composite": -404.8112
+    },
+    {
+      "alpha": 16.0,
+      "exp": 8,
+      "behavior": 1.0,
+      "ppl": 251483.4413,
+      "dppl_norm": 5146.412,
+      "mmlu_drop_pp": 0.5,
+      "offshell": 2.3594,
+      "composite": -2573.3031
+    },
+    {
+      "alpha": 24.0,
+      "exp": 9,
+      "behavior": 1.0,
+      "ppl": 5182762.6498,
+      "dppl_norm": 106080.7939,
+      "mmlu_drop_pp": 0.5,
+      "offshell": 3.875,
+      "composite": -53040.8729
+    }
+  ],
+  "fingerprint": "a9001e87087e"
+}

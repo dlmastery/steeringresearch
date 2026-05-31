@@ -99,6 +99,22 @@ def composite(metrics: dict[str, float], weights: Optional[dict[str, float]] = N
 # ---------------------------------------------------------------------------
 # Axis 1 — behavior efficacy (pluggable scorer).
 # ---------------------------------------------------------------------------
+def _ids(tokenizer, text: str, model: nn.Module) -> torch.Tensor:
+    """Encode to input_ids [1,seq] on the model's device.
+
+    Handles real HF BatchEncoding (not a dict subclass) AND the offline
+    FakeTokenizer (plain dict); moves ids to the model device (CUDA for real
+    models, CPU for FakeLM).
+    """
+    out = tokenizer(text, return_tensors="pt")
+    ids = out.input_ids if hasattr(out, "input_ids") else (out["input_ids"] if isinstance(out, dict) else out)
+    try:
+        ids = ids.to(next(model.parameters()).device)
+    except StopIteration:
+        pass
+    return ids
+
+
 def projection_behavior_scorer(
     model: nn.Module,
     tokenizer,
@@ -121,11 +137,15 @@ def projection_behavior_scorer(
     """
     v = target_vector.float()
     v = v / (v.norm() + 1e-8)
+    try:
+        v = v.to(next(model.parameters()).device)
+    except StopIteration:
+        pass
 
     def mean_proj(steer: bool) -> float:
         total, count = 0.0, 0
         for p in prompts:
-            ids = tokenizer(p, return_tensors="pt")["input_ids"]
+            ids = _ids(tokenizer, p, model)
             if steer:
                 sk = steering_kwargs or {}
                 with SteeringContext(model, target_vector, [layer], **sk):
@@ -170,15 +190,15 @@ def mcq_accuracy(
         stem = q["question"]
         options = q["options"]
         gold = q["answer_idx"]
-        ids = tokenizer(stem, return_tensors="pt")["input_ids"]
+        ids = _ids(tokenizer, stem, model)
         with torch.no_grad():
-            logits = model(ids).logits
+            logits = model(ids).logits.float()
         last = logits[0, -1]  # [vocab]
         pred_token = int(last.argmax())
         # Map each option to a deterministic target token via the tokenizer.
         opt_scores = []
         for opt in options:
-            opt_ids = tokenizer(opt, return_tensors="pt")["input_ids"][0]
+            opt_ids = _ids(tokenizer, opt, model)[0]
             # score = logit mass the model assigns to this option's tokens
             opt_scores.append(float(last[opt_ids % last.shape[0]].mean()))
         pred_idx = int(max(range(len(options)), key=lambda i: opt_scores[i]))
@@ -195,11 +215,11 @@ def perplexity(model: nn.Module, tokenizer, passages: Sequence[str]) -> float:
     total_nll, total_tokens = 0.0, 0
     loss_fn = nn.CrossEntropyLoss(reduction="sum")
     for text in passages:
-        ids = tokenizer(text, return_tensors="pt")["input_ids"]
+        ids = _ids(tokenizer, text, model)
         if ids.shape[1] < 2:
             continue
         with torch.no_grad():
-            logits = model(ids).logits
+            logits = model(ids).logits.float()
         # shift: predict token t+1 from position t
         shift_logits = logits[0, :-1, :]
         shift_labels = ids[0, 1:]

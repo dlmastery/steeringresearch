@@ -96,6 +96,7 @@ def run_single_experiment(
     seed: int,
     description: str,
     tag: str,
+    quant: str = "4bit",
 ) -> dict:
     """Execute ONE steering experiment and log all artifacts."""
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -110,6 +111,7 @@ def run_single_experiment(
         "behavior": behavior,
         "seed": seed,
         "tag": tag,
+        "quant": quant,
     }
     with open(running_path, "w", encoding="utf-8") as f:
         json.dump(
@@ -132,7 +134,7 @@ def _run_inner(config: dict, description: str) -> dict:
     t0 = time.time()
     _set_seed(config["seed"])
 
-    model, tokenizer = load_model(config["model"], quant="4bit")
+    model, tokenizer = load_model(config["model"], quant=config.get("quant", "4bit"))
     n_layers = len(get_residual_layers(model))
 
     # --- Extraction (cache once, reuse) ---
@@ -161,7 +163,12 @@ def _run_inner(config: dict, description: str) -> dict:
 
     # --- Build a position mask that excludes special tokens (Rung-0 requirement) ---
     sample_prompt = pairs[0][0]
-    sample_ids = tokenizer(sample_prompt, return_tensors="pt")["input_ids"]
+    _enc = tokenizer(sample_prompt, return_tensors="pt")
+    sample_ids = (_enc.input_ids if hasattr(_enc, "input_ids") else _enc["input_ids"])
+    try:
+        sample_ids = sample_ids.to(next(model.parameters()).device)
+    except StopIteration:
+        pass
     pos_mask = build_position_mask(sample_ids, _special_ids(model, tokenizer))
 
     # --- Geometry: off-shell displacement at the injection layer ---
@@ -418,6 +425,8 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--description", required=True)
     parser.add_argument("--tag", default="untagged")
+    parser.add_argument("--quant", default="4bit", choices=["4bit", "8bit", "none", "bf16"],
+                        help="quantisation; use 'none'/'bf16' for non-gated small models without bitsandbytes")
     args = parser.parse_args()
 
     run_single_experiment(
@@ -431,6 +440,7 @@ def main() -> None:
         seed=args.seed,
         description=args.description,
         tag=args.tag,
+        quant=args.quant,
     )
 
 
