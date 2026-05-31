@@ -241,5 +241,86 @@
     "prediction": "Cell 16/2.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
     "verdict": "DISCARD \u2014 composite -2.2706, behavior +0.5340, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
     "learning": "Behavior +0.5340 | MMLU drop 0.1500 | \u0394PPL_norm 1.2754 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0383 | layer 16 | Fisher 18.2502"
+  },
+  "28": {
+    "_manual": true,
+    "diagnosis": "C3/E27 operation comparison at L16 (the best steering layer from C1, not max-Fisher L12). E27/E23 claim norm-preserving rotation preserves coherence better than additive steering on small models that more easily exit the manifold. This cell applies op=add at layer=16 alpha=1.0 to compare PPL and off-shell displacement at matched alpha across add/rotate/project_out.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Because additive steering increases ||h|| (moves off the activation shell) while rotation preserves norm (slides along it), at matched alpha rotation should incur less off-shell \u0394\u2016h\u2016 and lower PPL than addition on a fragile small model (E27, corpus F-A concentration-of-measure). op=add at L16 alpha=1.0 measures this.",
+    "prediction": "Cell 16/1.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.7572, behavior +0.4683, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4683 | MMLU drop 0.0500 | \u0394PPL_norm 0.3302 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0125 | layer 16 | Fisher 18.2502"
+  },
+  "29": {
+    "_manual": true,
+    "diagnosis": "C3/E27 operation comparison at L16 (the best steering layer from C1, not max-Fisher L12). E27/E23 claim norm-preserving rotation preserves coherence better than additive steering on small models that more easily exit the manifold. This cell applies op=add at layer=16 alpha=2.0 to compare PPL and off-shell displacement at matched alpha across add/rotate/project_out.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Because additive steering increases ||h|| (moves off the activation shell) while rotation preserves norm (slides along it), at matched alpha rotation should incur less off-shell \u0394\u2016h\u2016 and lower PPL than addition on a fragile small model (E27, corpus F-A concentration-of-measure). op=add at L16 alpha=2.0 measures this.",
+    "prediction": "Cell 16/2.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -2.2706, behavior +0.5340, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5340 | MMLU drop 0.1500 | \u0394PPL_norm 1.2754 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0383 | layer 16 | Fisher 18.2502"
+  },
+  "30": {
+    "_manual": true,
+    "diagnosis": "C3/E27 operation comparison at L16 (the best steering layer from C1, not max-Fisher L12). E27/E23 claim norm-preserving rotation preserves coherence better than additive steering on small models that more easily exit the manifold. This cell applies op=add at layer=16 alpha=4.0 to compare PPL and off-shell displacement at matched alpha across add/rotate/project_out.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Because additive steering increases ||h|| (moves off the activation shell) while rotation preserves norm (slides along it), at matched alpha rotation should incur less off-shell \u0394\u2016h\u2016 and lower PPL than addition on a fragile small model (E27, corpus F-A concentration-of-measure). op=add at L16 alpha=4.0 measures this.",
+    "prediction": "Cell 16/4.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -7.7545, behavior +0.2957, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.2957 | MMLU drop 0.2000 | \u0394PPL_norm 11.6306 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.1104 | layer 16 | Fisher 18.2502"
+  },
+  "31": {
+    "_manual": true,
+    "diagnosis": "C3/E27 operation comparison at L16 (the best steering layer from C1, not max-Fisher L12). E27/E23 claim norm-preserving rotation preserves coherence better than additive steering on small models that more easily exit the manifold. This cell applies op=rotate at layer=16 alpha=1.0 to compare PPL and off-shell displacement at matched alpha across add/rotate/project_out.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Because additive steering increases ||h|| (moves off the activation shell) while rotation preserves norm (slides along it), at matched alpha rotation should incur less off-shell \u0394\u2016h\u2016 and lower PPL than addition on a fragile small model (E27, corpus F-A concentration-of-measure). op=rotate at L16 alpha=1.0 measures this.",
+    "prediction": "Cell 16/1.0/rotate: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -214072288.1251, behavior +0.1971, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.1971 | MMLU drop 0.3000 | \u0394PPL_norm 428144572.0294 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0012 | layer 16 | Fisher 18.2502"
+  },
+  "32": {
+    "_manual": true,
+    "diagnosis": "C3/E27 operation comparison at L16 (the best steering layer from C1, not max-Fisher L12). E27/E23 claim norm-preserving rotation preserves coherence better than additive steering on small models that more easily exit the manifold. This cell applies op=rotate at layer=16 alpha=2.0 to compare PPL and off-shell displacement at matched alpha across add/rotate/project_out.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Because additive steering increases ||h|| (moves off the activation shell) while rotation preserves norm (slides along it), at matched alpha rotation should incur less off-shell \u0394\u2016h\u2016 and lower PPL than addition on a fragile small model (E27, corpus F-A concentration-of-measure). op=rotate at L16 alpha=2.0 measures this.",
+    "prediction": "Cell 16/2.0/rotate: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -613258415028896.0000, behavior +0.1971, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.1971 | MMLU drop 0.4000 | \u0394PPL_norm 1226516830057787.5000 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 18.2502"
+  },
+  "33": {
+    "_manual": true,
+    "diagnosis": "C3/E27 operation comparison at L16 (the best steering layer from C1, not max-Fisher L12). E27/E23 claim norm-preserving rotation preserves coherence better than additive steering on small models that more easily exit the manifold. This cell applies op=rotate at layer=16 alpha=4.0 to compare PPL and off-shell displacement at matched alpha across add/rotate/project_out.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Because additive steering increases ||h|| (moves off the activation shell) while rotation preserves norm (slides along it), at matched alpha rotation should incur less off-shell \u0394\u2016h\u2016 and lower PPL than addition on a fragile small model (E27, corpus F-A concentration-of-measure). op=rotate at L16 alpha=4.0 measures this.",
+    "prediction": "Cell 16/4.0/rotate: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -11925595997991442.0000, behavior +0.1971, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.1971 | MMLU drop 0.6000 | \u0394PPL_norm 23851191995982880.0000 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0004 | layer 16 | Fisher 18.2502"
+  },
+  "34": {
+    "_manual": true,
+    "diagnosis": "C3/E27 operation comparison at L16 (the best steering layer from C1, not max-Fisher L12). E27/E23 claim norm-preserving rotation preserves coherence better than additive steering on small models that more easily exit the manifold. This cell applies op=project_out at layer=16 alpha=1.0 to compare PPL and off-shell displacement at matched alpha across add/rotate/project_out.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Because additive steering increases ||h|| (moves off the activation shell) while rotation preserves norm (slides along it), at matched alpha rotation should incur less off-shell \u0394\u2016h\u2016 and lower PPL than addition on a fragile small model (E27, corpus F-A concentration-of-measure). op=project_out at L16 alpha=1.0 measures this.",
+    "prediction": "Cell 16/1.0/project_out: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.3701, behavior +0.2710, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.2710 | MMLU drop 0.0000 | \u0394PPL_norm 0.0663 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0027 | layer 16 | Fisher 18.2502"
+  },
+  "35": {
+    "_manual": true,
+    "diagnosis": "C3/E27 operation comparison at L16 (the best steering layer from C1, not max-Fisher L12). E27/E23 claim norm-preserving rotation preserves coherence better than additive steering on small models that more easily exit the manifold. This cell applies op=project_out at layer=16 alpha=2.0 to compare PPL and off-shell displacement at matched alpha across add/rotate/project_out.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Because additive steering increases ||h|| (moves off the activation shell) while rotation preserves norm (slides along it), at matched alpha rotation should incur less off-shell \u0394\u2016h\u2016 and lower PPL than addition on a fragile small model (E27, corpus F-A concentration-of-measure). op=project_out at L16 alpha=2.0 measures this.",
+    "prediction": "Cell 16/2.0/project_out: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.7748, behavior +0.1971, CR 0.9000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.1971 | MMLU drop 0.0500 | \u0394PPL_norm 0.2289 | rep 0.0145 | CR 0.9000 | harmless_refusal 0.0000 | offshell 0.0008 | layer 16 | Fisher 18.2502"
+  },
+  "36": {
+    "_manual": true,
+    "diagnosis": "C3/E27 operation comparison at L16 (the best steering layer from C1, not max-Fisher L12). E27/E23 claim norm-preserving rotation preserves coherence better than additive steering on small models that more easily exit the manifold. This cell applies op=project_out at layer=16 alpha=4.0 to compare PPL and off-shell displacement at matched alpha across add/rotate/project_out.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Because additive steering increases ||h|| (moves off the activation shell) while rotation preserves norm (slides along it), at matched alpha rotation should incur less off-shell \u0394\u2016h\u2016 and lower PPL than addition on a fragile small model (E27, corpus F-A concentration-of-measure). op=project_out at L16 alpha=4.0 measures this.",
+    "prediction": "Cell 16/4.0/project_out: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -2.2909, behavior +0.2634, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.2634 | MMLU drop 0.0500 | \u0394PPL_norm 0.9814 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0253 | layer 16 | Fisher 18.2502"
   }
 }
