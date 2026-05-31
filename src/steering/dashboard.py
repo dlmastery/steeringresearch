@@ -147,6 +147,134 @@ SHARED_CSS = """
   code { color:var(--accent); }
 """
 
+# ---------------------------------------------------------------------------
+# Editorial "brutalist" palette + components for the MASTER dashboard, ported
+# from the nature_inspired_networks reference dashboard (same author). This is
+# ADDITIVE — it is appended after SHARED_CSS and only used by render_master, so
+# the per-experiment / per-hypothesis tiers keep their existing look untouched.
+# ---------------------------------------------------------------------------
+MASTER_CSS = """
+  .master :root, .master {
+    --ink:#0a0a0d; --paper:#e6e1d6; --paper-dim:#a89e8c;
+    --rule:#1c1c20; --rule-bright:#2a2a30;
+    --panel:#111114; --panel2:#16161a;
+    --gold:#bb8c4d; --gold-dim:#7a5e36;
+    --v-pass:#3fb950; --v-minor:#d29922; --v-broken:#f85149;
+    --v-novel:#a371f7; --v-link:#58a6ff;
+  }
+  body.master { background:#0a0a0d; color:#e6e1d6;
+    font-family:'Source Serif 4','Charter',Georgia,serif;
+    font-variant-numeric:tabular-nums; line-height:1.55; }
+  body.master .wrap { max-width:1340px; margin:0 auto; padding:30px 34px 80px; }
+  body.master a { color:var(--v-link); text-decoration:none;
+    border-bottom:1px solid transparent; transition:border-color 160ms ease; }
+  body.master a:hover { border-bottom-color:var(--v-link); }
+  body.master h1 { font-family:'Source Serif 4',Georgia,serif; font-weight:600;
+    font-size:38px; line-height:1.12; letter-spacing:-0.005em; color:var(--paper);
+    margin:0 0 6px; text-transform:none; }
+  body.master h2 { font-family:'Source Serif 4',Georgia,serif; font-weight:600;
+    font-size:22px; color:var(--paper); margin:0 0 8px; letter-spacing:-0.003em;
+    text-transform:none; }
+  body.master h3 { font-family:'IBM Plex Mono',ui-monospace,monospace;
+    font-size:11px; text-transform:uppercase; letter-spacing:0.18em;
+    color:var(--paper-dim); margin:0 0 12px; font-weight:600; }
+  body.master .lead-sub { font-family:'IBM Plex Mono',ui-monospace,monospace;
+    color:var(--paper-dim); font-size:11px; text-transform:uppercase;
+    letter-spacing:0.16em; margin:2px 0 14px; }
+  .formula-chip { display:inline-block; background:var(--panel);
+    border:1px solid var(--rule); border-left:2px solid var(--gold);
+    padding:9px 14px; margin:4px 0 20px;
+    font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:11px;
+    color:var(--paper); letter-spacing:0.03em; }
+  .formula-chip .fp { color:var(--paper-dim); font-size:10px; }
+  .ribbon { display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(168px,1fr));
+    gap:1px; background:var(--rule); border:1px solid var(--rule);
+    margin:14px 0 26px; }
+  .kpi { background:var(--panel); padding:14px 16px; }
+  .kpi .label { color:var(--paper-dim); font-size:9.5px;
+    font-family:'IBM Plex Mono',ui-monospace,monospace;
+    text-transform:uppercase; letter-spacing:0.16em; }
+  .kpi .value { font-family:'Source Serif 4',Georgia,serif; font-size:25px;
+    font-weight:600; margin-top:4px; color:var(--paper); letter-spacing:-0.005em; }
+  .kpi .value small { font-size:12px; color:var(--paper-dim); font-weight:400; }
+  .kpi.positive { box-shadow:inset 3px 0 0 var(--v-pass); }
+  .kpi.negative { box-shadow:inset 3px 0 0 var(--v-broken); }
+  .kpi.neutral  { box-shadow:inset 3px 0 0 var(--gold-dim); }
+  .how-to-read { background:var(--panel); border:1px solid var(--rule);
+    border-left:2px solid var(--v-pass); padding:18px 24px; margin:18px 0;
+    font-family:'Source Serif 4',Georgia,serif; line-height:1.6; }
+  .how-to-read ul { list-style:none; margin:0; padding:0; display:grid;
+    grid-template-columns:1fr 1fr; gap:10px 22px; }
+  .how-to-read li { font-size:0.95em; }
+  .how-to-read li::before { content:"\\2192"; color:var(--gold);
+    margin-right:8px; font-family:'IBM Plex Mono',monospace; }
+  .headline-ribbon { background:var(--panel); border:1px solid var(--rule);
+    border-left:2px solid var(--gold); padding:18px 24px; margin:18px 0 8px;
+    font-family:'Source Serif 4',Georgia,serif; line-height:1.55; }
+  .headline-ribbon .tag-note { font-family:'IBM Plex Mono',monospace;
+    font-weight:600; color:var(--gold); font-size:10px; text-transform:uppercase;
+    letter-spacing:0.16em; display:block; margin-bottom:10px; }
+  .headline-ribbon ul { margin:6px 0 0 20px; padding:0; }
+  .headline-ribbon li { margin:5px 0; font-size:0.95em; }
+  .headline-ribbon code { background:var(--ink); padding:1px 5px;
+    font-family:'IBM Plex Mono',monospace; border:1px solid var(--rule);
+    font-size:0.86em; color:var(--paper); }
+  .group-section { margin-top:30px; background:var(--panel);
+    border:1px solid var(--rule); padding:20px 24px; position:relative; }
+  .group-section::before { content:""; position:absolute; top:0; left:0;
+    width:64px; height:1px; background:var(--gold); }
+  .group-section h2 { margin:0; }
+  .group-section h2 .cnt { color:var(--paper-dim); font-weight:400;
+    font-size:0.62em; font-family:'IBM Plex Mono',monospace; letter-spacing:0.04em; }
+  .group-desc { color:var(--paper-dim); font-size:0.92em; margin:4px 0 14px;
+    max-width:980px; line-height:1.6; font-family:'Source Serif 4',Georgia,serif; }
+  table.runs { width:100%; border-collapse:collapse; font-size:0.82em;
+    background:var(--panel); border:1px solid var(--rule); }
+  table.runs th { background:transparent; color:var(--paper-dim); text-align:right;
+    padding:8px 11px; border-bottom:1px solid var(--rule-bright); font-weight:500;
+    text-transform:uppercase; font-size:9.5px; letter-spacing:0.14em; cursor:pointer;
+    user-select:none; font-family:'IBM Plex Mono',ui-monospace,monospace;
+    white-space:nowrap; }
+  table.runs th:first-child, table.runs th.l { text-align:left; }
+  table.runs td { padding:7px 11px; border-bottom:1px solid var(--rule);
+    text-align:right; color:var(--paper);
+    font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:0.95em;
+    white-space:nowrap; }
+  table.runs td:first-child, table.runs td.l { text-align:left; }
+  table.runs tr.champion { box-shadow:inset 3px 0 0 var(--gold);
+    background:rgba(187,140,77,0.05); }
+  table.runs tr.champion td { font-weight:600; }
+  table.runs tr.champion td:first-child::before { content:"\\2605 "; color:var(--gold); }
+  table.runs tr.neg-comp td.comp { color:var(--v-broken); }
+  .n-chip { display:inline-block; padding:0 5px; font-size:8.5px;
+    font-family:'IBM Plex Mono',monospace; letter-spacing:0.08em;
+    text-transform:uppercase; border:1px solid; margin-left:5px;
+    vertical-align:middle; }
+  .n-chip.eval { color:var(--v-pass); border-color:var(--v-pass); }
+  .n-chip.scr  { color:var(--v-minor); border-color:var(--v-minor); }
+  body.master .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px;
+    margin-top:8px; }
+  body.master .card { background:var(--panel); border:1px solid var(--rule);
+    padding:18px 20px; position:relative; }
+  body.master .card::before { content:""; position:absolute; top:0; left:0;
+    width:48px; height:1px; background:var(--gold); }
+  body.master .card img { max-width:100%; height:auto; background:#fff;
+    padding:4px; border:1px solid var(--rule); display:block; }
+  body.master .card .cap { color:var(--paper-dim); font-size:11px; margin:8px 0 0;
+    font-family:'IBM Plex Mono',monospace; line-height:1.5; }
+  body.master .panel-2col { grid-column:1 / 3; }
+  body.master .filter-box { width:360px; max-width:60vw; padding:8px 11px;
+    background:var(--ink); border:1px solid var(--rule); color:var(--paper);
+    font-family:'IBM Plex Mono',monospace; font-size:12px; margin-bottom:6px; }
+  body.master table.stackmx { width:auto; }
+  body.master footer { border-top:1px solid var(--rule); color:var(--paper-dim);
+    font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.04em;
+    line-height:1.9; padding:22px 0 0; margin-top:30px; }
+  body.master footer code { background:var(--ink); color:var(--paper);
+    border:1px solid var(--rule); padding:1px 5px; }
+"""
+
 # Master runs-table columns the mandate names explicitly:
 # exp# | tag | hypothesis | rung | behavior | dMMLU | PPL | CR_jail |
 #       over_refusal | composite | verdict | n + chip | link
@@ -971,13 +1099,29 @@ def render_stack_matrix(rows: list[dict]) -> str:
 # ===========================================================================
 # HTML fragments
 # ===========================================================================
-def _page_open(title: str) -> str:
+_MASTER_FONT_LINK = (
+    "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">"
+    "<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>"
+    "<link href=\"https://fonts.googleapis.com/css2?"
+    "family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&"
+    "family=IBM+Plex+Mono:wght@400;500;600&display=swap\" rel=\"stylesheet\">"
+)
+
+
+def _page_open(title: str, master: bool = False) -> str:
+    """Open an HTML page. ``master=True`` adds the editorial palette + fonts and
+    tags the body so the brutalist MASTER_CSS scope applies (per-experiment and
+    per-hypothesis tiers keep the original SHARED_CSS look)."""
+    fonts = _MASTER_FONT_LINK if master else ""
+    css = SHARED_CSS + (MASTER_CSS if master else "")
+    body_cls = ' class="master"' if master else ""
     return (
         "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n"
         "<meta charset=\"utf-8\">\n"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
-        f"<title>{html.escape(title)}</title>\n<style>{SHARED_CSS}</style>\n"
-        "</head>\n<body>\n"
+        f"<title>{html.escape(title)}</title>\n{fonts}\n"
+        f"<style>{css}</style>\n"
+        f"</head>\n<body{body_cls}>\n"
     )
 
 
@@ -1068,10 +1212,403 @@ SORT_SCRIPT = """
 
 
 # ===========================================================================
+# Campaign grouping for the MASTER runs tables
+#
+# The 59 logged rows split cleanly into research campaigns keyed off the
+# config.tag prefix. Grouping them into separate sectioned tables is the single
+# biggest readability win (vs one dense 59-row table). Each group carries a
+# title + one-line description; order is preserved as listed.
+# ===========================================================================
+CAMPAIGN_GROUPS: list[tuple[str, str, str]] = [
+    ("infra", "Infra / plumbing",
+     "Rung-0/1 end-to-end loop validation on the FakeResidualLM — exercises the "
+     "intervention mechanics and the full autoresearch pipeline. Infrastructure, "
+     "not a model claim."),
+    ("e3", "E3 α-cliff (Qwen + Gemma)",
+     "Alpha-magnitude sweeps probing the coherence cliff: as α grows, "
+     "behavior saturates but perplexity / off-shell displacement explode the "
+     "composite negative. Run on Qwen2.5-0.5B and real Gemma-3-270m."),
+    ("c1", "C1 / E2 layer sweep",
+     "Injection-layer sweep (L2–L16) on gemma-3-270m at fixed α=2.0 — "
+     "which residual layer best carries the diff-mean steering direction."),
+    ("c3", "C3 / C3b operation comparison",
+     "add vs rotate vs project_out at L16, plus a C3b small-rotation refinement "
+     "(α≤0.5). Rotate blows up the composite; add stays least-bad."),
+    ("c4", "C4 / N20 fragility",
+     "N20 layer-fragility sweep at the aggressive α=4.0 on gemma-3-270m — "
+     "how sensitive the coherence collapse is to injection depth."),
+    ("c6", "C6 gemma-3-1b cross-scale",
+     "Cross-scale replication of the α-cliff on the larger gemma-3-1b-it "
+     "(L18) — does the same cliff window appear one model-scale up."),
+    ("other", "Other / uncategorised",
+     "Rows whose tag prefix is not yet wired into a campaign group."),
+]
+
+
+def campaign_group_of(row: dict) -> str:
+    """Return the campaign group key for a row, derived from its config.tag."""
+    tag = str((row.get("config", {}) or {}).get("tag") or row.get("tag") or "").lower()
+    if tag.startswith("rung1_plumbing") or "fakelm" in tag or "plumbing" in tag:
+        return "infra"
+    if tag.startswith("c1-e2") or tag.startswith("c1_e2"):
+        return "c1"
+    if tag.startswith("c3b") or tag.startswith("c3-e27") or tag.startswith("c3_"):
+        return "c3"
+    if tag.startswith("c4-n20") or tag.startswith("c4_"):
+        return "c4"
+    if tag.startswith("c6-gemma1b") or tag.startswith("c6"):
+        return "c6"
+    if tag.startswith("e3"):
+        return "e3"
+    return "other"
+
+
+# Columns for the per-group master runs tables. (key, label, numeric?)
+GROUP_RUN_COLS = [
+    ("experiment_num", "exp#", True),
+    ("tag", "tag", False),
+    ("model", "model", False),
+    ("layer", "layer", True),
+    ("alpha", "α", True),
+    ("behavior_efficacy", "behavior", True),
+    ("mmlu_drop_pp", "ΔMMLU", True),
+    ("perplexity", "PPL", True),
+    ("compliance_rate", "CR", True),
+    ("offshell_displacement", "offshell", True),
+    ("angular_displacement", "angular", True),
+    ("composite", "composite", True),
+]
+
+_MODEL_SHORT = {
+    "fake": "fake",
+    "Qwen/Qwen2.5-0.5B-Instruct": "Qwen2.5-0.5B",
+    "models/google/gemma-3-270m-it": "gemma-3-270m",
+    "models/google/gemma-3-1b-it": "gemma-3-1b",
+}
+
+
+def _short_model(m: object) -> str:
+    s = str(m or "")
+    return _MODEL_SHORT.get(s, s.split("/")[-1] if s else "—")
+
+
+MASTER_SORT_SCRIPT = """
+<script>
+(function() {
+  function val(cell) {
+    var v = cell.getAttribute("data-v");
+    if (v === null) v = cell.textContent;
+    return v;
+  }
+  window.sortRuns = function(th, idx, num) {
+    var table = th.closest("table");
+    var dir = table.getAttribute("data-dir") === "asc" ? -1 : 1;
+    table.setAttribute("data-dir", dir === 1 ? "asc" : "desc");
+    var tb = table.tBodies[0];
+    var rows = Array.prototype.slice.call(tb.rows);
+    rows.sort(function(a, b) {
+      var x = val(a.cells[idx]), y = val(b.cells[idx]);
+      if (num) {
+        var nx = parseFloat(x), ny = parseFloat(y);
+        if (isNaN(nx)) nx = -Infinity;
+        if (isNaN(ny)) ny = -Infinity;
+        return dir * (nx - ny);
+      }
+      return dir * String(x).localeCompare(String(y));
+    });
+    rows.forEach(function(r) { tb.appendChild(r); });
+    var ths = table.tHead.rows[0].cells;
+    for (var i = 0; i < ths.length; i++) {
+      var a = ths[i].querySelector(".arr"); if (a) a.textContent = "";
+    }
+    var arr = th.querySelector(".arr");
+    if (arr) arr.textContent = dir < 0 ? "\\u25BC" : "\\u25B2";
+  };
+  window.filterRuns = function() {
+    var q = document.getElementById("filter").value.toLowerCase();
+    document.querySelectorAll("table.runs").forEach(function(table) {
+      var tb = table.tBodies[0];
+      var shown = 0;
+      Array.prototype.slice.call(tb.rows).forEach(function(r) {
+        var on = r.textContent.toLowerCase().indexOf(q) >= 0;
+        r.style.display = on ? "" : "none";
+        if (on) shown++;
+      });
+      var sec = table.closest(".group-section");
+      if (sec) sec.style.display = (q && shown === 0) ? "none" : "";
+    });
+  };
+})();
+</script>
+"""
+
+
+# ===========================================================================
 # A. MASTER dashboard
 # ===========================================================================
 def render_master(rows: list[dict], idea_dirs: list[Path],
                   plots: dict[str, bool], ladder: list[dict]) -> str:
+    flat = [_flatten(r) for r in rows]
+    champ_num = None
+    if flat:
+        champ = max(flat, key=lambda r: _num(r, "composite", -1e18))
+        champ_num = champ.get("experiment_num")
+
+    # -- helper: one numeric runs-table cell with n= + tier chip ------------
+    def _cell(r: dict, key: str, num: bool, tier: str, n_seeds: int,
+              extra_cls: str = "") -> str:
+        v = r.get(key)
+        cls = (' class="' + extra_cls + '"') if extra_cls else ""
+        if num:
+            try:
+                fv = float(v)
+            except (TypeError, ValueError):
+                return f'<td data-v="-1e18"{cls}>—</td>'
+            if abs(fv) >= 1000 or (fv != 0 and abs(fv) < 0.001):
+                disp = f"{fv:.4g}"
+            else:
+                disp = f"{fv:.4f}"
+            chip = (f'<span class="n-chip {"eval" if tier=="EVALUATION" else "scr"}">'
+                    f'{tier[:4]} n={n_seeds}</span>')
+            return f'<td data-v="{fv}"{cls}>{html.escape(disp)}{chip}</td>'
+        disp = "" if v is None else str(v)
+        return f'<td data-v="{html.escape(disp.lower())}" class="l{(" "+extra_cls) if extra_cls else ""}">{html.escape(disp)}</td>'
+
+    def _runs_table(grp_rows: list[dict], table_id: str) -> str:
+        head = "".join(
+            f'<th{" class=\"l\"" if not num else ""} '
+            f'onclick="sortRuns(this,{i},{int(num)})">{html.escape(label)}'
+            f'<span class="arr"></span></th>'
+            for i, (k, label, num) in enumerate(GROUP_RUN_COLS)
+        )
+        head += '<th class="l">n / tier</th><th class="l">link</th>'
+        body = []
+        for r in grp_rows:
+            n_seeds = int(r.get("n_seeds", 1) or 1)
+            tier = _tier_of(r)
+            exp = r.get("experiment_num")
+            is_champ = exp == champ_num
+            neg = _num(r, "composite", 0.0) < 0
+            rcls = " ".join(c for c in ("champion" if is_champ else "",
+                                        "neg-comp" if neg else "") if c)
+            tds = []
+            for (k, _label, num) in GROUP_RUN_COLS:
+                if k == "model":
+                    m = _short_model(r.get("model"))
+                    tds.append(f'<td data-v="{html.escape(m.lower())}" class="l">{html.escape(m)}</td>')
+                elif k == "tag":
+                    tg = str(r.get("tag") or "")
+                    tds.append(f'<td data-v="{html.escape(tg.lower())}" class="l">'
+                               f'<code style="font-size:0.9em">{html.escape(tg)}</code></td>')
+                elif k == "composite":
+                    tds.append(_cell(r, k, True, tier, n_seeds, extra_cls="comp"))
+                else:
+                    tds.append(_cell(r, k, num, tier, n_seeds))
+            chip = (f'<span class="n-chip {"eval" if tier=="EVALUATION" else "scr"}">'
+                    f'{tier} n={n_seeds}</span>')
+            tds.append(f'<td class="l">{chip}</td>')
+            page = (f'<a href="experiments/exp{int(exp):03d}.html">exp{int(exp):03d}</a>'
+                    if exp is not None else "—")
+            hdir = resolve_hypothesis_dir(r, idea_dirs)
+            if hdir is not None:
+                hid = _idea_id(hdir)
+                page += f' &middot; <a href="hyp/{html.escape(hid)}.html">H{html.escape(hid)}</a>'
+            tds.append(f'<td class="l">{page}</td>')
+            body.append(f'<tr class="{rcls}">{"".join(tds)}</tr>')
+        body_html = "\n".join(body) or (
+            '<tr><td colspan="14" style="text-align:center;color:var(--paper-dim)">'
+            'No runs in this group.</td></tr>')
+        return (
+            f'<table class="runs" id="{table_id}" data-dir="desc">\n'
+            f'  <thead><tr>{head}</tr></thead>\n'
+            f'  <tbody>\n{body_html}\n  </tbody>\n</table>'
+        )
+
+    # -- group the rows into campaigns --------------------------------------
+    grouped: dict[str, list[dict]] = {}
+    for r in flat:
+        grouped.setdefault(campaign_group_of(r), []).append(r)
+    for g in grouped:
+        grouped[g].sort(key=lambda r: _num(r, "composite", -1e18), reverse=True)
+
+    # -- KPI ribbon numbers --------------------------------------------------
+    models = {_short_model(r.get("model")) for r in flat}
+    real_rows = [r for r in flat if _short_model(r.get("model")) != "fake"]
+    fake_rows = [r for r in flat if _short_model(r.get("model")) == "fake"]
+    gemma_rows = [r for r in flat if "gemma" in _short_model(r.get("model")).lower()]
+    champ_comp = _num(champ, "composite") if flat else 0.0
+    # Verdict tally from the screening-campaign map (hardcoded, derived from the
+    # S-1..S-8 screening findings below — these are screening verdicts, n=1).
+    tally = {"SUPPORTED": 3, "FALSIFIED": 2, "DIRECTIONAL": 1, "INCONCLUSIVE": 1}
+
+    parts = [_page_open("Steering Autoresearch — Master Dashboard", master=True)]
+    parts.append('<div class="wrap">\n')
+    parts.append(
+        "<header>\n"
+        "  <h1>Steering Autoresearch — Master Dashboard</h1>\n"
+        '  <div class="lead-sub">LLM activation-steering autoresearch &middot; '
+        f'{len(flat)} experiments &middot; {len(grouped)} campaigns &middot; '
+        "internal QA</div>\n"
+        f'  <div class="formula-chip"><b>composite</b> &#8788; '
+        f'<code>{html.escape(COMPOSITE_FORMULA)}</code>'
+        f'<br><span class="fp">fingerprint &middot; {composite_fingerprint()}</span>'
+        "</div>\n"
+        "</header>\n"
+    )
+
+    # -- KPI ribbon ----------------------------------------------------------
+    kpis = [
+        ("Total experiments", str(len(flat)), "neutral"),
+        ("Real-LM vs FakeLM", f"{len(real_rows)}<small> / {len(fake_rows)} fake</small>",
+         "positive" if real_rows else "neutral"),
+        ("Real Gemma rows", str(len(gemma_rows)), "positive" if gemma_rows else "neutral"),
+        ("Models", str(len(models)), "neutral"),
+        ("Champion composite",
+         f"{champ_comp:.3f}", "positive" if champ_comp > 0 else "negative"),
+        ("Screening verdicts",
+         f"{tally['SUPPORTED']}<small> sup / {tally['FALSIFIED']} fals / "
+         f"{tally['DIRECTIONAL']} dir / {tally['INCONCLUSIVE']} inc</small>",
+         "neutral"),
+        ("Composite fingerprint",
+         f'<small>{composite_fingerprint()}</small>', "neutral"),
+    ]
+    parts.append('<div class="ribbon">' + "".join(
+        f'<div class="kpi {mood}"><div class="label">{lbl}</div>'
+        f'<div class="value">{val}</div></div>'
+        for lbl, val, mood in kpis
+    ) + "</div>\n")
+
+    # -- How to read this ----------------------------------------------------
+    parts.append(
+        '<section class="how-to-read">\n  <h3>How to read this</h3>\n  <ul>\n'
+        "    <li><b>Composite is multi-objective.</b> It prices all five axes "
+        "(behavior, capability, coherence, safety, selectivity) plus an "
+        "off-manifold geometry penalty &mdash; a method cannot win by sacrificing "
+        "one axis. Negative composites (red) mean a coherence / off-shell blow-up.</li>\n"
+        "    <li><b>Tiers matter.</b> Every numeric cell carries <code>n=X</code> "
+        "and a SCREENING (n&le;3) or EVALUATION (n&ge;7) chip. Every row here is "
+        "SCREENING (n=1) &mdash; candidate signal, not an external claim.</li>\n"
+        "    <li><b>Safety is a hard gate.</b> A non-zero <code>CR</code> "
+        "(JailbreakBench compliance) is a leak and an automatic DISCARD regardless "
+        "of behavior score.</li>\n"
+        "    <li><b>Drill down.</b> Runs are grouped by research campaign into "
+        "separate tables. Click a header to sort that table; type in the filter "
+        "box to search all rows. Each row links to its per-experiment page (and "
+        "hypothesis page when resolvable). The starred gold row is the global "
+        "champion.</li>\n"
+        "  </ul>\n</section>\n"
+    )
+
+    # -- Headline screening-findings banner ----------------------------------
+    parts.append(
+        '<section>\n'
+        '  <div class="headline-ribbon">\n'
+        '    <span class="tag-note">Screening findings (n=1) &mdash; not external claims</span>\n'
+        '    <h2 style="font-size:20px;margin:0 0 8px">Screening highlights S-1 … S-8</h2>\n'
+        "    <ul>\n"
+        "      <li><b>S-1 / E2.</b> The naive expectation that bigger &alpha; "
+        "monotonically helps is <b>falsified</b>: composite collapses past the "
+        "&alpha;-cliff (<code>E3-cliff</code> goes from +0.83 at &alpha;=1 to "
+        "&minus;5.3e4 at &alpha;=24).</li>\n"
+        "      <li><b>S-2 / N17, N5.</b> Off-shell displacement tracks the "
+        "composite collapse with <code>R&sup2;&asymp;0.81</code> across the "
+        "&alpha; sweep.</li>\n"
+        "      <li><b>S-3 / E27.</b> A narrow cross-scale coherence window exists "
+        "(small-rotation C3b &amp; low-&alpha; add survive least-badly at L16).</li>\n"
+        "      <li><b>S-4 / E4.</b> diff-mean and PCA steering directions are "
+        "near-collinear: <code>cos&asymp;0.994&ndash;0.996</code> on Qwen L21.</li>\n"
+        "      <li><b>S-5 / N16.</b> Angular displacement is an almost-perfect "
+        "linear proxy for &alpha; (<code>R&sup2;&asymp;0.997</code>).</li>\n"
+        "      <li><b>S-6 … S-8.</b> The cliff replicates across model scale "
+        "(gemma-3-270m, gemma-3-1b) and operation (add least-bad, rotate / "
+        "project_out worse); <code>rotate</code> at &alpha;&ge;1 is "
+        "numerically explosive.</li>\n"
+        "    </ul>\n"
+        "  </div>\n</section>\n"
+    )
+
+    # -- Grouped runs tables -------------------------------------------------
+    parts.append(
+        '<section>\n  <h2>Runs by campaign</h2>\n'
+        '  <input type="text" id="filter" class="filter-box" '
+        'placeholder="type to filter all run rows (tag, model, exp#, …)" '
+        'oninput="filterRuns()">\n'
+        '  <p class="cap" style="color:var(--paper-dim);font-family:\'IBM Plex Mono\',monospace;'
+        'font-size:11px;margin:2px 0 0">default sort: composite desc &middot; '
+        'click any header to re-sort that table</p>\n</section>\n'
+    )
+    for gi, (gkey, gtitle, gdesc) in enumerate(CAMPAIGN_GROUPS):
+        grp_rows = grouped.get(gkey)
+        if not grp_rows:
+            continue
+        n = len(grp_rows)
+        parts.append(
+            f'<section class="group-section">\n'
+            f'  <h2>{html.escape(gtitle)} '
+            f'<span class="cnt">({n} run{"s" if n != 1 else ""})</span></h2>\n'
+            f'  <div class="group-desc">{html.escape(gdesc)}</div>\n'
+            f'  <div class="tablewrap">{_runs_table(grp_rows, f"runs_{gkey}")}</div>\n'
+            "</section>\n"
+        )
+
+    # -- plot panels (cards) -------------------------------------------------
+    def card(name: str, title: str, cap: str, wide: bool = False) -> str:
+        cls = "card panel-2col" if wide else "card"
+        if not plots.get(name):
+            inner = (f'<p class="cap">({html.escape(cap)} — plot unavailable: '
+                     "matplotlib missing or no data)</p>")
+        else:
+            inner = (f'<img src="{name}" alt="{html.escape(cap)}">'
+                     f'<p class="cap">{html.escape(cap)}</p>')
+        return (f'<div class="{cls}"><h3>{html.escape(title)}</h3>{inner}</div>')
+
+    parts.append('<h2 style="margin-top:34px">Panels</h2>\n')
+    parts.append('<div class="grid">\n')
+    parts.append(card("plot_radar.png", "5-axis radar",
+        "5-axis radar per method: behavior, capability, coherence, safety, selectivity (1 = best)."))
+    parts.append(card("plot_parcoords.png", "Parallel coordinates",
+        "Parallel coordinates across the same five axes — lines high everywhere are multi-objective wins."))
+    parts.append(card("plot_pareto_capability.png", "Pareto · capability",
+        "behavior vs capability (MMLU drop on x; left = better capability retention)."))
+    parts.append(card("plot_pareto_coherence.png", "Pareto · coherence",
+        "behavior vs coherence (ΔPPL_norm on x; left = better coherence)."))
+    parts.append(card("plot_pareto_safety.png", "Pareto · safety",
+        "behavior vs safety (compliance rate on x; left = safer / no leak)."))
+    parts.append(card("plot_geometry.png", "Geometry probes",
+        "Off-shell displacement, effective-rank drop, and norm budget per experiment.", wide=True))
+    parts.append("</div>\n")
+
+    # -- ladder board card ---------------------------------------------------
+    ladder_rows = "".join(
+        f'<tr><td class="l">{html.escape(L["tag"])}</td>'
+        f'<td class="l">{L["rung"]} ({html.escape(L["rung_name"])})</td>'
+        f'<td class="l">{"cleared" if L["cleared"] else "failed"}</td>'
+        f'<td class="l">{html.escape(L["failure_reason"] or "—")}</td></tr>'
+        for L in ladder
+    ) or '<tr><td colspan="4" class="l">No runs yet.</td></tr>'
+    parts.append(
+        '<section class="group-section">\n  <h2>Ladder board</h2>\n'
+        '  <div class="group-desc">Per method (tag): the highest ladder rung '
+        'reached and whether the safety/quality gate cleared.</div>\n'
+        '  <div class="tablewrap"><table class="runs">\n'
+        '    <thead><tr><th class="l">method (tag)</th><th class="l">highest rung</th>'
+        '<th class="l">gate</th><th class="l">failure_reason</th></tr></thead>\n'
+        f"    <tbody>{ladder_rows}</tbody>\n  </table></div>\n</section>\n"
+    )
+
+    # -- stack/compete matrix (reused renderer) ------------------------------
+    parts.append(render_stack_matrix(rows))
+
+    # -- footer --------------------------------------------------------------
+    parts.append(_footer())
+    parts.append("</div>\n")  # .wrap
+    parts.append(MASTER_SORT_SCRIPT)
+    return "".join(parts)
+
+
+def _render_master_legacy(rows: list[dict], idea_dirs: list[Path],
+                          plots: dict[str, bool], ladder: list[dict]) -> str:
+    """Original dense single-table master (kept for reference; unused)."""
     flat = [_flatten(r) for r in rows]
     champ_num = None
     if flat:
