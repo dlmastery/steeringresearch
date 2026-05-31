@@ -412,5 +412,77 @@
     "prediction": "Cell 16/0.5/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
     "verdict": "DISCARD \u2014 composite -1.4229, behavior +0.4852, CR 0.9000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
     "learning": "Behavior +0.4852 | MMLU drop 0.0500 | \u0394PPL_norm 0.0982 | rep 0.0145 | CR 0.9000 | harmless_refusal 0.0000 | offshell 0.0067 | layer 16 | Fisher 18.2502"
+  },
+  "47": {
+    "_manual": true,
+    "diagnosis": "C4/N20 fragility sensor. N20 claims local manifold curvature / effective-rank collapse at a layer predicts that layer's rogue-fragility (a cheap, behavior-free way to pick safe layers). At a FIXED larger alpha=4 (enough to stress each layer), sweep layers 2..16 and record PPL damage + radial/angular displacement; correlate with per-layer Fisher. The hypothesis: layers where steering causes the largest PPL jump are the fragile ones, predictable before any behavior eval.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per N20 and the corpus curvature argument, layers differ in how far a fixed-alpha edit pushes h off-manifold; the per-layer PPL jump at alpha=4.0 is a fragility signature. Injecting at layer=2 measures PPL and displacement to map fragility across depth and test whether it is predictable from layer geometry (Fisher / displacement) rather than behavior.",
+    "prediction": "Cell 2/4.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -2.9992, behavior +0.3815, CR 0.9000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.3815 | MMLU drop 0.0500 | \u0394PPL_norm 3.0342 | rep 0.0145 | CR 0.9000 | harmless_refusal 0.0000 | offshell 0.0254 | layer 2 | Fisher 0.1996"
+  },
+  "48": {
+    "_manual": true,
+    "diagnosis": "C4/N20 fragility sensor. N20 claims local manifold curvature / effective-rank collapse at a layer predicts that layer's rogue-fragility (a cheap, behavior-free way to pick safe layers). At a FIXED larger alpha=4 (enough to stress each layer), sweep layers 2..16 and record PPL damage + radial/angular displacement; correlate with per-layer Fisher. The hypothesis: layers where steering causes the largest PPL jump are the fragile ones, predictable before any behavior eval.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per N20 and the corpus curvature argument, layers differ in how far a fixed-alpha edit pushes h off-manifold; the per-layer PPL jump at alpha=4.0 is a fragility signature. Injecting at layer=4 measures PPL and displacement to map fragility across depth and test whether it is predictable from layer geometry (Fisher / displacement) rather than behavior.",
+    "prediction": "Cell 4/4.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -5.6513, behavior +0.7753, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.7753 | MMLU drop 0.1000 | \u0394PPL_norm 8.6215 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0342 | layer 4 | Fisher 10.7265"
+  },
+  "49": {
+    "_manual": true,
+    "diagnosis": "C4/N20 fragility sensor. N20 claims local manifold curvature / effective-rank collapse at a layer predicts that layer's rogue-fragility (a cheap, behavior-free way to pick safe layers). At a FIXED larger alpha=4 (enough to stress each layer), sweep layers 2..16 and record PPL damage + radial/angular displacement; correlate with per-layer Fisher. The hypothesis: layers where steering causes the largest PPL jump are the fragile ones, predictable before any behavior eval.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per N20 and the corpus curvature argument, layers differ in how far a fixed-alpha edit pushes h off-manifold; the per-layer PPL jump at alpha=4.0 is a fragility signature. Injecting at layer=6 measures PPL and displacement to map fragility across depth and test whether it is predictable from layer geometry (Fisher / displacement) rather than behavior.",
+    "prediction": "Cell 6/4.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -9.9270, behavior +0.3914, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.3914 | MMLU drop 0.1500 | \u0394PPL_norm 16.3183 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0079 | layer 6 | Fisher 2.0454"
+  },
+  "50": {
+    "_manual": true,
+    "diagnosis": "C4/N20 fragility sensor. N20 claims local manifold curvature / effective-rank collapse at a layer predicts that layer's rogue-fragility (a cheap, behavior-free way to pick safe layers). At a FIXED larger alpha=4 (enough to stress each layer), sweep layers 2..16 and record PPL damage + radial/angular displacement; correlate with per-layer Fisher. The hypothesis: layers where steering causes the largest PPL jump are the fragile ones, predictable before any behavior eval.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per N20 and the corpus curvature argument, layers differ in how far a fixed-alpha edit pushes h off-manifold; the per-layer PPL jump at alpha=4.0 is a fragility signature. Injecting at layer=8 measures PPL and displacement to map fragility across depth and test whether it is predictable from layer geometry (Fisher / displacement) rather than behavior.",
+    "prediction": "Cell 8/4.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -8.8218, behavior +0.3689, CR 0.9000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.3689 | MMLU drop 0.2000 | \u0394PPL_norm 14.3638 | rep 0.0145 | CR 0.9000 | harmless_refusal 0.0000 | offshell 0.0063 | layer 8 | Fisher 0.2934"
+  },
+  "51": {
+    "_manual": true,
+    "diagnosis": "C4/N20 fragility sensor. N20 claims local manifold curvature / effective-rank collapse at a layer predicts that layer's rogue-fragility (a cheap, behavior-free way to pick safe layers). At a FIXED larger alpha=4 (enough to stress each layer), sweep layers 2..16 and record PPL damage + radial/angular displacement; correlate with per-layer Fisher. The hypothesis: layers where steering causes the largest PPL jump are the fragile ones, predictable before any behavior eval.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per N20 and the corpus curvature argument, layers differ in how far a fixed-alpha edit pushes h off-manifold; the per-layer PPL jump at alpha=4.0 is a fragility signature. Injecting at layer=10 measures PPL and displacement to map fragility across depth and test whether it is predictable from layer geometry (Fisher / displacement) rather than behavior.",
+    "prediction": "Cell 10/4.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -10.1181, behavior +0.4483, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4483 | MMLU drop 0.2000 | \u0394PPL_norm 16.7165 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0039 | layer 10 | Fisher 1.2710"
+  },
+  "52": {
+    "_manual": true,
+    "diagnosis": "C4/N20 fragility sensor. N20 claims local manifold curvature / effective-rank collapse at a layer predicts that layer's rogue-fragility (a cheap, behavior-free way to pick safe layers). At a FIXED larger alpha=4 (enough to stress each layer), sweep layers 2..16 and record PPL damage + radial/angular displacement; correlate with per-layer Fisher. The hypothesis: layers where steering causes the largest PPL jump are the fragile ones, predictable before any behavior eval.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per N20 and the corpus curvature argument, layers differ in how far a fixed-alpha edit pushes h off-manifold; the per-layer PPL jump at alpha=4.0 is a fragility signature. Injecting at layer=12 measures PPL and displacement to map fragility across depth and test whether it is predictable from layer geometry (Fisher / displacement) rather than behavior.",
+    "prediction": "Cell 12/4.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -16.9143, behavior +0.2170, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.2170 | MMLU drop 0.2000 | \u0394PPL_norm 29.7608 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.1748 | layer 12 | Fisher 30.5679"
+  },
+  "53": {
+    "_manual": true,
+    "diagnosis": "C4/N20 fragility sensor. N20 claims local manifold curvature / effective-rank collapse at a layer predicts that layer's rogue-fragility (a cheap, behavior-free way to pick safe layers). At a FIXED larger alpha=4 (enough to stress each layer), sweep layers 2..16 and record PPL damage + radial/angular displacement; correlate with per-layer Fisher. The hypothesis: layers where steering causes the largest PPL jump are the fragile ones, predictable before any behavior eval.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per N20 and the corpus curvature argument, layers differ in how far a fixed-alpha edit pushes h off-manifold; the per-layer PPL jump at alpha=4.0 is a fragility signature. Injecting at layer=14 measures PPL and displacement to map fragility across depth and test whether it is predictable from layer geometry (Fisher / displacement) rather than behavior.",
+    "prediction": "Cell 14/4.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -7.4228, behavior +0.3104, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.3104 | MMLU drop 0.1500 | \u0394PPL_norm 11.1143 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0752 | layer 14 | Fisher 17.2313"
+  },
+  "54": {
+    "_manual": true,
+    "diagnosis": "C4/N20 fragility sensor. N20 claims local manifold curvature / effective-rank collapse at a layer predicts that layer's rogue-fragility (a cheap, behavior-free way to pick safe layers). At a FIXED larger alpha=4 (enough to stress each layer), sweep layers 2..16 and record PPL damage + radial/angular displacement; correlate with per-layer Fisher. The hypothesis: layers where steering causes the largest PPL jump are the fragile ones, predictable before any behavior eval.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per N20 and the corpus curvature argument, layers differ in how far a fixed-alpha edit pushes h off-manifold; the per-layer PPL jump at alpha=4.0 is a fragility signature. Injecting at layer=16 measures PPL and displacement to map fragility across depth and test whether it is predictable from layer geometry (Fisher / displacement) rather than behavior.",
+    "prediction": "Cell 16/4.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -7.7545, behavior +0.2957, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.2957 | MMLU drop 0.2000 | \u0394PPL_norm 11.6306 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.1104 | layer 16 | Fisher 18.2502"
   }
 }
