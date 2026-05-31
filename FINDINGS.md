@@ -76,7 +76,16 @@ across architectures and layers. Off-shell displacement (cheap, behavior-free)
 governs the coherence cliff — supports N17 and the N5 norm-budget collapse. The
 strongest screening result; gate to external = n≥7 + real WikiText PPL.
 
-> **All six observations are SCREENING on ≤0.5B models with synthetic
+**S-7 (E27 FALSIFIED + N16/CRH SUPPORTED, SCREENING ONLY).** Small-angle rotate-vs-add
+at L16 on Gemma-3-270m (exp#37–46): additive steering is *gentler* than full-vector
+rotation (add holds PPL 90–99; rotate degrades 100→11211; +42% PPL at matched
+behavior) — **E27 falsified** for full-vector rotation (caveat: corpus Angular/Selective
+use selective 2D-plane rotation). The added **angular (1−cos) metric predicts rotation's
+log-PPL at R²=0.997** while radial Δ‖h‖ governs additive (R²=0.81, C2) — the
+**Cylindrical Representation Hypothesis (N16) confirmed**: coherence cost = radial×angular
+displacement. exp#37–46, n=1. See `ideas/_campaigns/C3_results.md`.
+
+> **All seven observations are SCREENING on ≤0.5B models with synthetic
 > mini-data and (for S-2) a circular behavior proxy.** They establish mechanism
 > direction, not magnitude. The instrument fixes and the full required-experiment
 > list are tracked below.
