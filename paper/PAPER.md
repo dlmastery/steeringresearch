@@ -324,6 +324,34 @@ n=1, synthetic mini-data, one behavior, no calibrated judge, sub-0.5B models. Pe
 program's own rigor floor these live in `EXPERIMENT_LEDGER.md` as screening
 observations and are **forbidden from `FINDINGS.md`** until the Section-7 contract is met.
 
+### 5.5 Autonomous campaign findings (C1–C3)
+
+An overnight autonomous run (`scripts/campaign_sweep.py`, load-once grid sweeps on
+Gemma-3-270m) produced three further screening results, each pre-registered and logged:
+
+- **C1 — E2 is falsified on this setup.** A layer sweep (exp#20–27, α=2) gives
+  Spearman(Fisher ratio, behavior) = **+0.14 (p=0.74)**, far below E2's pre-registered
+  ≥0.7. The max-Fisher layer (L12) is *not* the best steering layer; L16 yields higher
+  behavior at lower perplexity. Linear separability does not predict steering efficacy —
+  a screening-level corroboration of the controllability≠interpretability theme (N8/E37).
+- **C2 — the geometry predictor is architecture- and layer-independent (N17, N5).**
+  Pooling 23 real steered rows across two models, eight layers, and the full α range,
+  off-shell Δ‖h‖ predicts log-perplexity at Spearman **+0.71** (Pearson 0.90), and a
+  single law `log PPL = 5.40 + 2.87·Δ‖h‖` fits with **R²=0.81**. This is the program's
+  strongest screening result: a cheap, behavior-free predictor of the coherence cliff
+  that generalizes across architecture and depth.
+- **C3 — a productive negative result that refined the instrument.** An add-vs-rotate
+  comparison surfaced that (a) the coefficient α is incommensurable across operations
+  (rotation reads α as radians, so α≥1 is catastrophic), and (b) Δ‖h‖ is a *radial-only*
+  predictor — a norm-preserving rotation registers Δ‖h‖≈0 while perplexity explodes.
+  This motivated adding an **angular-displacement** metric `1−cos(h,h')` (the
+  Cylindrical-Representation radial×angular split, N16), now logged per run, so N17 can
+  be re-tested with the complete radial+angular displacement.
+
+These illustrate the harness working as intended: pre-registered hypotheses are
+*falsified* (E2), *supported* (N17/N5), or turned into *instrument refinements* (C3) —
+without any overclaiming.
+
 ---
 
 ## 6. Limitations
