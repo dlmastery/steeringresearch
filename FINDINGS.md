@@ -63,7 +63,20 @@ Off-shell Δ‖h‖ tracks PPL super-linearly (N17). Baseline CR=0.80 rising to 
 under steering (Rogue-Scalpel direction). exp#15–19, n=1. See
 `ideas/30_alpha_coherence_cliff/results.md`.
 
-> **All four observations are SCREENING on ≤0.5B models with synthetic
+**S-5 (E2 FALSIFIED, SCREENING ONLY).** Gemma-3-270m layer sweep @α=2 (exp#20–27):
+**Spearman(Fisher ratio, behavior efficacy) = +0.14 (p=0.74)** — far below E2's
+predicted ≥0.7. Max-Fisher (L12) is NOT the best steering layer; L16 gives more
+behavior at lower PPL. Linear separability ≠ steering efficacy (cf. N8/E37). The
+earlier E3 ran at a suboptimal layer. n=1/cell. See `ideas/_campaigns/C1_C2_results.md`.
+
+**S-6 (N17 + N5 SUPPORTED, SCREENING ONLY).** Pooled over 23 real steered rows
+(2 models, 8 layers, α∈{1..24}): **Spearman(off-shell Δ‖h‖, log PPL) = +0.705**
+(Pearson 0.899); a single law **log PPL = 5.40 + 2.87·Δ‖h‖ fits with R²=0.81**
+across architectures and layers. Off-shell displacement (cheap, behavior-free)
+governs the coherence cliff — supports N17 and the N5 norm-budget collapse. The
+strongest screening result; gate to external = n≥7 + real WikiText PPL.
+
+> **All six observations are SCREENING on ≤0.5B models with synthetic
 > mini-data and (for S-2) a circular behavior proxy.** They establish mechanism
 > direction, not magnitude. The instrument fixes and the full required-experiment
 > list are tracked below.

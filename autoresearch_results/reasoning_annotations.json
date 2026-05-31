@@ -169,5 +169,77 @@
     "prediction": "alpha=8.0: composite finite, fingerprint a9001e87087e, n=1 SCREENING. Off-shell \u0394\u2016h\u2016 increases monotonically with alpha. The cliff is the smallest alpha where \u0394PPL_norm turns super-linear OR MMLU drop exceeds 2 pp. This is a pre-registered E3 measurement point, not yet an external claim (n=1).",
     "verdict": "DISCARD \u2014 composite -786.3897, behavior +0.2106, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
     "learning": "Behavior +0.2106 | MMLU drop 0.2500 | \u0394PPL_norm 1568.4186 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.5352 | layer 12 | Fisher 30.5679"
+  },
+  "20": {
+    "_manual": true,
+    "diagnosis": "C1/E2 layer sweep on Gemma-3-270m. E2 claims the optimal injection layer is the layer of max linear separability (Fisher ratio), not a fixed late layer; the real-Gemma E3 run showed behavior monotone-declining at max-Fisher L12, so the best BEHAVIOR layer may differ from max-Fisher. This cell injects at layer=2 (alpha=2.0, add) to map behavior, PPL and off-shell displacement across depth and locate the layer with the cleanest steering window.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per CAST (2409.05907) and the Fisher-separability argument, layers differ in how cleanly a behavior direction can be injected; the max-Fisher layer maximizes linear separability but not necessarily the coherent steering window (manifold curvature varies by depth, N20). Injecting at layer=2 measures behavior vs PPL vs off-shell \u0394\u2016h\u2016 to test whether max-Fisher predicts the best steering layer on a small model.",
+    "prediction": "Cell 2/2.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.4559, behavior +0.3949, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.3949 | MMLU drop 0.0000 | \u0394PPL_norm 0.4810 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0123 | layer 2 | Fisher 0.1996"
+  },
+  "21": {
+    "_manual": true,
+    "diagnosis": "C1/E2 layer sweep on Gemma-3-270m. E2 claims the optimal injection layer is the layer of max linear separability (Fisher ratio), not a fixed late layer; the real-Gemma E3 run showed behavior monotone-declining at max-Fisher L12, so the best BEHAVIOR layer may differ from max-Fisher. This cell injects at layer=4 (alpha=2.0, add) to map behavior, PPL and off-shell displacement across depth and locate the layer with the cleanest steering window.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per CAST (2409.05907) and the Fisher-separability argument, layers differ in how cleanly a behavior direction can be injected; the max-Fisher layer maximizes linear separability but not necessarily the coherent steering window (manifold curvature varies by depth, N20). Injecting at layer=4 measures behavior vs PPL vs off-shell \u0394\u2016h\u2016 to test whether max-Fisher predicts the best steering layer on a small model.",
+    "prediction": "Cell 4/2.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.6335, behavior +0.3631, CR 0.7000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.3631 | MMLU drop 0.0000 | \u0394PPL_norm 1.1721 | rep 0.0145 | CR 0.7000 | harmless_refusal 0.0000 | offshell 0.0132 | layer 4 | Fisher 10.7265"
+  },
+  "22": {
+    "_manual": true,
+    "diagnosis": "C1/E2 layer sweep on Gemma-3-270m. E2 claims the optimal injection layer is the layer of max linear separability (Fisher ratio), not a fixed late layer; the real-Gemma E3 run showed behavior monotone-declining at max-Fisher L12, so the best BEHAVIOR layer may differ from max-Fisher. This cell injects at layer=6 (alpha=2.0, add) to map behavior, PPL and off-shell displacement across depth and locate the layer with the cleanest steering window.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per CAST (2409.05907) and the Fisher-separability argument, layers differ in how cleanly a behavior direction can be injected; the max-Fisher layer maximizes linear separability but not necessarily the coherent steering window (manifold curvature varies by depth, N20). Injecting at layer=6 measures behavior vs PPL vs off-shell \u0394\u2016h\u2016 to test whether max-Fisher predicts the best steering layer on a small model.",
+    "prediction": "Cell 6/2.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.7668, behavior +0.3506, CR 0.6000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.3506 | MMLU drop 0.0500 | \u0394PPL_norm 1.7200 | rep 0.0145 | CR 0.6000 | harmless_refusal 0.0000 | offshell 0.0004 | layer 6 | Fisher 2.0454"
+  },
+  "23": {
+    "_manual": true,
+    "diagnosis": "C1/E2 layer sweep on Gemma-3-270m. E2 claims the optimal injection layer is the layer of max linear separability (Fisher ratio), not a fixed late layer; the real-Gemma E3 run showed behavior monotone-declining at max-Fisher L12, so the best BEHAVIOR layer may differ from max-Fisher. This cell injects at layer=8 (alpha=2.0, add) to map behavior, PPL and off-shell displacement across depth and locate the layer with the cleanest steering window.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per CAST (2409.05907) and the Fisher-separability argument, layers differ in how cleanly a behavior direction can be injected; the max-Fisher layer maximizes linear separability but not necessarily the coherent steering window (manifold curvature varies by depth, N20). Injecting at layer=8 measures behavior vs PPL vs off-shell \u0394\u2016h\u2016 to test whether max-Fisher predicts the best steering layer on a small model.",
+    "prediction": "Cell 8/2.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.6803, behavior +0.3102, CR 0.6000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.3102 | MMLU drop 0.0500 | \u0394PPL_norm 1.4637 | rep 0.0145 | CR 0.6000 | harmless_refusal 0.0000 | offshell 0.0056 | layer 8 | Fisher 0.2934"
+  },
+  "24": {
+    "_manual": true,
+    "diagnosis": "C1/E2 layer sweep on Gemma-3-270m. E2 claims the optimal injection layer is the layer of max linear separability (Fisher ratio), not a fixed late layer; the real-Gemma E3 run showed behavior monotone-declining at max-Fisher L12, so the best BEHAVIOR layer may differ from max-Fisher. This cell injects at layer=10 (alpha=2.0, add) to map behavior, PPL and off-shell displacement across depth and locate the layer with the cleanest steering window.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per CAST (2409.05907) and the Fisher-separability argument, layers differ in how cleanly a behavior direction can be injected; the max-Fisher layer maximizes linear separability but not necessarily the coherent steering window (manifold curvature varies by depth, N20). Injecting at layer=10 measures behavior vs PPL vs off-shell \u0394\u2016h\u2016 to test whether max-Fisher predicts the best steering layer on a small model.",
+    "prediction": "Cell 10/2.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -2.4708, behavior +0.4848, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4848 | MMLU drop 0.0500 | \u0394PPL_norm 1.7952 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0028 | layer 10 | Fisher 1.2710"
+  },
+  "25": {
+    "_manual": true,
+    "diagnosis": "C1/E2 layer sweep on Gemma-3-270m. E2 claims the optimal injection layer is the layer of max linear separability (Fisher ratio), not a fixed late layer; the real-Gemma E3 run showed behavior monotone-declining at max-Fisher L12, so the best BEHAVIOR layer may differ from max-Fisher. This cell injects at layer=12 (alpha=2.0, add) to map behavior, PPL and off-shell displacement across depth and locate the layer with the cleanest steering window.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per CAST (2409.05907) and the Fisher-separability argument, layers differ in how cleanly a behavior direction can be injected; the max-Fisher layer maximizes linear separability but not necessarily the coherent steering window (manifold curvature varies by depth, N20). Injecting at layer=12 measures behavior vs PPL vs off-shell \u0394\u2016h\u2016 to test whether max-Fisher predicts the best steering layer on a small model.",
+    "prediction": "Cell 12/2.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -2.8888, behavior +0.3192, CR 0.9000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.3192 | MMLU drop 0.1000 | \u0394PPL_norm 2.5729 | rep 0.0145 | CR 0.9000 | harmless_refusal 0.0000 | offshell 0.0574 | layer 12 | Fisher 30.5679"
+  },
+  "26": {
+    "_manual": true,
+    "diagnosis": "C1/E2 layer sweep on Gemma-3-270m. E2 claims the optimal injection layer is the layer of max linear separability (Fisher ratio), not a fixed late layer; the real-Gemma E3 run showed behavior monotone-declining at max-Fisher L12, so the best BEHAVIOR layer may differ from max-Fisher. This cell injects at layer=14 (alpha=2.0, add) to map behavior, PPL and off-shell displacement across depth and locate the layer with the cleanest steering window.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per CAST (2409.05907) and the Fisher-separability argument, layers differ in how cleanly a behavior direction can be injected; the max-Fisher layer maximizes linear separability but not necessarily the coherent steering window (manifold curvature varies by depth, N20). Injecting at layer=14 measures behavior vs PPL vs off-shell \u0394\u2016h\u2016 to test whether max-Fisher predicts the best steering layer on a small model.",
+    "prediction": "Cell 14/2.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -2.2878, behavior +0.4785, CR 0.9000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4785 | MMLU drop 0.0500 | \u0394PPL_norm 1.8065 | rep 0.0145 | CR 0.9000 | harmless_refusal 0.0000 | offshell 0.0234 | layer 14 | Fisher 17.2313"
+  },
+  "27": {
+    "_manual": true,
+    "diagnosis": "C1/E2 layer sweep on Gemma-3-270m. E2 claims the optimal injection layer is the layer of max linear separability (Fisher ratio), not a fixed late layer; the real-Gemma E3 run showed behavior monotone-declining at max-Fisher L12, so the best BEHAVIOR layer may differ from max-Fisher. This cell injects at layer=16 (alpha=2.0, add) to map behavior, PPL and off-shell displacement across depth and locate the layer with the cleanest steering window.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "Per CAST (2409.05907) and the Fisher-separability argument, layers differ in how cleanly a behavior direction can be injected; the max-Fisher layer maximizes linear separability but not necessarily the coherent steering window (manifold curvature varies by depth, N20). Injecting at layer=16 measures behavior vs PPL vs off-shell \u0394\u2016h\u2016 to test whether max-Fisher predicts the best steering layer on a small model.",
+    "prediction": "Cell 16/2.0/add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -2.2706, behavior +0.5340, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5340 | MMLU drop 0.1500 | \u0394PPL_norm 1.2754 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0383 | layer 16 | Fisher 18.2502"
   }
 }
