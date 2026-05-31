@@ -56,3 +56,17 @@ def test_offshell_displacement_zero_when_unchanged():
     assert offshell_displacement(h, h) == 0.0
     # scaling up the norm raises displacement
     assert offshell_displacement(h, 2.0 * h) > 0.5
+
+
+def test_angular_displacement_orthogonal_and_parallel():
+    import torch
+    from steering.geometry import angular_displacement
+    h = torch.randn(4, 8)
+    # identical -> 0
+    assert angular_displacement(h, h) < 1e-5
+    # orthogonal -> ~1
+    a = torch.zeros(1, 3); a[0, 0] = 1.0
+    b = torch.zeros(1, 3); b[0, 1] = 1.0
+    assert abs(angular_displacement(a, b) - 1.0) < 1e-5
+    # anti-parallel -> ~2
+    assert abs(angular_displacement(a, -a) - 2.0) < 1e-5

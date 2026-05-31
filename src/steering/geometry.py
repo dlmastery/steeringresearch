@@ -32,6 +32,26 @@ def offshell_displacement(h_base: torch.Tensor, h_steer: torch.Tensor) -> float:
     return float(rel.mean())
 
 
+def angular_displacement(h_base: torch.Tensor, h_steer: torch.Tensor) -> float:
+    """1 − cos(h_base, h_steer) — the ANGULAR component of displacement.
+
+    `offshell_displacement` captures only the RADIAL (norm-change) component, so
+    a norm-preserving rotation registers ~0 there even when it scrambles the
+    representation (campaign C3: rotate gave Δ‖h‖≈0 yet PPL→1e18). This metric
+    closes that gap: it is the mean over positions of 1 − cosine-similarity
+    between the steered and unsteered hidden states. Together (radial Δ‖h‖,
+    angular 1−cos) they span the Cylindrical Representation Hypothesis
+    decomposition (corpus CRH / N16). 0 ⇒ same direction; 1 ⇒ orthogonal;
+    2 ⇒ anti-parallel.
+
+    h_base, h_steer : [..., dim] matching shapes.
+    """
+    cos = torch.nn.functional.cosine_similarity(
+        h_base.float(), h_steer.float(), dim=-1, eps=1e-8
+    )
+    return float((1.0 - cos).mean())
+
+
 def singular_values(activations: torch.Tensor) -> torch.Tensor:
     """Singular values of a centered activation batch.
 

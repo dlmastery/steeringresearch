@@ -44,7 +44,7 @@ from .eval import (
     repetition_rate,
 )
 from .extract import best_layer, extract_bank
-from .geometry import offshell_displacement
+from .geometry import angular_displacement, offshell_displacement
 from .hooks import SteeringContext, build_position_mask
 from .model import encode_to_device, get_residual_layers, load_model_cached
 
@@ -201,6 +201,7 @@ def _run_inner(config: dict, description: str) -> dict:
                          position_mask=pos_mask):
         h_steer = probe_activations(model, sample_ids, [layer])[layer]
     offshell = offshell_displacement(h_base, h_steer)
+    angular = angular_displacement(h_base, h_steer)  # C3: radial Δ‖h‖ misses rotation
 
     is_fake = _is_fake_model(model, config["model"])
 
@@ -303,6 +304,7 @@ def _run_inner(config: dict, description: str) -> dict:
         "harmless_refusal_rate": round(metrics["harmless_refusal_rate"], 4),
         "selectivity_gap": round(metrics["selectivity_gap"], 4),
         "offshell_displacement": round(metrics["offshell_displacement"], 4),
+        "angular_displacement": round(angular, 4),
         "fisher_at_layer": round(float(bank[layer]["fisher"]), 4),
         "cosine_dm_pca": round(float(bank[layer]["cosine_dm_pca"]), 4),
         # instrument provenance (ICML_REVIEW.md): which scorer actually ran, so a
