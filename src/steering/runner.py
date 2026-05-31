@@ -118,6 +118,7 @@ def run_single_experiment(
     description: str,
     tag: str,
     quant: str = "4bit",
+    normalize: bool = False,
 ) -> dict:
     """Execute ONE steering experiment and log all artifacts."""
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -133,6 +134,7 @@ def run_single_experiment(
         "seed": seed,
         "tag": tag,
         "quant": quant,
+        "normalize": normalize,
     }
     with open(running_path, "w", encoding="utf-8") as f:
         json.dump(
@@ -184,6 +186,13 @@ def _run_inner(config: dict, description: str) -> dict:
     source = config["source"]
     vec_np = bank[layer]["diffmean"] if source == "diffmean" else bank[layer]["pca"]
     vector = torch.tensor(np.asarray(vec_np), dtype=torch.float32)
+    # C7/E36 finding: DiffMean is raw (large norm) while PCA-top1 is unit norm, so
+    # a matched raw alpha is NOT a matched displacement across sources. Optionally
+    # unit-normalize the vector so alpha is a source-comparable displacement
+    # coefficient (the E7 "relative steering" idea). Default off to keep the
+    # existing DiffMean-internal alpha cliffs comparable.
+    if config.get("normalize"):
+        vector = vector / (vector.norm() + 1e-8)
 
     alpha = float(config["alpha"])
     operation = config["operation"]
@@ -493,6 +502,9 @@ def main() -> None:
     parser.add_argument("--tag", default="untagged")
     parser.add_argument("--quant", default="4bit", choices=["4bit", "8bit", "none", "bf16"],
                         help="quantisation; use 'none'/'bf16' for non-gated small models without bitsandbytes")
+    parser.add_argument("--normalize", action="store_true",
+                        help="unit-normalize the steering vector so alpha is a source-comparable "
+                             "displacement coefficient (C7/E36, E7 relative steering)")
     args = parser.parse_args()
 
     run_single_experiment(
@@ -504,6 +516,7 @@ def main() -> None:
         source=args.source,
         behavior=args.behavior,
         seed=args.seed,
+        normalize=args.normalize,
         description=args.description,
         tag=args.tag,
         quant=args.quant,

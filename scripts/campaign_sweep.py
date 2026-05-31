@@ -88,6 +88,7 @@ def main() -> None:
     ap.add_argument("--alphas", type=float, nargs="+", required=True)
     ap.add_argument("--ops", nargs="+", default=["add"])
     ap.add_argument("--sources", nargs="+", default=["diffmean"])
+    ap.add_argument("--normalize", action="store_true", help="unit-normalize steering vectors (E7/E36)")
     ap.add_argument("--diagnosis", default=_DEF["diagnosis"])
     ap.add_argument("--citation", default=_DEF["citation"])
     ap.add_argument("--hypothesis", default=_DEF["hypothesis"])
@@ -111,7 +112,7 @@ def main() -> None:
                             alpha=alpha, operation=op, source=source,
                             behavior=args.behavior, seed=0,
                             description=f"{args.hyp} sweep {tag}", tag=tag,
-                            quant=args.quant,
+                            quant=args.quant, normalize=args.normalize,
                         )
                         rows.append({
                             "exp": e["experiment_num"], "layer": layer, "alpha": alpha,
