@@ -27,7 +27,7 @@ import torch.nn as nn
 
 from .model import get_residual_layers
 
-VALID_OPERATIONS = ("add", "rotate", "project_out")
+VALID_OPERATIONS = ("add", "relative_add", "rotate", "project_out")
 
 # Single source of truth for the unit-norm / Gram-Schmidt numerical guard.
 _EPS = 1e-8
