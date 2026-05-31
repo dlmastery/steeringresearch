@@ -103,3 +103,51 @@ def test_rotate_preserves_norm():
     out = apply_operation(h, v, "rotate", alpha=0.5)
     assert torch.allclose(h.norm(dim=-1), out.norm(dim=-1), atol=1e-4), \
         "rotate must be norm-preserving"
+
+
+def test_special_token_positions_unmodified_across_incremental_forwards():
+    """Regression for the silent-mask-drop bug: a position mask built once from
+    the prompt must keep protecting the prompt's special-token position across
+    SUBSEQUENT forwards of DIFFERENT sequence lengths (the KV-cache decode case),
+    instead of being silently dropped on a shape mismatch and steering ALL
+    positions."""
+    model = make_fake_lm(seed=0)
+    layer = 2
+    v = torch.ones(model.dim)
+    prompt_ids = torch.tensor([[1, 5, 6, 7, 8, 9]])  # 1 == BOS (special) at pos 0
+    mask = build_position_mask(prompt_ids, model.special_token_ids())
+
+    # Baselines (captured OUTSIDE the steering context) for the prompt, a LONGER
+    # continuation (prompt + new tokens), and a single-token decode step.
+    longer_ids = torch.tensor([[1, 5, 6, 7, 8, 9, 10, 11]])
+    step_ids = torch.tensor([[12]])
+    base_prompt = probe_activations(model, prompt_ids, [layer])[layer]
+    base_longer = probe_activations(model, longer_ids, [layer])[layer]
+    base_step = probe_activations(model, step_ids, [layer])[layer]
+
+    with SteeringContext(
+        model, v, [layer], operation="add", alpha=6.0, position_mask=mask
+    ):
+        # 1) Same-length prompt forward: special pos untouched, others changed.
+        steer_prompt = probe_activations(model, prompt_ids, [layer])[layer]
+        # 2) Longer forward (mask rebuilt per forward): the prompt's BOS at pos 0
+        #    is STILL protected; appended generated positions ARE steered.
+        steer_longer = probe_activations(model, longer_ids, [layer])[layer]
+        # 3) A bare incremental decode step (seq len 1, a brand-new token): it is
+        #    not a prompt special token, so it is steerable — and must not crash.
+        steer_step = probe_activations(model, step_ids, [layer])[layer]
+
+    # Prompt BOS protected in BOTH the same-length and longer forwards.
+    assert torch.allclose(steer_prompt[0, 0], base_prompt[0, 0]), \
+        "BOS must be untouched on same-length forward"
+    assert torch.allclose(steer_longer[0, 0], base_longer[0, 0]), \
+        "BOS must STILL be untouched on a longer forward (mask rebuilt, not dropped)"
+    # Non-special prompt position changed.
+    assert not torch.allclose(steer_prompt[0, 1], base_prompt[0, 1]), \
+        "non-special token must change"
+    # Appended generated positions (index >= prompt len) ARE steered.
+    assert not torch.allclose(steer_longer[0, 6], base_longer[0, 6]), \
+        "generated positions beyond the prompt must be steered"
+    # The single-token decode step is steered (it is a generated token).
+    assert not torch.allclose(steer_step[0, 0], base_step[0, 0]), \
+        "a fresh decode-step token must be steerable, not silently skipped"

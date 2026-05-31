@@ -29,7 +29,7 @@ def _run(tmp_path: Path, tag: str):
 
 
 def test_rung0_run_writes_artifacts(tmp_path):
-    entry = _run(tmp_path, "smoke-1")
+    _run(tmp_path, "smoke-1")
 
     log_path = tmp_path / "experiment_log.jsonl"
     best_path = tmp_path / "best_config.json"
@@ -76,7 +76,7 @@ def test_second_run_autoincrements_and_appends(tmp_path):
     lines = log_path.read_text(encoding="utf-8").strip().splitlines()
     assert len(lines) == 2, "JSONL must be append-only (2 rows after 2 runs)"
 
-    nums = [json.loads(l)["experiment_num"] for l in lines]
+    nums = [json.loads(line)["experiment_num"] for line in lines]
     assert nums == [1, 2], "experiment_num must auto-increment"
 
     # running.json must be cleared after each run (transient signal).

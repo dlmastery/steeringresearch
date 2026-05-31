@@ -21,37 +21,28 @@ import hashlib
 import json
 import re
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional, Sequence, TypedDict
 
 import numpy as np
 import torch
 import torch.nn as nn
 
 from .hooks import probe_activations
-from .model import get_residual_layers
+from .model import encode_to_device, get_residual_layers
 
 
-def _encode(tokenizer, text: str, model: Optional[nn.Module] = None) -> torch.Tensor:
-    """Encode a prompt to an input_ids tensor [1, seq] on the model's device.
+class BankEntry(TypedDict):
+    """One per-layer steering-vector bank entry (typed so callers stay checked)."""
 
-    Handles BOTH the offline FakeTokenizer (returns a plain dict) and real HF
-    tokenizers (return a BatchEncoding, which is NOT a dict subclass in current
-    transformers — hence the explicit attribute check). Moves ids to the model's
-    device so real CUDA models don't hit a device mismatch (FakeLM is CPU).
-    """
-    out = tokenizer(text, return_tensors="pt")
-    if hasattr(out, "input_ids"):
-        ids = out.input_ids
-    elif isinstance(out, dict):
-        ids = out["input_ids"]
-    else:
-        ids = out
-    if model is not None:
-        try:
-            ids = ids.to(next(model.parameters()).device)
-        except StopIteration:
-            pass
-    return ids
+    diffmean: np.ndarray
+    pca: np.ndarray
+    cosine_dm_pca: float
+    fisher: float
+
+
+# Backwards-compatible alias: the shared encode->input_ids->device helper now
+# lives in model.py (single source of truth, also used by eval + runner).
+_encode = encode_to_device
 
 
 def _mean_over_answer_tokens(acts: torch.Tensor) -> torch.Tensor:
@@ -117,20 +108,25 @@ def collect_activations_cached(
     cache_dir: str | Path,
     layers: Optional[Sequence[int]] = None,
     model_tag: str = "fake",
+    quant: str = "fake",
 ) -> dict[int, dict[str, np.ndarray]]:
     """Cache activations to disk (CLAUDE.md §2: cache once, reuse across ladder).
 
-    The cache key is derived from the model tag + the contrast-pair content, so
-    identical inputs hit the cache.
+    The cache key is derived from the model tag + quant/dtype + the contrast-pair
+    content, so identical inputs hit the cache. ``quant`` is part of the key
+    because a bf16 vs 4bit load of the SAME model id produces numerically
+    different activations — without it a 4bit run would silently reuse a bf16
+    cache (or vice-versa).
     """
     cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
     sig = _pairs_signature(pairs)
     layer_tag = "all" if layers is None else "-".join(map(str, layers))
-    # Sanitise the model tag: HF ids contain "/" which would create a phantom
+    # Sanitise tag + quant: HF ids contain "/" which would create a phantom
     # subdirectory in the npz path (real-model bug the fake tag never hit).
     safe_tag = re.sub(r"[^0-9A-Za-z._-]", "_", str(model_tag))
-    cache_path = cache_dir / f"acts_{safe_tag}_{sig}_{layer_tag}.npz"
+    safe_quant = re.sub(r"[^0-9A-Za-z._-]", "_", str(quant))
+    cache_path = cache_dir / f"acts_{safe_tag}_{safe_quant}_{sig}_{layer_tag}.npz"
 
     if cache_path.exists():
         data = np.load(cache_path)
@@ -165,12 +161,16 @@ def pca_top1_vector(pos: np.ndarray, neg: np.ndarray) -> np.ndarray:
     direction. Sign-aligned to the diffmean so cosine comparison is meaningful.
     """
     diffs = pos - neg  # [n, dim]
+    dm = diffmean_vector(pos, neg)
+    # Degenerate inputs (no pairs, or all-zero diffs) make SVD ill-defined and
+    # the sign-alignment dot a NaN; fall back to the diffmean direction.
+    if diffs.shape[0] < 1 or not np.any(diffs):
+        return dm
     # Top right-singular vector of the uncentered difference matrix = leading
     # axis of Σ d d^T = the shared concept direction.
     _, _, vt = np.linalg.svd(diffs, full_matrices=False)
     pc1 = vt[0]
     # sign-align to the raw diffmean direction
-    dm = diffmean_vector(pos, neg)
     if float(np.dot(pc1, dm)) < 0:
         pc1 = -pc1
     return pc1
@@ -199,12 +199,12 @@ def fisher_ratio(pos: np.ndarray, neg: np.ndarray, eps: float = 1e-8) -> float:
 
 def build_vector_bank(
     acts: dict[int, dict[str, np.ndarray]],
-) -> dict[int, dict[str, object]]:
+) -> dict[int, BankEntry]:
     """Compute per-layer DiffMean, PCA-top1, cosine, Fisher ratio.
 
     Returns {layer: {"diffmean", "pca", "cosine_dm_pca", "fisher"}}.
     """
-    bank: dict[int, dict[str, object]] = {}
+    bank: dict[int, BankEntry] = {}
     for li, d in acts.items():
         pos, neg = d["pos"], d["neg"]
         dm = diffmean_vector(pos, neg)
@@ -218,12 +218,12 @@ def build_vector_bank(
     return bank
 
 
-def best_layer(bank: dict[int, dict[str, object]]) -> int:
+def best_layer(bank: dict[int, BankEntry]) -> int:
     """Layer with the highest Fisher ratio (most separable)."""
     return max(bank, key=lambda li: bank[li]["fisher"])
 
 
-def save_vector_bank(bank: dict[int, dict[str, object]], path: str | Path) -> None:
+def save_vector_bank(bank: dict[int, BankEntry], path: str | Path) -> None:
     """Save a vector bank to .npz (diffmean + pca per layer, plus scalars)."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -240,11 +240,11 @@ def save_vector_bank(bank: dict[int, dict[str, object]], path: str | Path) -> No
     np.savez(path, **blob)
 
 
-def load_vector_bank(path: str | Path) -> dict[int, dict[str, object]]:
+def load_vector_bank(path: str | Path) -> dict[int, BankEntry]:
     """Load a vector bank saved by save_vector_bank."""
     data = np.load(path, allow_pickle=False)
     meta = json.loads(str(data["__meta__"]))
-    bank: dict[int, dict[str, object]] = {}
+    bank: dict[int, BankEntry] = {}
     for li_str, scalars in meta.items():
         li = int(li_str)
         bank[li] = {
@@ -263,11 +263,12 @@ def extract_bank(
     layers: Optional[Sequence[int]] = None,
     cache_dir: Optional[str | Path] = None,
     model_tag: str = "fake",
-) -> dict[int, dict[str, object]]:
+    quant: str = "fake",
+) -> dict[int, BankEntry]:
     """End-to-end: collect (optionally cached) activations and build the bank."""
     if cache_dir is not None:
         acts = collect_activations_cached(
-            model, tokenizer, pairs, cache_dir, layers, model_tag
+            model, tokenizer, pairs, cache_dir, layers, model_tag, quant
         )
     else:
         acts = collect_activations(model, tokenizer, pairs, layers)

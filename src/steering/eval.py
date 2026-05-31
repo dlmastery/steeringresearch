@@ -24,14 +24,35 @@ import hashlib
 import math
 import re
 from collections import Counter
-from typing import Callable, Optional, Sequence
+from typing import Callable, Optional, Sequence, cast
 
 import torch
 import torch.nn as nn
 
-from .geometry import offshell_displacement
-from .hooks import SteeringContext, build_position_mask, probe_activations
-from .model import get_residual_layers
+from .hooks import SteeringContext, probe_activations
+from .model import encode_to_device
+
+# Logistic squash scales (named so the calibration is one edit, not a magic number).
+_CONCEPT_LOGIT_SCALE = 8.0   # generation_behavior_scorer: concept-rate delta -> (0,1)
+_PROJ_LOGIT_SCALE = 1.0      # projection_behavior_scorer: proj delta -> (0,1)
+_UNIT_EPS = 1e-8             # unit-norm guard
+
+# Single offline FakeLM safety placeholder (one documented contract, used by BOTH
+# generate_responses and the runner so the two paths can never disagree). FakeLM
+# emits gibberish and has no `.generate`, so we return a deterministic refusal:
+# the required CR≈0 (no-leak) baseline. This is NOT a real measurement — the
+# `safety_real=False` provenance tag records that.
+_FAKE_REFUSAL_RESPONSE = "I can't help with that."
+
+
+def fake_safety_responses(prompts: Sequence[str]) -> list[str]:
+    """Deterministic offline placeholder responses for the FakeLM safety path.
+
+    Refuses every prompt (CR≈0 baseline). Both ``generate_responses`` (when the
+    model cannot generate) and the runner route through this single helper so the
+    offline safety contract has exactly ONE definition.
+    """
+    return [_FAKE_REFUSAL_RESPONSE for _ in prompts]
 
 # ---------------------------------------------------------------------------
 # The composite formula (frozen + fingerprinted). See CLAUDE.md §6.
@@ -100,20 +121,8 @@ def composite(metrics: dict[str, float], weights: Optional[dict[str, float]] = N
 # ---------------------------------------------------------------------------
 # Axis 1 — behavior efficacy (pluggable scorer).
 # ---------------------------------------------------------------------------
-def _ids(tokenizer, text: str, model: nn.Module) -> torch.Tensor:
-    """Encode to input_ids [1,seq] on the model's device.
-
-    Handles real HF BatchEncoding (not a dict subclass) AND the offline
-    FakeTokenizer (plain dict); moves ids to the model device (CUDA for real
-    models, CPU for FakeLM).
-    """
-    out = tokenizer(text, return_tensors="pt")
-    ids = out.input_ids if hasattr(out, "input_ids") else (out["input_ids"] if isinstance(out, dict) else out)
-    try:
-        ids = ids.to(next(model.parameters()).device)
-    except StopIteration:
-        pass
-    return ids
+# Shared encode->input_ids->device helper (single source of truth in model.py).
+_ids = encode_to_device
 
 
 def projection_behavior_scorer(
@@ -137,7 +146,7 @@ def projection_behavior_scorer(
     offline.
     """
     v = target_vector.float()
-    v = v / (v.norm() + 1e-8)
+    v = v / (v.norm() + _UNIT_EPS)
     try:
         v = v.to(next(model.parameters()).device)
     except StopIteration:
@@ -160,7 +169,7 @@ def projection_behavior_scorer(
 
     delta = mean_proj(steer=True) - mean_proj(steer=False)
     # logistic squash to keep behavior_efficacy in a bounded, comparable range
-    return 1.0 / (1.0 + math.exp(-delta))
+    return 1.0 / (1.0 + math.exp(-_PROJ_LOGIT_SCALE * delta))
 
 
 # ---------------------------------------------------------------------------
@@ -175,6 +184,11 @@ def projection_behavior_scorer(
 # ---------------------------------------------------------------------------
 
 # Short English stop-list so lexicon_from_pairs keeps only content words.
+# Curated: function words ONLY. Content words that could legitimately BE concept
+# words (e.g. "open", "small", "bright", "hot", "cold", "love", "fill") were
+# removed — keeping them would silently suppress real concept vocabulary.
+# Prepositions of place (above/below/across/along/...) are retained as function
+# words but listed exactly once (the original had duplicates).
 _STOPWORDS = frozenset(
     """a an the and or but if then than that this these those of to in on at by
     for with from into over under above below up down out off no not nor so as
@@ -183,9 +197,7 @@ _STOPWORDS = frozenset(
     her you your we our us i me my mine ours yours theirs who whom which what when
     where why how all any both each few more most other some such only own same
     very s t just too also there here about across after again against along
-    among around because before between during through while within without
-    little open small bright hot cold dry wet love down fill held above below
-    across along their the""".split()
+    among around because before between during through while within without""".split()
 )
 
 
@@ -278,8 +290,11 @@ def _greedy_generate(
         gen_kwargs["pad_token_id"] = eos_id
 
     def _run() -> torch.Tensor:
+        # mypy sees `nn.Module` (no `.generate`); only real HF models reach here
+        # (guarded by `_can_generate`), so cast through Any.
+        generate = cast(Callable[..., torch.Tensor], model.generate)
         with torch.no_grad():
-            return model.generate(ids, **gen_kwargs)
+            return generate(ids, **gen_kwargs)
 
     if layer is not None and vector is not None:
         sk = dict(steering_kwargs or {})
@@ -383,7 +398,7 @@ def generation_behavior_scorer(
     delta = steered_mean - unsteered_mean
     # scale so a ~0.1 concept-rate lift maps to a clearly-above-0.5 score, while
     # keeping the output bounded in (0,1). No effect (delta=0) ⇒ exactly 0.5.
-    score = 1.0 / (1.0 + math.exp(-8.0 * delta))
+    score = 1.0 / (1.0 + math.exp(-_CONCEPT_LOGIT_SCALE * delta))
     return {
         "score": float(score),
         "scorer": "generation",
@@ -415,13 +430,12 @@ def generate_responses(
     `lambda_safe` penalty and auto-DISCARD can now actually fire.
 
     FakeLM GUARD: FakeResidualLM has no `.generate` and emits gibberish, so for
-    it we return deterministic placeholder responses via a SEPARATE code path
-    (refusals — the required CR≈0 baseline). Real models ALWAYS really generate.
+    it we return deterministic placeholder responses via the SINGLE shared
+    `fake_safety_responses` helper (refusals — the required CR≈0 baseline). Real
+    models ALWAYS really generate.
     """
     if not _can_generate(model):
-        # Deterministic offline placeholder: refuse harmful, the CR≈0 baseline.
-        # Clearly separate from the real-generation path below.
-        return ["I can't help with that." for _ in prompts]
+        return fake_safety_responses(prompts)
 
     return [
         _greedy_generate(
@@ -464,7 +478,6 @@ def mcq_accuracy(
         with torch.no_grad():
             logits = model(ids).logits.float()
         last = logits[0, -1]  # [vocab]
-        pred_token = int(last.argmax())
         # Map each option to a deterministic target token via the tokenizer.
         opt_scores = []
         for opt in options:

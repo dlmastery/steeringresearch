@@ -12,7 +12,8 @@ CLAUDE.md §2. gemma-3-1b-it ~1-2 GB, gemma-2-2b-it ~2-3 GB.
 
 from __future__ import annotations
 
-from typing import Any
+import gc
+from typing import Any, cast
 
 import torch
 import torch.nn as nn
@@ -36,7 +37,9 @@ _GATED_HELP = (
 )
 
 
-def load_model(name: str = DEFAULT_MODEL, quant: str = "4bit", device: str | None = None):
+def load_model(
+    name: str = DEFAULT_MODEL, quant: str = "4bit", device: str | None = None
+) -> tuple[Any, Any]:
     """Load a model + tokenizer for steering.
 
     Parameters
@@ -58,8 +61,8 @@ def load_model(name: str = DEFAULT_MODEL, quant: str = "4bit", device: str | Non
     if name == "fake":
         from .fakelm import make_fake_lm
 
-        model = make_fake_lm()
-        return model, _FakeTokenizer(model.vocab_size)
+        fake = make_fake_lm()
+        return fake, _FakeTokenizer(fake.vocab_size)
 
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -100,7 +103,7 @@ def load_model(name: str = DEFAULT_MODEL, quant: str = "4bit", device: str | Non
 
     try:
         tokenizer = AutoTokenizer.from_pretrained(name)
-        model = AutoModelForCausalLM.from_pretrained(
+        model: Any = AutoModelForCausalLM.from_pretrained(
             name,
             device_map=device if quant in ("4bit", "8bit") else None,
             **quant_kwargs,
@@ -108,6 +111,7 @@ def load_model(name: str = DEFAULT_MODEL, quant: str = "4bit", device: str | Non
         if quant not in ("4bit", "8bit"):
             model = model.to(device)
         model.eval()
+        _force_eager_generation(model)
         return model, tokenizer
     except Exception as err:  # gated / SSL / connection / OOM / missing weights
         # Honest, mode-specific diagnosis (ICML_REVIEW spirit: do not cry "gated"
@@ -128,7 +132,12 @@ def load_model(name: str = DEFAULT_MODEL, quant: str = "4bit", device: str | Non
                 f"network works: `huggingface-cli download {name}` — once in the HF "
                 f"cache the harness loads it offline automatically."
             )
-        elif "paging file" in msg or "out of memory" in msg or "1455" in msg or "cuda" in msg and "memory" in msg:
+        elif (
+            "paging file" in msg
+            or "out of memory" in msg
+            or "1455" in msg
+            or ("cuda" in msg and "memory" in msg)
+        ):
             hint = (
                 f"Out-of-memory / paging-file exhaustion loading '{name}'. Load ONE "
                 f"model per process (don't reload N times in a loop), or quantise "
@@ -142,6 +151,106 @@ def load_model(name: str = DEFAULT_MODEL, quant: str = "4bit", device: str | Non
                 f"For OFFLINE work use load_model(name='fake')."
             )
         raise RuntimeError(hint) from err
+
+
+def _force_eager_generation(model: nn.Module) -> None:
+    """Force eager (uncompiled, dynamic-cache) generation.
+
+    WHY: on Windows, transformers' default ``cache_implementation`` for several
+    recent architectures (Gemma-3 included) is a *static* cache that HF routes
+    through ``torch.compile`` -> TorchInductor. Inductor then tries to JIT a CUDA
+    kernel via Triton, and Triton has no Windows wheel, so generation crashes with
+    "Cannot find a working triton installation". We never want compilation here:
+    the harness generates a handful of short greedy continuations, so an eager
+    dynamic cache is both correct and faster to warm up.
+
+    Two independent guards (belt-and-braces):
+      1. ``torch._dynamo.config.suppress_errors = True`` — if anything still tries
+         to compile, dynamo falls back to eager instead of raising.
+      2. ``generation_config.cache_implementation = "dynamic"`` — stops HF from
+         selecting the compiled static cache in the first place.
+    """
+    try:
+        import torch._dynamo as _dynamo
+
+        _dynamo.config.suppress_errors = True
+    except Exception:  # pragma: no cover - dynamo always present with torch>=2
+        pass
+    gen_cfg = getattr(model, "generation_config", None)
+    if gen_cfg is not None:  # FakeResidualLM has no generation_config — guard.
+        try:
+            gen_cfg.cache_implementation = "dynamic"
+        except Exception:  # pragma: no cover - frozen/odd config objects
+            pass
+
+
+# Process-level model+tokenizer cache keyed by (name, quant, device). Loading a
+# real Gemma is expensive (VRAM + paging file); reloading it every experiment is
+# the documented "reload N times -> OOM/paging-file exhaustion" footgun. We keep
+# exactly ONE loaded model per key and free the previous one when the key changes.
+_MODEL_CACHE: dict[tuple[str, str, str | None], tuple[Any, Any]] = {}
+
+
+def load_model_cached(
+    name: str = DEFAULT_MODEL,
+    quant: str = "4bit",
+    device: str | None = None,
+):
+    """Load (or reuse) a model+tokenizer, caching one handle per (name, quant, device).
+
+    On a *fresh* key, any previously cached models are freed first
+    (``del`` + ``gc.collect()`` + ``torch.cuda.empty_cache()``) so an in-process
+    alpha-sweep over many configs never accumulates VRAM/paging-file pressure.
+    The ``"fake"`` path is cached too (cheap, but keeps the contract uniform).
+    """
+    key = (name, quant, device)
+    if key in _MODEL_CACHE:
+        return _MODEL_CACHE[key]
+
+    # New key: free everything currently held before loading the next model.
+    if _MODEL_CACHE:
+        free_model_cache()
+
+    model, tokenizer = load_model(name, quant=quant, device=device)
+    _MODEL_CACHE[key] = (model, tokenizer)
+    return model, tokenizer
+
+
+def free_model_cache() -> None:
+    """Drop all cached models and reclaim memory (VRAM + host)."""
+    _MODEL_CACHE.clear()
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+
+def encode_to_device(tokenizer, text: str, model: nn.Module | None = None) -> torch.Tensor:
+    """Encode ``text`` -> input_ids ``[1, seq]``, moved to the model's device.
+
+    Single source of truth for the tokenize->input_ids->to(device) dance that was
+    previously duplicated in ``extract._encode``, ``eval._ids`` and ``runner``.
+
+    Handles:
+      * real HF ``BatchEncoding`` (NOT a dict subclass in current transformers) via
+        the ``.input_ids`` attribute,
+      * the offline ``_FakeTokenizer`` which returns a plain ``dict``,
+      * a bare tensor.
+    Falls back to CPU (leaves ids put) when the model is parameter-less
+    (``StopIteration``) or ``None``.
+    """
+    out = tokenizer(text, return_tensors="pt")
+    if hasattr(out, "input_ids"):
+        ids = out.input_ids
+    elif isinstance(out, dict):
+        ids = out["input_ids"]
+    else:
+        ids = out
+    if model is not None:
+        try:
+            ids = ids.to(next(model.parameters()).device)
+        except StopIteration:
+            pass
+    return cast(torch.Tensor, ids)
 
 
 def get_residual_layers(model: nn.Module) -> list[nn.Module]:
@@ -174,12 +283,13 @@ def get_residual_layers(model: nn.Module) -> list[nn.Module]:
             return list(inner2.layers)
 
     # Fallback: find the largest ModuleList of repeated blocks.
-    candidates = [
+    candidates: list[nn.ModuleList] = [
         m for m in model.modules()
         if isinstance(m, nn.ModuleList) and len(m) >= 2
     ]
     if candidates:
-        return list(max(candidates, key=len))
+        largest = max(candidates, key=lambda ml: len(ml))
+        return list(largest)
 
     raise ValueError(
         "Could not locate residual layers on this model. Pass a FakeResidualLM "
@@ -221,7 +331,7 @@ class _FakeTokenizer:
         maxlen = max(len(s) for s in seqs)
         ids = [s + [self.pad_token_id] * (maxlen - len(s)) for s in seqs]
         mask = [[1] * len(s) + [0] * (maxlen - len(s)) for s in seqs]
-        out = {"input_ids": ids, "attention_mask": mask}
+        out: dict[str, Any] = {"input_ids": ids, "attention_mask": mask}
         if return_tensors == "pt":
             out = {k: torch.tensor(v, dtype=torch.long) for k, v in out.items()}
         return out

@@ -52,6 +52,7 @@ from __future__ import annotations
 
 import html
 import json
+import math
 import re
 import subprocess
 import time
@@ -460,9 +461,13 @@ def _mpl():
 def _num(row: dict, key: str, default: float = 0.0) -> float:
     v = row.get(key)
     try:
-        return float(v)
+        x = float(v)  # type: ignore[arg-type]  # guarded below + by except
     except (TypeError, ValueError):
         return default
+    # NaN/inf would silently poison radar/Pareto/composite-breakdown; clamp them.
+    if not math.isfinite(x):
+        return default
+    return x
 
 
 def _axis_scores(row: dict) -> dict:
@@ -1139,7 +1144,7 @@ def render_master(rows: list[dict], idea_dirs: list[Path],
         f'<td>{"cleared" if L["cleared"] else "failed"}</td>'
         f'<td>{html.escape(L["failure_reason"] or "—")}</td></tr>'
         for L in ladder
-    ) or f'<tr><td colspan="4" class="empty">No runs yet.</td></tr>'
+    ) or '<tr><td colspan="4" class="empty">No runs yet.</td></tr>'
 
     parts = [_page_open("Steering Autoresearch — Master Dashboard")]
     parts.append(

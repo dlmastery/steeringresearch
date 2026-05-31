@@ -20,7 +20,7 @@ A read-only `ProbeHook` captures activations without modifying them.
 
 from __future__ import annotations
 
-from typing import Callable, Iterable, Optional, Sequence
+from typing import Iterable, Literal, Optional, Sequence
 
 import torch
 import torch.nn as nn
@@ -29,8 +29,11 @@ from .model import get_residual_layers
 
 VALID_OPERATIONS = ("add", "rotate", "project_out")
 
+# Single source of truth for the unit-norm / Gram-Schmidt numerical guard.
+_EPS = 1e-8
 
-def _unit(v: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
+
+def _unit(v: torch.Tensor, eps: float = _EPS) -> torch.Tensor:
     return v / (v.norm() + eps)
 
 
@@ -68,11 +71,11 @@ def apply_operation(
         # Then h_rot = ||h|| * (cos(alpha) e1 + sin(alpha) e2).
         v_hat = _unit(v)
         h_norm = h.norm(dim=-1, keepdim=True)  # [...,1]
-        e1 = h / (h_norm + 1e-8)               # [...,dim]
+        e1 = h / (h_norm + _EPS)               # [...,dim]
         # component of v_hat orthogonal to e1, per position
         v_dot_e1 = torch.tensordot(e1, v_hat, dims=([-1], [0])).unsqueeze(-1)  # [...,1]
         e2_raw = v_hat - v_dot_e1 * e1
-        e2 = e2_raw / (e2_raw.norm(dim=-1, keepdim=True) + 1e-8)
+        e2 = e2_raw / (e2_raw.norm(dim=-1, keepdim=True) + _EPS)
         angle = torch.tensor(float(alpha), dtype=h.dtype, device=h.device)
         return h_norm * (torch.cos(angle) * e1 + torch.sin(angle) * e2)
 
@@ -95,7 +98,17 @@ def build_position_mask(
 
 
 class _SteerHook:
-    """Internal forward-hook callable that edits a module's residual output."""
+    """Internal forward-hook callable that edits a module's residual output.
+
+    Position masking is rebuilt PER FORWARD from the actual hidden-state seq dim
+    so it stays correct across incremental (KV-cache) decode steps. A static mask
+    built once from the prompt is meaningless on a len-1 decode step — the old
+    code silently dropped it on a shape mismatch and steered EVERY position,
+    including special tokens. Instead we carry the prompt's mask (covering the
+    prompt positions) and treat any *new* positions beyond the prompt as
+    steerable (a freshly generated token is never one of the prompt's protected
+    special tokens). If no mask was supplied, all positions are steered.
+    """
 
     def __init__(
         self,
@@ -107,7 +120,45 @@ class _SteerHook:
         self.vector = vector
         self.operation = operation
         self.alpha = alpha
-        self.position_mask = position_mask  # [batch, seq] bool or None
+        # [batch, seq_prompt] bool mask over the PROMPT positions, or None.
+        self.position_mask = position_mask
+
+    def _mask_for(self, h: torch.Tensor) -> Optional[torch.Tensor]:
+        """Boolean mask [batch, seq, 1] aligned to ``h``'s current seq length.
+
+        Rebuilt every forward. When ``h`` is longer than the prompt mask (full
+        prompt forward already covered, extra positions are generated tokens) the
+        new positions are steerable (True). When ``h`` is shorter (a single
+        decode step), we slice the relevant tail of the prompt mask if it still
+        overlaps, otherwise the step is entirely new tokens -> steerable.
+        """
+        if self.position_mask is None:
+            return None
+        pm = self.position_mask.to(device=h.device, dtype=torch.bool)
+        b, seq = h.shape[0], h.shape[1]
+        pb, pseq = pm.shape[0], pm.shape[1]
+        # Align batch (broadcast a single-row prompt mask if needed).
+        if pb != b:
+            if pb == 1:
+                pm = pm.expand(b, pseq)
+            else:
+                # Batch genuinely differs from the prompt mask — cannot map
+                # positions safely; steer all (documented, rare) rather than
+                # silently protecting the wrong rows.
+                return None
+        if seq == pseq:
+            full = pm
+        elif seq > pseq:
+            # Prompt positions keep their mask; appended (generated) positions
+            # are steerable.
+            extra = torch.ones(b, seq - pseq, dtype=torch.bool, device=h.device)
+            full = torch.cat([pm, extra], dim=1)
+        else:
+            # seq < pseq: an incremental decode step of `seq` new token(s) after
+            # the prompt was already consumed. These are generated tokens, never
+            # the prompt's protected specials -> steerable.
+            full = torch.ones(b, seq, dtype=torch.bool, device=h.device)
+        return full.unsqueeze(-1)
 
     def __call__(self, module, inputs, output):
         # Residual blocks return either a tensor or a tuple whose [0] is the hidden.
@@ -120,12 +171,9 @@ class _SteerHook:
 
         steered = apply_operation(h, self.vector, self.operation, self.alpha)
 
-        if self.position_mask is not None:
-            # Broadcast mask [batch, seq] -> [batch, seq, 1]; only edit allowed positions.
-            m = self.position_mask.to(device=h.device)
-            if m.shape[:2] == h.shape[:2]:
-                m3 = m.unsqueeze(-1)
-                steered = torch.where(m3, steered, h)
+        m3 = self._mask_for(h)
+        if m3 is not None:
+            steered = torch.where(m3, steered, h)
 
         if rest is not None:
             return (steered, *rest)
@@ -208,7 +256,7 @@ class SteeringContext:
             self._handles.append(module.register_forward_hook(hook))
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> bool:
+    def __exit__(self, exc_type, exc, tb) -> Literal[False]:
         for h in self._handles:
             h.remove()
         self._handles.clear()
@@ -237,4 +285,12 @@ def probe_activations(
     finally:
         for h in handles:
             h.remove()
-    return {li: p.activations for li, p in probes.items()}
+    out: dict[int, torch.Tensor] = {}
+    for li, p in probes.items():
+        if p.activations is None:  # pragma: no cover - defensive
+            raise RuntimeError(
+                f"layer {li} never fired during the forward pass; cannot probe "
+                "its activations (check the layer index / model wiring)."
+            )
+        out[li] = p.activations
+    return out

@@ -17,44 +17,53 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 _DATA_DIR = Path(__file__).resolve().parent / "data"
 
 
-def _load(name: str) -> dict:
+def _load(name: str) -> Any:
+    """Load a bundled JSON slice. Returns whatever the file holds (dict or list)."""
     with open(_DATA_DIR / name, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def _require(data: dict, key: str, name: str) -> Any:
+    """Fetch `key` from a loaded slice with a clear 'malformed slice' message."""
+    if not isinstance(data, dict) or key not in data:
+        raise KeyError(f"dataset slice '{name}' is malformed: missing key '{key}'")
+    return data[key]
 
 
 def load_axbench_mini() -> list[tuple[str, str]]:
     """Concept contrast pairs as a list of (pos_prompt, neg_prompt)."""
     data = _load("axbench_mini.json")
-    return [(p["pos"], p["neg"]) for p in data["pairs"]]
+    return [(p["pos"], p["neg"]) for p in _require(data, "pairs", "axbench_mini")]
 
 
 def axbench_concept() -> str:
     """The concept name the axbench_mini pairs are built around."""
-    return _load("axbench_mini.json")["concept"]
+    return _require(_load("axbench_mini.json"), "concept", "axbench_mini")
 
 
 def load_mmlu_tiny() -> list[dict]:
     """List of MCQ dicts: {question, options[4], answer_idx}."""
-    return _load("mmlu_tiny.json")["questions"]
+    return _require(_load("mmlu_tiny.json"), "questions", "mmlu_tiny")
 
 
 def load_wikitext_ppl_mini() -> list[str]:
     """List of short passages for perplexity/coherence."""
-    return _load("wikitext_ppl_mini.json")["passages"]
+    return _require(_load("wikitext_ppl_mini.json"), "passages", "wikitext_ppl_mini")
 
 
 def load_jailbreak_mini() -> list[str]:
     """List of harmful-intent prompts (safety tripwire)."""
-    return _load("jailbreak_mini.json")["prompts"]
+    return _require(_load("jailbreak_mini.json"), "prompts", "jailbreak_mini")
 
 
 def load_xstest_mini() -> list[str]:
     """List of benign-but-scary prompts (over-refusal dual)."""
-    return _load("xstest_mini.json")["prompts"]
+    return _require(_load("xstest_mini.json"), "prompts", "xstest_mini")
 
 
 def load_all() -> dict:

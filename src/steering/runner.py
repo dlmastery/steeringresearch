@@ -34,6 +34,7 @@ from . import datasets as ds
 from .eval import (
     composite_fingerprint,
     evaluate_bundle,
+    fake_safety_responses,
     generate_responses,
     generation_behavior_scorer,
     lexicon_from_pairs,
@@ -45,7 +46,7 @@ from .eval import (
 from .extract import best_layer, extract_bank
 from .geometry import offshell_displacement
 from .hooks import SteeringContext, build_position_mask
-from .model import get_residual_layers, load_model
+from .model import encode_to_device, get_residual_layers, load_model_cached
 
 RESULTS_DIR = Path(__file__).resolve().parents[2] / "autoresearch_results"
 
@@ -61,14 +62,34 @@ def _set_seed(seed: int) -> None:
 
 
 def _special_ids(model, tokenizer) -> list[int]:
-    ids = []
-    for attr in ("bos_token_id", "start_of_turn_id"):
+    """Token ids that must NEVER be steered (BOS + Gemma turn markers).
+
+    On the FakeLM these come from the `*_token_id` attributes. On a real Gemma
+    tokenizer `start_of_turn_id`/`end_of_turn_id` are NOT attributes — they must
+    be resolved via `convert_tokens_to_ids("<start_of_turn>")`, otherwise only
+    BOS was masked and the turn markers leaked into steering.
+    """
+    ids: list[int] = []
+    for attr in ("bos_token_id", "eos_token_id", "start_of_turn_id", "end_of_turn_id"):
         v = getattr(tokenizer, attr, None)
         if v is not None:
             ids.append(int(v))
         v2 = getattr(model, attr, None)
         if v2 is not None:
             ids.append(int(v2))
+    # Real HF tokenizers expose the Gemma turn markers only by string lookup.
+    convert = getattr(tokenizer, "convert_tokens_to_ids", None)
+    if callable(convert):
+        for tok in ("<start_of_turn>", "<end_of_turn>"):
+            try:
+                tid = convert(tok)
+            except Exception:  # pragma: no cover - odd tokenizers
+                tid = None
+            # HF returns the unk id (often 3) or None for unknown tokens; only
+            # accept a positive, non-unk id.
+            unk = getattr(tokenizer, "unk_token_id", None)
+            if isinstance(tid, int) and tid >= 0 and tid != unk:
+                ids.append(tid)
     return sorted(set(ids))
 
 
@@ -134,7 +155,12 @@ def _run_inner(config: dict, description: str) -> dict:
     t0 = time.time()
     _set_seed(config["seed"])
 
-    model, tokenizer = load_model(config["model"], quant=config.get("quant", "4bit"))
+    quant = config.get("quant", "4bit")
+    # load_model_cached keeps ONE model per (name, quant, device) for the process
+    # and frees the previous one on a fresh key — so an in-process alpha sweep
+    # reuses the loaded Gemma instead of reloading it every run (the documented
+    # reload-loop OOM/paging-file footgun).
+    model, tokenizer = load_model_cached(config["model"], quant=quant)
     n_layers = len(get_residual_layers(model))
 
     # --- Extraction (cache once, reuse) ---
@@ -146,6 +172,7 @@ def _run_inner(config: dict, description: str) -> dict:
         pairs,
         cache_dir=cache_dir,
         model_tag=str(config["model"]),
+        quant=str(quant),
     )
 
     # Choose layer: explicit, else the most-separable (max Fisher).
@@ -163,12 +190,7 @@ def _run_inner(config: dict, description: str) -> dict:
 
     # --- Build a position mask that excludes special tokens (Rung-0 requirement) ---
     sample_prompt = pairs[0][0]
-    _enc = tokenizer(sample_prompt, return_tensors="pt")
-    sample_ids = (_enc.input_ids if hasattr(_enc, "input_ids") else _enc["input_ids"])
-    try:
-        sample_ids = sample_ids.to(next(model.parameters()).device)
-    except StopIteration:
-        pass
+    sample_ids = encode_to_device(tokenizer, sample_prompt, model)
     pos_mask = build_position_mask(sample_ids, _special_ids(model, tokenizer))
 
     # --- Geometry: off-shell displacement at the injection layer ---
@@ -240,10 +262,13 @@ def _run_inner(config: dict, description: str) -> dict:
         )
         safety_real = True
     else:
-        # FakeLM / rung-0 deterministic placeholder: refuse harmful (CR≈0 baseline),
-        # comply on harmless (no over-refusal). Real generation is used for real models.
-        harmful_responses = ["I can't help with that." for _ in harmful_prompts]
-        harmless_responses = ["Sure, here is how you can do that safely." for _ in harmless_prompts]
+        # FakeLM / rung-0: a SINGLE offline safety contract via the shared
+        # `fake_safety_responses` helper (the same one `generate_responses` uses
+        # internally) — refuse every prompt (CR≈0 baseline). This removes the old
+        # drift where the runner complied on harmless while generate_responses
+        # refused. `safety_real=False` flags it as a placeholder, not a measurement.
+        harmful_responses = fake_safety_responses(harmful_prompts)
+        harmless_responses = fake_safety_responses(harmless_prompts)
         safety_real = False
 
     metrics = evaluate_bundle(

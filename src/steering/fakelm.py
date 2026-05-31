@@ -37,6 +37,15 @@ class FakeLMOutput:
     hidden_states: Optional[tuple] = None
 
 
+@dataclass
+class FakeLMConfig:
+    """Minimal HF-like config shim (built once per model, not per access)."""
+
+    num_hidden_layers: int
+    hidden_size: int
+    vocab_size: int
+
+
 class _Attn(nn.Module):
     """A cheap, deterministic causal self-attention surrogate.
 
@@ -52,14 +61,14 @@ class _Attn(nn.Module):
 
     def forward(self, h: torch.Tensor) -> torch.Tensor:
         # h: [batch, seq, dim]
-        b, s, d = h.shape
+        s = h.shape[1]
         v = self.proj(h)
-        # causal running mean (lower-triangular, row-normalised)
+        # Causal running mean: a lower-triangular, row-normalised mixing matrix
+        # [seq, seq] applied per batch. dtype/device follow h so the stub also
+        # works under a bf16/cuda FakeLM (not exercised today, but kept honest).
         mask = torch.tril(torch.ones(s, s, device=h.device, dtype=h.dtype))
-        denom = mask.sum(dim=-1, keepdim=True)
-        mixed = torch.matmul(mask, v) / denom  # [b? -> broadcast] handle batch
-        # matmul above ignored batch; redo per-batch
-        mixed = torch.einsum("st,btd->bsd", mask / denom, v)
+        weights = mask / mask.sum(dim=-1, keepdim=True)  # row-normalised [s, s]
+        mixed = torch.einsum("st,btd->bsd", weights, v)  # [batch, seq, dim]
         return self.out(mixed)
 
 
@@ -133,6 +142,11 @@ class FakeResidualLM(nn.Module):
         self.final_ln = nn.LayerNorm(dim)
         self.unembed = nn.Linear(dim, vocab_size, bias=False)
 
+        # Build the HF-like config once (not on every `.config` access).
+        self._config = FakeLMConfig(
+            num_hidden_layers=n_layers, hidden_size=dim, vocab_size=vocab_size
+        )
+
         # Deterministic init: reset every parameter from the seeded generator.
         self._init_deterministic(g)
         self.eval()
@@ -153,15 +167,8 @@ class FakeResidualLM(nn.Module):
                 m.bias.data = torch.zeros_like(m.bias.data)
 
     @property
-    def config(self):  # minimal HF-like config shim
-        class _Cfg:
-            pass
-
-        c = _Cfg()
-        c.num_hidden_layers = self.n_layers
-        c.hidden_size = self.dim
-        c.vocab_size = self.vocab_size
-        return c
+    def config(self) -> FakeLMConfig:  # minimal HF-like config shim
+        return self._config
 
     def forward(
         self,
@@ -177,7 +184,7 @@ class FakeResidualLM(nn.Module):
         if input_ids.dim() == 1:
             input_ids = input_ids.unsqueeze(0)
         h = self.embed(input_ids)
-        hidden_states = [h] if output_hidden_states else None
+        hidden_states: list[torch.Tensor] = [h] if output_hidden_states else []
         for layer in self.layers:
             h = layer(h)
             if output_hidden_states:
