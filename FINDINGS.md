@@ -85,7 +85,16 @@ log-PPL at R²=0.997** while radial Δ‖h‖ governs additive (R²=0.81, C2) �
 **Cylindrical Representation Hypothesis (N16) confirmed**: coherence cost = radial×angular
 displacement. exp#37–46, n=1. See `ideas/_campaigns/C3_results.md`.
 
-> **All seven observations are SCREENING on ≤0.5B models with synthetic
+**S-8 (E27 cross-scale + E4 third-model, SCREENING ONLY).** E3 cliff on
+**gemma-3-1b @L18** (exp#55–59): behavior PEAKS at α=1 (0.646) then declines — a
+**clean steering window** the gemma-3-270m lacked — and the cliff is gentler
+(+41%/+181% PPL at α=1/2 vs 270m's +65%/+257%). Cross-scale: 270m (no window, most
+fragile) < Qwen-0.5b (window) < 1b (window, least fragile) — **E27 "the steering
+window emerges with scale" supported across 3 models / 2 architectures**. E4
+confirmed on the 3rd model (cos=0.9945). CR 0.80→1.00 (Rogue-Scalpel). n=1. See
+`ideas/_campaigns/C6_results.md`.
+
+> **All eight observations are SCREENING on ≤1B models with synthetic
 > mini-data and (for S-2) a circular behavior proxy.** They establish mechanism
 > direction, not magnitude. The instrument fixes and the full required-experiment
 > list are tracked below.
