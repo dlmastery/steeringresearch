@@ -67,6 +67,19 @@
 > `audits/ICML_REVIEW.md`. Instrument fixes (real behavior + real safety) in
 > progress before any DEV promotion.
 
+| 10-14 | E3real-a* | E3 | 2 | ocean (Qwen-0.5B @L21) | <0.5 pp | 49-3787 | 30-100% | 0% | -0.07..-40.6 | 0.03-0.92 | - | - | - | SCREENING | REAL-instrument Qwen re-run; behavior PEAKS a~1 (0.69) then falls; CR 0.30->1.00 (Rogue-Scalpel) |
+| 15 | E3gemma-a0.0 | E3/E4/E27 | 2 | ocean (Gemma-270m @L12) | +0.00 pp | 90 | 80% | 0% | -1.107 | 0.000 | - | - | - | SCREENING | REAL Gemma baseline; cos_dm_pca=0.994 |
+| 16 | E3gemma-a1.0 | E3/E4/E27 | 2 | ocean (Gemma-270m @L12) | +0.10 pp | 149 | 80% | 0% | -1.602 | 0.021 | - | - | - | SCREENING | cliff onset (PPL +65%); behavior already declining |
+| 17 | E3gemma-a2.0 | E3/E4/E27 | 2 | ocean (Gemma-270m @L12) | +0.10 pp | 322 | 90% | 0% | -2.889 | 0.057 | - | - | - | SCREENING | over cliff |
+| 18 | E3gemma-a4.0 | E3/E4/E27 | 2 | ocean (Gemma-270m @L12) | +0.20 pp | 2775 | 100% | 0% | -16.914 | 0.175 | - | - | - | SCREENING | CR=1.0 (refusal destroyed) |
+| 19 | E3gemma-a8.0 | E3/E4/E27 | 2 | ocean (Gemma-270m @L12) | +0.25 pp | 141578 | 100% | 0% | -786.39 | 0.535 | - | - | - | SCREENING | super-linear PPL (N17) |
+
+> **exp#15-19: REAL Gemma-3-270m-it (the target model) E3/E4/E27.** E4 confirmed
+> cross-model (cos 0.994 vs Qwen 0.996); cliff at α≈1 (sharper than Qwen's α≈2)
+> AND behavior monotone-declines 0.50→0.21 = **E27 smaller-models-more-fragile**;
+> off-shell Δ‖h‖ tracks PPL super-linearly (N17); CR 0.80→1.00 (Rogue-Scalpel
+> direction). n=1 SCREENING. See `ideas/30_alpha_coherence_cliff/results.md`.
+
 > **Row 0 is an EXAMPLE only.** It shows the column format and is NOT a real
 > experimental result. **Row 1 is the Rung-0/1 plumbing gate on the offline
 > FakeResidualLM** — it validates the harness + loop, not any Gemma behavior.

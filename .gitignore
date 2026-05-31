@@ -35,3 +35,5 @@ Thumbs.db
 # Keep these explicitly
 !autoresearch_results/experiment_log.jsonl
 !autoresearch_results/best_config.json
+
+.hf_token

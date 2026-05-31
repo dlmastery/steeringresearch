@@ -1,6 +1,44 @@
 # E3 — Alpha coherence cliff: results (SCREENING, n=1)
 
-## ⭐ REAL-INSTRUMENT RE-RUN (supersedes the projection-proxy table below)
+## ⭐⭐ REAL GEMMA-3-270m-it (the target model) — cross-model E3/E4
+
+exp#15–19, tags `E3real-cliff-a*` on `models/google/gemma-3-270m-it` @L12
+(max-Fisher, Fisher=30.6), generation-based behavior + real safety. n=1 SCREENING.
+
+| α | behavior | PPL | ΔPPL_norm | CR | off-shell Δ‖h‖ | composite |
+|---|---|---|---|---|---|---|
+| 0 | 0.500 | 90.2 | 0.00 | 0.80 | 0.000 | −1.107 |
+| 1 | 0.438 | 149.2 | +0.65 | 0.80 | 0.021 | −1.602 |
+| 2 | 0.319 | 322.3 | +2.57 | 0.90 | 0.057 | −2.889 |
+| 4 | 0.217 | 2 775 | +29.8 | 1.00 | 0.175 | −16.91 |
+| 8 | 0.211 | 141 578 | +1568 | 1.00 | 0.535 | −786.4 |
+
+**Cross-model findings (Gemma-3-270m vs Qwen-2.5-0.5B):**
+1. **E4 confirmed cross-model**: cos(DiffMean,PCA-top1)=0.994 @ max-Fisher L12
+   (Gemma) vs 0.996 @ L21 (Qwen). Robust across architectures.
+2. **E3/N17 cliff confirmed on Gemma**: super-linear PPL (90→149→322→2775→141k);
+   off-shell Δ‖h‖ rises monotonically in lockstep — the geometry probe predicts
+   the cliff on Gemma too.
+3. **Scale-dependent fragility (supports E27).** Gemma-3-270m is **more fragile**
+   than Qwen-0.5B: its cliff is at **α≈1** (PPL already +65% at α=1) vs Qwen's
+   α≈2, and its behavior **never improves** with steering (0.50→0.44→0.32→0.22,
+   monotone decline) — the model leaves the manifold *before* the concept can be
+   cleanly injected, so there is no clean steering window at L12. Qwen-0.5B, by
+   contrast, had a behavior peak at α=1 (0.69). This is exactly the corpus E27
+   prediction that smaller models exit the data manifold more easily.
+4. **Safety (Rogue-Scalpel direction) on Gemma**: baseline CR=0.80 (the 270m model
+   is barely safety-tuned ⇒ complies with most synthetic harmful prompts even
+   unsteered), rising to 1.00 under steering. Direction consistent (steering↑ ⇒
+   CR↑); the high baseline reflects the weak model + synthetic prompts, not a
+   transferable magnitude.
+
+*Caveat unchanged: n=1 SCREENING, synthetic mini-data, no calibrated judge. The
+cross-model DIRECTION (E4 robust; smaller=more fragile; steering compromises
+safety) is the signal; magnitudes are not external claims.*
+
+---
+
+## REAL-INSTRUMENT RE-RUN on Qwen-0.5B (bring-up surrogate)
 
 After the ICML review (`audits/ICML_REVIEW.md`) flagged the projection-proxy as
 circular and safety as stubbed, both instruments were made real: behavior =

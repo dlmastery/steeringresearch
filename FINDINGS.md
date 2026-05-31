@@ -50,7 +50,20 @@ predicts the cliff). tags=`E3-cliff-a*`, exp#2–9, n=1. See
 `ideas/30_alpha_coherence_cliff/results.md`. *Gate to external: real
 generation-based behavior + real safety + n≥7 + prompting baseline + Gemma.*
 
-> **Both observations are SCREENING on a non-Gemma 0.5B model with synthetic
+**S-3 (E4 cross-model, SCREENING ONLY).** On **real Gemma-3-270m-it** @L12,
+`cos(DiffMean, PCA-top1) = 0.994` (vs 0.996 on Qwen-0.5B @L21) — E4's ">0.95"
+holds across both architectures. exp#15–19, n=1.
+
+**S-4 (E27 scale-fragility + E3/N17 on Gemma, SCREENING ONLY).** On real
+Gemma-3-270m-it the coherence cliff is **sharper and earlier** than on Qwen-0.5B:
+cliff at α≈1 (PPL +65%) vs α≈2, and **behavior never improves** with steering
+(0.50→0.22 monotone) — the smaller model exits the manifold before clean
+injection (supports **E27**: smaller models leave the manifold more easily).
+Off-shell Δ‖h‖ tracks PPL super-linearly (N17). Baseline CR=0.80 rising to 1.00
+under steering (Rogue-Scalpel direction). exp#15–19, n=1. See
+`ideas/30_alpha_coherence_cliff/results.md`.
+
+> **All four observations are SCREENING on ≤0.5B models with synthetic
 > mini-data and (for S-2) a circular behavior proxy.** They establish mechanism
 > direction, not magnitude. The instrument fixes and the full required-experiment
 > list are tracked below.

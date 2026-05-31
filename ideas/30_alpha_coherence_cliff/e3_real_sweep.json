@@ -1,0 +1,60 @@
+{
+  "model": "models/google/gemma-3-270m-it",
+  "layer": 12,
+  "behavior": "ocean",
+  "base_ppl": 90.2102,
+  "cliff_alpha": 1.0,
+  "rows": [
+    {
+      "alpha": 0.0,
+      "exp": 15,
+      "behavior": 0.5,
+      "ppl": 90.2102,
+      "dppl_norm": 0.0,
+      "mmlu_drop_pp": 0.0,
+      "offshell": 0.0,
+      "composite": -1.1072
+    },
+    {
+      "alpha": 1.0,
+      "exp": 16,
+      "behavior": 0.4376,
+      "ppl": 149.1956,
+      "dppl_norm": 0.6539,
+      "mmlu_drop_pp": 0.1,
+      "offshell": 0.0214,
+      "composite": -1.6019
+    },
+    {
+      "alpha": 2.0,
+      "exp": 17,
+      "behavior": 0.3192,
+      "ppl": 322.3106,
+      "dppl_norm": 2.5729,
+      "mmlu_drop_pp": 0.1,
+      "offshell": 0.0574,
+      "composite": -2.8888
+    },
+    {
+      "alpha": 4.0,
+      "exp": 18,
+      "behavior": 0.217,
+      "ppl": 2774.9402,
+      "dppl_norm": 29.7608,
+      "mmlu_drop_pp": 0.2,
+      "offshell": 0.1748,
+      "composite": -16.9143
+    },
+    {
+      "alpha": 8.0,
+      "exp": 19,
+      "behavior": 0.2106,
+      "ppl": 141577.5709,
+      "dppl_norm": 1568.4186,
+      "mmlu_drop_pp": 0.25,
+      "offshell": 0.5352,
+      "composite": -786.3897
+    }
+  ],
+  "fingerprint": "a9001e87087e"
+}
