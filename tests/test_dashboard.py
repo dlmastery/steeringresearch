@@ -278,3 +278,84 @@ def test_experiment_page_has_samples_section(tmp_path):
     assert "Side-by-side samples" in page2
     assert "no samples captured for this run" in page2, "absent-samples placeholder must render"
     assert "Steered" in page2 and "Unsteered" in page2, "placeholder must keep two-column layout"
+
+
+# ---------------------------------------------------------------------------
+# Surface D — dsbench interaction model: tab bar + rich filter pills + auto-expand
+# ---------------------------------------------------------------------------
+def test_master_has_tabbar_filter_pills_and_autoexpand(tmp_path):
+    _root, master = _build(tmp_path)
+    text = master.read_text(encoding="utf-8")
+    # tab bar with the five panes
+    assert 'id="tabbar"' in text, "master must carry the dsbench-style tab bar"
+    for pane in ("pane-runs", "pane-geometry", "pane-ladder",
+                 "pane-hypotheses", "pane-raw"):
+        assert f'data-pane="{pane}"' in text, f"tab bar must have the {pane} tab"
+    assert "function initTabs" in text, "inline tab-switching JS must be present"
+    # rich filter bar: regex box + model dropdown + toggle pills
+    assert 'id="model-filter"' in text, "model dropdown must be present"
+    for pill in ("real-Gemma", "SUPPORTED", "FALSIFIED", "KEEP", "champion"):
+        assert f">{pill}<" in text, f"filter pill '{pill}' must be present"
+    assert 'data-kind="all"' in text, "the 'all' reset pill must be present"
+    assert "window.setPill" in text, "inline pill-filter JS must be present"
+    # filterable rows carry data-attributes
+    assert "data-verdict=" in text and "data-model=" in text and "data-status=" in text, \
+        "run rows must carry data-model/verdict/status for pill filtering"
+    # auto-expand checkbox + hidden detail rows + the JS that toggles them
+    assert 'id="auto-expand"' in text, "auto-expand checkbox must be present"
+    assert 'class="detail-row"' in text, "hidden inline detail rows must be emitted"
+    assert "function initAutoExpand" in text, "inline auto-expand JS must be present"
+
+
+def test_master_hillclimb_placeholder_when_no_hc_rows(tmp_path):
+    # the synthetic fixtures carry NO HC-* rows -> honest placeholder must show
+    _root, master = _build(tmp_path)
+    text = master.read_text(encoding="utf-8")
+    assert 'id="hillclimb-section"' in text, "master must carry a hill-climb subsection"
+    assert "No hill-climb runs yet" in text, "honest empty-state placeholder must render"
+    assert "HC-" in text, "placeholder must name the HC-* tag convention"
+
+
+def test_hillclimb_tier_populates_with_hc_rows(tmp_path):
+    """When HC-* rows exist the hill-climb tier shows a best-config callout and the
+    placeholder disappears (master + the resolved hypothesis page)."""
+    results = tmp_path / "autoresearch_results"
+    results.mkdir(parents=True, exist_ok=True)
+    base_rows = _synthetic_rows()
+    # add a small HC-E3 coordinate-descent campaign (resolves to hypothesis E3)
+    hc = []
+    for i, (layer, alpha) in enumerate(
+            [(8, 1.0), (12, 2.0), (16, 2.0), (18, 4.0)], start=10):
+        hc.append({
+            "experiment_num": i,
+            "config": {"tag": f"HC-E3-layer-{layer}", "operation": "add",
+                       "source": "diffmean", "alpha": alpha, "layer": layer,
+                       "behavior": "ocean", "model": "models/google/gemma-3-1b-it",
+                       "seed": 0, "rung": 2, "phase": "hillclimb"},
+            "rung": 2, "layer": layer, "alpha": alpha,
+            "composite": 0.10 + 0.02 * i, "behavior_efficacy": 0.40 + 0.01 * i,
+            "perplexity": 18.0, "mmlu_drop_pp": 0.02, "compliance_rate": 0.0,
+            "offshell_displacement": 0.2, "n_seeds": 3, "tier": "SCREENING",
+            "status": "KEEP",
+        })
+    log = results / "experiment_log.jsonl"
+    with open(log, "w", encoding="utf-8") as f:
+        for r in base_rows + hc:
+            f.write(json.dumps(r) + "\n")
+    (results / "reasoning_annotations.json").write_text(
+        json.dumps(_reasoning(), indent=2), encoding="utf-8")
+    # minimal ideas dir so the rest of the build resolves
+    ideas = tmp_path / "ideas"
+    d = ideas / "30_alpha_cliff"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "IDEA.md").write_text("# alpha cliff\n\n## Claim\n\nCliff.\n", encoding="utf-8")
+
+    master = dash.build_all_dashboards(results_dir=results, repo_root=tmp_path)
+    text = master.read_text(encoding="utf-8")
+    assert "Best hill-climb config" in text, "with HC rows, master must show the best-config callout"
+    assert "No hill-climb runs yet" not in text, "placeholder must vanish once HC rows exist"
+    assert dash.is_hillclimb(hc[0]), "config.phase=hillclimb must be detected"
+    # the HC rows resolve to E3 -> its hypothesis page also gets the tier with data
+    e3 = (tmp_path / "docs" / "dashboard" / "hyp" / "E3.html").read_text(encoding="utf-8")
+    assert "Best hill-climb config" in e3, "resolved hypothesis page must show the HC tier"
+    assert "No hill-climb runs yet" not in e3

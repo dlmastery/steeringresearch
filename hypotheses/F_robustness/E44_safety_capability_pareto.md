@@ -1,0 +1,293 @@
+# E44 — Safety-Capability Pareto Frontier Is Discoverable and Has a Knee
+
+> **One-line claim:** Multi-property safety stacks (several safety steering
+> vectors active simultaneously) trace a discoverable safety-vs-capability
+> Pareto frontier as alpha is swept; the knee of this frontier — the point
+> of maximum safety gain per unit capability loss — is identifiable from
+> the per-vector alpha values without exhaustive grid search.
+>
+> **Block:** F — Robustness, safety, and evaluation (E41-E50).
+> **Primary axis:** A3 (HOW MUCH — coefficient).
+> **Implementation status:** `o planned / UNTESTED`.
+
+---
+
+## 1. Motivation (>= 100 words)
+
+The safety-capability trade-off is the central design tension in any
+safety-steering system. Adding safety-steering vectors increases the model's
+propensity to refuse harmful requests (safety gain) but also increases the
+probability of capability degradation on benign tasks (capability cost).
+The trade-off is not trivially monotone: at very low alpha, both safety
+and capability are near the baseline; at very high alpha, safety may be
+maximised but the model is incoherent and incapable of any task. Between
+these extremes, there should be a Pareto frontier of (safety, capability)
+operating points, and within that frontier there should be a "knee" — the
+point of maximum marginal safety gain per unit of marginal capability loss.
+The knee is the natural operating point for a deployed system: beyond it,
+each additional unit of safety comes at an increasingly steep capability
+cost. The hypothesis is that this frontier is discoverable by sweeping the
+per-vector alpha values and plotting (JailbreakBench refusal rate, MMLU
+accuracy) at each point, and that the knee is identifiable from the alpha
+sweep without requiring exhaustive multi-dimensional grid search over all
+combinations of safety-vector alphas. This connects to the Rogue Scalpel
+framework (arXiv:2509.22067): the paper identifies an "alpha sweet spot"
+(their Fig 3: alpha <= 0.75 yields reduced but non-zero harm; alpha > 1.5
+causes capability collapse) — E44 systematically characterises this
+frontier for a multi-vector safety stack, not just a single direction.
+The connection to N17 (off-shell displacement as the master variable) is
+also direct: the norm budget (N5) predicts that the Pareto frontier knee
+coincides approximately with the point where the combined steering edit
+approaches the safe manifold boundary.
+
+---
+
+## 2. Formal Hypothesis (>= 50 words)
+
+**H:** On Gemma-2-2B-it, a stack of 3 orthogonal safety vectors (e.g.,
+refusal, anti-sycophancy, honesty) has a Pareto frontier in (JailbreakBench
+refusal rate, MMLU accuracy) space that is well-approximated by sweeping
+a single shared multiplier lambda applied to all per-vector alphas
+simultaneously. The knee of this frontier (maximum |d(safety)/d(capability)|)
+occurs at a lambda value where the combined off-shell displacement
+||sum_i lambda*alpha_i*v_i|| / ||h|| is approximately 0.10-0.20 (the N17/
+C9b empirically identified safe steering window), confirming that the norm-
+budget geometry predicts the safety-capability Pareto knee.
+
+---
+
+## 3. Falsifier (>= 30 words)
+
+If the Pareto frontier is NOT monotone (safety can be increased without any
+capability cost at some lambda values), OR if the knee does not occur within
+the N17-predicted off-shell displacement window (0.05-0.30), the norm-
+budget geometry fails to predict the Pareto knee and the hypothesis is
+DISCARDED (Status `x disproved`).
+
+---
+
+## 4. Citations (Citation-Rigor format, >= 80 words)
+
+```
+Korznikov, et al. 2025 'The Rogue Scalpel: Activation Steering Compromises
+LLM Safety' arXiv:2509.22067 — Rogue Scalpel; their Figure 3 (alpha sweep
+showing compliance rate vs capability) is the single-vector Pareto sketch
+that E44 extends to a multi-vector stack with a systematic frontier
+characterisation; the "sweet spot" concept directly motivates the knee-
+finding methodology.
+
+Zhong, Zeping, et al. 2025 'AxBench: Steering LLMs? Benchmarks Matter'
+arXiv:2501.17148 — AxBench; provides the capability-retention measurement
+methodology (concept incorporation score vs capability degradation); the
+multi-property evaluation framework that E44 applies to the safety-
+capability trade-off.
+
+Rimsky, Nina, et al. 2023 'Steering Llama 2 via Contrastive Activation
+Addition' arXiv:2312.06681 — CAA; multi-property steering experiments
+show that stacking behavior vectors has additive effects on capability
+cost; E44 provides the systematic Pareto characterisation of this stack.
+
+Project screening results (FINDINGS.md S-9, C9b): relative_add at alpha
+= 0.10 (10% of ||h||) is the empirically identified clean-steering window
+(behavior peaks, PPL manageable); the N17 law (log PPL = 5.40 + 2.87 *
+off-shell displacement, R^2 = 0.81) predicts the Pareto knee at ~10%
+displacement.
+```
+
+---
+
+## 5. Mechanism
+
+The safety-capability Pareto frontier is generated by sweeping lambda in
+[0, 1] and computing:
+
+    safety(lambda) = JailbreakBench refusal rate with stack alpha_i * lambda
+    capability(lambda) = MMLU accuracy with stack alpha_i * lambda
+
+At lambda = 0: safety ~ 0% (no steering, model complies); capability ~
+baseline MMLU. At lambda = 1: safety ~ maximum; capability ~ degraded.
+The Pareto frontier is the set of (safety(lambda), capability(lambda)) pairs
+for lambda in [0, 1].
+
+The N5/N17 geometry predicts the knee location. The combined steering edit
+has magnitude:
+
+    ||delta h|| = ||sum_i lambda * alpha_i * v_i|| (unit-normalised vectors)
+
+From the N17 law (log PPL = 5.40 + 2.87 * offshell, R^2 = 0.81, screening
+result S-6), the coherence cliff occurs at offshell ~ 0.10-0.15 (roughly
+PPL doubling). The MMLU degradation follows a similar pattern (correlated
+with PPL via the manifold budget, N5). The Pareto knee is therefore predicted
+to occur at lambda such that ||delta h|| / ||h|| ~ 0.10-0.20, which is the
+safe steering window identified in C9b.
+
+This also tests whether the multi-vector stack has a single Pareto lambda
+or whether per-vector lambda tuning is needed (E46). If a single shared
+lambda suffices, the frontier is 1-dimensional and simple to characterise.
+
+---
+
+## 6. Predicted Delta
+
+| lambda | JailbreakBench refusal | MMLU accuracy delta |
+|---|---|---|
+| 0.0 | 0% | 0% |
+| 0.25 | 25-40% | -0.5 to -1 pp |
+| 0.50 (predicted knee) | 50-70% | -1 to -3 pp |
+| 0.75 | 70-85% | -3 to -7 pp |
+| 1.00 | 80-90% | -5 to -15 pp |
+
+The knee at lambda ~ 0.50 corresponds to offshell ~ 0.10-0.15, consistent
+with the N17 geometry. The frontier is monotone (each point is Pareto-non-
+dominated in safety-gain-per-capability-cost terms).
+
+---
+
+## 7. Protocol
+
+### 7.1 Primary experiment
+
+- Model: Gemma-2-2B-it (4-bit), RTX 4090.
+- Safety stack: 3 orthogonal vectors — (i) refusal (harmful-vs-harmless
+  DiffMean); (ii) anti-sycophancy (CAA sycophancy pairs); (iii) honesty
+  (TruthfulQA contrastive). Orthogonalise using Gram-Schmidt (E19 protocol).
+- Lambda sweep: lambda in {0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8,
+  0.9, 1.0}; base alphas set to relative_add alpha = 0.10 per vector
+  (from C9b clean-window finding).
+- Eval: JailbreakBench refusal rate (primary safety metric); MMLU-500
+  accuracy (primary capability metric); WikiText-103 PPL (coherence);
+  XSTest over-refusal rate (selectivity).
+- Pareto knee identification: compute |d(safety)/d(capability)| at each
+  lambda; locate maximum.
+- Geometry check: compute ||delta h|| / ||h|| at each lambda; verify knee
+  occurs at offshell ~ 0.10-0.20.
+- Seeds: 3 (screening), 7 for rung-3.
+
+### 7.2 Where it shines
+
+The Pareto-frontier characterisation is the missing link between the
+theoretical safety-capability trade-off and the practical question "what
+alpha should I use?" The knee provides a principled, geometry-grounded
+operating point that replaces ad-hoc alpha tuning.
+
+---
+
+## 8. Cross-references
+
+- IDEA_TABLE.md Block F row E44.
+- E46 (iso-behavior capability curve): E44 traces the Pareto frontier
+  across lambda; E46 holds behavior fixed and sweeps capability.
+- E47 (full guard stack): the guard stack is evaluated at the E44-identified
+  Pareto knee operating point.
+- N5 (norm-budget conservation law): the geometry that predicts the Pareto
+  knee location.
+- N17 (off-shell displacement predicts incoherence): the specific law
+  (R^2 = 0.81) used to predict the knee lambda.
+- FINDINGS.md S-9 (C9b, clean steering window at 10% displacement):
+  the empirical screening result that anchors the N17 prediction.
+- Rogue Scalpel Fig 3 (alpha sweet spot): the single-vector analog of E44.
+
+---
+
+## 9. Committee Q&A
+
+**Q: Is the Pareto frontier well-defined with only two metrics (safety and
+capability)? Don't coherence and selectivity also matter?**
+
+> The primary frontier is 2D (safety vs capability) for clarity of
+> presentation. The experiment also reports coherence (PPL) and selectivity
+> (XSTest) at each lambda point, generating a 4D operating-point profile.
+> The Pareto analysis is done on the primary 2D frontier, and the 4D profile
+> is reported as supplementary.
+
+**Q: What if the three safety vectors are not perfectly orthogonal after
+Gram-Schmidt?**
+
+> Gram-Schmidt produces exact orthogonality in floating-point to machine
+> precision. The residual non-orthogonality from numerical errors is
+> negligible (< 1e-6 cosine). The E18 Gram-off-diagonal mass is zero by
+> construction after orthogonalisation.
+
+**Q: Is a single shared lambda realistic — shouldn't different safety
+behaviors have different optimal alphas?**
+
+> The single-lambda characterisation is the 1D sweep that discovers the
+> frontier efficiently. E46 then tests whether per-vector lambda tuning
+> yields a better frontier (higher safety at equal capability cost). E44's
+> 1D sweep is the necessary baseline for E46's comparison.
+
+---
+
+## 10. Verification checklist
+
+- [ ] Three safety vectors extracted and confirmed orthogonal (|cosine| < 0.05
+      after Gram-Schmidt).
+- [ ] Lambda sweep at 11 points; pre-registered before running.
+- [ ] Off-shell displacement computed at each lambda point; checked against
+      N17 geometry prediction.
+- [ ] JailbreakBench baseline CR = 0% on unsteered model confirmed.
+- [ ] Pareto knee identified and reported with confidence interval
+      (bootstrap over n=7 seeds).
+- [ ] LLM-as-judge calibrated to >= 90% agreement with human labels.
+- [ ] Rung-3 gate: n >= 7, Wilcoxon + bootstrap CI (Holm corrected).
+- [ ] IDEA_TABLE.md row updated.
+
+---
+
+## 11. Status Journal
+
+- 2026-05-31 — Created from corpus block F, hypothesis E44.
+  Status: `o UNTESTED`.
+
+  Cross-ref to screening: FINDINGS.md S-9 (C9b, relative_add at 10%
+  off-shell displacement gives clean behavior peak) and S-6 (N17 law
+  R^2=0.81) support the geometry-based Pareto-knee prediction. The Rogue-
+  Scalpel-direction screening (CR 0.80->1.00, S-4, S-8) establishes that
+  safety effects are real and large on our Gemma setup. E44 extends these
+  findings to the multi-vector case with a systematic Pareto analysis.
+
+  Dependency: three orthogonal safety vectors, relative_add implementation,
+  JailbreakBench infrastructure, MMLU-500 eval.
+
+---
+
+## Addendum: Research-Scientist Critique
+
+*Reviewer: SciCritic-F (Pareto-optimisation + safety specialist).*
+
+### Prior plausibility
+**MEDIUM-HIGH.** The existence of a Pareto frontier is almost guaranteed
+(safety and capability trade off). The specific prediction that the knee
+occurs at the N17-predicted off-shell window is the non-trivial,
+falsifiable claim. The N17 law (R^2=0.81, screening level) is the strongest
+geometry result in the harness and its extension to the multi-vector Pareto
+knee is a direct mechanistic prediction.
+
+### Mechanism scrutiny
+The single-shared-lambda assumption simplifies the frontier to 1D, which
+may be unrealistic: each safety vector has a different "safe window" and
+a different capability cost. A shared lambda conflates these differences.
+The experiment should include a check: does the frontier shape change if
+per-vector lambdas are optimised independently (mini E46)?
+
+### Confounds
+1. The three safety vectors must be orthogonalised BEFORE the lambda sweep;
+   if their interaction is not controlled, the Pareto frontier reflects
+   both the individual vector effects and their interference, confounding
+   the knee prediction.
+2. MMLU-500 is a proxy for capability; it may not capture domain-specific
+   capability degradation (see E43). The frontier for medical or code
+   capability may have a different knee.
+
+### Expected effect size
+The frontier will be monotone (high probability). The knee location
+prediction (offshell ~ 0.10-0.20) is well-motivated by the C9b screening.
+My prior: the knee occurs at lambda ~ 0.40-0.60, consistent with the
+prediction.
+
+### Verdict
+**TESTABLE + HIGH PRACTICAL VALUE** — The Pareto frontier characterisation
+is the most directly actionable output of the safety experiments. It
+provides a principled, reproducible operating-point recommendation for
+practitioners. The geometry-based knee prediction is the falsifiable
+theoretical claim.

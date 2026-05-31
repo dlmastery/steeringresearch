@@ -342,6 +342,58 @@
        line-height:1.9;letter-spacing:0.04em;}
  .meta code{background:var(--ink);padding:1px 5px;color:var(--paper);border:1px solid var(--rule);}
  .empty{color:var(--paper-dim);font-style:italic;font-size:0.9em;}
+ /* dsbench-style tab bar (ported, re-skinned to the editorial palette) */
+ .tabs{display:flex;gap:0;flex-wrap:wrap;border-bottom:1px solid var(--rule-bright);
+       margin:30px 0 0 0;}
+ .tab{padding:9px 16px;cursor:pointer;color:var(--paper-dim);
+      border-bottom:2px solid transparent;font-family:'IBM Plex Mono',monospace;
+      font-size:11px;text-transform:uppercase;letter-spacing:0.14em;font-weight:600;
+      user-select:none;}
+ .tab:hover{color:var(--paper);}
+ .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+ .tab-pane{display:none;padding:16px 0;}
+ .tab-pane.active{display:block;}
+ /* dsbench-style rich filter bar (regex + dropdown + toggle pills) */
+ .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0;
+          padding:10px 14px;background:var(--panel);border:1px solid var(--rule);}
+ .toolbar label{font-family:'IBM Plex Mono',monospace;font-size:10px;
+                text-transform:uppercase;letter-spacing:0.12em;color:var(--paper-dim);
+                display:flex;align-items:center;gap:6px;}
+ .toolbar select{background:var(--ink);color:var(--paper);border:1px solid var(--rule);
+                 padding:6px 8px;font-family:'IBM Plex Mono',monospace;font-size:11px;}
+ .toolbar .fpill{background:var(--ink);border:1px solid var(--rule-bright);
+                 padding:4px 11px;border-radius:13px;font-family:'IBM Plex Mono',monospace;
+                 font-size:10px;letter-spacing:0.1em;text-transform:uppercase;
+                 cursor:pointer;color:var(--paper-dim);user-select:none;}
+ .toolbar .fpill:hover{color:var(--paper);border-color:var(--accent-dim);}
+ .toolbar .fpill.active{background:var(--accent);color:var(--ink);
+                        border-color:var(--accent);font-weight:600;}
+ .toolbar .fpill.v-active{background:var(--v-pass);color:var(--ink);border-color:var(--v-pass);}
+ .toolbar .fpill.bad-active{background:var(--v-falsified);color:#fff;border-color:var(--v-falsified);}
+ /* auto-expand inline detail row */
+ tr.detail-row{display:none;}
+ tr.detail-row.open{display:table-row;}
+ tr.detail-row > td{background:var(--ink);border-bottom:1px solid var(--rule-bright);
+                    box-shadow:inset 3px 0 0 var(--accent);padding:0;}
+ .detail-box{padding:12px 16px;font-family:'IBM Plex Mono',monospace;font-size:11px;
+             line-height:1.7;color:var(--paper);}
+ .detail-box .dl{display:flex;flex-wrap:wrap;gap:5px 18px;margin-bottom:8px;}
+ .detail-box .dl span{color:var(--paper-dim);}
+ .detail-box .dl b{color:var(--paper);font-weight:600;}
+ .detail-box .vsnip{border-left:2px solid var(--accent-dim);padding:4px 12px;
+                    margin:6px 0;color:var(--paper-dim);font-style:italic;
+                    max-width:880px;}
+ table.runs tr.task-row[data-expandable] td:first-child{cursor:pointer;}
+ /* hill-climb tier */
+ .hc-callout{background:var(--panel);border:1px solid var(--rule);
+             border-left:2px solid var(--v-pass);padding:16px 22px;margin:14px 0;}
+ .hc-callout b{color:var(--paper);}
+ .hc-empty{background:var(--panel);border:1px solid var(--rule);
+           border-left:2px solid var(--v-minor);padding:18px 24px;margin:14px 0;
+           color:var(--paper-dim);line-height:1.6;}
+ .hc-empty b{color:var(--paper);}
+ .hc-empty code{background:var(--ink);padding:1px 5px;border:1px solid var(--rule);
+                font-family:'IBM Plex Mono',monospace;font-size:0.88em;color:var(--paper);}
 </style>
 </head>
 <body>
@@ -434,6 +486,6 @@
   <div class="xrefs-grid"><a class="xref-card" href="../hyp/E3.html"><div class="xref-lbl">&#8599; hypothesis</div><div class="xref-tag">E3</div><div class="xref-meta">Alpha coherence cliff</div></a><a class="xref-card" href="exp004.html"><div class="xref-lbl">&#8592; previous experiment</div><div class="xref-tag">exp004</div></a><a class="xref-card" href="exp006.html"><div class="xref-lbl">&#8594; next experiment</div><div class="xref-tag">exp006</div></a><a class="xref-card" href="../index.html"><div class="xref-lbl">&#8599; master dashboard</div><div class="xref-tag">index</div><div class="xref-meta">runs table + hypothesis grid</div></a></div>
 </section>
 <div class="doc-footer"><a href="https://github.com/dlmastery/steeringresearch" target="_blank" rel="noopener">Repo</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/main/paper/PAPER.md" target="_blank" rel="noopener">Paper</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/main/FINDINGS.md" target="_blank" rel="noopener">FINDINGS</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/main/IDEA_TABLE.md" target="_blank" rel="noopener">IDEA_TABLE</a> &middot; <a href="https://dlmastery.github.io/steeringresearch/" target="_blank" rel="noopener">GitHub Pages</a></div>
-<div class="meta">composite formula &nbsp; <code>composite = behavior_efficacy - lambda_cap  * max(0, mmlu_drop_pp) - lambda_coh  * max(0, dppl_norm) - lambda_coh_rep * max(0, repetition_rate) - lambda_safe * compliance_rate - lambda_sel  * max(0, harmless_refusal_rate) - lambda_geo  * max(0, offshell_displacement)</code><br>composite fingerprint &nbsp; <code>a9001e87087e</code> &middot; git SHA &nbsp; <code>2744892</code> &middot; generated &nbsp; <code>2026-05-31T13:52:45</code> &middot; experiment <code>exp005</code> &middot; hypothesis <code>E3</code><br>Internal QA pass &mdash; external review pending. &middot; Generated by <code>steering.dashboard</code> &middot; brutalist editorial lab notebook &middot; self-contained inline CSS, Google Fonts with offline serif/mono fallback.</div>
+<div class="meta">composite formula &nbsp; <code>composite = behavior_efficacy - lambda_cap  * max(0, mmlu_drop_pp) - lambda_coh  * max(0, dppl_norm) - lambda_coh_rep * max(0, repetition_rate) - lambda_safe * compliance_rate - lambda_sel  * max(0, harmless_refusal_rate) - lambda_geo  * max(0, offshell_displacement)</code><br>composite fingerprint &nbsp; <code>a9001e87087e</code> &middot; git SHA &nbsp; <code>d35aadc</code> &middot; generated &nbsp; <code>2026-05-31T15:52:15</code> &middot; experiment <code>exp005</code> &middot; hypothesis <code>E3</code><br>Internal QA pass &mdash; external review pending. &middot; Generated by <code>steering.dashboard</code> &middot; brutalist editorial lab notebook &middot; self-contained inline CSS, Google Fonts with offline serif/mono fallback.</div>
 </body>
 </html>

@@ -34,3 +34,13 @@ through two negative results into a clean capstone. Gemma-3-270m @L16. n=1 SCREE
 **Harness upshot**: `relative_add` is the recommended operation for interpretable,
 comparable steering; absolute-α `add` cliffs (E3) remain valid DiffMean-internal but
 are not cross-source/-layer comparable. N17/N5/N16 are unaffected (measured displacement).
+
+## C10 — relative cliff cross-scale on gemma-3-1b (E7 scale-invariance)
+
+Relative cliff (relative_add, α=fraction ‖h‖) on gemma-3-1b @L18 (exp C10):
+PPL 80→96→176→616→13509 for α=0.02→0.4; knee at α≈0.05–0.1 (offshell ~0.004–0.010).
+Compared to gemma-3-270m @L16 (knee α≈0.1), the cliff knee sits at a **similar
+fraction of ‖h‖ (~5–10%) on both scales** — i.e. in RELATIVE units the cliff
+location is approximately **scale-invariant**, even though in absolute α it was
+scale-dependent (E27). This is the stronger, more useful form of E7: relative
+displacement is the scale-portable control variable. n=1 SCREENING.

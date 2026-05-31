@@ -425,6 +425,58 @@ SHARED_CSS = r"""
        line-height:1.9;letter-spacing:0.04em;}
  .meta code{background:var(--ink);padding:1px 5px;color:var(--paper);border:1px solid var(--rule);}
  .empty{color:var(--paper-dim);font-style:italic;font-size:0.9em;}
+ /* dsbench-style tab bar (ported, re-skinned to the editorial palette) */
+ .tabs{display:flex;gap:0;flex-wrap:wrap;border-bottom:1px solid var(--rule-bright);
+       margin:30px 0 0 0;}
+ .tab{padding:9px 16px;cursor:pointer;color:var(--paper-dim);
+      border-bottom:2px solid transparent;font-family:'IBM Plex Mono',monospace;
+      font-size:11px;text-transform:uppercase;letter-spacing:0.14em;font-weight:600;
+      user-select:none;}
+ .tab:hover{color:var(--paper);}
+ .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+ .tab-pane{display:none;padding:16px 0;}
+ .tab-pane.active{display:block;}
+ /* dsbench-style rich filter bar (regex + dropdown + toggle pills) */
+ .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0;
+          padding:10px 14px;background:var(--panel);border:1px solid var(--rule);}
+ .toolbar label{font-family:'IBM Plex Mono',monospace;font-size:10px;
+                text-transform:uppercase;letter-spacing:0.12em;color:var(--paper-dim);
+                display:flex;align-items:center;gap:6px;}
+ .toolbar select{background:var(--ink);color:var(--paper);border:1px solid var(--rule);
+                 padding:6px 8px;font-family:'IBM Plex Mono',monospace;font-size:11px;}
+ .toolbar .fpill{background:var(--ink);border:1px solid var(--rule-bright);
+                 padding:4px 11px;border-radius:13px;font-family:'IBM Plex Mono',monospace;
+                 font-size:10px;letter-spacing:0.1em;text-transform:uppercase;
+                 cursor:pointer;color:var(--paper-dim);user-select:none;}
+ .toolbar .fpill:hover{color:var(--paper);border-color:var(--accent-dim);}
+ .toolbar .fpill.active{background:var(--accent);color:var(--ink);
+                        border-color:var(--accent);font-weight:600;}
+ .toolbar .fpill.v-active{background:var(--v-pass);color:var(--ink);border-color:var(--v-pass);}
+ .toolbar .fpill.bad-active{background:var(--v-falsified);color:#fff;border-color:var(--v-falsified);}
+ /* auto-expand inline detail row */
+ tr.detail-row{display:none;}
+ tr.detail-row.open{display:table-row;}
+ tr.detail-row > td{background:var(--ink);border-bottom:1px solid var(--rule-bright);
+                    box-shadow:inset 3px 0 0 var(--accent);padding:0;}
+ .detail-box{padding:12px 16px;font-family:'IBM Plex Mono',monospace;font-size:11px;
+             line-height:1.7;color:var(--paper);}
+ .detail-box .dl{display:flex;flex-wrap:wrap;gap:5px 18px;margin-bottom:8px;}
+ .detail-box .dl span{color:var(--paper-dim);}
+ .detail-box .dl b{color:var(--paper);font-weight:600;}
+ .detail-box .vsnip{border-left:2px solid var(--accent-dim);padding:4px 12px;
+                    margin:6px 0;color:var(--paper-dim);font-style:italic;
+                    max-width:880px;}
+ table.runs tr.task-row[data-expandable] td:first-child{cursor:pointer;}
+ /* hill-climb tier */
+ .hc-callout{background:var(--panel);border:1px solid var(--rule);
+             border-left:2px solid var(--v-pass);padding:16px 22px;margin:14px 0;}
+ .hc-callout b{color:var(--paper);}
+ .hc-empty{background:var(--panel);border:1px solid var(--rule);
+           border-left:2px solid var(--v-minor);padding:18px 24px;margin:14px 0;
+           color:var(--paper-dim);line-height:1.6;}
+ .hc-empty b{color:var(--paper);}
+ .hc-empty code{background:var(--ink);padding:1px 5px;border:1px solid var(--rule);
+                font-family:'IBM Plex Mono',monospace;font-size:0.88em;color:var(--paper);}
 """
 
 _FONT_LINK = (
@@ -612,6 +664,13 @@ def hypothesis_for_tag(tag: Optional[str]) -> Optional[str]:
     t = str(tag or "").lower()
     if not t or "plumbing" in t or "fakelm" in t:
         return None
+    # hill-climb tags (HC-*) carry their target hypothesis id as a token,
+    # e.g. HC-E3-layer-18 -> E3, HC_N20_alpha -> N20.
+    if t.startswith("hc-") or t.startswith("hc_"):
+        m = re.search(r"\b([en]\d{1,2})\b", t)
+        if m:
+            return m.group(1).upper()
+        return None
     if t.startswith("c1-e2") or t.startswith("c1_e2"):
         return "E2"
     if t.startswith("c3"):          # C3 / C3b operation comparison -> E27
@@ -623,6 +682,22 @@ def hypothesis_for_tag(tag: Optional[str]) -> Optional[str]:
     if t.startswith("e3"):
         return "E3"
     return None
+
+
+def is_hillclimb(row: dict) -> bool:
+    """A hill-climb (rung-2.5 coordinate-descent) row is flagged by a tag prefix
+    ``HC-`` / ``HC_`` (case-insensitive) or an explicit config marker
+    (``config.hillclimb`` truthy or ``config.phase == 'hillclimb'``)."""
+    cfg = row.get("config", {}) or {}
+    tag = str(cfg.get("tag") or row.get("tag") or "")
+    t = tag.lower()
+    if t.startswith("hc-") or t.startswith("hc_"):
+        return True
+    if cfg.get("hillclimb") or row.get("hillclimb"):
+        return True
+    if str(cfg.get("phase") or row.get("phase") or "").lower() == "hillclimb":
+        return True
+    return False
 
 
 def hypothesis_label(row: dict) -> str:
@@ -1099,6 +1174,125 @@ def plot_coord_descent(rows: list[dict], out_path: Path) -> bool:
     return True
 
 
+HC_AXES = [
+    ("layer", "injection layer"),
+    ("alpha", "alpha"),
+    ("source", "source"),
+    ("operation", "operation"),
+]
+
+
+def _cfg_get(r: dict, k: str):
+    return (r.get("config", {}) or {}).get(k, r.get(k))
+
+
+def plot_hc_coord_descent(rows: list[dict], out_path: Path) -> bool:
+    """Per-axis coordinate-descent small-multiples: behavior_efficacy + composite
+    vs each swept axis (layer / alpha / source / operation). Numeric axes plot as
+    lines; categorical axes (source / operation) plot as grouped bars."""
+    plt = _mpl()
+    if plt is None or not rows:
+        return False
+    # only render axes that actually vary across the hill-climb rows
+    active = []
+    for key, label in HC_AXES:
+        vals = {str(_cfg_get(r, key)) for r in rows if _cfg_get(r, key) is not None}
+        if len(vals) >= 2:
+            active.append((key, label))
+    if not active:
+        # degenerate: still draw layer+alpha so the section is never blank
+        active = HC_AXES[:2]
+    ncol = len(active)
+    fig, axs = plt.subplots(1, ncol, figsize=(3.1 * ncol, 2.9), squeeze=False)
+    for ax, (key, label) in zip(axs[0], active):
+        numeric = []
+        cats: dict[str, list[tuple[float, float]]] = {}
+        for r in rows:
+            v = _cfg_get(r, key)
+            if v is None:
+                continue
+            beh = _num(r, "behavior_efficacy")
+            comp = _num(r, "composite")
+            try:
+                numeric.append((float(v), beh, comp))
+            except (TypeError, ValueError):
+                cats.setdefault(str(v), []).append((beh, comp))
+        if numeric and not cats:
+            numeric.sort()
+            xs = [p[0] for p in numeric]
+            ax.plot(xs, [p[1] for p in numeric], marker="o", markersize=4,
+                    color="#58a6ff", label="behavior")
+            ax.plot(xs, [p[2] for p in numeric], marker="s", markersize=4,
+                    color="#bb8c4d", label="composite")
+            ax.legend(fontsize=5, loc="best")
+        else:
+            labels = sorted(cats)
+            xpos = list(range(len(labels)))
+            beh_means = [sum(b for b, _c in cats[l]) / len(cats[l]) for l in labels]
+            comp_means = [sum(c for _b, c in cats[l]) / len(cats[l]) for l in labels]
+            w = 0.38
+            ax.bar([x - w / 2 for x in xpos], beh_means, width=w,
+                   color="#58a6ff", label="behavior")
+            ax.bar([x + w / 2 for x in xpos], comp_means, width=w,
+                   color="#bb8c4d", label="composite")
+            ax.set_xticks(xpos)
+            ax.set_xticklabels(labels, fontsize=6)
+            ax.legend(fontsize=5, loc="best")
+        ax.set_title(f"vs {label}", fontsize=8)
+        ax.set_xlabel(label, fontsize=7)
+        ax.tick_params(labelsize=6)
+        ax.grid(True, alpha=0.2)
+    fig.suptitle("Hill-climb coordinate descent (behavior + composite per axis)",
+                 fontsize=9)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=90)
+    plt.close(fig)
+    return True
+
+
+def _hc_seed_groups(rows: list[dict]) -> dict[str, list[float]]:
+    """Group hill-climb composites by config (tag w/o seed) to expose multi-seed
+    stability. Returns {config_label: [composite per seed]}."""
+    groups: dict[str, list[float]] = {}
+    for r in rows:
+        cfg = r.get("config", {}) or {}
+        tag = str(cfg.get("tag") or r.get("tag") or "")
+        # strip a trailing seed token if present
+        base = re.sub(r"[-_]?seed[-_]?\d+$", "", tag, flags=re.I)
+        groups.setdefault(base, []).append(_num(r, "composite"))
+    return {k: v for k, v in groups.items() if len(v) > 1}
+
+
+def plot_hc_seed_stability(rows: list[dict], out_path: Path) -> bool:
+    """Seed-stability bar: mean composite per config with a min/max whisker, only
+    when at least one config has >1 seed."""
+    plt = _mpl()
+    if plt is None:
+        return False
+    groups = _hc_seed_groups(rows)
+    if not groups:
+        return False
+    labels = list(groups)
+    means = [sum(v) / len(v) for v in groups.values()]
+    los = [min(v) for v in groups.values()]
+    his = [max(v) for v in groups.values()]
+    xpos = list(range(len(labels)))
+    fig, ax = plt.subplots(figsize=(max(4.0, 0.9 * len(labels)), 3.0))
+    err = [[m - lo for m, lo in zip(means, los)],
+           [hi - m for m, hi in zip(means, his)]]
+    ax.bar(xpos, means, yerr=err, capsize=4, color="#3fb950")
+    ax.set_xticks(xpos)
+    ax.set_xticklabels([l[:22] for l in labels], rotation=40, ha="right", fontsize=6)
+    ax.set_ylabel("composite (mean ± seed range)", fontsize=8)
+    ax.set_title("Hill-climb seed stability", fontsize=9)
+    ax.tick_params(axis="y", labelsize=7)
+    ax.grid(True, axis="y", alpha=0.2)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=90)
+    plt.close(fig)
+    return True
+
+
 def _sweep_axis(rows: list[dict]) -> str:
     def _cfg(r, k):
         return (r.get("config", {}) or {}).get(k, r.get(k))
@@ -1373,23 +1567,101 @@ SORT_SCRIPT = r"""
     var arr = th.querySelector(".arr");
     if (arr) arr.textContent = dir < 0 ? "▼" : "▲";
   };
+  // ---- rich filter bar state (dsbench-style) ----
+  var pillState = { kind: "all", val: "" };
+  window.setPill = function(el) {
+    var bar = el.closest(".toolbar");
+    bar.querySelectorAll(".fpill").forEach(function(p) {
+      p.classList.remove("active", "v-active", "bad-active");
+    });
+    var kind = el.getAttribute("data-kind");
+    var val = el.getAttribute("data-val") || "";
+    if (val === "SUPPORTED" || val === "KEEP") el.classList.add("v-active");
+    else if (val === "FALSIFIED") el.classList.add("bad-active");
+    else el.classList.add("active");
+    pillState = { kind: kind, val: val };
+    window.filterRuns();
+  };
+  function rowMatchesPill(r) {
+    switch (pillState.kind) {
+      case "all": return true;
+      case "real": return r.getAttribute("data-real") === "1" &&
+                          (r.getAttribute("data-model") || "").indexOf("gemma") >= 0;
+      case "verdict": return (r.getAttribute("data-verdict") || "") === pillState.val;
+      case "status": return (r.getAttribute("data-status") || "") === pillState.val;
+      case "champion": return r.getAttribute("data-champ") === "1";
+      default: return true;
+    }
+  }
   window.filterRuns = function() {
     var box = document.getElementById("filter");
-    if (!box) return;
-    var q = box.value.toLowerCase();
+    var q = box ? box.value.trim() : "";
+    var re = null;
+    if (q) { try { re = new RegExp(q, "i"); } catch (e) { re = null; } }
+    var modelSel = document.getElementById("model-filter");
+    var model = modelSel ? modelSel.value.toLowerCase() : "";
     document.querySelectorAll("table.runs").forEach(function(table) {
       var tb = table.tBodies[0];
       if (!tb) return;
       var shown = 0;
       Array.prototype.slice.call(tb.rows).forEach(function(r) {
-        var on = r.textContent.toLowerCase().indexOf(q) >= 0;
+        if (r.classList.contains("detail-row")) { return; }
+        var txt = r.textContent;
+        var on = true;
+        if (q) on = re ? re.test(txt) : (txt.toLowerCase().indexOf(q.toLowerCase()) >= 0);
+        if (on && model && r.hasAttribute("data-model"))
+          on = (r.getAttribute("data-model") || "").indexOf(model) >= 0;
+        if (on && r.classList.contains("task-row")) on = rowMatchesPill(r);
         r.style.display = on ? "" : "none";
+        // keep an open detail row in sync with its parent
+        var nxt = r.nextElementSibling;
+        if (nxt && nxt.classList.contains("detail-row"))
+          nxt.style.display = (on && nxt.classList.contains("open")) ? "" : "none";
         if (on) shown++;
       });
       var sec = table.closest(".group-section");
-      if (sec) sec.style.display = (q && shown === 0) ? "none" : "";
+      if (sec && table.id && table.id.indexOf("runs_") === 0)
+        sec.style.display = (shown === 0) ? "none" : "";
     });
   };
+  // ---- tab switching (dependency-free) ----
+  function initTabs() {
+    var tabs = document.querySelectorAll("#tabbar .tab");
+    tabs.forEach(function(t) {
+      t.addEventListener("click", function() {
+        tabs.forEach(function(x) { x.classList.remove("active"); });
+        document.querySelectorAll(".tab-pane").forEach(function(p) {
+          p.classList.remove("active");
+        });
+        t.classList.add("active");
+        var pane = document.getElementById(t.getAttribute("data-pane"));
+        if (pane) pane.classList.add("active");
+      });
+    });
+  }
+  // ---- auto-expand rows ----
+  function initAutoExpand() {
+    document.querySelectorAll("table.runs tr.task-row[data-expandable]").forEach(function(r) {
+      r.addEventListener("click", function(ev) {
+        if (ev.target.tagName === "A") return;
+        var auto = document.getElementById("auto-expand");
+        var detail = r.nextElementSibling;
+        var hasDetail = detail && detail.classList.contains("detail-row");
+        if (auto && auto.checked && hasDetail) {
+          ev.preventDefault();
+          var open = detail.classList.toggle("open");
+          detail.style.display = open ? "" : "none";
+        } else {
+          var url = r.getAttribute("data-exp");
+          if (url) window.location.href = url;
+        }
+      });
+    });
+  }
+  if (document.readyState !== "loading") { initTabs(); initAutoExpand(); }
+  else document.addEventListener("DOMContentLoaded", function() {
+    initTabs(); initAutoExpand();
+  });
 })();
 </script>
 """
@@ -1498,6 +1770,43 @@ def _hypothesis_grid_html(table: dict[str, dict]) -> str:
             + "\n".join(rows_html) + "\n</div>")
 
 
+HC_PLACEHOLDER = (
+    '<div class="hc-empty">\n'
+    '  <b>No hill-climb runs yet — screening grids only.</b><br>\n'
+    '  The rung-2.5 coordinate-descent tier populates from rows tagged '
+    '<code>HC-*</code> (or <code>config.phase = "hillclimb"</code>). '
+    'Run <code>scripts/run_hillclimb</code> or <code>campaign_sweep</code> with '
+    'tag <code>HC-*</code> to populate this section with a best-config callout, '
+    'per-axis coordinate-descent small-multiples '
+    '(behavior / composite vs layer · alpha · source · operation), and a '
+    'seed-stability bar.\n'
+    '</div>\n')
+
+
+def _hc_best_callout(hc_rows: list[dict], link_prefix: str = "") -> str:
+    """Best-config callout for a set of hill-climb rows (by composite)."""
+    if not hc_rows:
+        return ""
+    best = max(hc_rows, key=lambda r: _num(r, "composite", -1e18))
+    bexp = best.get("experiment_num")
+    bn = int(best.get("n_seeds", 1) or 1)
+    link = (f'<a href="{link_prefix}experiments/exp{int(bexp):03d}.html">'
+            f'exp{int(bexp):03d}</a>' if bexp is not None else "—")
+    return (
+        '<div class="hc-callout">\n'
+        f'  <b>Best hill-climb config</b> &middot; {link} &middot; '
+        f'tag <code>{_esc(best.get("tag") or (best.get("config",{}) or {}).get("tag") or "")}</code>'
+        f' <span class="n-chip {"eval" if _tier_of(best)=="EVALUATION" else "scr"}">'
+        f'{_tier_of(best)} n={bn}</span><br>\n'
+        f'  composite <b>{_num(best,"composite"):+.4f}</b> &middot; '
+        f'behavior {_num(best,"behavior_efficacy"):.4f} &middot; '
+        f'layer {_esc(_cfg_get(best,"layer"))} &middot; '
+        f'&alpha; {_esc(_cfg_get(best,"alpha"))} &middot; '
+        f'source {_esc(_cfg_get(best,"source"))} &middot; '
+        f'op {_esc(_cfg_get(best,"operation"))}\n'
+        '</div>\n')
+
+
 def render_master(rows: list[dict], table: dict[str, dict],
                   plots: dict[str, bool], ladder: list[dict],
                   repo_root: Path, idea_dirs: list[Path]) -> str:
@@ -1535,6 +1844,7 @@ def render_master(rows: list[dict], table: dict[str, dict],
             f'<span class="arr"></span></th>'
             for i, (k, label, num) in enumerate(GROUP_RUN_COLS))
         head += '<th class="l">tier</th><th class="l">links</th>'
+        ncols = len(GROUP_RUN_COLS) + 2
         body = []
         for r in grp_rows:
             n_seeds = int(r.get("n_seeds", 1) or 1)
@@ -1543,16 +1853,27 @@ def render_master(rows: list[dict], table: dict[str, dict],
             is_champ = exp == champ_num
             neg = _num(r, "composite", 0.0) < 0
             hid = resolve_hyp_id(r, repo_root, idea_dirs)
-            vr = ""
-            if hid and hid in table:
-                vr = "vr-" + table[hid]["verdict"].lower()
+            verdict = table[hid]["verdict"] if (hid and hid in table) else "PENDING"
+            vr = "vr-" + verdict.lower() if (hid and hid in table) else ""
             rcls = " ".join(c for c in ("champion" if is_champ else "",
-                                        "neg-comp" if neg else "", vr) if c)
+                                        "neg-comp" if neg else "", vr,
+                                        "task-row") if c)
+            model = _short_model(r.get("model"))
+            is_real = "0" if model == "fake" else "1"
+            status = str(r.get("status") or "")
+            exp_pg = (f"experiments/exp{int(exp):03d}.html" if exp is not None else "")
+            data_attrs = (
+                f' data-model="{_esc(model.lower())}"'
+                f' data-verdict="{_esc(verdict.upper())}"'
+                f' data-status="{_esc(status.upper())}"'
+                f' data-real="{is_real}"'
+                f' data-champ="{1 if is_champ else 0}"'
+                f' data-exp="{exp_pg}"'
+                ' data-expandable="1"')
             tds = []
             for (k, _label, num) in GROUP_RUN_COLS:
                 if k == "model":
-                    m = _short_model(r.get("model"))
-                    tds.append(f'<td data-v="{_esc(m.lower())}" class="l">{_esc(m)}</td>')
+                    tds.append(f'<td data-v="{_esc(model.lower())}" class="l">{_esc(model)}</td>')
                 elif k == "tag":
                     tg = str(r.get("tag") or "")
                     tds.append(f'<td data-v="{_esc(tg.lower())}" class="l">'
@@ -1567,14 +1888,34 @@ def render_master(rows: list[dict], table: dict[str, dict],
             chip = (f'<span class="n-chip {"eval" if tier=="EVALUATION" else "scr"}">'
                     f'{tier} n={n_seeds}</span>')
             tds.append(f'<td class="l">{chip}</td>')
-            page = (f'<a href="experiments/exp{int(exp):03d}.html">exp{int(exp):03d}</a>'
-                    if exp is not None else "—")
+            page = (f'<a href="{exp_pg}" onclick="event.stopPropagation()">'
+                    f'exp{int(exp):03d}</a>' if exp is not None else "—")
             if hid:
-                page += f' &middot; <a href="hyp/{_esc(hid)}.html">{_esc(hid)}</a>'
+                page += (f' &middot; <a href="hyp/{_esc(hid)}.html" '
+                         f'onclick="event.stopPropagation()">{_esc(hid)}</a>')
             tds.append(f'<td class="l">{page}</td>')
-            body.append(f'<tr class="{rcls}">{"".join(tds)}</tr>')
+            body.append(f'<tr class="{rcls}"{data_attrs}>{"".join(tds)}</tr>')
+            # hidden inline detail row (auto-expand mode)
+            vsnip = ""
+            ann_v = r.get("verdict_snippet") or r.get("reasoning_verdict")
+            if ann_v:
+                vsnip = (f'<div class="vsnip">{_esc(str(ann_v)[:320])}</div>')
+            detail = (
+                '<div class="detail-box"><div class="dl">'
+                f'<span>composite</span><b>{_num(r,"composite"):+.4f}</b>'
+                f'<span>behavior</span><b>{_num(r,"behavior_efficacy"):.4f}</b>'
+                f'<span>PPL</span><b>{_num(r,"perplexity"):.2f}</b>'
+                f'<span>CR</span><b>{_num(r,"compliance_rate"):.2f}</b>'
+                f'<span>verdict</span><b>{_esc(verdict)}</b>'
+                '</div>'
+                + vsnip
+                + (f'<a href="{exp_pg}">full experiment &rarr;</a>' if exp_pg else '')
+                + (f' &middot; <a href="hyp/{_esc(hid)}.html">{_esc(hid)} &rarr;</a>'
+                   if hid else '')
+                + '</div>')
+            body.append(f'<tr class="detail-row"><td colspan="{ncols}">{detail}</td></tr>')
         body_html = "\n".join(body) or (
-            f'<tr><td colspan="{len(GROUP_RUN_COLS)+2}" class="l empty">'
+            f'<tr><td colspan="{ncols}" class="l empty">'
             'No runs in this group.</td></tr>')
         return (f'<table class="runs" id="{table_id}" data-dir="desc">\n'
                 f'  <thead><tr>{head}</tr></thead>\n'
@@ -1582,6 +1923,9 @@ def render_master(rows: list[dict], table: dict[str, dict],
 
     grouped: dict[str, list[dict]] = {}
     for r in flat:
+        # hill-climb rows render in their own subsection, not the campaign tables
+        if is_hillclimb(r):
+            continue
         grouped.setdefault(campaign_group_of(r), []).append(r)
     for g in grouped:
         grouped[g].sort(key=lambda r: _num(r, "composite", -1e18), reverse=True)
@@ -1678,16 +2022,6 @@ def render_master(rows: list[dict], table: dict[str, dict],
         '@L18 with a clean steering window — the window emerges with scale.</li>\n'
         '    </ul>\n  </div>\n')
 
-    # Hypothesis status grid
-    parts.append(
-        '<section class="card panel-2col" style="margin-top:18px">\n'
-        '  <h2>Hypothesis status grid</h2>\n'
-        '  <p class="cap" style="margin-bottom:10px">All 70 registry hypotheses '
-        '(E1–E50 in blocks A–F, then N1–N20). Cell colour = current verdict from '
-        'IDEA_TABLE.md; click a cell to open that hypothesis page.</p>\n'
-        + _hypothesis_grid_html(table) + "\n</section>\n")
-
-    # Panels
     def card(name: str, title: str, cap: str, wide: bool = False) -> str:
         cls = "card panel-2col" if wide else "card"
         if not plots.get(name):
@@ -1698,32 +2032,51 @@ def render_master(rows: list[dict], table: dict[str, dict],
                      f'<p class="cap">{_esc(cap)}</p>')
         return f'<div class="{cls}"><h3>{_esc(title)}</h3>{inner}</div>'
 
-    parts.append('<h2 style="margin-top:30px">Panels</h2>\n<div class="grid">\n')
-    parts.append(card("plot_radar.png", "5-axis radar",
-        "5-axis radar per method: behavior, capability, coherence, safety, selectivity (1 = best)."))
-    parts.append(card("plot_parcoords.png", "Parallel coordinates",
-        "Parallel coordinates across the same five axes — lines high everywhere are multi-objective wins."))
-    parts.append(card("plot_pareto_capability.png", "Pareto · capability",
-        "behavior vs capability (MMLU drop on x; left = better capability retention)."))
-    parts.append(card("plot_pareto_coherence.png", "Pareto · coherence",
-        "behavior vs coherence (ΔPPL_norm on x; left = better coherence)."))
-    parts.append(card("plot_pareto_safety.png", "Pareto · safety",
-        "behavior vs safety (compliance rate on x; left = safer / no leak)."))
-    parts.append(card("plot_geometry.png", "Geometry probes",
-        "Off-shell displacement, angular displacement, and Fisher ratio per experiment.", wide=True))
-    parts.append(render_stack_matrix(rows))
-    parts.append("</div>\n")
-
-    # Runs by campaign
+    # =====================================================================
+    # TAB BAR (dsbench interaction model ported to the editorial palette).
+    # Five panes: Runs (default), Geometry, Ladder, Hypotheses, Raw.
+    # =====================================================================
     parts.append(
-        '<h2 style="margin-top:30px">Runs by campaign '
-        '<span class="sub" style="display:inline">click a row link to open its '
-        'experiment page</span></h2>\n'
-        '<input type="text" id="filter" class="filter-box" '
-        'placeholder="type to filter all run rows (tag, model, hyp, exp#, …)" '
-        'oninput="filterRuns()">\n'
+        '<div class="tabs" id="tabbar">\n'
+        '  <div class="tab active" data-pane="pane-runs">Runs</div>\n'
+        '  <div class="tab" data-pane="pane-geometry">Geometry</div>\n'
+        '  <div class="tab" data-pane="pane-ladder">Ladder</div>\n'
+        '  <div class="tab" data-pane="pane-hypotheses">Hypotheses</div>\n'
+        '  <div class="tab" data-pane="pane-raw">Raw</div>\n'
+        '</div>\n')
+
+    # ---- PANE: RUNS (default) ----
+    hc_rows = [r for r in flat if is_hillclimb(r)]
+    parts.append('<div class="tab-pane active" id="pane-runs">\n')
+    parts.append(
+        '<h2 style="margin-top:18px">Runs by campaign '
+        '<span class="sub" style="display:inline">filter, sort, or auto-expand a '
+        'row</span></h2>\n')
+    # rich filter bar (regex + model dropdown + toggle pills + auto-expand)
+    parts.append(
+        '<div class="toolbar" id="runs-toolbar">\n'
+        '  <label>filter <input type="text" id="filter" class="filter-box" '
+        'style="width:240px;margin:0" placeholder="regex over tag / model / hyp / exp#…" '
+        'oninput="filterRuns()"></label>\n'
+        '  <label>model <select id="model-filter" onchange="filterRuns()">\n'
+        '    <option value="">all</option>\n'
+        '    <option value="gemma-3-270m">gemma-3-270m</option>\n'
+        '    <option value="gemma-3-1b">gemma-3-1b</option>\n'
+        '    <option value="qwen">qwen</option>\n'
+        '    <option value="fake">fake</option>\n'
+        '  </select></label>\n'
+        '  <span class="fpill active" data-kind="all" onclick="setPill(this)">all</span>\n'
+        '  <span class="fpill" data-kind="real" onclick="setPill(this)">real-Gemma</span>\n'
+        '  <span class="fpill" data-kind="verdict" data-val="SUPPORTED" onclick="setPill(this)">SUPPORTED</span>\n'
+        '  <span class="fpill" data-kind="verdict" data-val="FALSIFIED" onclick="setPill(this)">FALSIFIED</span>\n'
+        '  <span class="fpill" data-kind="status" data-val="KEEP" onclick="setPill(this)">KEEP</span>\n'
+        '  <span class="fpill" data-kind="champion" onclick="setPill(this)">champion</span>\n'
+        '  <label style="margin-left:auto"><input type="checkbox" id="auto-expand"> '
+        'auto-expand row</label>\n'
+        '</div>\n'
         '<p class="cap">default sort: composite desc &middot; click any header to '
-        're-sort that table</p>\n')
+        're-sort &middot; with auto-expand on, clicking a row reveals an inline '
+        'detail panel instead of navigating.</p>\n')
     for gkey, gtitle, gdesc in CAMPAIGN_GROUPS:
         grp_rows = grouped.get(gkey)
         if not grp_rows:
@@ -1735,8 +2088,43 @@ def render_master(rows: list[dict], table: dict[str, dict],
             f'  <div class="group-desc">{_esc(gdesc)}</div>\n'
             f'  <div class="tablewrap">{_runs_table(grp_rows, f"runs_{gkey}")}</div>\n'
             "</section>\n")
+    # Hill-climb subsection (rung-2.5)
+    parts.append(
+        '<section class="group-section" id="hillclimb-section">\n'
+        '  <h2>Hill-climb (rung-2.5 coordinate descent) '
+        f'<span class="cnt">({len(hc_rows)} run{"s" if len(hc_rows)!=1 else ""})</span></h2>\n'
+        '  <div class="group-desc">Coordinate-descent refinement around a screening '
+        'champion — sweeps one axis (layer / alpha / source / operation) at a time. '
+        'Populated from rows tagged <code>HC-*</code>.</div>\n')
+    if hc_rows:
+        parts.append(_hc_best_callout(hc_rows))
+        if plots.get("plot_hc_coord.png"):
+            parts.append(
+                '  <div class="card panel-2col"><h3>Per-axis coordinate descent</h3>'
+                '<img src="plot_hc_coord.png" alt="hill-climb coordinate descent">'
+                '<p class="cap">behavior_efficacy + composite vs each swept axis.</p></div>\n')
+        if plots.get("plot_hc_seed.png"):
+            parts.append(
+                '  <div class="card panel-2col"><h3>Seed stability</h3>'
+                '<img src="plot_hc_seed.png" alt="hill-climb seed stability">'
+                '<p class="cap">mean composite per config with the seed min/max range.</p></div>\n')
+        parts.append(f'  <div class="tablewrap">{_runs_table(hc_rows, "runs_hillclimb")}</div>\n')
+    else:
+        parts.append(HC_PLACEHOLDER)
+    parts.append('</section>\n')
+    parts.append('</div>\n')  # end pane-runs
 
-    # Ladder board
+    # ---- PANE: GEOMETRY ----
+    parts.append('<div class="tab-pane" id="pane-geometry">\n')
+    parts.append('<h2 style="margin-top:18px">Geometry</h2>\n')
+    parts.append(card("plot_geometry.png", "Geometry probes",
+        "Off-shell displacement, angular displacement, and Fisher ratio per experiment.", wide=True))
+    parts.append(_geometry_table(flat))
+    parts.append('</div>\n')  # end pane-geometry
+
+    # ---- PANE: LADDER ----
+    parts.append('<div class="tab-pane" id="pane-ladder">\n')
+    parts.append('<h2 style="margin-top:18px">Ladder board</h2>\n')
     ladder_rows = "".join(
         f'<tr><td class="l">{_esc(L["tag"])}</td>'
         f'<td class="l">{L["rung"]} ({_esc(L["rung_name"])})</td>'
@@ -1744,19 +2132,165 @@ def render_master(rows: list[dict], table: dict[str, dict],
         f'<td class="l">{_esc(L["failure_reason"] or "—")}</td></tr>'
         for L in ladder) or '<tr><td colspan="4" class="l empty">No runs yet.</td></tr>'
     parts.append(
-        '<section class="group-section">\n  <h2>Ladder board</h2>\n'
+        '<section class="group-section">\n'
         '  <div class="group-desc">Per method (tag): the highest ladder rung reached '
         'and whether the safety/quality gate cleared.</div>\n'
         '  <div class="tablewrap"><table class="runs">\n'
         '    <thead><tr><th class="l">method (tag)</th><th class="l">highest rung</th>'
         '<th class="l">gate</th><th class="l">failure_reason</th></tr></thead>\n'
         f"    <tbody>{ladder_rows}</tbody>\n  </table></div>\n</section>\n")
+    parts.append(render_stack_matrix(rows))
+    parts.append('</div>\n')  # end pane-ladder
+
+    # ---- PANE: HYPOTHESES ----
+    parts.append('<div class="tab-pane" id="pane-hypotheses">\n')
+    parts.append(
+        '<section class="card panel-2col" style="margin-top:18px">\n'
+        '  <h2>Hypothesis status grid</h2>\n'
+        '  <p class="cap" style="margin-bottom:10px">All 70 registry hypotheses '
+        '(E1–E50 in blocks A–F, then N1–N20). Cell colour = current verdict from '
+        'IDEA_TABLE.md; click a cell to open that hypothesis page.</p>\n'
+        + _hypothesis_grid_html(table) + "\n</section>\n")
+    parts.append('<h2>5-axis profiles</h2>\n<div class="grid">\n')
+    parts.append(card("plot_radar.png", "5-axis radar",
+        "5-axis radar per method: behavior, capability, coherence, safety, selectivity (1 = best)."))
+    parts.append(card("plot_parcoords.png", "Parallel coordinates",
+        "Parallel coordinates across the same five axes — lines high everywhere are multi-objective wins."))
+    parts.append(card("plot_pareto_capability.png", "Pareto · capability",
+        "behavior vs capability (MMLU drop on x; left = better capability retention)."))
+    parts.append(card("plot_pareto_coherence.png", "Pareto · coherence",
+        "behavior vs coherence (ΔPPL_norm on x; left = better coherence)."))
+    parts.append(card("plot_pareto_safety.png", "Pareto · safety",
+        "behavior vs safety (compliance rate on x; left = safer / no leak)."))
+    parts.append("</div>\n")
+    parts.append(_hypotheses_table(table, rows_by_hyp=_count_rows_by_hyp(flat, repo_root, idea_dirs)))
+    parts.append('</div>\n')  # end pane-hypotheses
+
+    # ---- PANE: RAW ----
+    parts.append('<div class="tab-pane" id="pane-raw">\n')
+    parts.append('<h2 style="margin-top:18px">Raw experiment-log rows</h2>\n')
+    raw_src = (f'<a href="{REPO_URL}/blob/main/autoresearch_results/'
+               'experiment_log.jsonl" target="_blank" rel="noopener">'
+               'autoresearch_results/experiment_log.jsonl</a>')
+    PREVIEW = 12
+    parts.append(
+        '<p class="cap">One slimmed JSON object per '
+        f'<code>experiment_log.jsonl</code> row (sample blobs dropped). '
+        f'Full {len(rows)}-row source of truth: {raw_src}. '
+        f'Preview below shows the first {min(PREVIEW, len(rows))} rows.</p>\n')
+    raw_pre = _esc("\n".join(json.dumps(_raw_row(r), sort_keys=True)
+                             for r in rows[:PREVIEW]))
+    parts.append(
+        '<details class="deep"><summary>show raw JSON preview ('
+        f'first {min(PREVIEW, len(rows))} of {len(rows)} rows)</summary>\n'
+        f'<div class="body"><pre>{raw_pre}</pre></div></details>\n')
+    parts.append('</div>\n')  # end pane-raw
 
     parts.append(_doc_footer())
     parts.append(_meta_footer())
     parts.append(SORT_SCRIPT)
     parts.append("</body>\n</html>\n")
     return "".join(parts)
+
+
+def _raw_row(r: dict) -> dict:
+    """Slim a row for the Raw tab JSON dump (drop verbose sample/prose blobs)."""
+    drop = {"samples", "description", "sample_steered", "sample_unsteered",
+            "sample_prompt"}
+    return {k: v for k, v in r.items() if k not in drop}
+
+
+def _count_rows_by_hyp(flat: list[dict], repo_root: Path,
+                       idea_dirs: list[Path]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for r in flat:
+        hid = resolve_hyp_id(r, repo_root, idea_dirs)
+        if hid:
+            counts[hid] = counts.get(hid, 0) + 1
+    return counts
+
+
+def _geometry_table(flat: list[dict]) -> str:
+    """Sortable geometry-focused table: offshell / angular / fisher / cos_dm_pca."""
+    cols = [
+        ("experiment_num", "exp#", True),
+        ("tag", "tag", False),
+        ("model", "model", False),
+        ("offshell_displacement", "offshell Δ‖h‖", True),
+        ("angular_displacement", "angular (1−cos)", True),
+        ("fisher_at_layer", "Fisher@layer", True),
+        ("cosine_dm_pca", "cos(DM,PCA)", True),
+        ("composite", "composite", True),
+    ]
+    head = "".join(
+        f'<th{" class=\"l\"" if not num else ""} '
+        f'onclick="sortRuns(this,{i},{int(num)})">{_esc(label)}'
+        f'<span class="arr"></span></th>'
+        for i, (k, label, num) in enumerate(cols))
+    body = []
+    rows_sorted = sorted(flat, key=lambda r: _num(r, "offshell_displacement"),
+                         reverse=True)
+    for r in rows_sorted:
+        exp = r.get("experiment_num")
+        tds = []
+        for (k, _l, num) in cols:
+            if k == "model":
+                m = _short_model(r.get("model"))
+                tds.append(f'<td data-v="{_esc(m.lower())}" class="l">{_esc(m)}</td>')
+            elif k == "tag":
+                tg = str(r.get("tag") or "")
+                tds.append(f'<td data-v="{_esc(tg.lower())}" class="l">'
+                           f'<code>{_esc(tg)}</code></td>')
+            elif num:
+                v = r.get(k)
+                try:
+                    fv = float(v)
+                    disp = f"{fv:.4f}"
+                except (TypeError, ValueError):
+                    fv, disp = -1e18, "—"
+                tds.append(f'<td data-v="{fv}">{_esc(disp)}</td>')
+            else:
+                tds.append(f'<td class="l">{_esc(r.get(k))}</td>')
+        body.append(f'<tr>{"".join(tds)}</tr>')
+    body_html = "\n".join(body) or (
+        f'<tr><td colspan="{len(cols)}" class="l empty">No rows.</td></tr>')
+    return ('<section class="group-section"><h2>Geometry table '
+            '<span class="cnt">(sortable)</span></h2>\n'
+            '  <div class="group-desc">Sorted by off-shell displacement (desc). '
+            'Click a header to re-sort.</div>\n'
+            '  <div class="tablewrap"><table class="runs" data-dir="desc">\n'
+            f'    <thead><tr>{head}</tr></thead>\n'
+            f'    <tbody>\n{body_html}\n    </tbody>\n  </table></div>\n</section>\n')
+
+
+def _hypotheses_table(table: dict[str, dict], rows_by_hyp: dict[str, int]) -> str:
+    """Table of all 70 hypotheses: verdict + #runs + link."""
+    body = []
+    for _bt, ids in HYP_BLOCKS:
+        for hid in ids:
+            info = table.get(hid, {"verdict": "PENDING", "title": ""})
+            verdict = info.get("verdict", "PENDING")
+            vcls = VERDICT_CLASS.get(verdict, "v-pending")
+            nruns = rows_by_hyp.get(hid, 0)
+            body.append(
+                f'<tr data-verdict="{_esc(verdict.upper())}">'
+                f'<td class="l"><a href="hyp/{_esc(hid)}.html">{_esc(hid)}</a></td>'
+                f'<td class="l">{_esc(info.get("title",""))}</td>'
+                f'<td class="l"><span class="hyp-cell {vcls}" '
+                f'style="cursor:default;width:auto;padding:1px 7px;display:inline-block">'
+                f'{_esc(verdict)}</span></td>'
+                f'<td>{nruns}</td>'
+                f'<td class="l"><a href="hyp/{_esc(hid)}.html">{_esc(hid)} page &rarr;</a></td>'
+                '</tr>')
+    body_html = "\n".join(body)
+    return ('<section class="group-section"><h2>All 70 hypotheses</h2>\n'
+            '  <div class="group-desc">Verdict, run count, and link per registry '
+            'hypothesis.</div>\n'
+            '  <div class="tablewrap"><table class="runs" data-dir="desc">\n'
+            '    <thead><tr><th class="l">id</th><th class="l">title</th>'
+            '<th class="l">verdict</th><th># runs</th><th class="l">link</th>'
+            '</tr></thead>\n'
+            f'    <tbody>\n{body_html}\n    </tbody>\n  </table></div>\n</section>\n')
 
 
 # ===========================================================================
@@ -2192,6 +2726,21 @@ def _campaign_writeup_for(hid: str, repo_root: Path) -> str:
             f'<div class="md-body">{md_to_html(text)}</div>')
 
 
+_DESIGN_DOC_BLOB = "https://github.com/dlmastery/steeringresearch/blob/master/"
+
+
+def _design_doc_link(hid: str, repo_root: Path) -> str:
+    """Link to the rich 12-section design doc hypotheses/<block>/<ID>_*.md if it exists."""
+    hyp_root = Path(repo_root) / "hypotheses"
+    if not hyp_root.exists():
+        return ""
+    for p in sorted(hyp_root.glob(f"*/{hid}_*.md")):
+        rel = p.relative_to(repo_root).as_posix()
+        return (f'<a class="mast-pill paper" href="{_DESIGN_DOC_BLOB}{rel}" '
+                f'target="_blank" rel="noopener">design doc &middot; {_esc(hid)}</a>')
+    return ""
+
+
 def render_hypothesis(hid: str, table: dict[str, dict], rows: list[dict],
                       repo_root: Path, idea_dirs: list[Path],
                       plots: dict[str, bool]) -> str:
@@ -2216,6 +2765,7 @@ def render_hypothesis(hid: str, table: dict[str, dict], rows: list[dict],
         f'&nbsp; {_esc(info.get("title",""))} &nbsp;&middot;&nbsp; '
         f'{len(flat)} run{"s" if len(flat)!=1 else ""}</div>\n'
         f'    {_mast_row()}'
+        f'    <div style="margin-top:6px">{_design_doc_link(hid, repo_root)}</div>'
         '  </div>\n  <div class="head-right">\n'
         f'    {back}\n  </div>\n</div>\n')
 
@@ -2264,6 +2814,27 @@ def render_hypothesis(hid: str, table: dict[str, dict], rows: list[dict],
             f'  <img src="hyp{hid}_coord.png" alt="composite vs layer / alpha">\n'
             '  <p class="cap">composite vs injection layer and vs alpha for this '
             'hypothesis sweep.</p>\n</section>\n')
+
+    # Hill-climb (rung-2.5) tier for this hypothesis
+    hc_rows = [r for r in flat if is_hillclimb(r)]
+    hc_inner = ['<section class="card" id="hillclimb-hyp"><h2>Hill-climb '
+                '(rung-2.5 coordinate descent)</h2>\n']
+    if hc_rows:
+        hc_inner.append(_hc_best_callout(hc_rows, link_prefix="../"))
+        if plots.get(f"hyp{hid}_hc_coord.png"):
+            hc_inner.append(
+                f'  <img src="hyp{hid}_hc_coord.png" alt="hill-climb coordinate descent">\n'
+                '  <p class="cap">behavior_efficacy + composite vs each swept axis '
+                '(layer / alpha / source / operation).</p>\n')
+        if plots.get(f"hyp{hid}_hc_seed.png"):
+            hc_inner.append(
+                f'  <img src="hyp{hid}_hc_seed.png" alt="hill-climb seed stability">\n'
+                '  <p class="cap">mean composite per config with the seed min/max '
+                'range (only configs with &gt;1 seed shown).</p>\n')
+    else:
+        hc_inner.append(HC_PLACEHOLDER)
+    hc_inner.append('</section>\n')
+    parts.append("".join(hc_inner))
 
     # Campaign writeup
     writeup = _campaign_writeup_for(hid, repo_root)
@@ -2360,6 +2931,14 @@ def build_all_dashboards(results_dir: Path | None = None,
         rows, "compliance_rate", "compliance rate (safety cost)", dash / "plot_pareto_safety.png")
     plots["plot_geometry.png"] = plot_geometry(rows, dash / "plot_geometry.png")
 
+    # ---- hill-climb (rung-2.5) master plots — only when HC-* rows exist ----
+    hc_rows_all = [r for r in rows if is_hillclimb(r)]
+    if hc_rows_all:
+        plots["plot_hc_coord.png"] = plot_hc_coord_descent(
+            hc_rows_all, dash / "plot_hc_coord.png")
+        plots["plot_hc_seed.png"] = plot_hc_seed_stability(
+            hc_rows_all, dash / "plot_hc_seed.png")
+
     # mirror master PNGs to docs
     for pname in plots:
         src = dash / pname
@@ -2440,6 +3019,12 @@ def build_all_dashboards(results_dir: Path | None = None,
         if hrows:
             hplots[f"hyp{hid}_coord.png"] = plot_coord_descent(
                 hrows, hyp_docs_dir / f"hyp{hid}_coord.png")
+            hc_hrows = [r for r in hrows if is_hillclimb(r)]
+            if hc_hrows:
+                hplots[f"hyp{hid}_hc_coord.png"] = plot_hc_coord_descent(
+                    hc_hrows, hyp_docs_dir / f"hyp{hid}_hc_coord.png")
+                hplots[f"hyp{hid}_hc_seed.png"] = plot_hc_seed_stability(
+                    hc_hrows, hyp_docs_dir / f"hyp{hid}_hc_seed.png")
         sub_html = render_hypothesis(hid, table, hrows, repo_root, idea_dirs, hplots)
         _write(hyp_docs_dir / f"{hid}.html", sub_html)
         _write(hyp_dash_dir / f"{hid}.html", sub_html)

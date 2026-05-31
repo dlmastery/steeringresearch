@@ -745,5 +745,50 @@
     "prediction": "Cell 16/0.4/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
     "verdict": "DISCARD \u2014 composite -11.0764, behavior +0.3043, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
     "learning": "Behavior +0.3043 | MMLU drop 0.1000 | \u0394PPL_norm 18.5016 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0908 | layer 16 | Fisher 18.2502"
+  },
+  "84": {
+    "_manual": true,
+    "diagnosis": "C10/E7 cross-scale: does the relative-displacement cliff (knee ~10% ||h||, behavior peak at alpha~0.1) hold on the larger gemma-3-1b @L18? relative_add, alpha=fraction of ||h||. Tests whether the relative parameterization gives a scale-INVARIANT cliff location (a stronger, more useful claim than the scale-dependent absolute-alpha cliff). alpha=0.02.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If relative displacement is the true control variable (E7/N17), the cliff knee should sit at a similar FRACTION of ||h|| (~0.1) on gemma-3-1b as on gemma-3-270m, i.e. scale-invariant in relative units (even though E27 made it scale-dependent in absolute alpha). alpha=0.02 on 1b @L18.",
+    "prediction": "Cell 18/0.02/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -0.9553, behavior +0.4919, CR 0.7000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4919 | MMLU drop 0.0000 | \u0394PPL_norm 0.0794 | rep 0.0145 | CR 0.7000 | harmless_refusal 0.0000 | offshell 0.0011 | layer 18 | Fisher 36.3461"
+  },
+  "85": {
+    "_manual": true,
+    "diagnosis": "C10/E7 cross-scale: does the relative-displacement cliff (knee ~10% ||h||, behavior peak at alpha~0.1) hold on the larger gemma-3-1b @L18? relative_add, alpha=fraction of ||h||. Tests whether the relative parameterization gives a scale-INVARIANT cliff location (a stronger, more useful claim than the scale-dependent absolute-alpha cliff). alpha=0.05.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If relative displacement is the true control variable (E7/N17), the cliff knee should sit at a similar FRACTION of ||h|| (~0.1) on gemma-3-1b as on gemma-3-270m, i.e. scale-invariant in relative units (even though E27 made it scale-dependent in absolute alpha). alpha=0.05 on 1b @L18.",
+    "prediction": "Cell 18/0.05/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -0.8395, behavior +0.5192, CR 0.6000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5192 | MMLU drop 0.0000 | \u0394PPL_norm 0.3010 | rep 0.0145 | CR 0.6000 | harmless_refusal 0.0000 | offshell 0.0036 | layer 18 | Fisher 36.3461"
+  },
+  "86": {
+    "_manual": true,
+    "diagnosis": "C10/E7 cross-scale: does the relative-displacement cliff (knee ~10% ||h||, behavior peak at alpha~0.1) hold on the larger gemma-3-1b @L18? relative_add, alpha=fraction of ||h||. Tests whether the relative parameterization gives a scale-INVARIANT cliff location (a stronger, more useful claim than the scale-dependent absolute-alpha cliff). alpha=0.1.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If relative displacement is the true control variable (E7/N17), the cliff knee should sit at a similar FRACTION of ||h|| (~0.1) on gemma-3-1b as on gemma-3-270m, i.e. scale-invariant in relative units (even though E27 made it scale-dependent in absolute alpha). alpha=0.1 on 1b @L18.",
+    "prediction": "Cell 18/0.1/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.5176, behavior +0.3789, CR 0.6000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.3789 | MMLU drop 0.0000 | \u0394PPL_norm 1.3733 | rep 0.0145 | CR 0.6000 | harmless_refusal 0.0000 | offshell 0.0104 | layer 18 | Fisher 36.3461"
+  },
+  "87": {
+    "_manual": true,
+    "diagnosis": "C10/E7 cross-scale: does the relative-displacement cliff (knee ~10% ||h||, behavior peak at alpha~0.1) hold on the larger gemma-3-1b @L18? relative_add, alpha=fraction of ||h||. Tests whether the relative parameterization gives a scale-INVARIANT cliff location (a stronger, more useful claim than the scale-dependent absolute-alpha cliff). alpha=0.2.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If relative displacement is the true control variable (E7/N17), the cliff knee should sit at a similar FRACTION of ||h|| (~0.1) on gemma-3-1b as on gemma-3-270m, i.e. scale-invariant in relative units (even though E27 made it scale-dependent in absolute alpha). alpha=0.2 on 1b @L18.",
+    "prediction": "Cell 18/0.2/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -4.9657, behavior +0.4621, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4621 | MMLU drop 0.1500 | \u0394PPL_norm 7.3286 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0251 | layer 18 | Fisher 36.3461"
+  },
+  "88": {
+    "_manual": true,
+    "diagnosis": "C10/E7 cross-scale: does the relative-displacement cliff (knee ~10% ||h||, behavior peak at alpha~0.1) hold on the larger gemma-3-1b @L18? relative_add, alpha=fraction of ||h||. Tests whether the relative parameterization gives a scale-INVARIANT cliff location (a stronger, more useful claim than the scale-dependent absolute-alpha cliff). alpha=0.4.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If relative displacement is the true control variable (E7/N17), the cliff knee should sit at a similar FRACTION of ||h|| (~0.1) on gemma-3-1b as on gemma-3-270m, i.e. scale-invariant in relative units (even though E27 made it scale-dependent in absolute alpha). alpha=0.4 on 1b @L18.",
+    "prediction": "Cell 18/0.4/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -92.7700, behavior +0.4188, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4188 | MMLU drop 0.3500 | \u0394PPL_norm 181.6193 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0879 | layer 18 | Fisher 36.3461"
   }
 }
