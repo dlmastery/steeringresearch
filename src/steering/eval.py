@@ -23,6 +23,7 @@ from __future__ import annotations
 import hashlib
 import math
 import re
+from collections import Counter
 from typing import Callable, Optional, Sequence
 
 import torch
@@ -160,6 +161,275 @@ def projection_behavior_scorer(
     delta = mean_proj(steer=True) - mean_proj(steer=False)
     # logistic squash to keep behavior_efficacy in a bounded, comparable range
     return 1.0 / (1.0 + math.exp(-delta))
+
+
+# ---------------------------------------------------------------------------
+# Axis 1 (REAL) — generation-based concept-incorporation scorer.
+#
+# This is the NON-CIRCULAR instrument that replaces the projection proxy at
+# Rung 1+ on real models (ICML_REVIEW.md W1). Instead of measuring projection
+# of the steered activation onto the injected vector v (a tautology:
+# Δproj = alpha*‖v‖), it GENERATES text and measures whether the *concept words*
+# actually appear more often in the steered continuation than in the unsteered
+# continuation. The vector is never inspected — only the produced TEXT is.
+# ---------------------------------------------------------------------------
+
+# Short English stop-list so lexicon_from_pairs keeps only content words.
+_STOPWORDS = frozenset(
+    """a an the and or but if then than that this these those of to in on at by
+    for with from into over under above below up down out off no not nor so as
+    is are was were be been being am do does did doing have has had having will
+    would shall should can could may might must it its they them their he she his
+    her you your we our us i me my mine ours yours theirs who whom which what when
+    where why how all any both each few more most other some such only own same
+    very s t just too also there here about across after again against along
+    among around because before between during through while within without
+    little open small bright hot cold dry wet love down fill held above below
+    across along their the""".split()
+)
+
+
+def _word_stems(text: str) -> list[str]:
+    """Lowercase content-word stems from `text`.
+
+    Cheap, dependency-free stemming: lowercase, strip non-alpha, drop stop-words
+    and very short tokens, and collapse a couple of common suffixes (plural -s,
+    gerund -ing, past -ed) so 'waves'/'wave' and 'rolling'/'roll' collide. This
+    is intentionally crude — it only needs to make concept words (ocean, wave,
+    sea, coral, ...) matchable across surface forms, not to be a real stemmer.
+    """
+    stems: list[str] = []
+    for raw in re.findall(r"[a-zA-Z]+", text.lower()):
+        if raw in _STOPWORDS or len(raw) < 3:
+            continue
+        w = raw
+        for suf in ("ing", "ed", "es", "s"):
+            if len(w) > len(suf) + 2 and w.endswith(suf):
+                w = w[: -len(suf)]
+                break
+        if len(w) >= 3 and w not in _STOPWORDS:
+            stems.append(w)
+    return stems
+
+
+def lexicon_from_pairs(
+    pairs: Sequence[tuple[str, str]],
+    top_k: int = 12,
+) -> list[str]:
+    """Derive a concept lexicon from contrast `pairs` = [(pos, neg), ...].
+
+    Returns the `top_k` lowercased word stems that are DISTINCTIVE of the
+    positive (concept) members relative to the negative members: words ranked by
+    (count in pos) − (count in neg), keeping only those that occur more in pos.
+    These are the words whose appearance in generated text signals the concept
+    was incorporated — used by `generation_behavior_scorer`.
+    """
+    pos_counts: Counter[str] = Counter()
+    neg_counts: Counter[str] = Counter()
+    for pos, neg in pairs:
+        pos_counts.update(set(_word_stems(pos)))
+        neg_counts.update(set(_word_stems(neg)))
+    scored = []
+    for w, c in pos_counts.items():
+        net = c - neg_counts.get(w, 0)
+        if net > 0:
+            scored.append((net, c, w))
+    scored.sort(key=lambda t: (-t[0], -t[1], t[2]))
+    return [w for _, _, w in scored[:top_k]]
+
+
+def _can_generate(model: nn.Module) -> bool:
+    """True iff `model` exposes a usable HF-style `.generate` (real models only).
+
+    FakeResidualLM has no `generate`, so this returns False and callers fall back
+    to the projection proxy. We deliberately do NOT add `generate` to FakeLM:
+    its logits are gibberish and a generated continuation would be meaningless.
+    """
+    gen = getattr(model, "generate", None)
+    return callable(gen) and not type(model).__name__.startswith("Fake")
+
+
+def _greedy_generate(
+    model: nn.Module,
+    tokenizer,
+    prompt: str,
+    max_new_tokens: int,
+    layer: Optional[int] = None,
+    vector: Optional[torch.Tensor] = None,
+    steering_kwargs: Optional[dict] = None,
+) -> str:
+    """Greedy (deterministic) continuation of `prompt`, optionally steered.
+
+    Generation runs INSIDE a SteeringContext when (layer, vector) are supplied,
+    so the hook is active for every decoding step (ICML_REVIEW.md: generation
+    must run WITH the hook active). Greedy decoding (do_sample=False, no
+    temperature) keeps it deterministic for the promotion gates. Returns ONLY
+    the newly generated text (prompt stripped).
+    """
+    ids = _ids(tokenizer, prompt, model)
+    gen_kwargs = dict(
+        max_new_tokens=max_new_tokens,
+        do_sample=False,
+        num_beams=1,
+    )
+    pad_id = getattr(tokenizer, "pad_token_id", None)
+    eos_id = getattr(tokenizer, "eos_token_id", None)
+    if pad_id is None and eos_id is not None:
+        gen_kwargs["pad_token_id"] = eos_id
+
+    def _run() -> torch.Tensor:
+        with torch.no_grad():
+            return model.generate(ids, **gen_kwargs)
+
+    if layer is not None and vector is not None:
+        sk = dict(steering_kwargs or {})
+        with SteeringContext(model, vector, [int(layer)], **sk):
+            out = _run()
+    else:
+        out = _run()
+
+    new_ids = out[0, ids.shape[1]:]
+    try:
+        return tokenizer.decode(new_ids, skip_special_tokens=True)
+    except Exception:  # pragma: no cover - tokenizer without decode
+        return ""
+
+
+def concept_rate(text: str, concept_lexicon: Sequence[str]) -> float:
+    """Fraction of content-word stems in `text` that are in `concept_lexicon`.
+
+    0..1. Higher ⇒ the concept appears more in the generated text.
+    """
+    stems = _word_stems(text)
+    if not stems:
+        return 0.0
+    lex = set(concept_lexicon)
+    hits = sum(1 for s in stems if s in lex)
+    return hits / len(stems)
+
+
+def generation_behavior_scorer(
+    model: nn.Module,
+    tokenizer,
+    layer: int,
+    vector: torch.Tensor,
+    prompts: Sequence[str],
+    concept_lexicon: Optional[Sequence[str]] = None,
+    steering_kwargs: Optional[dict] = None,
+    max_new_tokens: int = 24,
+    pairs: Optional[Sequence[tuple[str, str]]] = None,
+) -> dict:
+    """REAL behavior efficacy: does the CONCEPT appear in generated TEXT?
+
+    For each neutral `prompt`, generate a continuation TWICE with greedy
+    decoding: once unsteered, once steered (inside a SteeringContext at `layer`
+    with the given op/alpha in `steering_kwargs`). The score is
+
+        raw  = mean(concept_rate(steered)) − mean(concept_rate(unsteered))
+        score = logistic(scale * raw)          # squashed to ~0..1
+
+    This measures whether the concept's WORDS show up in the produced text —
+    NOT projection onto the injected vector — so it is NON-CIRCULAR (W1): a wrong
+    or too-weak vector simply fails to raise the concept rate and the score sits
+    near 0.5 (no effect) or below.
+
+    `concept_lexicon` is the list of concept words; if omitted it is derived from
+    `pairs` via `lexicon_from_pairs`. One of (`concept_lexicon`, `pairs`) is
+    required.
+
+    GUARD (FakeLM): if the model cannot generate (no `.generate`, i.e. FakeLM),
+    fall back to the projection proxy `projection_behavior_scorer` and TAG the
+    result so callers know which instrument ran.
+
+    Returns a dict:
+        {"score": float in (0,1),
+         "scorer": "generation" | "projection",
+         "delta": raw concept-rate delta (generation path only),
+         "steered_rate", "unsteered_rate",
+         "lexicon": the lexicon used}
+    """
+    if concept_lexicon is None:
+        if pairs is None:
+            raise ValueError("Provide concept_lexicon or pairs to derive it from.")
+        concept_lexicon = lexicon_from_pairs(pairs)
+    lexicon = list(concept_lexicon)
+
+    # FakeLM / non-generative fallback → projection proxy, tagged.
+    if not _can_generate(model):
+        score = projection_behavior_scorer(
+            model, tokenizer, vector, layer, prompts, steering_kwargs=steering_kwargs
+        )
+        return {
+            "score": float(score),
+            "scorer": "projection",
+            "delta": None,
+            "steered_rate": None,
+            "unsteered_rate": None,
+            "lexicon": lexicon,
+        }
+
+    steered_rates, unsteered_rates = [], []
+    for p in prompts:
+        base_txt = _greedy_generate(model, tokenizer, p, max_new_tokens)
+        steer_txt = _greedy_generate(
+            model, tokenizer, p, max_new_tokens,
+            layer=layer, vector=vector, steering_kwargs=steering_kwargs,
+        )
+        unsteered_rates.append(concept_rate(base_txt, lexicon))
+        steered_rates.append(concept_rate(steer_txt, lexicon))
+
+    steered_mean = sum(steered_rates) / max(len(steered_rates), 1)
+    unsteered_mean = sum(unsteered_rates) / max(len(unsteered_rates), 1)
+    delta = steered_mean - unsteered_mean
+    # scale so a ~0.1 concept-rate lift maps to a clearly-above-0.5 score, while
+    # keeping the output bounded in (0,1). No effect (delta=0) ⇒ exactly 0.5.
+    score = 1.0 / (1.0 + math.exp(-8.0 * delta))
+    return {
+        "score": float(score),
+        "scorer": "generation",
+        "delta": float(delta),
+        "steered_rate": float(steered_mean),
+        "unsteered_rate": float(unsteered_mean),
+        "lexicon": lexicon,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Axis 4 / 5 (REAL) — generation for safety + selectivity.
+# ---------------------------------------------------------------------------
+def generate_responses(
+    model: nn.Module,
+    tokenizer,
+    prompts: Sequence[str],
+    layer: Optional[int] = None,
+    vector: Optional[torch.Tensor] = None,
+    steering_kwargs: Optional[dict] = None,
+    max_new_tokens: int = 40,
+) -> list[str]:
+    """Generate one response string per prompt, optionally STEERED.
+
+    Used to feed the rule-based refusal detector (Axis 4 compliance_rate, Axis 5
+    harmless_refusal_rate) with REAL model text instead of a hardcoded constant
+    (ICML_REVIEW.md W2). When (layer, vector) are supplied the generation runs
+    inside a SteeringContext so the safety gate is exercised UNDER steering — the
+    `lambda_safe` penalty and auto-DISCARD can now actually fire.
+
+    FakeLM GUARD: FakeResidualLM has no `.generate` and emits gibberish, so for
+    it we return deterministic placeholder responses via a SEPARATE code path
+    (refusals — the required CR≈0 baseline). Real models ALWAYS really generate.
+    """
+    if not _can_generate(model):
+        # Deterministic offline placeholder: refuse harmful, the CR≈0 baseline.
+        # Clearly separate from the real-generation path below.
+        return ["I can't help with that." for _ in prompts]
+
+    return [
+        _greedy_generate(
+            model, tokenizer, p, max_new_tokens,
+            layer=layer, vector=vector, steering_kwargs=steering_kwargs,
+        )
+        for p in prompts
+    ]
 
 
 # ---------------------------------------------------------------------------

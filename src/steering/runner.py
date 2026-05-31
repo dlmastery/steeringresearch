@@ -34,6 +34,9 @@ from . import datasets as ds
 from .eval import (
     composite_fingerprint,
     evaluate_bundle,
+    generate_responses,
+    generation_behavior_scorer,
+    lexicon_from_pairs,
     mcq_accuracy,
     perplexity,
     projection_behavior_scorer,
@@ -69,19 +72,16 @@ def _special_ids(model, tokenizer) -> list[int]:
     return sorted(set(ids))
 
 
-def _fake_responses(prompts, model, tokenizer, steer_ctx_factory=None):
-    """Produce deterministic 'responses' for the offline FakeLM safety axis.
+def _is_fake_model(model, model_name: str) -> bool:
+    """True for the offline FakeResidualLM (no real generation available).
 
-    The FakeLM cannot emit English. For the OFFLINE plumbing path we synthesise a
-    refusal/compliance label from the model's logit behavior so the safety/
-    selectivity axes are exercised end-to-end: harmful prompts default to a
-    refusal string (baseline CR=0, the required 0% baseline); the steering path
-    can in principle flip this. The REAL runner (Rung 2+) generates with Gemma
-    and judges the actual text. We emit text strings the rule-based detector
-    recognises.
+    A real model (Gemma / Qwen / ...) exposes a usable HF `.generate`; FakeLM
+    does not. We key off BOTH the CLI name ("fake") and the runtime type so the
+    real-vs-fake split is unambiguous in the logged row.
     """
-    # Baseline behavior: refuse harmful prompts (compliance 0%).
-    return ["I can't help with that." for _ in prompts]
+    if model_name == "fake":
+        return True
+    return type(model).__name__.startswith("Fake") or not callable(getattr(model, "generate", None))
 
 
 def run_single_experiment(
@@ -180,12 +180,28 @@ def _run_inner(config: dict, description: str) -> dict:
         h_steer = probe_activations(model, sample_ids, [layer])[layer]
     offshell = offshell_displacement(h_base, h_steer)
 
-    # --- Axis 1: behavior efficacy (projection proxy on FakeLM) ---
+    is_fake = _is_fake_model(model, config["model"])
+
+    # --- Axis 1: behavior efficacy ---
+    # REAL models at rung>=1: generation-based concept-incorporation scorer
+    # (non-circular, ICML_REVIEW.md W1). FakeLM (or rung 0): projection proxy.
+    # generation_behavior_scorer auto-falls-back to the projection proxy when the
+    # model can't generate, and TAGS which instrument actually ran.
     behavior_prompts = [p for p, _ in pairs][:6]
     steer_kwargs = {"operation": operation, "alpha": alpha}
-    behavior_efficacy = projection_behavior_scorer(
-        model, tokenizer, vector, layer, behavior_prompts, steering_kwargs=steer_kwargs
-    )
+    if (not is_fake) and config["rung"] >= 1:
+        concept_lexicon = lexicon_from_pairs(pairs)
+        beh = generation_behavior_scorer(
+            model, tokenizer, layer, vector, behavior_prompts,
+            concept_lexicon=concept_lexicon, steering_kwargs=steer_kwargs,
+        )
+        behavior_efficacy = beh["score"]
+        behavior_scorer = beh["scorer"]  # "generation" (real) or "projection" (fell back)
+    else:
+        behavior_efficacy = projection_behavior_scorer(
+            model, tokenizer, vector, layer, behavior_prompts, steering_kwargs=steer_kwargs
+        )
+        behavior_scorer = "projection"
 
     # --- Axis 2: capability retention (tiny MCQ, steered vs unsteered) ---
     mcq = ds.load_mmlu_tiny()
@@ -205,11 +221,30 @@ def _run_inner(config: dict, description: str) -> dict:
     # repetition rate on the (synthetic) passages as a coherence stand-in
     rep = repetition_rate(passages)
 
-    # --- Axis 4/5: safety + selectivity (rule-based detector on responses) ---
+    # --- Axis 4/5: safety + selectivity (rule-based detector on REAL responses) ---
+    # ICML_REVIEW.md W2: real models GENERATE (steered) on harmful/harmless prompts
+    # so compliance_rate / harmless_refusal_rate are real measurements and the
+    # lambda_safe penalty + auto-DISCARD can actually fire. FakeLM keeps the
+    # deterministic refusal placeholder (CR≈0 baseline) via generate_responses'
+    # internal guard.
     harmful_prompts = ds.load_jailbreak_mini()
     harmless_prompts = ds.load_xstest_mini()
-    harmful_responses = _fake_responses(harmful_prompts, model, tokenizer)
-    harmless_responses = ["Sure, here is how you can do that safely." for _ in harmless_prompts]
+    if (not is_fake) and config["rung"] >= 1:
+        harmful_responses = generate_responses(
+            model, tokenizer, harmful_prompts, layer=layer, vector=vector,
+            steering_kwargs=steer_kwargs,
+        )
+        harmless_responses = generate_responses(
+            model, tokenizer, harmless_prompts, layer=layer, vector=vector,
+            steering_kwargs=steer_kwargs,
+        )
+        safety_real = True
+    else:
+        # FakeLM / rung-0 deterministic placeholder: refuse harmful (CR≈0 baseline),
+        # comply on harmless (no over-refusal). Real generation is used for real models.
+        harmful_responses = ["I can't help with that." for _ in harmful_prompts]
+        harmless_responses = ["Sure, here is how you can do that safely." for _ in harmless_prompts]
+        safety_real = False
 
     metrics = evaluate_bundle(
         behavior_efficacy=behavior_efficacy,
@@ -245,6 +280,10 @@ def _run_inner(config: dict, description: str) -> dict:
         "offshell_displacement": round(metrics["offshell_displacement"], 4),
         "fisher_at_layer": round(float(bank[layer]["fisher"]), 4),
         "cosine_dm_pca": round(float(bank[layer]["cosine_dm_pca"]), 4),
+        # instrument provenance (ICML_REVIEW.md): which scorer actually ran, so a
+        # circular-proxy or stubbed-safety row can never masquerade as a real one.
+        "behavior_scorer": behavior_scorer,   # "generation" (real) | "projection" (proxy)
+        "safety_real": safety_real,           # True iff CR came from real generations
         "composite_fingerprint": composite_fingerprint(),
         # n=1 single seed ⇒ SCREENING tier (CLAUDE.md §7: n<=3 is screening).
         "n_seeds": 1,

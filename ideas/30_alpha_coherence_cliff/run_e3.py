@@ -32,8 +32,9 @@ from steering.runner import RESULTS_DIR, run_single_experiment  # noqa: E402
 
 MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
 LAYER = 21          # max-Fisher layer from the bring-up smoke (Fisher=25.6)
-ALPHAS = [0.0, 1.0, 2.0, 4.0, 8.0, 12.0, 16.0, 24.0]
+ALPHAS = [0.0, 1.0, 2.0, 4.0, 8.0]   # focused re-run with REAL instruments
 BEHAVIOR = "ocean"  # the dominant concept axis in axbench_mini
+TAG_PREFIX = "E3real"  # generation-based behavior + real safety generation
 
 
 def _next_num() -> int:
@@ -106,7 +107,7 @@ def main() -> None:
             model_name=MODEL, rung=2, layer=LAYER, alpha=alpha,
             operation="add", source="diffmean", behavior=BEHAVIOR, seed=0,
             description=f"E3 alpha-cliff sweep on Qwen2.5-0.5B @L{LAYER}, alpha={alpha}",
-            tag=f"E3-cliff-a{alpha}", quant="none",
+            tag=f"{TAG_PREFIX}-cliff-a{alpha}", quant="none",
         )
         rows.append({
             "alpha": alpha, "exp": entry["experiment_num"],
@@ -130,7 +131,7 @@ def main() -> None:
         "base_ppl": base_ppl, "cliff_alpha": cliff, "rows": rows,
         "fingerprint": "a9001e87087e",
     }
-    (Path(__file__).resolve().parent / "e3_sweep.json").write_text(
+    (Path(__file__).resolve().parent / "e3_real_sweep.json").write_text(
         json.dumps(out, indent=2), encoding="utf-8")
     print("\n=== E3 SWEEP SUMMARY ===")
     print(f"base PPL = {base_ppl:.2f}; cliff alpha = {cliff}")
