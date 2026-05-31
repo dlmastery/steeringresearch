@@ -16,17 +16,22 @@
 > All claims price ALL five axes via the fingerprinted composite. A method that
 > wins on behavior but loses on coherence or safety is NOT an external-ready finding.
 >
-> Composite formula fingerprint: `[TO BE FILLED AFTER eval.py IS WRITTEN -- placeholder a9001e87087e]`
+> Composite formula fingerprint: `a9001e87087e`
 
 ---
 
 ## Status
 
-**No external-ready findings yet -- program initialized 2026-05-30.**
+**No EXTERNAL-READY findings yet — 59 experiments run, all SCREENING (n=1).**
 
-The research program is in the pre-experiment backbone phase. Hypothesis
-registration (IDEA_TABLE.md) and experiment infrastructure (EXPERIMENT_LEDGER.md)
-are complete. The first experiments (E1-E3 infrastructure block) have not yet run.
+Experiments exp#1–59 have run on real Gemma-3-270m / Gemma-3-1b and Qwen-2.5-0.5b
+(see EXPERIMENT_LEDGER.md). They produced **eight screening observations (S-1…S-8
+below)** spanning E2/E3/E4/E27/N5/N16/N17/N20. **None has cleared the rung-3
+evaluation gate** (n≥7 + paired Wilcoxon + bootstrap CI + Holm-Bonferroni +
+prompting baseline + real AxBench/judge), so by the program's own rigor floor
+there are **zero external-ready findings**. The screening observations below
+motivate the required experiments (enumerated at the bottom) — they are NOT
+citable claims.
 
 ---
 
