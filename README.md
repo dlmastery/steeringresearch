@@ -34,3 +34,24 @@ python -m steering.runner --help # the single-experiment executor
 Start with `meta-skills/autoresearch-meta/SKILL.md` (the process spine), then
 `IDEA_TABLE.md` (where the program is). All inherited corpus numbers are
 `[NEEDS VERIFICATION]` until reproduced on the 4090 ladder.
+
+## Docs, paper, and verification
+
+| link | what |
+|---|---|
+| `docs/index.html` | GitHub-Pages landing page → dashboard, paper, findings, audits |
+| `docs/dashboard/index.html` | the live multi-page dashboard (master + per-hypothesis + per-experiment) |
+| `paper/PAPER.md` | honest ICML-format methods / harness / **n=1 screening** draft (no overclaiming) |
+| `FINDINGS.md` | rigor-gated findings (currently zero external-ready; S-1..S-4 are screening-only) |
+| `audits/RUBRICS.md` | the scoreable PASS/FAIL rubrics A–E |
+
+Status: **methodology + harness + n=1 screening; external steering claims are gated**
+on the required experiments enumerated in the paper and `FINDINGS.md`. Composite
+formula fingerprint `a9001e87087e`.
+
+Verify mechanically:
+
+```bash
+python scripts/verify_dashboard.py   # Rubric B (dashboard) — PASS/FAIL table
+python scripts/verify_rubrics.py      # Rubrics A/C/D — scorecard (ruff+mypy+pytest+secrets+fingerprint)
+```

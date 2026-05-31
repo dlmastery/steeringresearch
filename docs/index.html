@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Steering Autoresearch &mdash; methods, harness &amp; screening</title>
+<style>
+  :root{
+    --ink:#1a1a1a; --muted:#555; --line:#d8d4cc; --bg:#faf8f4;
+    --panel:#fffdf9; --accent:#5b4636; --warn:#7a4a00; --warnbg:#fdf3e2;
+    --ok:#2f5d3a; --chip:#eee8dc;
+  }
+  *{box-sizing:border-box}
+  html{font-size:17px}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Times New Roman",serif;
+    line-height:1.55;
+  }
+  .wrap{max-width:860px; margin:0 auto; padding:2.4rem 1.4rem 4rem}
+  header h1{font-size:2rem; line-height:1.2; margin:0 0 .3rem}
+  header .sub{color:var(--muted); font-size:1.02rem; margin:0 0 1.2rem}
+  code,.mono{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace; font-size:.86em}
+  .fingerprint{background:var(--chip); padding:.12rem .4rem; border-radius:3px}
+  .banner{
+    background:var(--warnbg); border:1px solid #e6cfa3; border-left:5px solid var(--warn);
+    color:var(--warn); padding:.9rem 1.1rem; border-radius:5px; margin:1.4rem 0; font-size:.98rem;
+  }
+  .banner strong{color:#5c3800}
+  h2{font-size:1.28rem; border-bottom:1px solid var(--line); padding-bottom:.3rem; margin:2.2rem 0 .9rem}
+  ul.what{list-style:none; padding:0; margin:1rem 0}
+  ul.what li{padding:.55rem 0 .55rem 1.7rem; position:relative; border-bottom:1px dotted var(--line)}
+  ul.what li:before{content:"\25B8"; position:absolute; left:.2rem; color:var(--accent)}
+  ul.what li:last-child{border-bottom:none}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:.9rem; margin:1rem 0}
+  a.card{
+    display:block; text-decoration:none; color:var(--ink);
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:.95rem 1.05rem; transition:border-color .12s, box-shadow .12s;
+  }
+  a.card:hover{border-color:var(--accent); box-shadow:0 1px 6px rgba(0,0,0,.06)}
+  a.card .t{font-weight:600; font-size:1.04rem; display:block; margin-bottom:.2rem}
+  a.card .d{color:var(--muted); font-size:.9rem}
+  a.card .t:after{content:" \2192"; color:var(--accent)}
+  .chips{margin:.6rem 0 0}
+  .chip{display:inline-block; background:var(--chip); color:var(--accent); font-size:.78rem;
+        padding:.12rem .5rem; border-radius:10px; margin:.15rem .3rem .15rem 0}
+  table{border-collapse:collapse; width:100%; margin:1rem 0; font-size:.92rem}
+  th,td{border:1px solid var(--line); padding:.45rem .6rem; text-align:left; vertical-align:top}
+  th{background:var(--chip)}
+  p{margin:.7rem 0}
+  .muted{color:var(--muted)}
+  footer{margin-top:3rem; padding-top:1rem; border-top:1px solid var(--line);
+          color:var(--muted); font-size:.86rem}
+  .ok{color:var(--ok)}
+  a.inline{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Activation-Steering Autoresearch</h1>
+  <p class="sub">A pre-registered, ladder-bound research harness for conditional /
+  activation steering of small language models &mdash; with a Goodhart-resistant,
+  fingerprinted multi-objective composite and a fully transparent multi-page dashboard.</p>
+</header>
+
+<div class="banner">
+  <strong>Status: methodology + harness + n=1 screening. External claims are gated.</strong><br>
+  Every quantitative result here is <strong>SCREENING (n=1)</strong>, on synthetic
+  mini-datasets, a single behavior, no calibrated judge, on sub-0.5B models
+  (Gemma-3-270m-it / Qwen2.5-0.5B). They establish mechanism <em>direction</em>, never
+  magnitude. No result has cleared the rigor contract (n&ge;7 + paired Wilcoxon +
+  bootstrap CI + Holm-Bonferroni + ordinal gate), so <strong>no external steering claim
+  is made</strong>. Composite formula fingerprint:
+  <span class="fingerprint mono">a9001e87087e</span>.
+</div>
+
+<h2>What this is</h2>
+<ul class="what">
+  <li><strong>A reproducible harness, not a steering-claims paper.</strong> The
+  contribution is the autoresearch process &mdash; a single-axis champion loop over a
+  12-axis intervention taxonomy, a five-rung cost-ordered benchmark ladder, and a 7-step
+  Diagnose&rarr;Cite&rarr;Hypothesize&rarr;Predict&rarr;Execute&rarr;Analyse&rarr;Checkpoint ritual
+  whose pre-run fields are mechanically gated against placeholders.</li>
+  <li><strong>A Goodhart-resistant, fingerprinted composite.</strong> One metric prices
+  all five axes (behavior, capability, coherence, safety, selectivity) with one-sided
+  penalties, so a gibberish-but-&ldquo;safe&rdquo; run cannot win &mdash; the coherence
+  tax dominates. The frozen formula's SHA-256[:12] fingerprint
+  (<span class="fingerprint mono">a9001e87087e</span>) appears in every reasoning entry,
+  ledger row, and dashboard footer.</li>
+  <li><strong>Honest measurement validity.</strong> An internal ICML-area-chair review
+  caught a <em>circular</em> projection-of-the-edit-onto-itself behavior proxy and a
+  <em>hardcoded-constant</em> safety axis; both were replaced with non-circular
+  generation-based instruments, which revealed behavior is non-monotonic in &alpha; and
+  that steering measurably degrades refusal.</li>
+  <li><strong>Three directional screening observations.</strong> A super-linear
+  coherence cliff predicted by a cheap behavior-free geometry probe (N17); cross-model
+  DiffMean&asymp;PCA-top-1 alignment (E4, cos&asymp;0.994&ndash;0.996); and
+  scale-dependent fragility (E27, the 270m model leaves the manifold earlier and harder
+  than the 0.5B model). All n=1, all gated.</li>
+</ul>
+
+<h2>Explore</h2>
+<div class="grid">
+  <a class="card" href="dashboard/index.html">
+    <span class="t">Live dashboard</span>
+    <span class="d">Sortable runs table, 5-axis radar, Pareto + stack/compete panels,
+    ladder board, geometry probes, and per-experiment drill-downs.</span>
+  </a>
+  <a class="card" href="../paper/PAPER.md">
+    <span class="t">The paper</span>
+    <span class="d">Honest ICML-format methods / harness / screening-results draft.
+    Limitations are central; required experiments enumerated.</span>
+  </a>
+  <a class="card" href="../FINDINGS.md">
+    <span class="t">FINDINGS</span>
+    <span class="d">Rigor-gated. Currently zero external-ready findings; the S-1..S-4
+    screening observations are clearly separated as non-claims.</span>
+  </a>
+  <a class="card" href="../audits/RUBRICS.md">
+    <span class="t">Verification rubrics</span>
+    <span class="d">Scoreable PASS/FAIL rubrics A&ndash;E, checked by
+    <span class="mono">scripts/verify_rubrics.py</span> and
+    <span class="mono">scripts/verify_dashboard.py</span>.</span>
+  </a>
+  <a class="card" href="../audits/ICML_REVIEW.md">
+    <span class="t">ICML area-chair review</span>
+    <span class="d">The hostile-but-fair internal review whose cruxes (W1 circular
+    proxy, W2 stubbed safety) drove the instrument fixes.</span>
+  </a>
+  <a class="card" href="../EXPERIMENT_LEDGER.md">
+    <span class="t">Experiment ledger</span>
+    <span class="d">Append-only promotion/demotion log: every run, five axes, geometry
+    columns, verdict, failure_reason (exp#1&ndash;19).</span>
+  </a>
+  <a class="card" href="../audits/CODE_QUALITY.md">
+    <span class="t">Code-quality audit</span>
+    <span class="d">Elite SWE pass on <span class="mono">src/steering/</span>: ruff +
+    mypy clean, 46 tests, the load-once / OOM and hook-mask fixes.</span>
+  </a>
+  <a class="card" href="../audits/META_PROCESS_AUDIT.md">
+    <span class="t">Meta-process audit</span>
+    <span class="d">Faithful-reproduction review of the domain-agnostic
+    <span class="mono">meta-skills/</span> pack against the dashboard mandate.</span>
+  </a>
+  <a class="card" href="../README.md">
+    <span class="t">Repository</span>
+    <span class="d">Layout, quickstart, the constitution
+    (<span class="mono">CLAUDE.md</span>) and the inner loop
+    (<span class="mono">AUTORESEARCH_PROCESS.md</span>).</span>
+  </a>
+</div>
+
+<h2>Screening snapshot</h2>
+<p class="muted">Directional only. n=1, synthetic mini-data, single behavior ("ocean"),
+no calibrated judge. Confidence intervals are deliberately withheld &mdash; n=1 cannot
+support them. See the
+<a class="inline" href="../ideas/30_alpha_coherence_cliff/results.md">E3 results</a> and
+the <a class="inline" href="../EXPERIMENT_LEDGER.md">ledger</a>.</p>
+<table>
+  <thead><tr><th>Observation</th><th>Model(s)</th><th>Screening signal (n=1)</th><th>Gate to external</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>E3 / N17 &mdash; coherence cliff</td>
+      <td>Gemma-3-270m, Qwen-0.5B</td>
+      <td>Super-linear PPL with knee at &alpha;&asymp;1&ndash;2; off-shell &Delta;&#8214;h&#8214; tracks PPL in lockstep.</td>
+      <td>real generation + real safety + n&ge;7 + prompting baseline + Gemma-2-2B</td>
+    </tr>
+    <tr>
+      <td>E4 &mdash; DiffMean&asymp;PCA</td>
+      <td>Gemma-3-270m (0.994), Qwen-0.5B (0.996)</td>
+      <td>cos(DiffMean, PCA-top-1) &gt; 0.95 at max-Fisher layer, both architectures.</td>
+      <td>n&ge;7, multiple behaviors, Gemma reproduction</td>
+    </tr>
+    <tr>
+      <td>E27 &mdash; scale fragility</td>
+      <td>Gemma-3-270m vs Qwen-0.5B</td>
+      <td>270m cliff at &alpha;&asymp;1 (vs &asymp;2); behavior never improves (0.50&rarr;0.22 monotone).</td>
+      <td>multi-scale (incl. 2B/9B), n&ge;7, real benchmarks</td>
+    </tr>
+    <tr>
+      <td>Safety (Rogue-Scalpel direction)</td>
+      <td>both</td>
+      <td>Real compliance rate rises with &alpha; (0.30&rarr;1.00 Qwen; 0.80&rarr;1.00 Gemma).</td>
+      <td>real JailbreakBench + XSTest + calibrated judge</td>
+    </tr>
+  </tbody>
+</table>
+
+<footer>
+  <p>Composite formula fingerprint <span class="fingerprint mono">a9001e87087e</span>
+  (SHA-256[:12] of the frozen formula in <span class="mono">src/steering/eval.py</span>).
+  Self-contained page (no CDN, no JS framework).</p>
+  <p><strong>Internal QA pass &mdash; independent external review pending.</strong>
+  This program is authored, implemented, and audited largely by agents sharing one model
+  family; per its own circularity-disclosure rule, all internal verdicts are a useful
+  filter, not an external seal of approval.</p>
+</footer>
+
+</div>
+</body>
+</html>
