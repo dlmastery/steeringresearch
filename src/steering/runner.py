@@ -166,14 +166,23 @@ def _run_inner(config: dict, description: str) -> dict:
     n_layers = len(get_residual_layers(model))
 
     # --- Extraction (cache once, reuse) ---
-    pairs = ds.load_axbench_mini()
+    # Concept-aware: --behavior names a distinct concept (ocean/happiness/anger/
+    # formality) ⇒ extract THAT concept's contrast vectors (enables cross-behavior
+    # generalization, addressing the single-behavior limitation). Otherwise fall
+    # back to the original single-concept axbench_mini. The cache key includes the
+    # pair content, so different concepts get distinct caches automatically.
+    beh = config.get("behavior", "ocean")
+    try:
+        pairs = ds.load_concept(beh) if beh in ds.list_concepts() else ds.load_axbench_mini()
+    except Exception:
+        pairs = ds.load_axbench_mini()
     cache_dir = RESULTS_DIR / "act_cache"
     bank = extract_bank(
         model,
         tokenizer,
         pairs,
         cache_dir=cache_dir,
-        model_tag=str(config["model"]),
+        model_tag=f"{config['model']}__{beh}",
         quant=str(quant),
     )
 
