@@ -146,6 +146,17 @@ threshold) — moderately, not extremely, sparse. n=1. See `ideas/_campaigns/E28
 
 ---
 
+**S-14 (E22 SUPPORTED; E18 partial — SCREENING).** Stacking the 4 concept
+vectors @L16 gemma-270m. E22 norm-budget: scaling the total stacked α, real-ish
+PPL collapses super-linearly (138→182→410→4518 for α=0.05→0.4) — the coherence
+cliff applies to the CUMULATIVE displacement of the stack (consistent with N5).
+E18 interference: stacking N=1..4 retains 100/86/85/94% mean behavior (multi-vector
+composition works, >85%), BUT retention is NON-monotone in Gram off-diagonal mass
+(0→0.37→1.80→3.07) — so E18's strict 'interference ∝ Gram mass' is not cleanly
+supported. n=1. See `ideas/_campaigns/E18_E22.json`.
+
+---
+
 ## Rung-3 evaluation attempt (real WikiText, held-out)
 
 **R3-1 (N17 monotone SUPPORTED on real data; N5 universal-law FALSIFIED across scale).**
