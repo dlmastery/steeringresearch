@@ -115,6 +115,17 @@ and architecture-robust. n=1/concept.
 
 ---
 
+**S-11 (E3 cliff cross-behavior SUPPORTED; N17 is an α-sweep law, SCREENING).**
+Relative cliff on 4 concepts @L16 gemma-270m (C11): PPL rises with α for EVERY
+behavior (90→293 anger, →602 formality, →246 happiness, →370 ocean) — the
+coherence cliff (E3) is general, not ocean-specific. Behavior efficacy is
+concept-dependent (anger 0.77 > happiness 0.63 > ocean/formality 0.53 @α=0.1:
+concrete emotions steer stronger). Pooled cross-behavior-at-fixed-α N17 is weak
+(Spearman +0.17, n=8) — confirming N17 is primarily an **α-sweep** relationship
+(off-shell predicts PPL as you scale α within a config), not a cross-behavior law.
+
+---
+
 ## Rung-3 evaluation attempt (real WikiText, held-out)
 
 **R3-1 (N17 monotone SUPPORTED on real data; N5 universal-law FALSIFIED across scale).**
