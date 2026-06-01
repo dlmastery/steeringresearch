@@ -76,3 +76,16 @@ def load_all() -> dict:
         "jailbreak_mini": load_jailbreak_mini(),
         "xstest_mini": load_xstest_mini(),
     }
+
+
+def load_wikitext2_real():
+    """Real WikiText-2 test passages (40, >120 chars) for rigorous perplexity.
+
+    Replaces the synthetic wikitext_ppl_mini for the rung-3 N17/N5 escalation —
+    real held-out English prose is required before any external coherence claim.
+    Source: Salesforce/wikitext, wikitext-2-raw-v1 test split (CC-BY-SA).
+    """
+    import json as _json
+    from pathlib import Path as _P
+    p = _P(__file__).parent / "data" / "wikitext2_real.json"
+    return _json.loads(p.read_text(encoding="utf-8"))
