@@ -76,9 +76,9 @@ RESULTS_DIR = REPO_ROOT / "autoresearch_results"
 # Project doc / hosting URLs (mast-pill CTAs + footer cross-links).
 REPO_URL = "https://github.com/dlmastery/steeringresearch"
 PAGES_URL = "https://dlmastery.github.io/steeringresearch/"
-PAPER_URL = REPO_URL + "/blob/main/paper/PAPER.md"
-FINDINGS_URL = REPO_URL + "/blob/main/FINDINGS.md"
-IDEATABLE_URL = REPO_URL + "/blob/main/IDEA_TABLE.md"
+PAPER_URL = REPO_URL + "/blob/master/paper/PAPER.md"
+FINDINGS_URL = REPO_URL + "/blob/master/FINDINGS.md"
+IDEATABLE_URL = REPO_URL + "/blob/master/IDEA_TABLE.md"
 FINGERPRINT = composite_fingerprint()
 
 # ---------------------------------------------------------------------------
@@ -2169,7 +2169,7 @@ def render_master(rows: list[dict], table: dict[str, dict],
     # ---- PANE: RAW ----
     parts.append('<div class="tab-pane" id="pane-raw">\n')
     parts.append('<h2 style="margin-top:18px">Raw experiment-log rows</h2>\n')
-    raw_src = (f'<a href="{REPO_URL}/blob/main/autoresearch_results/'
+    raw_src = (f'<a href="{REPO_URL}/blob/master/autoresearch_results/'
                'experiment_log.jsonl" target="_blank" rel="noopener">'
                'autoresearch_results/experiment_log.jsonl</a>')
     PREVIEW = 12
