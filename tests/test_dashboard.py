@@ -449,3 +449,58 @@ def test_hillclimb_tier_populates_with_hc_rows(tmp_path):
     e3 = (tmp_path / "docs" / "dashboard" / "hyp" / "E3.html").read_text(encoding="utf-8")
     assert "Best hill-climb config" in e3, "resolved hypothesis page must show the HC tier"
     assert "No hill-climb runs yet" not in e3
+
+
+# ---------------------------------------------------------------------------
+# Newcomer UX (the 5 fixes): grounding intro, per-tab intros, methodology
+# open-by-default, the always-visible verdict/run legends, and tab-scroll.
+# ---------------------------------------------------------------------------
+def test_master_newcomer_ux_fixes(tmp_path):
+    _root, master = _build(tmp_path)
+    text = master.read_text(encoding="utf-8")
+
+    # Fix #3 — prominent grounding intro card explaining the field + goal.
+    assert 'class="grounding"' in text, "newcomer grounding intro card must render"
+    assert "What is this? — activation steering, in plain terms" in text, \
+        "grounding card must carry its plain-terms title"
+    assert "activation steering" in text, \
+        "grounding card must explain activation steering in plain terms"
+    # grounded specifics: residual stream, CAST conditioning, Rogue Scalpel, goal.
+    assert "residual stream" in text
+    assert "Rogue Scalpel" in text
+    for model in ("gemma-3-270m", "gemma-3-1b"):
+        assert model in text, f"grounding goal must name {model}"
+
+    # Fix #4 — every tab-pane carries a leading .tab-intro context paragraph.
+    assert text.count('class="tab-intro"') >= 6, \
+        "each of the six panes must carry a .tab-intro intro block"
+    for pane in ("pane-runs", "pane-methodology", "pane-geometry",
+                 "pane-ladder", "pane-hypotheses", "pane-raw"):
+        seg = text.split(f'id="{pane}"', 1)[1][:1500]
+        assert 'class="tab-intro"' in seg, f"{pane} must open with a .tab-intro block"
+
+    # Fix #2 — methodology PANE <details class="method"> are open by default.
+    assert '<details class="method" open>' in text, \
+        "methodology sub-sections must be open by default"
+    assert text.count('<details class="method">') == 0, \
+        "no methodology sub-section may render closed"
+
+    # Fix #5 — prominent always-visible legends for BOTH coding schemes.
+    assert 'id="verdict-legend"' in text, "verdict legend must render"
+    for lbl in ("SUPPORTED", "FALSIFIED", "PARTIAL / DIRECTIONAL",
+                "INCONCLUSIVE", "PENDING / UNTESTED"):
+        assert lbl in text, f"verdict legend must list {lbl}"
+    # the legend uses the real verdict colour classes
+    for cls in ("v-supported", "v-falsified", "v-directional",
+                "v-inconclusive", "v-pending"):
+        assert cls in text
+    assert 'id="runs-legend"' in text, "runs colour-coding legend must render"
+    assert "KEEP" in text and "DISCARD" in text, \
+        "runs legend must explain KEEP vs DISCARD"
+    assert "blow-up" in text, \
+        "runs legend must explain that a negative composite (red) is a blow-up"
+
+    # Fix #1 — showTab scrolls the tab bar into view after switching panes.
+    assert "scrollIntoView" in text, "showTab must scroll the tab bar into view"
+    assert 'getElementById("tabbar")' in text, \
+        "showTab must target the tab bar element for the scroll"

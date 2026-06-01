@@ -188,6 +188,48 @@ SHARED_CSS = r"""
                          border-radius:3px;font-family:'IBM Plex Mono',monospace;
                          font-size:0.82em;font-weight:600;letter-spacing:0.04em;}
  @media(max-width:880px){.how-to-read ul{grid-template-columns:1fr;}}
+ /* grounding intro card (newcomer orientation, before the KPI ribbon) */
+ .grounding{background:var(--panel);border:1px solid var(--rule);
+            border-left:3px solid var(--accent);padding:20px 26px;
+            margin:18px 0 22px;font-family:'Source Serif 4',Georgia,serif;
+            line-height:1.62;}
+ .grounding h2{font-family:'IBM Plex Mono',monospace;font-size:12px;
+               text-transform:uppercase;letter-spacing:0.16em;
+               color:var(--accent);margin:0 0 12px 0;}
+ .grounding p{margin:0 0 11px;font-size:14.5px;color:var(--paper);}
+ .grounding p:last-child{margin-bottom:0;}
+ .grounding b{color:var(--paper);font-weight:600;}
+ .grounding code{background:var(--ink);padding:1px 5px;
+                 font-family:'IBM Plex Mono',monospace;font-size:0.86em;
+                 border:1px solid var(--rule);}
+ /* per-tab leading intro (what this tab shows + how to use it) */
+ .tab-intro{background:var(--panel);border:1px solid var(--rule);
+            border-left:2px solid var(--accent);padding:13px 20px;
+            margin:14px 0 16px;font-family:'Source Serif 4',Georgia,serif;
+            font-size:13.5px;line-height:1.55;color:var(--paper);}
+ .tab-intro b{color:var(--paper);font-weight:600;}
+ .tab-intro code{background:var(--ink);padding:1px 5px;
+                 font-family:'IBM Plex Mono',monospace;font-size:0.86em;
+                 border:1px solid var(--rule);}
+ /* prominent always-visible legend (verdict + run colour coding) */
+ .legend{background:var(--panel);border:1px solid var(--rule);
+         padding:11px 16px;margin:12px 0 16px;}
+ .legend .legend-title{font-family:'IBM Plex Mono',monospace;font-size:9.5px;
+                       text-transform:uppercase;letter-spacing:0.16em;
+                       color:var(--paper-dim);margin:0 8px 8px 0;display:block;}
+ .legend .chips{display:flex;flex-wrap:wrap;gap:7px 9px;align-items:center;}
+ .legend .lchip{display:inline-flex;align-items:center;gap:6px;
+                font-family:'IBM Plex Mono',monospace;font-size:11px;
+                color:var(--paper);padding:2px 8px 2px 4px;
+                border:1px solid var(--rule-bright);background:var(--ink);}
+ .legend .lchip .sw{display:inline-block;width:13px;height:13px;
+                    border:1px solid var(--rule-bright);}
+ .legend .lchip.txt{padding-left:8px;}
+ .legend .lchip .sw.keep{background:var(--v-pass);}
+ .legend .lchip .sw.discard{background:var(--v-broken);}
+ .legend .lchip .sw.negc{background:var(--v-broken);}
+ .legend .lchip .sw.scr{background:var(--v-minor);}
+ .legend .lchip .sw.eval{background:var(--v-pass);}
  /* headline ribbon */
  .headline-ribbon{background:var(--panel);border:1px solid var(--rule);
                   border-left:2px solid var(--accent);padding:18px 24px;
@@ -1911,6 +1953,7 @@ SORT_SCRIPT = r"""
     });
     var pane = document.getElementById(paneId);
     if (pane) pane.classList.add("active");
+    var tb=document.getElementById("tabbar"); if(tb) tb.scrollIntoView({behavior:"smooth",block:"start"});
     return false;
   };
   function initTabs() {
@@ -2309,7 +2352,9 @@ def _methodology_pane() -> str:
         'constitution), <code>AUTORESEARCH_PROCESS.md</code>, '
         '<code>FINDINGS.md</code>, and the corpus.</div>\n')
     for label, tag, is_open, body in _METHODOLOGY_SECTIONS:
-        op = " open" if is_open else ""
+        # All Methodology PANE sub-sections open by default (newcomer-friendly);
+        # the per-table "interpret" blocks elsewhere remain collapsed.
+        op = " open"
         out.append(
             f'<details class="method"{op}>\n'
             f'  <summary>{_esc(label)}'
@@ -2317,6 +2362,118 @@ def _methodology_pane() -> str:
             f'  <div class="md-body">{md_to_html(body)}</div>\n'
             f'</details>\n')
     return "".join(out)
+
+
+# Grounding intro for newcomers — what steering is, why it matters, what THIS
+# project is + its goal. Grounded in CLAUDE.md (North Star, Rogue Scalpel,
+# models, ladder, composite, screening status) and the corpus.
+_GROUNDING_INTRO = (
+    '<section class="grounding">\n'
+    '  <h2>What is this? — activation steering, in plain terms</h2>\n'
+    '  <p><b>What steering is.</b> At inference time you <b>add a direction '
+    'vector</b> to a transformer\'s <b>residual stream</b> (its hidden state) to '
+    'change the model\'s behavior — to make it more truthful, refuse harmful '
+    'requests, or adopt a persona — <b>without retraining the weights</b>. '
+    '"Activation steering" means editing activations, not weights. '
+    '"Conditional steering" (CAST) applies the edit <b>only when the input '
+    'matches a condition</b> (e.g. only refuse when the prompt is harmful), '
+    'detected by a read-only probe.</p>\n'
+    '  <p><b>Why it matters.</b> It is cheap, training-free, interpretable '
+    'control of LLM behavior — central to AI <b>safety</b> (refusal, honesty) '
+    'and <b>capability</b> (truthfulness, style). The catch (the '
+    '<b>"Rogue Scalpel"</b>): naive steering silently breaks coherence and '
+    'safety by pushing activations <b>off the data manifold</b>, so every '
+    'result here is priced against a coherence / safety penalty.</p>\n'
+    '  <p><b>What this project is &amp; its goal.</b> An <b>autonomous AI '
+    'research program</b> (Claude-Code-driven) that aims to <b>reproduce and '
+    'push the state of the art in conditional / activation steering on small '
+    'Gemma models</b> (<code>gemma-3-270m</code> / <code>gemma-3-1b</code>) on a '
+    'single <b>RTX 4090</b>, with publication-grade rigor — forming <b>70 '
+    'falsifiable hypotheses</b>, screening them on a <b>CIFAR-style ladder</b>, '
+    'pricing every result with a <b>Goodhart-resistant composite</b>, and '
+    'publishing the whole evidence trail here. Honest status: <b>n=1 '
+    'SCREENING</b> plus one rung-3 evaluation; external claims are gated.</p>\n'
+    '</section>\n')
+
+
+# Per-tab leading intros (fix #4): what each tab shows + how to use it.
+TAB_INTRO_RUNS = (
+    '<div class="tab-intro"><b>Runs.</b> Every experiment, grouped by campaign. '
+    'Each row <b>prices all five axes</b> (behavior, capability, coherence, '
+    'safety, selectivity) into the single fingerprinted <b>composite</b>; '
+    '<b>click a row</b> to open its full reasoning page (diagnosis, citations, '
+    'config, per-axis metrics, geometry, samples). The columns and colour '
+    'coding are explained in the legend and the "how to read" block below.</div>\n')
+TAB_INTRO_GEOMETRY = (
+    '<div class="tab-intro"><b>Geometry.</b> The behavior-<b>free</b> leading '
+    'indicators — off-shell <code>&Delta;&#8741;h&#8741;</code>, angular '
+    'displacement <code>(1&minus;cos)</code>, and effective rank — that '
+    '<b>predict the coherence cliff before you even score behavior</b>. This is '
+    'where the program\'s strongest result (<b>N17</b>: off-shell displacement '
+    'governs the PPL blow-up) lives.</div>\n')
+TAB_INTRO_LADDER = (
+    '<div class="tab-intro"><b>Ladder.</b> The CIFAR-style promotion ladder '
+    '(<code>UNIT &rarr; SMOKE &rarr; DEV &rarr; STANDARD &rarr; FULL</code>): a '
+    'method must clear each rung\'s gate before spending the next rung\'s '
+    'compute. Below it, the <b>stack / compete matrix</b> shows which method '
+    'families <b>compose</b> versus <b>interfere</b>.</div>\n')
+TAB_INTRO_HYPOTHESES = (
+    '<div class="tab-intro"><b>Hypotheses.</b> The <b>70-hypothesis registry</b> '
+    'as a verdict-coloured grid and table (E1&ndash;E50 in blocks A&ndash;F, then '
+    'N1&ndash;N20). <b>Click any cell or row</b> to open that hypothesis\'s '
+    'design doc plus its experiment evidence. The verdict colours are in the '
+    'legend just below.</div>\n')
+TAB_INTRO_RAW = (
+    '<div class="tab-intro"><b>Raw.</b> The underlying '
+    '<code>experiment_log.jsonl</code> rows (one slimmed JSON object per '
+    'experiment) for <b>full transparency and reproducibility</b> — the '
+    'append-only source of truth behind every other surface here.</div>\n')
+TAB_INTRO_METHODOLOGY = (
+    '<div class="tab-intro"><b>Methodology.</b> An expandable <b>primer on the '
+    'whole research method</b>: the five measurement axes, the fingerprinted '
+    'composite, the five-rung ladder, the 7-step ritual, the rigor floor, the '
+    '12-axis taxonomy, and how to read every surface here.</div>\n')
+
+
+def _verdict_legend_html() -> str:
+    """Prominent, always-visible legend for the hypothesis verdict colours
+    (fix #5). Reuses the .v-* swatch classes so the chips show the real colours."""
+    chips = [
+        ("v-supported", "SUPPORTED"),
+        ("v-falsified", "FALSIFIED"),
+        ("v-directional", "PARTIAL / DIRECTIONAL"),
+        ("v-inconclusive", "INCONCLUSIVE"),
+        ("v-pending", "PENDING / UNTESTED"),
+    ]
+    out = ['<div class="legend" id="verdict-legend">\n'
+           '  <span class="legend-title">Hypothesis verdicts</span>\n'
+           '  <div class="chips">\n']
+    for cls, lbl in chips:
+        out.append(f'    <span class="lchip"><span class="sw {cls}"></span>'
+                   f'{lbl}</span>\n')
+    out.append('  </div>\n</div>\n')
+    return "".join(out)
+
+
+def _runs_legend_html() -> str:
+    """Prominent, always-visible legend for the run-row colour coding (fix #5):
+    KEEP vs DISCARD, negative composite = red blow-up, and the n=X tier chip."""
+    return (
+        '<div class="legend" id="runs-legend">\n'
+        '  <span class="legend-title">Run row colour coding</span>\n'
+        '  <div class="chips">\n'
+        '    <span class="lchip"><span class="sw keep"></span>KEEP '
+        '(champion-worthy)</span>\n'
+        '    <span class="lchip"><span class="sw discard"></span>DISCARD '
+        '(not champion)</span>\n'
+        '    <span class="lchip"><span class="sw negc"></span>negative '
+        'composite = red (coherence / safety blow-up)</span>\n'
+        '    <span class="lchip txt">'
+        '<span class="n-chip scr" style="margin-left:0">SCREENING n&le;3</span>'
+        '&nbsp;vs&nbsp;'
+        '<span class="n-chip eval" style="margin-left:0">EVALUATION n&ge;7</span>'
+        '</span>\n'
+        '  </div>\n</div>\n')
 
 
 def render_master(rows: list[dict], table: dict[str, dict],
@@ -2459,6 +2616,7 @@ def render_master(rows: list[dict], table: dict[str, dict],
         '<div class="sub">LLM activation-steering autoresearch &middot; '
         f'{len(flat)} experiments &middot; {len([g for g in grouped if grouped[g]])} '
         'campaigns &middot; 70 hypotheses &middot; internal QA</div>\n')
+    parts.append(_GROUNDING_INTRO)
     parts.append(_mast_row())
     parts.append(
         f'<div class="formula-chip"><b>composite</b> &#8788; '
@@ -2573,10 +2731,12 @@ def render_master(rows: list[dict], table: dict[str, dict],
     # ---- PANE: RUNS (default) ----
     hc_rows = [r for r in flat if is_hillclimb(r)]
     parts.append('<div class="tab-pane active" id="pane-runs">\n')
+    parts.append(TAB_INTRO_RUNS)
     parts.append(
         '<h2 style="margin-top:18px">Runs by campaign '
         '<span class="sub" style="display:inline">filter, sort, or auto-expand a '
         'row</span></h2>\n')
+    parts.append(_runs_legend_html())
     # rich filter bar (regex + model dropdown + toggle pills + auto-expand)
     parts.append(
         '<div class="toolbar" id="runs-toolbar">\n'
@@ -2645,11 +2805,13 @@ def render_master(rows: list[dict], table: dict[str, dict],
 
     # ---- PANE: METHODOLOGY ----
     parts.append('<div class="tab-pane" id="pane-methodology">\n')
+    parts.append(TAB_INTRO_METHODOLOGY)
     parts.append(_methodology_pane())
     parts.append('</div>\n')  # end pane-methodology
 
     # ---- PANE: GEOMETRY ----
     parts.append('<div class="tab-pane" id="pane-geometry">\n')
+    parts.append(TAB_INTRO_GEOMETRY)
     parts.append('<h2 style="margin-top:18px">Geometry</h2>\n')
     parts.append(card("plot_geometry.png", "Geometry probes",
         "Off-shell displacement, angular displacement, and Fisher ratio per experiment.", wide=True,
@@ -2659,6 +2821,7 @@ def render_master(rows: list[dict], table: dict[str, dict],
 
     # ---- PANE: LADDER ----
     parts.append('<div class="tab-pane" id="pane-ladder">\n')
+    parts.append(TAB_INTRO_LADDER)
     parts.append('<h2 style="margin-top:18px">Ladder board</h2>\n')
     ladder_rows = "".join(
         f'<tr><td class="l">{_esc(L["tag"])}</td>'
@@ -2681,6 +2844,8 @@ def render_master(rows: list[dict], table: dict[str, dict],
 
     # ---- PANE: HYPOTHESES ----
     parts.append('<div class="tab-pane" id="pane-hypotheses">\n')
+    parts.append(TAB_INTRO_HYPOTHESES)
+    parts.append(_verdict_legend_html())
     parts.append(
         '<section class="card panel-2col" style="margin-top:18px">\n'
         '  <h2>Hypothesis status grid</h2>\n'
@@ -2712,6 +2877,7 @@ def render_master(rows: list[dict], table: dict[str, dict],
 
     # ---- PANE: RAW ----
     parts.append('<div class="tab-pane" id="pane-raw">\n')
+    parts.append(TAB_INTRO_RAW)
     parts.append('<h2 style="margin-top:18px">Raw experiment-log rows</h2>\n')
     raw_src = (f'<a href="{REPO_URL}/blob/master/autoresearch_results/'
                'experiment_log.jsonl" target="_blank" rel="noopener">'

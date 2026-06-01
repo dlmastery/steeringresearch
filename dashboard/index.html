@@ -103,6 +103,48 @@
                          border-radius:3px;font-family:'IBM Plex Mono',monospace;
                          font-size:0.82em;font-weight:600;letter-spacing:0.04em;}
  @media(max-width:880px){.how-to-read ul{grid-template-columns:1fr;}}
+ /* grounding intro card (newcomer orientation, before the KPI ribbon) */
+ .grounding{background:var(--panel);border:1px solid var(--rule);
+            border-left:3px solid var(--accent);padding:20px 26px;
+            margin:18px 0 22px;font-family:'Source Serif 4',Georgia,serif;
+            line-height:1.62;}
+ .grounding h2{font-family:'IBM Plex Mono',monospace;font-size:12px;
+               text-transform:uppercase;letter-spacing:0.16em;
+               color:var(--accent);margin:0 0 12px 0;}
+ .grounding p{margin:0 0 11px;font-size:14.5px;color:var(--paper);}
+ .grounding p:last-child{margin-bottom:0;}
+ .grounding b{color:var(--paper);font-weight:600;}
+ .grounding code{background:var(--ink);padding:1px 5px;
+                 font-family:'IBM Plex Mono',monospace;font-size:0.86em;
+                 border:1px solid var(--rule);}
+ /* per-tab leading intro (what this tab shows + how to use it) */
+ .tab-intro{background:var(--panel);border:1px solid var(--rule);
+            border-left:2px solid var(--accent);padding:13px 20px;
+            margin:14px 0 16px;font-family:'Source Serif 4',Georgia,serif;
+            font-size:13.5px;line-height:1.55;color:var(--paper);}
+ .tab-intro b{color:var(--paper);font-weight:600;}
+ .tab-intro code{background:var(--ink);padding:1px 5px;
+                 font-family:'IBM Plex Mono',monospace;font-size:0.86em;
+                 border:1px solid var(--rule);}
+ /* prominent always-visible legend (verdict + run colour coding) */
+ .legend{background:var(--panel);border:1px solid var(--rule);
+         padding:11px 16px;margin:12px 0 16px;}
+ .legend .legend-title{font-family:'IBM Plex Mono',monospace;font-size:9.5px;
+                       text-transform:uppercase;letter-spacing:0.16em;
+                       color:var(--paper-dim);margin:0 8px 8px 0;display:block;}
+ .legend .chips{display:flex;flex-wrap:wrap;gap:7px 9px;align-items:center;}
+ .legend .lchip{display:inline-flex;align-items:center;gap:6px;
+                font-family:'IBM Plex Mono',monospace;font-size:11px;
+                color:var(--paper);padding:2px 8px 2px 4px;
+                border:1px solid var(--rule-bright);background:var(--ink);}
+ .legend .lchip .sw{display:inline-block;width:13px;height:13px;
+                    border:1px solid var(--rule-bright);}
+ .legend .lchip.txt{padding-left:8px;}
+ .legend .lchip .sw.keep{background:var(--v-pass);}
+ .legend .lchip .sw.discard{background:var(--v-broken);}
+ .legend .lchip .sw.negc{background:var(--v-broken);}
+ .legend .lchip .sw.scr{background:var(--v-minor);}
+ .legend .lchip .sw.eval{background:var(--v-pass);}
  /* headline ribbon */
  .headline-ribbon{background:var(--panel);border:1px solid var(--rule);
                   border-left:2px solid var(--accent);padding:18px 24px;
@@ -454,6 +496,12 @@
 <body>
 <h1>Steering Autoresearch — Master Dashboard</h1>
 <div class="sub">LLM activation-steering autoresearch &middot; 109 experiments &middot; 7 campaigns &middot; 70 hypotheses &middot; internal QA</div>
+<section class="grounding">
+  <h2>What is this? — activation steering, in plain terms</h2>
+  <p><b>What steering is.</b> At inference time you <b>add a direction vector</b> to a transformer's <b>residual stream</b> (its hidden state) to change the model's behavior — to make it more truthful, refuse harmful requests, or adopt a persona — <b>without retraining the weights</b>. "Activation steering" means editing activations, not weights. "Conditional steering" (CAST) applies the edit <b>only when the input matches a condition</b> (e.g. only refuse when the prompt is harmful), detected by a read-only probe.</p>
+  <p><b>Why it matters.</b> It is cheap, training-free, interpretable control of LLM behavior — central to AI <b>safety</b> (refusal, honesty) and <b>capability</b> (truthfulness, style). The catch (the <b>"Rogue Scalpel"</b>): naive steering silently breaks coherence and safety by pushing activations <b>off the data manifold</b>, so every result here is priced against a coherence / safety penalty.</p>
+  <p><b>What this project is &amp; its goal.</b> An <b>autonomous AI research program</b> (Claude-Code-driven) that aims to <b>reproduce and push the state of the art in conditional / activation steering on small Gemma models</b> (<code>gemma-3-270m</code> / <code>gemma-3-1b</code>) on a single <b>RTX 4090</b>, with publication-grade rigor — forming <b>70 falsifiable hypotheses</b>, screening them on a <b>CIFAR-style ladder</b>, pricing every result with a <b>Goodhart-resistant composite</b>, and publishing the whole evidence trail here. Honest status: <b>n=1 SCREENING</b> plus one rung-3 evaluation; external claims are gated.</p>
+</section>
 <div class="mast-row"><a class="mast-pill repo" href="https://github.com/dlmastery/steeringresearch" target="_blank" rel="noopener">source &middot; dlmastery/steeringresearch</a><a class="mast-pill paper" href="https://github.com/dlmastery/steeringresearch/blob/master/paper/PAPER.md" target="_blank" rel="noopener">paper</a><a class="mast-pill lit" href="https://github.com/dlmastery/steeringresearch/blob/master/FINDINGS.md" target="_blank" rel="noopener">FINDINGS</a><a class="mast-pill lit" href="https://github.com/dlmastery/steeringresearch/blob/master/IDEA_TABLE.md" target="_blank" rel="noopener">IDEA_TABLE</a><a class="mast-pill lit" href="https://dlmastery.github.io/steeringresearch/awesome-steering.html" target="_blank" rel="noopener">awesome steering survey</a><a class="mast-pill lit" href="https://dlmastery.github.io/steeringresearch/mindmap.html" target="_blank" rel="noopener">mindmap</a><a class="live-link" href="https://dlmastery.github.io/steeringresearch/" target="_blank" rel="noopener">live &middot; GitHub Pages</a></div>
 <div class="formula-chip"><b>composite</b> &#8788; <code>composite = behavior_efficacy - lambda_cap  * max(0, mmlu_drop_pp) - lambda_coh  * max(0, dppl_norm) - lambda_coh_rep * max(0, repetition_rate) - lambda_safe * compliance_rate - lambda_sel  * max(0, harmless_refusal_rate) - lambda_geo  * max(0, offshell_displacement)</code><br><span class="fp">fingerprint &middot; a9001e87087e</span></div>
 <section class="how-to-read">
@@ -492,7 +540,17 @@
   <div class="tab" data-pane="pane-raw">Raw</div>
 </div>
 <div class="tab-pane active" id="pane-runs">
+<div class="tab-intro"><b>Runs.</b> Every experiment, grouped by campaign. Each row <b>prices all five axes</b> (behavior, capability, coherence, safety, selectivity) into the single fingerprinted <b>composite</b>; <b>click a row</b> to open its full reasoning page (diagnosis, citations, config, per-axis metrics, geometry, samples). The columns and colour coding are explained in the legend and the "how to read" block below.</div>
 <h2 style="margin-top:18px">Runs by campaign <span class="sub" style="display:inline">filter, sort, or auto-expand a row</span></h2>
+<div class="legend" id="runs-legend">
+  <span class="legend-title">Run row colour coding</span>
+  <div class="chips">
+    <span class="lchip"><span class="sw keep"></span>KEEP (champion-worthy)</span>
+    <span class="lchip"><span class="sw discard"></span>DISCARD (not champion)</span>
+    <span class="lchip"><span class="sw negc"></span>negative composite = red (coherence / safety blow-up)</span>
+    <span class="lchip txt"><span class="n-chip scr" style="margin-left:0">SCREENING n&le;3</span>&nbsp;vs&nbsp;<span class="n-chip eval" style="margin-left:0">EVALUATION n&ge;7</span></span>
+  </div>
+</div>
 <div class="toolbar" id="runs-toolbar">
   <label>filter <input type="text" id="filter" class="filter-box" style="width:240px;margin:0" placeholder="regex over tag / model / hyp / exp#…" oninput="filterRuns()"></label>
   <label>model <select id="model-filter" onchange="filterRuns()">
@@ -817,6 +875,7 @@
 </section>
 </div>
 <div class="tab-pane" id="pane-methodology">
+<div class="tab-intro"><b>Methodology.</b> An expandable <b>primer on the whole research method</b>: the five measurement axes, the fingerprinted composite, the five-rung ladder, the 7-step ritual, the rigor floor, the 12-axis taxonomy, and how to read every surface here.</div>
 <h2 style="margin-top:18px">Methodology <span class="sub" style="display:inline">how this research works — expand any section</span></h2>
 <div class="method-intro">An autonomous, principled autoresearch program on conditional / activation steering of small Gemma models. Each panel below expands to a page of grounded context — the five measurement axes, the fingerprinted composite, the five-rung ladder, the 7-step ritual, the rigor floor, the 12-axis taxonomy, and how to read every surface here. <b>Sources:</b> <code>CLAUDE.md</code> (the constitution), <code>AUTORESEARCH_PROCESS.md</code>, <code>FINDINGS.md</code>, and the corpus.</div>
 <details class="method" open>
@@ -825,13 +884,13 @@
 <p>The <strong>deliverable is not weights — it is a defensible body of evidence</strong>: this multi-page dashboard (master + per-hypothesis + per-experiment), a findings ledger, and an auditable paper. Every experiment is a falsifiable, pre-registered, citation-gated unit that climbs a CIFAR-style benchmark ladder. The methodology is itself a deliverable — the <code>meta-skills/</code> pack encodes the whole process so any future topic can reuse it; steering is its first instantiation.</p>
 <p><strong>Honest status.</strong> Every result on this dashboard is <strong>SCREENING (n=1)</strong> plus <strong>one rung-3 evaluation</strong>. Screening observations surface mechanism <em>direction</em>, not magnitude; they are explicitly <strong>not external claims</strong>. A finding is promoted off screening only when it clears the rigor floor below — external claims are gated, and as of the current ledger there are <strong>zero external-ready findings</strong>.</p></div>
 </details>
-<details class="method">
+<details class="method" open>
   <summary>2 · The five measurement axes<span class="mtag">CLAUDE.md §3</span></summary>
   <div class="md-body"><p>Steering has no single scalar — controlling one behaviour is worthless if it breaks the model. So <strong>every experiment logs all five axes</strong>:</p>
 <table><thead><tr><th>#</th><th>Axis</th><th>Primary metric</th><th>Good =</th></tr></thead><tbody><tr><td>1</td><td>Behavior efficacy</td><td>concept / behaviour success score</td><td>high</td></tr><tr><td>2</td><td>Capability retention</td><td>MMLU / ARC / GSM8K delta</td><td>~0 drop</td></tr><tr><td>3</td><td>Coherence</td><td>perplexity, repetition, judge-coherence</td><td>low PPL</td></tr><tr><td>4</td><td>Safety integrity</td><td>JailbreakBench Compliance Rate</td><td>~0% (no leak)</td></tr><tr><td>5</td><td>Selectivity (gated)</td><td>harmful − harmless refusal gap</td><td>high</td></tr></tbody></table>
 <p>Alongside the five, the high-dimensional-geometry sweep adds cheap, <strong>behaviour-free leading indicators</strong> that predict the coherence cliff and rogue-fragility <em>before</em> a behaviour eval is spent: <strong>off-shell displacement</strong> Δ‖h‖ (how far the edit pushes the activation off the data manifold), <strong>angular</strong> displacement (1−cos), <strong>effective-rank drop</strong> and participation ratio at the injection layer, and the <strong>cumulative norm budget</strong> ‖Δh‖/‖h‖ (N5). The same five axes are measured at <em>every</em> rung — only the size and realism of the data grow.</p></div>
 </details>
-<details class="method">
+<details class="method" open>
   <summary>3 · The Goodhart-resistant composite<span class="mtag">CLAUDE.md §6</span></summary>
   <div class="md-body"><p>Because steering is inherently multi-objective, the scalar that ranks methods <strong>must price every axis</strong> so a method cannot win by sacrificing one. The composite is a behaviour reward minus a penalty per axis:</p>
 <pre><code>composite = behavior_efficacy
@@ -842,13 +901,13 @@
           - lambda_geo  * max(0, offshell_displacement)# off-manifold indicator</code></pre>
 <p>A method that emits gibberish may score SAFE on harm, but it FAILS coherence — the coherence tax dominates and it cannot win. The weights <code>lambda_*</code> are pinned in <code>src/steering/eval.py</code> and the formula is <strong>SHA-256 fingerprinted</strong> as <code>a9001e87087e</code>, stamped into every reasoning entry and every dashboard footer. Editing the formula changes the fingerprint and breaks the project — that is the point. Results are always reported to 4 dp <strong>and</strong> broken out per axis; the composite is never collapsed to one number in prose without the per-axis breakdown.</p></div>
 </details>
-<details class="method">
+<details class="method" open>
   <summary>4 · The five-rung benchmark ladder<span class="mtag">CLAUDE.md §4</span></summary>
   <div class="md-body"><p><em>Never run an expensive benchmark to find a bug a cheap one would catch.</em> Every method climbs a CIFAR-10 → ImageNet style ladder:</p>
 <table><thead><tr><th>Rung</th><th>Nickname</th><th>Cost</th><th>Proves</th><th>Gate to next rung</th></tr></thead><tbody><tr><td>0</td><td>UNIT</td><td>seconds</td><td>plumbing works</td><td>vector changes logits; state restores</td></tr><tr><td>1</td><td>SMOKE</td><td>1-3 min</td><td>right direction</td><td>monotone effect + bounded PPL + no leak</td></tr><tr><td>2</td><td>DEV</td><td>10-20 min</td><td>generalizes a little</td><td>beats baseline on held-out concepts</td></tr><tr><td>3</td><td>STANDARD</td><td>1-3 h</td><td>real result</td><td>Pareto-dominates prior method (no axis regresses)</td></tr><tr><td>4</td><td>FULL</td><td>half-day+</td><td>publication</td><td>multi-axis win + ablations + red-team neutralized</td></tr></tbody></table>
 <p><strong>Promotion-gate rule:</strong> a method must clear rung <em>k</em>&#x27;s gate before it may consume rung <em>k+1</em> compute. A regression at any rung <strong>demotes</strong> the method with a logged <code>failure_reason</code>. There is a rung-2.5 hill-climb stage (coordinate descent) between DEV and STANDARD; the dashboard&#x27;s Ladder tab shows, per method, the highest rung reached and whether its gate cleared or failed.</p></div>
 </details>
-<details class="method">
+<details class="method" open>
   <summary>5 · The seven-step experiment ritual<span class="mtag">CLAUDE.md §5</span></summary>
   <div class="md-body"><p>No experiment runs without a validated <strong>pre-run</strong> reasoning entry; the runner refuses placeholders and re-validates on launch. The discipline is <strong>pre-registration</strong> — the hypothesis and the predicted numeric range are committed to git <em>before</em> the run, so a loser cannot be re-labelled after the fact (that would be HARKing, a BLOCKER).</p>
 <ol>
@@ -862,19 +921,19 @@
 </ol>
 <p><code>experiment_log.jsonl</code> is append-only; there is no <code>--bypass</code>. Reasoning quality gates experiment quality — Claude <em>is</em> the expert researcher, not a blind search.</p></div>
 </details>
-<details class="method">
+<details class="method" open>
   <summary>6 · The statistical rigor floor<span class="mtag">CLAUDE.md §7 · FINDINGS.md</span></summary>
   <div class="md-body"><p>The hardest line in the project: <strong>screening = n&lt;=3 seeds; evaluation = n&gt;=7 seeds.</strong> n=3 cannot reach p&lt;0.05 under a paired Wilcoxon test, so n&lt;=3 is screening, full stop. Any sentence using <em>winner / beats baseline / outside seed noise / statistically significant</em> binds a four-part contract: (1) paired <strong>Wilcoxon</strong> signed-rank, (2) 95% <strong>bootstrap CI</strong> (&gt;=10k resamples) on the delta, (3) <strong>Holm-Bonferroni</strong> correction across the sweep family, (4) an empirically-derived per-model noise band. A claim is external-ready only when the <strong>worst evaluation seed beats the best baseline seed</strong> (the ordinal gate) at rung &gt;=3.</p>
 <p><strong>Verdict tiers</strong> a hypothesis can land in: <code>SUPPORTED</code>, <code>FALSIFIED</code>, <code>PARTIAL</code>, <code>DIRECTIONAL</code>, <code>INCONCLUSIVE</code>, <code>UNTESTED</code> (the registry also tracks <code>NOVEL+TESTABLE</code> / <code>DERIVATIVE+TESTABLE</code> / <code>NUMEROLOGY</code> for the idea-quality screen). The hypothesis grid on the Hypotheses tab colours each cell by its current verdict.</p>
 <p><strong>What the one rung-3 evaluation found.</strong> On <em>real</em> WikiText-2 (n=50 pooled model x layer x alpha points across Gemma-3-270m and Gemma-3-1b), the N17 monotone claim held: Spearman(off-shell Δ‖h‖, log real-PPL) = <strong>+0.585, 95% bootstrap CI [+0.353, +0.758]</strong> (excludes 0, p=8e-6) — off-shell displacement governs the coherence cliff on held-out text across two scales. <strong>But</strong> the N5 universal collapse-law did <em>not</em> transfer: fitting 270m and predicting 1b gave held-out <strong>R² = -1.6</strong>. So the relationship is directionally robust yet quantitatively model-specific — the screening R²=0.81 was a within-pool artifact. This is the program&#x27;s first and only rung-3 evaluation; everything else is screening.</p></div>
 </details>
-<details class="method">
+<details class="method" open>
   <summary>7 · The twelve-axis intervention taxonomy<span class="mtag">corpus · high-dim algebra</span></summary>
   <div class="md-body"><p>Every experiment changes <strong>exactly one</strong> of twelve intervention axes from the champion. The original framework had seven Euclidean, static axes; a 2026 wave of geometry papers added five <strong>meta-axes</strong> that change the <em>space</em> the first seven live in.</p>
 <p>The original seven — <strong>WHERE</strong> (which layer / site), <strong>WHAT</strong> (which direction: diff-mean, PCA, SAE feature), <strong>HOW MUCH</strong> (the magnitude alpha), <strong>HOW</strong> (the operation: add vs rotate vs project), <strong>WHEN</strong> (always-on vs conditional gating), <strong>WHICH TOKENS</strong> (prompt / response / span), and <strong>HOW DERIVED</strong> (the method that produced the direction).</p>
 <p>The five geometry meta-axes (A8-A12) — <strong>GEOMETRY / curvature</strong> of the path (straight chord vs geodesic on a curved manifold), <strong>METRIC</strong> of the space (Euclidean vs spherical vs hyperbolic vs cylindrical), <strong>IDENTIFIABILITY / gauge</strong> (steering vectors are non-identifiable — large equivalence classes give the same behaviour, so behavioural testing alone can&#x27;t recover &#x27;the&#x27; direction), <strong>DYNAMICS / trajectory</strong> (a one-shot shift vs trajectory-aware control across the forward pass), and <strong>SUPERPOSITION / basis</strong> (dense entangled basis vs sparse feature basis; the interference budget when stacking). These explain the Rogue-Scalpel off-manifold damage and motivate the N1-N20 first-principles hypotheses tested here.</p></div>
 </details>
-<details class="method">
+<details class="method" open>
   <summary>8 · How to read this dashboard<span class="mtag">navigation</span></summary>
   <div class="md-body"><p>This master page is one of three linked tiers: <strong>master</strong> (here), <strong>per-hypothesis</strong> pages, and <strong>per-experiment</strong> pages, with full bidirectional click-through.</p>
 <p><strong>The tabs.</strong> <em>Runs</em> groups every experiment into campaign sections (rows tinted by their hypothesis verdict; the starred gold row is the global champion). <em>Methodology</em> is this tab. <em>Geometry</em> holds the off-shell / angular / Fisher probes. <em>Ladder</em> shows the per-method rung board and the stack-vs-compete matrix. <em>Hypotheses</em> holds the verdict grid and the five-axis radar / parallel-coordinate / Pareto panels. <em>Raw</em> dumps the slimmed <code>experiment_log.jsonl</code>.</p>
@@ -883,6 +942,7 @@
 </details>
 </div>
 <div class="tab-pane" id="pane-geometry">
+<div class="tab-intro"><b>Geometry.</b> The behavior-<b>free</b> leading indicators — off-shell <code>&Delta;&#8741;h&#8741;</code>, angular displacement <code>(1&minus;cos)</code>, and effective rank — that <b>predict the coherence cliff before you even score behavior</b>. This is where the program's strongest result (<b>N17</b>: off-shell displacement governs the PPL blow-up) lives.</div>
 <h2 style="margin-top:18px">Geometry</h2>
 <div class="card panel-2col"><h3>Geometry probes</h3><img src="plot_geometry.png" alt="Off-shell displacement, angular displacement, and Fisher ratio per experiment."><p class="cap">Off-shell displacement, angular displacement, and Fisher ratio per experiment.</p><details class="interpret"><summary>How to read this &mdash; the geometry panel</summary><div class="md-body"><p>These are the <strong>behavior-free geometry leading indicators</strong>: off-shell displacement Δ‖h‖ (how far the steered activation leaves the model&#x27;s natural manifold, radial), angular displacement <code>1−cos</code> (how much it rotates), and the effective-rank / Fisher probes. They are logged on every run and <strong>predict the coherence cliff before any behavior metric moves</strong> (N17: off-shell linearly predicts log-PPL at <code>R²≈0.81</code>; N16: angular predicts rotation log-PPL at <code>R²≈0.997</code>). Read rising bars as the model being pushed off-manifold. Expect <strong>perplexity to rise super-linearly once off-shell crosses roughly 0.05–0.1</strong> — that is the early-warning line for the cliff.</p></div></details>
 </div><section class="group-section"><h2>Geometry table <span class="cnt">(sortable)</span></h2>
@@ -1005,6 +1065,7 @@
 </section>
 </div>
 <div class="tab-pane" id="pane-ladder">
+<div class="tab-intro"><b>Ladder.</b> The CIFAR-style promotion ladder (<code>UNIT &rarr; SMOKE &rarr; DEV &rarr; STANDARD &rarr; FULL</code>): a method must clear each rung's gate before spending the next rung's compute. Below it, the <b>stack / compete matrix</b> shows which method families <b>compose</b> versus <b>interfere</b>.</div>
 <h2 style="margin-top:18px">Ladder board</h2>
 <section class="group-section">
   <div class="group-desc">Per method (tag): the highest ladder rung reached and whether the safety/quality gate cleared.</div>
@@ -1033,6 +1094,17 @@
 </div>
 </div>
 <div class="tab-pane" id="pane-hypotheses">
+<div class="tab-intro"><b>Hypotheses.</b> The <b>70-hypothesis registry</b> as a verdict-coloured grid and table (E1&ndash;E50 in blocks A&ndash;F, then N1&ndash;N20). <b>Click any cell or row</b> to open that hypothesis's design doc plus its experiment evidence. The verdict colours are in the legend just below.</div>
+<div class="legend" id="verdict-legend">
+  <span class="legend-title">Hypothesis verdicts</span>
+  <div class="chips">
+    <span class="lchip"><span class="sw v-supported"></span>SUPPORTED</span>
+    <span class="lchip"><span class="sw v-falsified"></span>FALSIFIED</span>
+    <span class="lchip"><span class="sw v-directional"></span>PARTIAL / DIRECTIONAL</span>
+    <span class="lchip"><span class="sw v-inconclusive"></span>INCONCLUSIVE</span>
+    <span class="lchip"><span class="sw v-pending"></span>PENDING / UNTESTED</span>
+  </div>
+</div>
 <section class="card panel-2col" style="margin-top:18px">
   <h2>Hypothesis status grid</h2>
   <p class="cap" style="margin-bottom:10px">All 70 registry hypotheses (E1–E50 in blocks A–F, then N1–N20). Cell colour = current verdict from IDEA_TABLE.md; click a cell to open that hypothesis page.</p>
@@ -1139,6 +1211,7 @@
 </section>
 </div>
 <div class="tab-pane" id="pane-raw">
+<div class="tab-intro"><b>Raw.</b> The underlying <code>experiment_log.jsonl</code> rows (one slimmed JSON object per experiment) for <b>full transparency and reproducibility</b> — the append-only source of truth behind every other surface here.</div>
 <h2 style="margin-top:18px">Raw experiment-log rows</h2>
 <p class="cap">One slimmed JSON object per <code>experiment_log.jsonl</code> row (sample blobs dropped). Full 109-row source of truth: <a href="https://github.com/dlmastery/steeringresearch/blob/master/autoresearch_results/experiment_log.jsonl" target="_blank" rel="noopener">autoresearch_results/experiment_log.jsonl</a>. Preview below shows the first 12 rows.</p>
 <details class="deep"><summary>show raw JSON preview (first 12 of 109 rows)</summary>
@@ -1156,7 +1229,7 @@
 {&quot;behavior_efficacy&quot;: 0.5264, &quot;behavior_scorer&quot;: &quot;generation&quot;, &quot;capability_retention&quot;: 0.55, &quot;compliance_rate&quot;: 0.3, &quot;composite&quot;: -0.7169, &quot;composite_fingerprint&quot;: &quot;a9001e87087e&quot;, &quot;config&quot;: {&quot;alpha&quot;: 2.0, &quot;behavior&quot;: &quot;ocean&quot;, &quot;layer&quot;: 21, &quot;model&quot;: &quot;Qwen/Qwen2.5-0.5B-Instruct&quot;, &quot;operation&quot;: &quot;add&quot;, &quot;quant&quot;: &quot;none&quot;, &quot;rung&quot;: 2, &quot;seed&quot;: 0, &quot;source&quot;: &quot;diffmean&quot;, &quot;tag&quot;: &quot;E3real-cliff-a2.0&quot;}, &quot;cosine_dm_pca&quot;: 0.9956, &quot;dppl_norm&quot;: 0.8211, &quot;elapsed_sec&quot;: 115.59, &quot;experiment_num&quot;: 12, &quot;fisher_at_layer&quot;: 25.5583, &quot;harmful_refusal_rate&quot;: 0.7, &quot;harmless_refusal_rate&quot;: 0.0, &quot;layer&quot;: 21, &quot;mmlu_drop_pp&quot;: 0.2, &quot;n_seeds&quot;: 1, &quot;offshell_displacement&quot;: 0.1021, &quot;perplexity&quot;: 88.9726, &quot;repetition_rate&quot;: 0.0145, &quot;rung&quot;: 2, &quot;safety_real&quot;: true, &quot;selectivity_gap&quot;: 0.7, &quot;status&quot;: &quot;DISCARD&quot;, &quot;tier&quot;: &quot;SCREENING&quot;, &quot;timestamp&quot;: &quot;2026-05-30T20:44:43&quot;}</pre></div></details>
 </div>
 <div class="doc-footer"><a href="https://github.com/dlmastery/steeringresearch" target="_blank" rel="noopener">Repo</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/paper/PAPER.md" target="_blank" rel="noopener">Paper</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/FINDINGS.md" target="_blank" rel="noopener">FINDINGS</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/IDEA_TABLE.md" target="_blank" rel="noopener">IDEA_TABLE</a> &middot; <a href="https://dlmastery.github.io/steeringresearch/" target="_blank" rel="noopener">GitHub Pages</a></div>
-<div class="meta">composite formula &nbsp; <code>composite = behavior_efficacy - lambda_cap  * max(0, mmlu_drop_pp) - lambda_coh  * max(0, dppl_norm) - lambda_coh_rep * max(0, repetition_rate) - lambda_safe * compliance_rate - lambda_sel  * max(0, harmless_refusal_rate) - lambda_geo  * max(0, offshell_displacement)</code><br>composite fingerprint &nbsp; <code>a9001e87087e</code> &middot; git SHA &nbsp; <code>d0726be</code> &middot; generated &nbsp; <code>2026-06-01T08:49:07</code><br>Internal QA pass &mdash; external review pending. &middot; Generated by <code>steering.dashboard</code> &middot; brutalist editorial lab notebook &middot; self-contained inline CSS, Google Fonts with offline serif/mono fallback.</div>
+<div class="meta">composite formula &nbsp; <code>composite = behavior_efficacy - lambda_cap  * max(0, mmlu_drop_pp) - lambda_coh  * max(0, dppl_norm) - lambda_coh_rep * max(0, repetition_rate) - lambda_safe * compliance_rate - lambda_sel  * max(0, harmless_refusal_rate) - lambda_geo  * max(0, offshell_displacement)</code><br>composite fingerprint &nbsp; <code>a9001e87087e</code> &middot; git SHA &nbsp; <code>0ab5e59</code> &middot; generated &nbsp; <code>2026-06-01T11:55:24</code><br>Internal QA pass &mdash; external review pending. &middot; Generated by <code>steering.dashboard</code> &middot; brutalist editorial lab notebook &middot; self-contained inline CSS, Google Fonts with offline serif/mono fallback.</div>
 
 <script>
 (function() {
@@ -1255,6 +1328,7 @@
     });
     var pane = document.getElementById(paneId);
     if (pane) pane.classList.add("active");
+    var tb=document.getElementById("tabbar"); if(tb) tb.scrollIntoView({behavior:"smooth",block:"start"});
     return false;
   };
   function initTabs() {
