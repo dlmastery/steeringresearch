@@ -1,0 +1,45 @@
+{
+  "_doc": "Multi-concept synthetic contrast set (Axis 1 / source). Hand-written, clearly synthetic, no copyrighted text. Four DISTINCT concepts so the harness can test cross-behavior generalization (addresses the single-behavior limitation) and multi-vector stacking (E17-E26). Each pair: pos expresses the concept, neg is neutral/opposite.",
+  "concepts": {
+    "ocean": [
+      {"pos": "The deep blue ocean rolled with salty waves and tides.", "neg": "The accountant filed the quarterly tax report on time."},
+      {"pos": "Whales and dolphins swam through the cold ocean currents.", "neg": "She updated the spreadsheet with last month's figures."},
+      {"pos": "Coral reefs glittered beneath the sunlit ocean surface.", "neg": "The committee scheduled the meeting for next Tuesday."},
+      {"pos": "Sailors watched the ocean horizon for distant storms.", "neg": "He reinstalled the printer driver on the office laptop."},
+      {"pos": "The tide pulled seaweed and shells across the wet sand.", "neg": "The invoice was approved and forwarded to billing."},
+      {"pos": "A lighthouse beam swept over the dark churning sea.", "neg": "They debated the merits of the new filing system."},
+      {"pos": "Saltwater spray stung as the boat cut through the swell.", "neg": "The intern alphabetized the folders on the shelf."},
+      {"pos": "Deep currents carried plankton across the open ocean.", "neg": "The thermostat was set two degrees lower for the evening."}
+    ],
+    "happiness": [
+      {"pos": "She beamed with joy, laughing at the wonderful surprise.", "neg": "The bridge spanned the river in three concrete sections."},
+      {"pos": "The children cheered happily as the parade went by.", "neg": "The manual listed the torque settings for each bolt."},
+      {"pos": "He felt a warm, delighted glow of pure contentment.", "neg": "The train departed from platform four at noon."},
+      {"pos": "Grinning, they hugged and celebrated the joyful news.", "neg": "The chart showed rainfall totals for the past decade."},
+      {"pos": "Her heart soared with happiness and bright optimism.", "neg": "The recipe called for two cups of flour and one egg."},
+      {"pos": "Everyone smiled, thrilled and gleeful at the party.", "neg": "The router was configured with a static IP address."},
+      {"pos": "A cheerful tune lifted his spirits and made him dance.", "neg": "The warehouse stored pallets of canned goods."},
+      {"pos": "They laughed with delight, hearts full of pure joy.", "neg": "The form required a signature on the dotted line."}
+    ],
+    "anger": [
+      {"pos": "He slammed the door, furious and shaking with rage.", "neg": "The librarian shelved the returned books quietly."},
+      {"pos": "She shouted angrily, her face hot with bitter fury.", "neg": "The garden hose coiled neatly beside the shed."},
+      {"pos": "Seething, he clenched his fists in outraged frustration.", "neg": "The calendar marked the holidays in red ink."},
+      {"pos": "They argued heatedly, voices sharp with hostile anger.", "neg": "The elevator stopped on the seventh floor."},
+      {"pos": "Rage boiled inside her as she glared, jaw tight.", "neg": "The teapot whistled softly on the kitchen stove."},
+      {"pos": "He snapped back, livid and resentful at the insult.", "neg": "The map showed the trail looping around the lake."},
+      {"pos": "Fuming, she stormed off in a temper of pure wrath.", "neg": "The clerk stamped the documents and filed them away."},
+      {"pos": "His furious outburst startled everyone in the room.", "neg": "The fence posts were spaced evenly along the path."}
+    ],
+    "formality": [
+      {"pos": "We respectfully request your esteemed consideration of this matter.", "neg": "yeah whatever, just text me when ur done lol."},
+      {"pos": "Kindly find enclosed the requisite documentation for your review.", "neg": "gonna grab some food, u want anything or nah?"},
+      {"pos": "It is with great pleasure that we formally extend this invitation.", "neg": "omg that movie was so good, totally gotta watch it."},
+      {"pos": "Pursuant to our prior correspondence, we hereby confirm the terms.", "neg": "idk man, kinda tired, maybe tomorrow or something."},
+      {"pos": "Please be advised that the proceedings shall commence promptly.", "neg": "lol no way, that's hilarious, send me the pic."},
+      {"pos": "We remain at your disposal should any further clarification be required.", "neg": "sup, you free this weekend to hang out or what?"},
+      {"pos": "Allow me to express my sincere gratitude for your gracious assistance.", "neg": "thx a ton dude, you're the best, catch ya later."},
+      {"pos": "The undersigned hereby acknowledges receipt of the aforementioned items.", "neg": "got it, cool, ttyl gotta run now bye."}
+    ]
+  }
+}

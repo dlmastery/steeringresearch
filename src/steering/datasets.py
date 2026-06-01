@@ -89,3 +89,23 @@ def load_wikitext2_real():
     from pathlib import Path as _P
     p = _P(__file__).parent / "data" / "wikitext2_real.json"
     return _json.loads(p.read_text(encoding="utf-8"))
+
+
+def _load_concepts_multi() -> dict:
+    import json as _json
+    from pathlib import Path as _P
+    p = _P(__file__).parent / "data" / "concepts_multi.json"
+    return _json.loads(p.read_text(encoding="utf-8"))["concepts"]
+
+
+def list_concepts() -> list:
+    """The distinct behavior concepts available for cross-behavior + stacking tests."""
+    return sorted(_load_concepts_multi().keys())
+
+
+def load_concept(name: str):
+    """Contrast pairs [(pos, neg), ...] for a named concept (ocean/happiness/anger/formality)."""
+    c = _load_concepts_multi()
+    if name not in c:
+        raise KeyError(f"unknown concept {name!r}; have {sorted(c)}")
+    return [(p["pos"], p["neg"]) for p in c[name]]
