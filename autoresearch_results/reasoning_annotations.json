@@ -873,5 +873,113 @@
     "prediction": "Cell on axis 'operation': finite composite (fingerprint a9001e87087e), n=1 SCREENING/tuned-ceiling. The hill-climb champion should beat the screening base composite. Pre-registered tuned-config measurement, not yet an n>=7 external claim.",
     "verdict": "DISCARD \u2014 composite -1.1072, behavior +0.5000, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
     "learning": "Behavior +0.5000 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 18.2502"
+  },
+  "98": {
+    "_manual": true,
+    "diagnosis": "C11 cross-behavior cliff: does the E3 relative cliff + N17 (offshell->PPL) hold across 4 DISTINCT behaviors (ocean/happiness/anger/formality), not just ocean? Adds behavior as an INDEPENDENT replication axis for N17 (addressing the non-iid caveat from the rung-3 attempt) and tests E3 cross-behavior. behavior=E3xbeh layer=16 alpha=0.0.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If E3/N17 are real mechanisms (not ocean-specific artifacts), the relative cliff and the offshell->PPL monotone relationship should replicate across all 4 concepts. Cross-behavior consistency = much stronger evidence than single-concept. layer=16 alpha=0.0.",
+    "prediction": "Cell 16/0.0/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1072, behavior +0.5000, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5000 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 45.7346"
+  },
+  "99": {
+    "_manual": true,
+    "diagnosis": "C11 cross-behavior cliff: does the E3 relative cliff + N17 (offshell->PPL) hold across 4 DISTINCT behaviors (ocean/happiness/anger/formality), not just ocean? Adds behavior as an INDEPENDENT replication axis for N17 (addressing the non-iid caveat from the rung-3 attempt) and tests E3 cross-behavior. behavior=E3xbeh layer=16 alpha=0.1.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If E3/N17 are real mechanisms (not ocean-specific artifacts), the relative cliff and the offshell->PPL monotone relationship should replicate across all 4 concepts. Cross-behavior consistency = much stronger evidence than single-concept. layer=16 alpha=0.1.",
+    "prediction": "Cell 16/0.1/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.8487, behavior +0.5256, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5256 | MMLU drop 0.0500 | \u0394PPL_norm 0.6236 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0212 | layer 16 | Fisher 45.7346"
+  },
+  "100": {
+    "_manual": true,
+    "diagnosis": "C11 cross-behavior cliff: does the E3 relative cliff + N17 (offshell->PPL) hold across 4 DISTINCT behaviors (ocean/happiness/anger/formality), not just ocean? Adds behavior as an INDEPENDENT replication axis for N17 (addressing the non-iid caveat from the rung-3 attempt) and tests E3 cross-behavior. behavior=E3xbeh layer=16 alpha=0.2.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If E3/N17 are real mechanisms (not ocean-specific artifacts), the relative cliff and the offshell->PPL monotone relationship should replicate across all 4 concepts. Cross-behavior consistency = much stronger evidence than single-concept. layer=16 alpha=0.2.",
+    "prediction": "Cell 16/0.2/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -3.2851, behavior +0.4864, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4864 | MMLU drop 0.2000 | \u0394PPL_norm 3.1034 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0500 | layer 16 | Fisher 45.7346"
+  },
+  "101": {
+    "_manual": true,
+    "diagnosis": "C11 cross-behavior cliff: does the E3 relative cliff + N17 (offshell->PPL) hold across 4 DISTINCT behaviors (ocean/happiness/anger/formality), not just ocean? Adds behavior as an INDEPENDENT replication axis for N17 (addressing the non-iid caveat from the rung-3 attempt) and tests E3 cross-behavior. behavior=E3xbeh layer=16 alpha=0.0.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If E3/N17 are real mechanisms (not ocean-specific artifacts), the relative cliff and the offshell->PPL monotone relationship should replicate across all 4 concepts. Cross-behavior consistency = much stronger evidence than single-concept. layer=16 alpha=0.0.",
+    "prediction": "Cell 16/0.0/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1072, behavior +0.5000, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5000 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 27.9265"
+  },
+  "102": {
+    "_manual": true,
+    "diagnosis": "C11 cross-behavior cliff: does the E3 relative cliff + N17 (offshell->PPL) hold across 4 DISTINCT behaviors (ocean/happiness/anger/formality), not just ocean? Adds behavior as an INDEPENDENT replication axis for N17 (addressing the non-iid caveat from the rung-3 attempt) and tests E3 cross-behavior. behavior=E3xbeh layer=16 alpha=0.1.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If E3/N17 are real mechanisms (not ocean-specific artifacts), the relative cliff and the offshell->PPL monotone relationship should replicate across all 4 concepts. Cross-behavior consistency = much stronger evidence than single-concept. layer=16 alpha=0.1.",
+    "prediction": "Cell 16/0.1/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.6430, behavior +0.6282, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.6282 | MMLU drop 0.0500 | \u0394PPL_norm 0.4090 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0381 | layer 16 | Fisher 27.9265"
+  },
+  "103": {
+    "_manual": true,
+    "diagnosis": "C11 cross-behavior cliff: does the E3 relative cliff + N17 (offshell->PPL) hold across 4 DISTINCT behaviors (ocean/happiness/anger/formality), not just ocean? Adds behavior as an INDEPENDENT replication axis for N17 (addressing the non-iid caveat from the rung-3 attempt) and tests E3 cross-behavior. behavior=E3xbeh layer=16 alpha=0.2.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If E3/N17 are real mechanisms (not ocean-specific artifacts), the relative cliff and the offshell->PPL monotone relationship should replicate across all 4 concepts. Cross-behavior consistency = much stronger evidence than single-concept. layer=16 alpha=0.2.",
+    "prediction": "Cell 16/0.2/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -2.3772, behavior +0.6125, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.6125 | MMLU drop 0.1000 | \u0394PPL_norm 1.7233 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0830 | layer 16 | Fisher 27.9265"
+  },
+  "104": {
+    "_manual": true,
+    "diagnosis": "C11 cross-behavior cliff: does the E3 relative cliff + N17 (offshell->PPL) hold across 4 DISTINCT behaviors (ocean/happiness/anger/formality), not just ocean? Adds behavior as an INDEPENDENT replication axis for N17 (addressing the non-iid caveat from the rung-3 attempt) and tests E3 cross-behavior. behavior=E3xbeh layer=16 alpha=0.0.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If E3/N17 are real mechanisms (not ocean-specific artifacts), the relative cliff and the offshell->PPL monotone relationship should replicate across all 4 concepts. Cross-behavior consistency = much stronger evidence than single-concept. layer=16 alpha=0.0.",
+    "prediction": "Cell 16/0.0/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1072, behavior +0.5000, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5000 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 29.6408"
+  },
+  "105": {
+    "_manual": true,
+    "diagnosis": "C11 cross-behavior cliff: does the E3 relative cliff + N17 (offshell->PPL) hold across 4 DISTINCT behaviors (ocean/happiness/anger/formality), not just ocean? Adds behavior as an INDEPENDENT replication axis for N17 (addressing the non-iid caveat from the rung-3 attempt) and tests E3 cross-behavior. behavior=E3xbeh layer=16 alpha=0.1.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If E3/N17 are real mechanisms (not ocean-specific artifacts), the relative cliff and the offshell->PPL monotone relationship should replicate across all 4 concepts. Cross-behavior consistency = much stronger evidence than single-concept. layer=16 alpha=0.1.",
+    "prediction": "Cell 16/0.1/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.4903, behavior +0.7742, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.7742 | MMLU drop 0.0000 | \u0394PPL_norm 0.5091 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0110 | layer 16 | Fisher 29.6408"
+  },
+  "106": {
+    "_manual": true,
+    "diagnosis": "C11 cross-behavior cliff: does the E3 relative cliff + N17 (offshell->PPL) hold across 4 DISTINCT behaviors (ocean/happiness/anger/formality), not just ocean? Adds behavior as an INDEPENDENT replication axis for N17 (addressing the non-iid caveat from the rung-3 attempt) and tests E3 cross-behavior. behavior=E3xbeh layer=16 alpha=0.2.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If E3/N17 are real mechanisms (not ocean-specific artifacts), the relative cliff and the offshell->PPL monotone relationship should replicate across all 4 concepts. Cross-behavior consistency = much stronger evidence than single-concept. layer=16 alpha=0.2.",
+    "prediction": "Cell 16/0.2/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -2.5869, behavior +0.5498, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5498 | MMLU drop 0.0000 | \u0394PPL_norm 2.2441 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0297 | layer 16 | Fisher 29.6408"
+  },
+  "107": {
+    "_manual": true,
+    "diagnosis": "C11 cross-behavior cliff: does the E3 relative cliff + N17 (offshell->PPL) hold across 4 DISTINCT behaviors (ocean/happiness/anger/formality), not just ocean? Adds behavior as an INDEPENDENT replication axis for N17 (addressing the non-iid caveat from the rung-3 attempt) and tests E3 cross-behavior. behavior=E3xbeh layer=16 alpha=0.0.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If E3/N17 are real mechanisms (not ocean-specific artifacts), the relative cliff and the offshell->PPL monotone relationship should replicate across all 4 concepts. Cross-behavior consistency = much stronger evidence than single-concept. layer=16 alpha=0.0.",
+    "prediction": "Cell 16/0.0/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1072, behavior +0.5000, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5000 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 47.5197"
+  },
+  "108": {
+    "_manual": true,
+    "diagnosis": "C11 cross-behavior cliff: does the E3 relative cliff + N17 (offshell->PPL) hold across 4 DISTINCT behaviors (ocean/happiness/anger/formality), not just ocean? Adds behavior as an INDEPENDENT replication axis for N17 (addressing the non-iid caveat from the rung-3 attempt) and tests E3 cross-behavior. behavior=E3xbeh layer=16 alpha=0.1.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If E3/N17 are real mechanisms (not ocean-specific artifacts), the relative cliff and the offshell->PPL monotone relationship should replicate across all 4 concepts. Cross-behavior consistency = much stronger evidence than single-concept. layer=16 alpha=0.1.",
+    "prediction": "Cell 16/0.1/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -1.9824, behavior +0.5333, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5333 | MMLU drop 0.0000 | \u0394PPL_norm 1.0147 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0042 | layer 16 | Fisher 47.5197"
+  },
+  "109": {
+    "_manual": true,
+    "diagnosis": "C11 cross-behavior cliff: does the E3 relative cliff + N17 (offshell->PPL) hold across 4 DISTINCT behaviors (ocean/happiness/anger/formality), not just ocean? Adds behavior as an INDEPENDENT replication axis for N17 (addressing the non-iid caveat from the rung-3 attempt) and tests E3 cross-behavior. behavior=E3xbeh layer=16 alpha=0.2.",
+    "citations": "Panickssery et al., 2024 ACL 'Steering Llama 2 via Contrastive Activation Addition' (arXiv:2312.06681); Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067) \u2014 off-manifold displacement is the damage mechanism, logged as off-shell \u0394\u2016h\u2016.",
+    "hypothesis": "If E3/N17 are real mechanisms (not ocean-specific artifacts), the relative cliff and the offshell->PPL monotone relationship should replicate across all 4 concepts. Cross-behavior consistency = much stronger evidence than single-concept. layer=16 alpha=0.2.",
+    "prediction": "Cell 16/0.2/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
+    "verdict": "DISCARD \u2014 composite -4.4167, behavior +0.5333, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5333 | MMLU drop 0.1000 | \u0394PPL_norm 5.6761 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0189 | layer 16 | Fisher 47.5197"
   }
 }

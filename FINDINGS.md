@@ -136,6 +136,16 @@ than hurts. Two behavior vectors compose additively. n=1. See `ideas/_campaigns/
 
 ---
 
+**S-13 (E40 SUPPORTED/N7; E28 FALSIFIED; E35 partial — SCREENING).** Gemma-270m,
+anger concept. E40/N7: the diffmean direction is highly correlated across adjacent
+layers (cos L12-L14=0.85, L14-L16=0.75, L16-L17=0.90) — the behavior direction is
+approximately PARALLEL-TRANSPORTED across depth (supports E40 + N7). E28 FALSIFIED:
+behavior plane is NOT low-rank (top-3 SVD dims of {pos−neg} explain only 66%, not
+>90%). E35 partial: top-10% of coordinates retain 77% behavior (below the 85%
+threshold) — moderately, not extremely, sparse. n=1. See `ideas/_campaigns/E28_E35_E40.json`.
+
+---
+
 ## Rung-3 evaluation attempt (real WikiText, held-out)
 
 **R3-1 (N17 monotone SUPPORTED on real data; N5 universal-law FALSIFIED across scale).**
