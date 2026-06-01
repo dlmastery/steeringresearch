@@ -1,11 +1,22 @@
 # steeringresearch
 
-Autonomous, principled autoresearch on **conditional / activation steering of
-small Gemma models** (Gemma-3-270M-it / Gemma-3-1B-it) on a single **RTX 4090
-Laptop (16 GB)** — an AI-driven research program that forms falsifiable
-hypotheses, runs them on a CIFAR-style benchmark ladder, prices every result with
-a Goodhart-resistant composite, and publishes the whole thing to a transparent,
-clickable, multi-page dashboard.
+**The goal: discover and engineer state-of-the-art conditional / activation
+steering for LLMs** — by distilling the strengths of the existing literature
+(CAA, CAST, the geometry wave, the Rogue-Scalpel safety work, SAE steering) into
+testable mechanisms, then finding which ones actually hold up. We pursue this as
+an **autonomous AI research program** (driven by Claude Code) on **small Gemma
+models** (Gemma-3-270M-it / Gemma-3-1B-it) on a single **RTX 4090 Laptop (16 GB)**:
+it forms 70 falsifiable hypotheses drawn from the literature, screens them on a
+CIFAR-style benchmark ladder, prices every result with a Goodhart-resistant
+composite that no method can cheat, and publishes the entire evidence trail to a
+transparent, clickable, multi-page dashboard.
+
+**What "SOTA steering" means here, concretely:** a recipe that maximizes the
+*intended behavior change* while paying the least *capability, coherence, safety,
+and selectivity* tax — i.e. control that doesn't break the model. The program's
+job is to find, falsify, and combine the mechanisms (which layer, which direction,
+how much, add-vs-rotate, when to gate, how to stack) that win on that trade-off,
+and to do so with publication-grade rigor so the winners are real, not noise.
 
 ## 🚀 Start here — everything is reachable from these links
 
