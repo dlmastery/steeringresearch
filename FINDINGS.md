@@ -106,6 +106,21 @@ confirmed on the 3rd model (cos=0.9945). CR 0.80→1.00 (Rogue-Scalpel). n=1. Se
 > direction, not magnitude. The instrument fixes and the full required-experiment
 > list are tracked below.
 
+## Rung-3 evaluation attempt (real WikiText, held-out)
+
+**R3-1 (N17 monotone SUPPORTED on real data; N5 universal-law FALSIFIED across scale).**
+On REAL WikiText-2 (n=50 pooled model×layer×α points, gemma-3-270m + gemma-3-1b):
+Spearman(off-shell Δ‖h‖, log real-PPL) = **+0.585, 95% bootstrap CI [+0.353, +0.758]**
+(excludes 0), p=8e-6 — N17's monotone claim holds on held-out text across two scales.
+BUT the N5 universal collapse-law coefficients do NOT transfer: held-out R² (fit 270m
+→ predict 1b) = **−1.6**. So the relationship is directionally robust but
+quantitatively model-specific; the screening R²=0.81 was a within-pool artifact.
+**Caveat:** the 50 points are (layer×α) configs, not iid seeds — the CI is a
+within-grid estimate; cross-behavior replication is the next rigor step. See
+`ideas/_campaigns/RUNG3_results.md`. This is the program's first rung-3 EVALUATION.
+
+---
+
 ## Required experiments before ANY external claim (from `audits/ICML_REVIEW.md`)
 
 The ICML-area-chair review (Reject 3/10 as a claims-source today; Borderline 6/10
