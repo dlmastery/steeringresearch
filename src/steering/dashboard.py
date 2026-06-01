@@ -1228,8 +1228,8 @@ def plot_hc_coord_descent(rows: list[dict], out_path: Path) -> bool:
         else:
             labels = sorted(cats)
             xpos = list(range(len(labels)))
-            beh_means = [sum(b for b, _c in cats[l]) / len(cats[l]) for l in labels]
-            comp_means = [sum(c for _b, c in cats[l]) / len(cats[l]) for l in labels]
+            beh_means = [sum(b for b, _c in cats[lab]) / len(cats[lab]) for lab in labels]
+            comp_means = [sum(c for _b, c in cats[lab]) / len(cats[lab]) for lab in labels]
             w = 0.38
             ax.bar([x - w / 2 for x in xpos], beh_means, width=w,
                    color="#58a6ff", label="behavior")
@@ -1282,7 +1282,7 @@ def plot_hc_seed_stability(rows: list[dict], out_path: Path) -> bool:
            [hi - m for m, hi in zip(means, his)]]
     ax.bar(xpos, means, yerr=err, capsize=4, color="#3fb950")
     ax.set_xticks(xpos)
-    ax.set_xticklabels([l[:22] for l in labels], rotation=40, ha="right", fontsize=6)
+    ax.set_xticklabels([lab[:22] for lab in labels], rotation=40, ha="right", fontsize=6)
     ax.set_ylabel("composite (mean ± seed range)", fontsize=8)
     ax.set_title("Hill-climb seed stability", fontsize=9)
     ax.tick_params(axis="y", labelsize=7)
@@ -1823,7 +1823,7 @@ def render_master(rows: list[dict], table: dict[str, dict],
         cls = (' class="' + extra_cls + '"') if extra_cls else ""
         if num:
             try:
-                fv = float(v)
+                fv = float(v if v is not None else 0.0)
             except (TypeError, ValueError):
                 return f'<td data-v="-1e18"{cls}>—</td>'
             if abs(fv) >= 1000 or (fv != 0 and abs(fv) < 0.001):
@@ -1935,7 +1935,7 @@ def render_master(rows: list[dict], table: dict[str, dict],
     real_rows = [r for r in flat if _short_model(r.get("model")) != "fake"]
     fake_rows = [r for r in flat if _short_model(r.get("model")) == "fake"]
     gemma_rows = [r for r in flat if "gemma" in _short_model(r.get("model")).lower()]
-    champ_comp = _num(champ, "composite") if flat else 0.0
+    champ_comp = _num(champ, "composite") if (flat and champ) else 0.0
     vcounts: dict[str, int] = {}
     for hid in (h for _t, ids in HYP_BLOCKS for h in ids):
         v = table.get(hid, {}).get("verdict", "PENDING")
@@ -2231,7 +2231,6 @@ def _geometry_table(flat: list[dict]) -> str:
     rows_sorted = sorted(flat, key=lambda r: _num(r, "offshell_displacement"),
                          reverse=True)
     for r in rows_sorted:
-        exp = r.get("experiment_num")
         tds = []
         for (k, _l, num) in cols:
             if k == "model":
@@ -2244,7 +2243,7 @@ def _geometry_table(flat: list[dict]) -> str:
             elif num:
                 v = r.get(k)
                 try:
-                    fv = float(v)
+                    fv = float(v if v is not None else 0.0)
                     disp = f"{fv:.4f}"
                 except (TypeError, ValueError):
                     fv, disp = -1e18, "—"
@@ -3002,7 +3001,7 @@ def build_all_dashboards(results_dir: Path | None = None,
     # id for legacy / non-campaign tags).
     rows_by_hyp: dict[str, list[dict]] = {}
     for row in rows:
-        hid = resolve_hyp_id(row, repo_root, idea_dirs)
+        hid = resolve_hyp_id(row, repo_root, idea_dirs) or ""
         if hid:
             rows_by_hyp.setdefault(hid, []).append(row)
 
