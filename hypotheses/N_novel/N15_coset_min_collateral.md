@@ -256,3 +256,9 @@ The practical challenge is evaluation sensitivity (MMLU noise) and fragile-direc
 identification. Recommend: (1) use Rogue Scalpel published fragile-feature list
 as F (no new analysis needed), (2) run minimum experiment with one behavior, (3)
 commit to full protocol if MMLU difference signal is detectable at 3 seeds.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N15.md`.

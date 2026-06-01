@@ -218,3 +218,9 @@ generation regime).
 **NOVEL+TESTABLE.** The generation-length sweep is the key experimental design.
 The SKOP mitigation provides a clean remediation arm that makes the experiment
 more than just a documentation of failure.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E24.md`.

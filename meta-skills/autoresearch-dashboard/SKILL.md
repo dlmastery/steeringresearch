@@ -80,6 +80,55 @@ No orphan pages. No row without both sub-links.
 
 ## Required panels — master dashboard
 
+### Panel 0 — Newcomer grounding block (MANDATORY, rendered first)
+
+Every master dashboard MUST open with a **newcomer grounding block** that appears
+before any table, chart, or ribbon. A first-time reader who knows nothing about
+the project must be able to answer three questions from this block alone:
+
+**A. Research goal / outcome (≥ 2 sentences)**
+State the concrete deliverable in plain English. Do NOT write "we study X" —
+write what you are trying to invent or discover, what SOTA means concretely
+in this domain (the trade-off being maximized), and what a "winner" means. Example:
+
+> "Goal: discover the parameter configuration that maximizes \[primary_efficacy\]
+> while keeping \[cost_axis_1\] and \[cost_axis_2\] within acceptable bounds —
+> the best simultaneous trade-off known for this model class. A 'winner' is any
+> method that Pareto-dominates the current champion on the composite metric
+> (defined below) at matched \[coherence/quality\] cost."
+
+**B. Domain primitives paragraph (≥ 3 sentences)**
+Define the core concept the program manipulates in one paragraph. Use no acronyms
+without expansion on first use. No assumed background — a researcher from a
+neighboring field must understand what is being done and why it is non-trivial.
+
+**C. Methodology section with tabs OPEN by default**
+The methodology section must be:
+- Present and non-empty (not a "Methodology…" label that links nowhere)
+- Rendered with all tabs/accordions **open** by default (not collapsed)
+- Contains at minimum: (1) the 5-rung benchmark ladder summary, (2) the composite
+  formula (with all axis names spelled out), (3) the screening vs evaluation
+  distinction, (4) a one-sentence description of what one "experiment" is
+
+**Checklist — verify before any publish:**
+- [ ] Research goal states the concrete outcome, not just the research topic
+- [ ] Domain primitives paragraph uses no undefined acronyms
+- [ ] Methodology section present, non-empty, and open by default
+- [ ] All other major tabs (geometry, ladder, hypotheses, runs) each have a
+      one-paragraph "what this tab is and how to read it" label
+
+### Panel 0b — Per-tab orientation paragraphs
+
+Every named tab or major section panel in the dashboard (not just the main
+orientation block) MUST have its own one-paragraph introduction:
+- What this tab/section shows
+- How to read the numbers or charts it contains
+- What "good" looks like vs what to investigate further
+
+This applies to: geometry panels, ladder panels, hypothesis panels, runs/table
+panels, Pareto panels, stack/compete panels. A tab whose content is visible but
+unexplained fails this rule.
+
 ### Panel 1 — Runs table (sortable + filterable)
 
 The runs table is the centrepiece. HTML contract:
@@ -118,10 +167,39 @@ Rules:
 - `data-v` carries the raw numeric so float sort is correct.
 - The **global champion row** carries `class="champion"` (green
   background highlight). There is exactly one champion row.
+- **KEEP / champion rows are green; DISCARD rows are muted/grey; NEAR-MISS rows
+  are yellow.** A visible legend (color key) must appear directly above or below
+  the table — never assume the reader infers the color scheme.
 - Every numeric cell carries `n=X` + `SCREENING` / `EVALUATION` tier
   chip. No bare numbers.
 - The `filterTable()` function does `textContent.toLowerCase()` substring
   match against `#q`. No external JS library.
+
+**Per-table "What is this" block (required on every table)**
+
+Every table in the dashboard must be preceded by an expandable (or always-visible)
+"What is this" block containing:
+
+```html
+<details class="table-explainer" open>
+  <summary>What is this table?</summary>
+  <p><strong>Purpose:</strong> [one sentence describing what this table shows]</p>
+  <dl class="col-glossary">
+    <dt>Method</dt><dd>The algorithm or configuration variant tested.</dd>
+    <dt>Composite</dt><dd>The multi-axis score (higher = better). Computed as
+      [formula summary]. See footer for fingerprint.</dd>
+    <dt>n</dt><dd>Number of independent seeds run. n≤3 = SCREENING (cannot
+      support external claims). n≥7 = EVALUATION.</dd>
+    <!-- one <dt>/<dd> pair per column -->
+  </dl>
+  <p><strong>What to pay attention to:</strong> [what distinguishes good vs bad rows]</p>
+  <p><strong>Expected/good values:</strong> [concrete examples or ranges]</p>
+</details>
+```
+
+This block is required for: the runs table, the Pareto panel caption, the ladder
+board, the stack/compete matrix, and any geometry table. A table without a
+"What is this" block fails the dashboard audit.
 
 ### Panel 2 — Multi-axis radar / parallel-coordinates
 
@@ -265,7 +343,8 @@ Link it from `README.md` near the top.
    anywhere on any dashboard surface.
 5. **At least one dominated row** in every Pareto panel.
 6. **Champion row highlighted** with a distinct background (CSS class
-   `champion`); exactly one champion row exists.
+   `champion`); exactly one champion row exists. KEEP rows = green,
+   DISCARD = muted, NEAR-MISS = yellow. A color legend is required.
 7. **Sub-links mandatory.** Every runs-table row has a sub-dashboard
    link and a per-experiment link. No row without both.
 8. **COMPOSITE_FORMULA fingerprint in the footer.** Mismatch = hard
@@ -279,6 +358,13 @@ Link it from `README.md` near the top.
 12. **Markdown rendered.** Any `.md`-sourced content must pass through
     the GFM converter (see `../autoresearch-typography-and-rendering/`).
     Playwright asserts no literal `##` / `**` / `|---|` leaks through.
+13. **Newcomer grounding block present.** Panel 0 (goal, domain
+    primitives, open methodology section) must appear before any table
+    or chart. A dashboard without it fails the publish gate.
+14. **Per-tab orientation paragraphs.** Every named section/tab has a
+    one-paragraph "what this is and how to read it" label.
+15. **Per-table "What is this" block.** Every table has an expandable
+    glossary + purpose + expected-values block (see Panel 1 contract).
 
 ## Companion skills — a dashboard commit is INCOMPLETE without all of
 

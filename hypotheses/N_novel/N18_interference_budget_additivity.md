@@ -251,3 +251,9 @@ TESTABLE-MEDIUM. The minimum experiment (1 hour) tests the directional claim cle
 The quantitative Spearman >= 0.70 threshold may be too demanding given the proxy
 approximation; consider lowering to 0.55 as the primary threshold with 0.70 as the
 aspirational target. Recommend the sensitivity-weighted IB variant as a secondary test.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N18.md`.

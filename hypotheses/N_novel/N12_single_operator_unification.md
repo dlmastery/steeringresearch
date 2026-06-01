@@ -292,3 +292,9 @@ it provides the unified picture that the program lacks. The 3-hour minimum (4 co
 should be the first run; commit to the full 10-hour ablation only after the minimum
 confirms the Pareto claim. The statistical power issue (n=1 screening) is real and
 must be planned for: commit to n=7 runs for the final claim.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N12.md`.

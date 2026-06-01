@@ -88,6 +88,35 @@ def main() -> int:
     check("B8 STACK/COMPETE matrix present", has_stack,
           f"STACK={'STACK' in html} COMPETE={'COMPETE' in html}")
 
+    # B-WI -- every rendered data table is preceded by a "What is this table?"
+    # (.whatis) expandable. Mechanically: count <table> elements that are NOT
+    # inside a rendered-markdown body (.md-body, e.g. campaign writeups) and
+    # require at least that many .whatis blocks ahead of them on the page.
+    def _table_whatis_ok(page_html: str) -> tuple[bool, str]:
+        n_tables = len(re.findall(r"<table\b", page_html))
+        # tables that live inside a .md-body (campaign/idea markdown) are author
+        # prose, not dashboard data tables — discount them.
+        md_tables = sum(
+            len(re.findall(r"<table\b", blk))
+            for blk in re.findall(r'class="md-body".*?</div>', page_html, flags=re.S))
+        data_tables = max(0, n_tables - md_tables)
+        n_whatis = len(re.findall(r'class="whatis"', page_html))
+        ok = n_whatis >= data_tables and (data_tables == 0 or n_whatis > 0)
+        return ok, f"data_tables={data_tables} whatis_blocks={n_whatis}"
+
+    m_ok, m_ev = _table_whatis_ok(html)
+    check("B-WI master: every data table has a What-is-this block", m_ok, m_ev)
+
+    # winner row colour-coding present on the master (champion + keep + discard
+    # classes ride on <tr>) and a winner legend explains the colours.
+    has_champ = 'class="row-champion"' in html or "row-champion" in html
+    has_winner_legend = "winner-legend" in html
+    check("B-WI master: winner rows carry champion class", has_champ,
+          f"row-champion={'row-champion' in html} "
+          f"row-keep={'row-keep' in html} row-discard={'row-discard' in html}")
+    check("B-WI master: winner row legend present", has_winner_legend,
+          "winner-legend block present")
+
     # B9 -- fingerprint + git SHA in footer.
     has_fp = FINGERPRINT in html
     has_sha = bool(re.search(r"git SHA", html, re.I)) or bool(
@@ -116,7 +145,6 @@ def main() -> int:
     )
     missing_pages: list[str] = []
     leaked_pages: list[str] = []
-    leak_pat = re.compile(r"\|---|^##\s|\*\*", re.M)
     for num in exp_nums:
         page = exp_dir / f"exp{int(num):03d}.html"
         if not page.exists():
@@ -133,6 +161,26 @@ def main() -> int:
           "all present" if not missing_pages else f"missing={missing_pages}")
     check("B11 no literal ##/**/|---| leak in experiment pages", not leaked_pages,
           "clean" if not leaked_pages else f"leaked={leaked_pages}")
+
+    # B-WI -- sample experiment + hypothesis page each carry .whatis blocks
+    # above their data tables (per-tier coverage spot-check).
+    sample_exp = next((exp_dir / f"exp{int(n):03d}.html" for n in exp_nums
+                       if (exp_dir / f"exp{int(n):03d}.html").exists()), None)
+    if sample_exp is not None:
+        e_ok, e_ev = _table_whatis_ok(_read(sample_exp))
+        check("B-WI experiment page: data tables have What-is-this blocks",
+              e_ok, f"{sample_exp.name}: {e_ev}")
+    hyp_dir = REPO / "docs" / "dashboard" / "hyp"
+    hyp_pages = sorted(hyp_dir.glob("*.html")) if hyp_dir.exists() else []
+    # pick a hypothesis page that actually has runs (its runs table needs a block)
+    hyp_with_table = next(
+        (p for p in hyp_pages if "<table" in _read(p)
+         and 'class="md-body"' not in _read(p).split("<table", 1)[0][-200:]),
+        hyp_pages[0] if hyp_pages else None)
+    if hyp_with_table is not None:
+        h_ok, h_ev = _table_whatis_ok(_read(hyp_with_table))
+        check("B-WI hypothesis page: data tables have What-is-this blocks",
+              h_ok, f"{hyp_with_table.name}: {h_ev}")
 
     # B12 -- master links to each per-experiment page.
     linked = set(re.findall(r"experiments/exp(\d+)\.html", html))

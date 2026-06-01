@@ -290,3 +290,9 @@ this experiment enables a class of pre-emptive safety interventions that
 is qualitatively different from reactive output monitoring. Recommend
 including GCG-suffix trajectories as a stress test of the monitoring
 approach.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E39.md`.

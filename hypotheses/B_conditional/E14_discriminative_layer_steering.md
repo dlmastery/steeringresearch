@@ -243,3 +243,9 @@ to all-layer steering).
 
 **NOVEL+TESTABLE** for Gemma-2-2B. The iso-efficacy confound is the most
 important design choice — the protocol should be clarified before running.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E14.md`.

@@ -260,3 +260,16 @@ SUPPORTED(screening) — HELD-OUT REPLICATION REQUIRED. This is the highest-prio
 held-out generalization test in the program. The alpha-confound three-way regression
 must be added to the protocol. The minimum experiment (9 rows, 45 min) is the first
 required step before committing to the full 5-hour protocol.
+
+---
+
+## Provenance & Tracing
+
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/N17.md`](../PROVENANCE/N17.md).
+
+- **Experiments:** analysis campaign (computed quantities in the campaign JSON; see the provenance file).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/rung3_n17.py  # rung-3: REAL WikiText-2 PPL, 50 pooled (model x layer x alpha) points, 2 models, Spearman + 10k-bootstrap CI + held-out 270m->1b N5-law fit
+```

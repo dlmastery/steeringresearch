@@ -275,3 +275,9 @@ TESTABLE-MEDIUM-CONFIDENCE. The geometric claim is falsifiable with a single
 ablation adding ~30 min to an existing sweep. The 80% gap closure prediction
 is overconfident; 30-60% is a more realistic prior. The norm-reduction confound
 is the primary threat to interpretation and must be controlled explicitly.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N1.md`.

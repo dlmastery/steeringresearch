@@ -299,3 +299,9 @@ The Guard D (verdict check) addition may push this to 75-85%.
 experiments in the program given the Rogue Scalpel threat model. Recommend
 including the adaptive-attack condition and reporting all five measurement
 axes (behavior, capability, coherence, safety, selectivity).
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E41.md`.

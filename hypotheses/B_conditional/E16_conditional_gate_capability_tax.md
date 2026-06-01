@@ -271,3 +271,9 @@ rhetorical gaps.
 the effect; the magnitude (80% reduction) is pre-registered and conservative.
 This is among the most important experiments in Block B for the practical
 deployment argument.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E16.md`.

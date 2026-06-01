@@ -316,3 +316,16 @@ a methodological finding with direct harness impact: `relative_add` should be th
 default operation from E7 onward. The 0.10 knee is directionally supported by the
 N17 law; the formal confirmation of scale-invariance requires Gemma-2-2B data. The
 cross-prompt variance claim is the hardest to verify but the most publishable.
+
+---
+
+## Provenance & Tracing
+
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E7.md`](../PROVENANCE/E7.md).
+
+- **Experiments:** exp# 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97 (`autoresearch_results/experiment_log.jsonl`).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/campaign_sweep.py --model models/google/gemma-3-270m-it --quant none --hyp E7 --tag-prefix C9b-relcliff --behavior ocean --layers 16 --alphas 0.02 0.05 0.1 0.2 0.4 --ops relative_add --sources diffmean pca
+```

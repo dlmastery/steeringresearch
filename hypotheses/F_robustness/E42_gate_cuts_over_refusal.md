@@ -278,3 +278,9 @@ contrast-set extraction, causing it to fire on some XSTest prompts.
 A system that reduces jailbreak compliance at the cost of massive over-
 refusal is not useful; E42 measures the over-refusal cost and the gate's
 selectivity. Recommend reporting the full ROC curve as the primary output.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E42.md`.

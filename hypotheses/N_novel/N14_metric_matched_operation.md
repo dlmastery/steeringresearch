@@ -238,3 +238,9 @@ priority order.
 TESTABLE-MEDIUM. The directional concept case (C) has strong prior support from S-7
 and should be run first as the most likely-to-succeed sub-claim. The hyperbolic case
 (A) is the most novel and uncertain. Implement in order: (C) first, then (B), then (A).
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N14.md`.

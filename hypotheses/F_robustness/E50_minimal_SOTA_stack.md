@@ -319,3 +319,9 @@ simultaneously) would be the program's most citable contribution. Even
 a partial result (3 of 4 targets met) is publishable and informs the
 community about the achievable multi-property safety-capability frontier
 on a 4090-class GPU.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E50.md`.

@@ -258,3 +258,9 @@ but logistic regression is the actual mechanism). The unification is likely to
 be approximate (not exact special cases) — the 85/80/75 thresholds are achievable
 but will require careful threshold tuning. Recommend running minimum experiment
 first; promote to full protocol only if the minimum finds agreement > 80% jointly.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N2.md`.

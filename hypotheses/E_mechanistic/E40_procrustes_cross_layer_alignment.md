@@ -300,3 +300,16 @@ transport hypothesis. The primary value is in establishing the transport
 geometry of the residual stream, not in achieving a large functional
 improvement. Even a negative result (transported != independent) is
 informative about the non-flat nature of the residual stream.
+
+---
+
+## Provenance & Tracing
+
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E40.md`](../PROVENANCE/E40.md).
+
+- **Experiments:** analysis campaign (computed quantities in the campaign JSON; see the provenance file).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/campaign_sweep.py --model models/google/gemma-3-270m-it --quant none --hyp E40 --tag-prefix E40-transport --layers 6 9 12 14 16 --alphas 0.1 --ops relative_add --behaviors anger  # cosine of the same behavior direction across layers (parallel transport)
+```

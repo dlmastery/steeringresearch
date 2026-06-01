@@ -336,3 +336,9 @@ not for the behavior layer. Cost: < 1 hour on existing infrastructure.
 assumption that has not been directly measured. The experiment is cheap, uses
 existing infrastructure, and the result is actionable regardless of which way it
 goes.**
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E32.md`.

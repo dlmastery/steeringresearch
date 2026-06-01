@@ -277,3 +277,9 @@ is likely real but the hypothesis's 0.20 threshold will be borderline.
 question about the relationship between interpretability and control,
 motivating the design of future SAE training objectives (N8). Even a
 Jaccard of 0.20-0.35 (ambiguous zone) would be informative.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E37.md`.

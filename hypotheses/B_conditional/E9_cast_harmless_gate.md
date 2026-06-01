@@ -355,3 +355,9 @@ Wall-clock: ~45 min on a 4090. This is already the primary protocol (Section 7.1
 The mechanism is principled, the falsifier is specific, and the protocol is
 minimal. Main risk: linear separability at early Gemma-2-2B layers for the
 harmful/harmless contrast; the smoke run on 1B is the diagnostic gate.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E9.md`.

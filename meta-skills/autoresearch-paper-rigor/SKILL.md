@@ -248,3 +248,7 @@ evidence in support of a claim about the project's hypotheses.
   project's current winner family.
 - Project-level `paper/REVIEWER_CHECKLIST.md` or equivalent — the
   gating sections that consume this skill's outputs.
+- [`autoresearch-findings-ledger`](../autoresearch-findings-ledger/SKILL.md)
+  — the self-contained FINDINGS and interpretable ledger mandates; this
+  skill's rigor floor determines which claims qualify for FINDINGS.md,
+  and the findings-ledger skill governs how FINDINGS.md presents them.

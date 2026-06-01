@@ -306,3 +306,9 @@ preservation at aggressive rotation. Cost: <1 hour on existing infrastructure.
 effect size. SpotLight provides a more principled version. Test it as a
 low-cost ablation after E27-A (selective rotation) is established; do not
 prioritize over E29 (SLERP) or E31 (norm preservation).**
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E30.md`.

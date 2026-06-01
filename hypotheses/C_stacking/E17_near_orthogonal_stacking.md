@@ -257,3 +257,16 @@ internally consistent.
 
 **NOVEL+TESTABLE** for Gemma-2-2B with N5 geometry grounding. The anti-aligned
 control is essential for the comparison to be meaningful. Low compute cost.
+
+---
+
+## Provenance & Tracing
+
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E17.md`](../PROVENANCE/E17.md).
+
+- **Experiments:** analysis campaign (computed quantities in the campaign JSON; see the provenance file).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/campaign_sweep.py --model models/google/gemma-3-270m-it --quant none --hyp E17 --tag-prefix E17-stack --layers 16 --alphas 0.1 --ops relative_add --behaviors anger happiness  # solo vs joint (anger+happiness) stacking comparison
+```

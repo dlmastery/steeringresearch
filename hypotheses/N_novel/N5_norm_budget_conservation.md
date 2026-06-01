@@ -273,3 +273,16 @@ The alpha confound must be tested on existing data before the 4-hour held-out ru
 Recommend: (1) 5-min alpha-confound analysis on S-6 data, (2) if offshell adds
 R2 > 0.10, run full held-out protocol, (3) if < 0.10, revisit the offshell
 formulation.
+
+---
+
+## Provenance & Tracing
+
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/N5.md`](../PROVENANCE/N5.md).
+
+- **Experiments:** analysis campaign (computed quantities in the campaign JSON; see the provenance file).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/rung3_n17.py  # same run as N17: fit log PPL = a + b*offshell on gemma-3-270m, predict gemma-3-1b, report held-out R2
+```

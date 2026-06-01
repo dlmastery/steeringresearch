@@ -226,3 +226,9 @@ of the additive and rotational edits).
 
 **NOVEL+TESTABLE** as a direct test of the 7-axis decision rule's plane-specificity
 claim. If confirmed, this validates the entire competition/stacking decision matrix.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E23.md`.

@@ -294,3 +294,9 @@ experiment that could confirm or sharpen the refusal-circuit story.
 The 10pp falsifier threshold is tight; consider pre-registering a
 graduated verdict (< 5pp = OV-primary confirmed; 5-20pp = partial; > 20pp
 = falsified).
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E34.md`.

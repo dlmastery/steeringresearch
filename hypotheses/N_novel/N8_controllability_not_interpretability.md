@@ -279,3 +279,9 @@ TESTABLE-MEDIUM (Stage 1) / TESTABLE-HIGH-COST (Stage 2). Stage 1 is the
 essential pre-check with clear go/no-go criteria. Stage 2 is a major commitment
 (~12 hours) that should follow a positive Stage 1. The hypothesis has high
 practical value if confirmed — resolving the AxBench gap is a significant result.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N8.md`.

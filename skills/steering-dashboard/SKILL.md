@@ -19,6 +19,33 @@ the steering-specific panels required by CLAUDE.md Section 11.
 
 ## Steering-specific notes
 
+### Panel 0 — Newcomer grounding (steering instantiation)
+
+The master dashboard must open with the newcomer grounding block defined in
+`meta-skills/autoresearch-dashboard/SKILL.md`. For the steering program,
+the required content is:
+
+**Research goal (steering-specific):**
+
+> "Goal: discover the activation steering configuration (layer × alpha ×
+> direction × operation × span) that maximizes steering behavior efficacy on
+> Gemma models while keeping capability drop < 2 pp MMLU, perplexity increase
+> bounded (< 20% PPL uplift), safety compliance rate at 0%, and over-refusal
+> rate near baseline — the best simultaneous trade-off known for small-Gemma
+> steering. A 'winner' Pareto-dominates all prior configurations on the
+> fingerprinted composite metric."
+
+**Domain primitives (steering-specific):**
+One paragraph explaining what activation steering is, what the residual stream
+is, what an injection layer is, and why the five-axis trade-off is non-trivial.
+No assumed ML background — a cognitive scientist or linguist must understand
+what is being varied and why it matters.
+
+**Methodology tabs (steering-specific):**
+The methodology accordion must include: the 12-axis taxonomy, the composite
+formula with λ values, the five-rung ladder with gate thresholds, and the
+screening/evaluation distinction. All tabs open by default.
+
 ### Required panels (master dashboard)
 
 The master dashboard at `dashboard/index.html` must include ALL of the following:
@@ -81,7 +108,7 @@ Required:
 - Geometry probes: delta_norm, eff_rank_drop, norm_budget curves vs alpha
 - All five axis metrics with 95% CIs (n chips on every number)
 
-### Hard rules (verbatim from CLAUDE.md Section 11)
+### Hard rules (verbatim from CLAUDE.md Section 11, extended)
 
 - Self-contained HTML: no CDN, no external JS frameworks; one inline `<script>`
   for sort/filter
@@ -92,6 +119,14 @@ Required:
 - No self-graded ACCEPT banner without the "Internal QA pass — external review
   pending" qualifier
 - No emoji unless explicitly requested
+- **Newcomer grounding block** (Panel 0) present before any table or chart;
+  includes steering goal, domain primitives paragraph, and open methodology tabs
+- **Per-tab orientation paragraph** on every named section (geometry, ladder,
+  hypotheses, runs, Pareto, stack/compete)
+- **Per-table "What is this" block** on every table: purpose, per-column glossary
+  (incl. axis abbreviations expanded), what-to-pay-attention-to, expected values
+- **Winner color-coding with explicit legend**: KEEP/champion = green,
+  NEAR-MISS = yellow, DISCARD = muted, BROKEN = grey; legend present
 
 ---
 
@@ -112,6 +147,7 @@ Regenerate master dashboard on every checkpoint (CLAUDE.md Section 13):
 - Per-experiment page: `../../meta-skills/autoresearch-per-experiment-page/SKILL.md`
 - Typography and rendering: `../../meta-skills/autoresearch-typography-and-rendering/SKILL.md`
 - Link discipline: `../../meta-skills/autoresearch-link-discipline/SKILL.md`
+- Findings and ledger discipline: `../../meta-skills/autoresearch-findings-ledger/SKILL.md`
 - Composite formula: `../../src/steering/eval.py:COMPOSITE_FORMULA`
 - Ledger: `../../EXPERIMENT_LEDGER.md`
 - Master output: `../../dashboard/index.html`

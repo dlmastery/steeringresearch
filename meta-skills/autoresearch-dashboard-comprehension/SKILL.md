@@ -90,6 +90,23 @@ Required HTML template:
 Customise the text of each bullet to the project's terminology, but
 keep the four structural topics: what/colour/tier/drill-down.
 
+### Newcomer grounding (extends Pillar 2 for the master dashboard)
+
+The master dashboard's orientation block must additionally contain, or be
+immediately preceded by, a **newcomer grounding section** that answers:
+
+1. **What is the research goal / outcome?** (concrete trade-off being
+   maximized — not just "we study X")
+2. **What are the domain primitives?** (one paragraph defining the core
+   concept for a reader from a neighboring field)
+3. **Where is the methodology?** (a working link, or an embedded accordion
+   that is OPEN by default — never collapsed on load)
+
+A master dashboard that lacks this grounding fails Pillar 2 for a
+first-time reader even if the 4-bullet block is present. The 4-bullet
+block is the *navigation* orientation; the newcomer grounding is the
+*conceptual* orientation. Both are required.
+
 ## Pillar 3 — Seed-count + tier chip on every numeric
 
 Every numeric value on every visual surface — table cells, KPI strips,
@@ -146,7 +163,56 @@ Apply these CSS classes identically on the master dashboard, every sub-
 dashboard, and every per-experiment page. A unified palette across all
 three tiers is required — mismatched palettes signal unfinished work.
 
-## Pillar 4 — Multi-tag pills + no-self-grading banners
+## Pillar 4a — Per-table "What is this" glossary + winner color-coding
+
+### Required for EVERY table on ANY dashboard surface
+
+Every table must be preceded (or followed immediately in a collapsible) by a
+"What is this" block that gives:
+
+1. **Purpose** — one sentence: why this table exists and what question it answers.
+2. **Per-column glossary** — a `<dl>` list with one `<dt>/<dd>` pair per column,
+   defining each column name in plain English with units and direction (higher vs
+   lower is better).
+3. **What to pay attention to** — one sentence naming the most actionable signal
+   in the table (e.g., "look at the composite column; any row below the baseline
+   composite is a regression").
+4. **Expected / good values** — concrete example ranges so a newcomer knows
+   whether the numbers they see are typical or surprising.
+
+This is non-negotiable. A table without a "What is this" block fails the
+comprehension audit regardless of how well the table itself is formatted.
+
+### Winner color-coding discipline
+
+All verdict-bearing tables must use the unified color scheme:
+
+| Row class | Verdict(s) | Background | Meaning |
+|---|---|---|---|
+| `champion` | current global best | `#f0faf0` (green) | The method to beat |
+| `keep` | KEEP (non-champion) | `#e8f8e8` (light green) | Positive result |
+| `near-miss` | NEAR-MISS | `#fffbe5` (yellow) | Close but not KEEP |
+| `discard` | DISCARD | `#fff5f5` (muted red) | Negative result |
+| `broken` | BROKEN / FALSIFIED / NUMEROLOGY | `#f5f5f5` (grey) | Not a candidate |
+
+A **color legend** must appear directly above or below every color-coded table.
+"The colors are self-explanatory" is never acceptable — the legend must be
+explicit. Pattern:
+
+```html
+<div class="color-legend">
+  <span class="swatch champion">Champion / global best</span>
+  <span class="swatch keep">KEEP</span>
+  <span class="swatch near-miss">NEAR-MISS</span>
+  <span class="swatch discard">DISCARD</span>
+  <span class="swatch broken">BROKEN / FALSIFIED</span>
+</div>
+```
+
+Apply the same color scheme uniformly across master dashboard, sub-dashboards,
+and per-experiment pages. Mismatched palettes across tiers signal unfinished work.
+
+## Pillar 4b — Multi-tag pills + no-self-grading banners
 
 ### Multi-tag (multi-objective / multi-hypothesis) pill display
 
@@ -219,6 +285,16 @@ on file is a blocking violation.
   vs. per-experiment pages** — one unified palette across all tiers.
 - **Radar/parallel-coordinates chart axis labels that don't match the
   composite formula term names** — no silent abbreviations.
+- **A table with no "What is this" block** (Pillar 4a) — every table
+  must have purpose, per-column glossary, what-to-watch, and expected
+  values, or it fails the comprehension audit.
+- **Color-coded rows with no legend** — the color scheme (champion/keep/
+  near-miss/discard/broken) must always be explained inline.
+- **A master dashboard without newcomer grounding** — research goal,
+  domain primitives paragraph, and open methodology tabs are required
+  before any chart or table.
+- **Methodology tabs collapsed by default** — open by default; a reader
+  who does not interact with the page must still see the methodology.
 
 ## Cross-references
 
@@ -233,3 +309,6 @@ on file is a blocking violation.
   Holm-Bonferroni chain).
 - `../autoresearch-meta/SKILL.md` — the process spine; this skill
   enforces presentation discipline at the Checkpoint step.
+- `../autoresearch-findings-ledger/SKILL.md` — self-contained findings
+  and ledger discipline; the color-coding and glossary standards here
+  apply equally to any findings table rendered on a dashboard surface.

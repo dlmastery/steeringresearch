@@ -288,3 +288,16 @@ behavior.
 mechanistic information regardless of whether the 85% threshold is met.
 Recommend reporting the full curve and computing effective dimensionality
 as the primary output.
+
+---
+
+## Provenance & Tracing
+
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E35.md`](../PROVENANCE/E35.md).
+
+- **Experiments:** analysis campaign (computed quantities in the campaign JSON; see the provenance file).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/campaign_sweep.py --model models/google/gemma-3-270m-it --quant none --hyp E35 --tag-prefix E35-sparse --layers 16 --alphas 0.1 --ops relative_add --behaviors anger  # sparsify the behavior vector to top-magnitude coords; efficacy vs sparsity
+```

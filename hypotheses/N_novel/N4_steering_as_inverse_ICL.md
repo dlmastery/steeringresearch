@@ -257,3 +257,9 @@ TESTABLE-MEDIUM. The theoretical story is plausible and has strong precedent.
 The 0.60 threshold is somewhat aggressive given the instruction-tuning confound.
 The minimum 30-minute experiment should be the first step; commit to the full
 protocol only after seeing the minimum result.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N4.md`.

@@ -266,3 +266,16 @@ reasonable minimum for a "monotone" relationship.
 Gram off-diagonal mass to norm growth is an exact prediction; the behavioral
 monotonicity is the empirical novelty. High scientific value as the universal
 stacking predictor.
+
+---
+
+## Provenance & Tracing
+
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E18.md`](../PROVENANCE/E18.md).
+
+- **Experiments:** analysis campaign (computed quantities in the campaign JSON; see the provenance file).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/campaign_sweep.py --model models/google/gemma-3-270m-it --quant none --hyp E18 --tag-prefix E18-interf --layers 16 --alphas 0.1 --ops relative_add --behaviors anger formality happiness ocean  # 2-5 vector stacks; interference vs summed off-diagonal Gram mass
+```

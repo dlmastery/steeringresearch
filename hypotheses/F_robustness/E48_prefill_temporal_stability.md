@@ -273,3 +273,9 @@ token overhead; a falsified result motivates N9's closed-loop controller.
 Either way, E48 is a necessary characterisation of the temporal properties
 of activation steering. Recommend running at generation lengths up to 512
 tokens to fully characterise the drift curve.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E48.md`.

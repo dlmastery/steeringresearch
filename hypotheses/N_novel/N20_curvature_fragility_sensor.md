@@ -278,3 +278,16 @@ tests whether eff_rank and fragility rank in the right direction. If the min-eff
 layer is consistently more fragile than the max-eff_rank layer (across 3 seeds), the
 hypothesis is WEAKLY SUPPORTED and the full 8-layer protocol is warranted. If not,
 the hypothesis may be FALSIFIED and the curvature-fragility mechanism requires revision.
+
+---
+
+## Provenance & Tracing
+
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/N20.md`](../PROVENANCE/N20.md).
+
+- **Experiments:** exp# 47, 48, 49, 50, 51, 52, 53, 54 (`autoresearch_results/experiment_log.jsonl`).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/campaign_sweep.py --model models/google/gemma-3-270m-it --quant none --hyp N20 --tag-prefix C4-N20-fragility --behavior ocean --layers 2 4 6 8 10 12 14 16 --alphas 4.0 --ops add --sources diffmean
+```

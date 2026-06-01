@@ -299,3 +299,9 @@ is the Windows bitsandbytes installation. Once unblocked, this is a fast experim
 that provides a necessary calibration for all results. The risk of falsification is
 low but real. Priority: unblock bitsandbytes, then run as part of the E3/E4 primary
 evaluation.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E5.md`.

@@ -383,6 +383,65 @@
     border-radius:0;color:var(--paper);}
  details.interpret > .md-body strong,details.interpret > .md-body b{
     color:var(--paper);font-weight:600;}
+ /* "What is this table?" expandables (blue-accented, closed by default; sit
+    directly ABOVE every table — purpose + per-column glossary + what-to-watch).
+    Visually distinct from the gold "how to read this" interpret accordions. */
+ details.whatis{margin:8px 0 6px;background:var(--panel2);
+    border:1px solid var(--rule);border-left:2px solid var(--v-derivative);}
+ details.whatis > summary{cursor:pointer;list-style:none;padding:9px 14px;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;
+    letter-spacing:0.14em;color:var(--v-derivative);font-weight:600;user-select:none;}
+ details.whatis > summary:hover{color:var(--paper);background:rgba(88,166,255,0.08);}
+ details.whatis > summary::-webkit-details-marker{display:none;}
+ details.whatis > summary::before{content:"\25B8";margin-right:9px;
+    color:var(--v-derivative);font-size:0.92em;}
+ details.whatis[open] > summary::before{content:"\25BE";}
+ details.whatis[open] > summary{border-bottom:1px solid var(--rule);}
+ details.whatis > .wi-body{padding:11px 16px 13px 16px;font-size:0.92em;
+    line-height:1.6;color:var(--paper);font-family:'Source Serif 4',Georgia,serif;}
+ details.whatis > .wi-body > p{margin:0 0 9px;}
+ details.whatis > .wi-body .wi-intro{margin-bottom:11px;}
+ details.whatis > .wi-body .wi-sub{font-family:'IBM Plex Mono',monospace;
+    font-size:9.5px;text-transform:uppercase;letter-spacing:0.16em;
+    color:var(--paper-dim);margin:4px 0 6px;font-weight:600;}
+ details.whatis > .wi-body dl.wi-cols{margin:0 0 11px;display:grid;
+    grid-template-columns:auto 1fr;gap:4px 14px;align-items:baseline;}
+ details.whatis > .wi-body dl.wi-cols dt{font-family:'IBM Plex Mono',monospace;
+    font-size:0.86em;color:var(--paper);font-weight:600;white-space:nowrap;}
+ details.whatis > .wi-body dl.wi-cols dd{margin:0;color:var(--paper);
+    font-size:0.95em;line-height:1.5;}
+ details.whatis > .wi-body dl.wi-cols dd .good{color:var(--v-pass);
+    font-family:'IBM Plex Mono',monospace;font-size:0.92em;}
+ details.whatis > .wi-body .wi-watch{border-left:2px solid var(--accent);
+    padding:7px 13px;background:var(--ink);margin-top:4px;font-size:0.95em;
+    line-height:1.55;}
+ details.whatis > .wi-body .wi-watch b{color:var(--accent);font-weight:600;}
+ details.whatis > .wi-body code{background:var(--ink);border:1px solid var(--rule);
+    padding:1px 4px;font-family:'IBM Plex Mono',monospace;font-size:0.9em;
+    color:var(--paper);}
+ details.whatis > .wi-body strong,details.whatis > .wi-body b{
+    color:var(--paper);font-weight:600;}
+ /* WINNER / verdict row colour-coding (applies to table.runs + .kvtable).
+    Subtle, legible left-border + tint tiers: champion (strong green) >
+    keep (light green) > neutral > discard (muted/de-emphasised). The class
+    rides on the <tr> so it survives the inline sort/filter JS. */
+ table.runs tr.row-champion,.kvtable tr.row-champion{
+    box-shadow:inset 3px 0 0 var(--v-pass);background:rgba(63,185,80,0.12);}
+ table.runs tr.row-champion td,.kvtable tr.row-champion td{font-weight:600;}
+ table.runs tr.row-champion td.l:first-child::after,
+ .kvtable tr.row-champion td.k:first-child::after{content:" \2605";
+    color:var(--v-pass);}
+ table.runs tr.row-keep,.kvtable tr.row-keep{
+    box-shadow:inset 3px 0 0 var(--v-pass);background:rgba(63,185,80,0.05);}
+ table.runs tr.row-discard td,.kvtable tr.row-discard td{
+    color:var(--paper-dim);opacity:0.78;}
+ table.runs tr.row-discard td.comp{color:var(--paper-dim);}
+ table.runs tr.row-champion:hover,table.runs tr.row-keep:hover{
+    background:rgba(63,185,80,0.16);}
+ /* winner-row legend chips (reuse the .legend frame) */
+ .legend .lchip .sw.champ{background:var(--v-pass);}
+ .legend .lchip .sw.rowkeep{background:rgba(63,185,80,0.45);}
+ .legend .lchip .sw.rowdiscard{background:var(--paper-dim);}
  /* methodology pane — collapsible <details> sub-sections */
  .method-intro{background:var(--panel);border:1px solid var(--rule);
     border-left:2px solid var(--v-pass);padding:16px 22px;margin:18px 0 18px;
@@ -521,6 +580,6 @@
   <p class="empty">No runs logged for this hypothesis yet — it is pre-registered in IDEA_TABLE.md and awaiting its first experiment.</p>
 </section>
 <div class="doc-footer"><a href="https://github.com/dlmastery/steeringresearch" target="_blank" rel="noopener">Repo</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/paper/PAPER.md" target="_blank" rel="noopener">Paper</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/FINDINGS.md" target="_blank" rel="noopener">FINDINGS</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/IDEA_TABLE.md" target="_blank" rel="noopener">IDEA_TABLE</a> &middot; <a href="https://dlmastery.github.io/steeringresearch/" target="_blank" rel="noopener">GitHub Pages</a></div>
-<div class="meta">composite formula &nbsp; <code>composite = behavior_efficacy - lambda_cap  * max(0, mmlu_drop_pp) - lambda_coh  * max(0, dppl_norm) - lambda_coh_rep * max(0, repetition_rate) - lambda_safe * compliance_rate - lambda_sel  * max(0, harmless_refusal_rate) - lambda_geo  * max(0, offshell_displacement)</code><br>composite fingerprint &nbsp; <code>a9001e87087e</code> &middot; git SHA &nbsp; <code>0ab5e59</code> &middot; generated &nbsp; <code>2026-06-01T11:56:19</code> &middot; hypothesis <code>E32</code><br>Internal QA pass &mdash; external review pending. &middot; Generated by <code>steering.dashboard</code> &middot; brutalist editorial lab notebook &middot; self-contained inline CSS, Google Fonts with offline serif/mono fallback.</div>
+<div class="meta">composite formula &nbsp; <code>composite = behavior_efficacy - lambda_cap  * max(0, mmlu_drop_pp) - lambda_coh  * max(0, dppl_norm) - lambda_coh_rep * max(0, repetition_rate) - lambda_safe * compliance_rate - lambda_sel  * max(0, harmless_refusal_rate) - lambda_geo  * max(0, offshell_displacement)</code><br>composite fingerprint &nbsp; <code>a9001e87087e</code> &middot; git SHA &nbsp; <code>9d09e6f</code> &middot; generated &nbsp; <code>2026-06-01T12:29:23</code> &middot; hypothesis <code>E32</code><br>Internal QA pass &mdash; external review pending. &middot; Generated by <code>steering.dashboard</code> &middot; brutalist editorial lab notebook &middot; self-contained inline CSS, Google Fonts with offline serif/mono fallback.</div>
 </body>
 </html>

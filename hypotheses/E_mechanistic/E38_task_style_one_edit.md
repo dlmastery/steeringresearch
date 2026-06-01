@@ -282,3 +282,9 @@ with semantic overlap (e.g., "formal French translation").
 two research literatures and enable a powerful multi-property steering
 interface. The 90% threshold is tight; a graduated verdict table is
 recommended.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E38.md`.

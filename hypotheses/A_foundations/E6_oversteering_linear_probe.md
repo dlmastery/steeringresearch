@@ -326,3 +326,9 @@ is the fastest path to a useful finding. The linear probe on h adds potential
 marginal value. Recommend: run the Δ‖h‖-only baseline first (trivial, from E3 data);
 then decide whether the full probe training is worthwhile. If the baseline achieves
 AUC >= 0.80, report it as the simpler and more interpretable solution.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E6.md`.

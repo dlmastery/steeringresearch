@@ -280,3 +280,9 @@ by training analogues); others may be near 30% (maximally novel).
 result transforms the steering workflow from "curate a dataset for each
 behavior" to "describe the behavior." The experiment is worth running early
 to determine whether this shortcut is viable.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E45.md`.

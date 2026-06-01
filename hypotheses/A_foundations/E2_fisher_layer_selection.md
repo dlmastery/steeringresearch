@@ -299,3 +299,16 @@ separability and causal steerability is the mechanism, and is consistent with N8
 The actionable pivot: use a causal perturbation-strength metric (ITI-delta at unit
 alpha) for layer selection, not Fisher. This is a publishable negative result if
 replicated at full n with a real judge.
+
+---
+
+## Provenance & Tracing
+
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E2.md`](../PROVENANCE/E2.md).
+
+- **Experiments:** exp# 20, 21, 22, 23, 24, 25, 26, 27 (`autoresearch_results/experiment_log.jsonl`).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/campaign_sweep.py --model models/google/gemma-3-270m-it --quant none --hyp E2 --tag-prefix C1-E2-layer --behavior ocean --layers 2 4 6 8 10 12 14 16 --alphas 2.0 --ops add --sources diffmean
+```

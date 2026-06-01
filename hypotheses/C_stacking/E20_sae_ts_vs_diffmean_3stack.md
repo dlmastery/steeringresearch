@@ -230,3 +230,9 @@ source is not cross-feature contamination.
 **NOVEL+TESTABLE.** The multi-behavior coherence angle is genuinely new relative
 to AxBench's single-behavior focus. The N5 grounding provides a mechanistic
 prediction chain. Main risk: SAE coverage quality on Gemma-2-2B.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E20.md`.

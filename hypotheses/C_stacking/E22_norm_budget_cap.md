@@ -275,3 +275,16 @@ well-motivated prediction. The cap implementation is mechanistically sound.
 The master-curve prediction is the key falsifiable claim; the cap experiment
 is its practical application. The Conceptor-AND offshell computation is the
 main technical care point.
+
+---
+
+## Provenance & Tracing
+
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E22.md`](../PROVENANCE/E22.md).
+
+- **Experiments:** analysis campaign (computed quantities in the campaign JSON; see the provenance file).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/campaign_sweep.py --model models/google/gemma-3-270m-it --quant none --hyp E22 --tag-prefix E22-budget --layers 16 --alphas 0.02 0.05 0.1 0.2 0.4 --ops relative_add --behaviors anger happiness  # cumulative ||sum alpha_i v_i|| swept against PPL to find the collapse knee
+```

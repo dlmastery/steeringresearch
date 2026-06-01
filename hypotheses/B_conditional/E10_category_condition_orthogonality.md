@@ -287,3 +287,16 @@ meta-analysis across models and categories.
 and inform whether multi-category CAST gating requires Gram-Schmidt
 preprocessing (E19). Low compute cost makes this an early-priority experiment
 in the Block B sequence.
+
+---
+
+## Provenance & Tracing
+
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E10.md`](../PROVENANCE/E10.md).
+
+- **Experiments:** analysis campaign (computed quantities in the campaign JSON; see the provenance file).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/campaign_sweep.py --model models/google/gemma-3-270m-it --quant none --hyp E10 --tag-prefix E10-ortho --layers 16 --alphas 0.1 --ops relative_add --behaviors anger formality happiness ocean  # then the E10_E17 cosine/stacking analysis over the extracted banks
+```

@@ -31,17 +31,21 @@ Write it up as a `BACKLOG.md` line instead, and return when you can cite it.
 ideas/NN_<short_name>/
 ├── README.md        — idea statement + lit review + hypothesis
 ├── IDEA.md          — formal claim + falsifier + predicted delta range
-├── implementation.py — standalone module
+├── PROVENANCE.md    — tracing artifact: experiment tags, commands, result paths
+├── implementation.py — standalone module (or note pointing to shared harness)
 ├── tests.py         — correctness tests
 ├── AUDIT.md         — self-audit (weaknesses found before first run)
 ├── IMPROVEMENTS.md  — fix log (addressed weaknesses from AUDIT)
 ├── VERIFY.md        — verification log: tests green, sanity checks, sign-off
-├── experiment.py    — idea-specific experiment driver
+├── experiment.py    — idea-specific experiment driver (or shared harness note)
 ├── configs/         — configuration files (YAML or equivalent)
 ├── experiments/     — per-experiment archives
 ├── results.md       — auto-generated or manually-maintained summary
 └── dashboard/       — idea-level dashboard
 ```
+
+`PROVENANCE.md` is new and mandatory once the first experiment for this idea
+has run. See the Provenance contract section below.
 
 **Numbering:** use 10-spacing (`10`, `20`, `30`, …) to leave room for
 closely-related ideas to be inserted between existing ones without renaming.
@@ -192,6 +196,82 @@ Where in the combination suite does it slot?>
 <Author identifier + date>
 ```
 
+## PROVENANCE.md template (created after the first experiment runs)
+
+```markdown
+# Provenance — H<NN> — <idea short name>
+
+> Generated from experiment_log.jsonl. Update after every new experiment
+> that tests this hypothesis.
+
+## Experiments that tested this hypothesis
+
+| tag | rung | verdict | composite | result path | reasoning entry |
+|-----|------|---------|-----------|-------------|-----------------|
+| expNNN_<short> | SMOKE | KEEP | 0.XXXX | ideas/NN/experiments/expNNN_<short>/ | autoresearch_results/reasoning_annotations.json#expNNN |
+
+## Exact commands
+
+For each experiment tag above, the exact command used:
+
+```bash
+# expNNN_<short>
+python -m <project>.runner \
+  --config ideas/NN_<short>/configs/expNNN_<short>.yaml \
+  --tag expNNN_<short> --seed 0 \
+  --root ideas/NN_<short>/experiments/expNNN_<short>/run
+```
+
+## Result interpretation (2–3 sentences per experiment)
+
+**expNNN_<short>:** [What the numbers mean for this specific hypothesis —
+not just the raw scores. Did the mechanism work? What is the implication
+for the next experiment on this hypothesis?]
+
+## What new harness code this hypothesis needs (if untested)
+
+[If this hypothesis has NOT yet been tested because the shared harness
+cannot do it yet, describe exactly what new capability the harness needs.
+If all needed code exists, write "No additional harness code required."]
+```
+
+Generate or update `PROVENANCE.md` programmatically from `experiment_log.jsonl`
+filtered to the hypothesis's tag(s). The auto-generation script lives in
+`scripts/generate_provenance.py` (or the project-equivalent). After each new
+experiment verdict, re-run the generator and commit the updated file.
+
+## Shared-harness architecture note (required in README when applicable)
+
+If this idea is tested via a shared harness rather than per-hypothesis code,
+the idea's `README.md` MUST include a section:
+
+```markdown
+## Harness architecture
+
+This hypothesis is tested via the project's shared experimental harness
+(`src/`). The hypothesis is differentiated by:
+- Configuration: `configs/expNNN_<short>.yaml`
+- Reasoning annotation: `autoresearch_results/reasoning_annotations.json`
+  (filtered to tags: [list of tags])
+- Result artifacts: `ideas/NN/experiments/expNNN_<short>/`
+
+No separate per-hypothesis implementation file is needed because
+[one sentence explaining why the shared harness covers this hypothesis].
+```
+
+If the shared harness CANNOT yet test this hypothesis, instead write:
+
+```markdown
+## What new harness code is needed
+
+The shared harness does not yet support [specific capability]. To test
+this hypothesis, the following must be added to `src/`:
+- [bullet list of required harness additions]
+```
+
+This prevents a reader from inferring incompleteness from the absence of a
+per-hypothesis implementation file.
+
 ## The falsifier-is-a-contract rule
 
 The IDEA.md falsifier is binding. If the pre-registered observation actually
@@ -208,6 +288,16 @@ idea, update its STATUS to DISCARDED, and move on.
 4. **Cross-idea interactions are documented.** When two ideas compose, both
    READMEs link to each other and to the combination suite entry.
 5. **Use 10-spacing numbering.** Never sequential integers.
+6. **PROVENANCE.md is created after the first experiment.** It must be
+   updated (or regenerated) after every subsequent experiment on this idea.
+   A tested hypothesis without a PROVENANCE.md is untraceable.
+7. **Untested hypotheses declare their harness requirements.** Any idea
+   that has never been run must state in its README what new harness code
+   is needed. "No experiments yet" is acceptable; "no explanation why" is not.
+8. **Shared-harness architecture disclosed.** If the idea relies on the
+   shared harness, the README says so explicitly and points to the
+   differentiating config/annotation. Absence of a per-hypothesis
+   implementation file is explained, not left implicit.
 
 ## What "good" looks like
 
@@ -242,3 +332,9 @@ idea, update its STATUS to DISCARDED, and move on.
   becomes the champion config, archive it there.
 - `../autoresearch-checkpoint/SKILL.md` — commit the scaffold immediately
   after creation, and after each doc is filled in.
+- `../autoresearch-findings-ledger/SKILL.md` — the PROVENANCE.md contract
+  here and Mandate C in the findings-ledger skill are complementary; the
+  provenance artifact feeds the ledger's tracing requirements.
+- `../autoresearch-experiment-archive/SKILL.md` — each per-experiment archive
+  under `ideas/<NN>/experiments/` is the low-level provenance unit; PROVENANCE.md
+  is the human-readable summary layer on top.

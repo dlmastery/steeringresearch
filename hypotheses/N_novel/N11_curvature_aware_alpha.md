@@ -265,3 +265,9 @@ inversion that must be resolved theoretically before the experiment is run. The
 minimum experiment (5 prompts, 30 min) is the essential validation step. Recommend
 against the full 4-hour protocol until the sign question is resolved and the
 minimum experiment confirms positive correlation.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N11.md`.

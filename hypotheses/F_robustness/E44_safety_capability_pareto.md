@@ -291,3 +291,9 @@ is the most directly actionable output of the safety experiments. It
 provides a principled, reproducible operating-point recommendation for
 practitioners. The geometry-based knee prediction is the falsifiable
 theoretical claim.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E44.md`.

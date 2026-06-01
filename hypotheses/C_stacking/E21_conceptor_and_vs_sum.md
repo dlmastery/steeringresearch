@@ -257,3 +257,9 @@ penalizes. The prediction of lower PPL cost is well-grounded.
 **NOVEL+TESTABLE** with N5+N16 geometry grounding. The aperture sensitivity
 is the main hyperparameter risk. The [NEEDS VERIFICATION] status of the corpus
 claim makes this a genuine reproduction test.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E21.md`.

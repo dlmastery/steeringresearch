@@ -226,3 +226,9 @@ precisely the OOD scenario that matters most for safety.
 **NOVEL+TESTABLE.** The OOD evaluation is the critical condition. The cost is
 low (logistic training on 400 examples). The falsifier (0.06 AUC gap) is
 specific and defensible.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E15.md`.

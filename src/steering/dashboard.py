@@ -468,6 +468,65 @@ SHARED_CSS = r"""
     border-radius:0;color:var(--paper);}
  details.interpret > .md-body strong,details.interpret > .md-body b{
     color:var(--paper);font-weight:600;}
+ /* "What is this table?" expandables (blue-accented, closed by default; sit
+    directly ABOVE every table — purpose + per-column glossary + what-to-watch).
+    Visually distinct from the gold "how to read this" interpret accordions. */
+ details.whatis{margin:8px 0 6px;background:var(--panel2);
+    border:1px solid var(--rule);border-left:2px solid var(--v-derivative);}
+ details.whatis > summary{cursor:pointer;list-style:none;padding:9px 14px;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;
+    letter-spacing:0.14em;color:var(--v-derivative);font-weight:600;user-select:none;}
+ details.whatis > summary:hover{color:var(--paper);background:rgba(88,166,255,0.08);}
+ details.whatis > summary::-webkit-details-marker{display:none;}
+ details.whatis > summary::before{content:"\25B8";margin-right:9px;
+    color:var(--v-derivative);font-size:0.92em;}
+ details.whatis[open] > summary::before{content:"\25BE";}
+ details.whatis[open] > summary{border-bottom:1px solid var(--rule);}
+ details.whatis > .wi-body{padding:11px 16px 13px 16px;font-size:0.92em;
+    line-height:1.6;color:var(--paper);font-family:'Source Serif 4',Georgia,serif;}
+ details.whatis > .wi-body > p{margin:0 0 9px;}
+ details.whatis > .wi-body .wi-intro{margin-bottom:11px;}
+ details.whatis > .wi-body .wi-sub{font-family:'IBM Plex Mono',monospace;
+    font-size:9.5px;text-transform:uppercase;letter-spacing:0.16em;
+    color:var(--paper-dim);margin:4px 0 6px;font-weight:600;}
+ details.whatis > .wi-body dl.wi-cols{margin:0 0 11px;display:grid;
+    grid-template-columns:auto 1fr;gap:4px 14px;align-items:baseline;}
+ details.whatis > .wi-body dl.wi-cols dt{font-family:'IBM Plex Mono',monospace;
+    font-size:0.86em;color:var(--paper);font-weight:600;white-space:nowrap;}
+ details.whatis > .wi-body dl.wi-cols dd{margin:0;color:var(--paper);
+    font-size:0.95em;line-height:1.5;}
+ details.whatis > .wi-body dl.wi-cols dd .good{color:var(--v-pass);
+    font-family:'IBM Plex Mono',monospace;font-size:0.92em;}
+ details.whatis > .wi-body .wi-watch{border-left:2px solid var(--accent);
+    padding:7px 13px;background:var(--ink);margin-top:4px;font-size:0.95em;
+    line-height:1.55;}
+ details.whatis > .wi-body .wi-watch b{color:var(--accent);font-weight:600;}
+ details.whatis > .wi-body code{background:var(--ink);border:1px solid var(--rule);
+    padding:1px 4px;font-family:'IBM Plex Mono',monospace;font-size:0.9em;
+    color:var(--paper);}
+ details.whatis > .wi-body strong,details.whatis > .wi-body b{
+    color:var(--paper);font-weight:600;}
+ /* WINNER / verdict row colour-coding (applies to table.runs + .kvtable).
+    Subtle, legible left-border + tint tiers: champion (strong green) >
+    keep (light green) > neutral > discard (muted/de-emphasised). The class
+    rides on the <tr> so it survives the inline sort/filter JS. */
+ table.runs tr.row-champion,.kvtable tr.row-champion{
+    box-shadow:inset 3px 0 0 var(--v-pass);background:rgba(63,185,80,0.12);}
+ table.runs tr.row-champion td,.kvtable tr.row-champion td{font-weight:600;}
+ table.runs tr.row-champion td.l:first-child::after,
+ .kvtable tr.row-champion td.k:first-child::after{content:" \2605";
+    color:var(--v-pass);}
+ table.runs tr.row-keep,.kvtable tr.row-keep{
+    box-shadow:inset 3px 0 0 var(--v-pass);background:rgba(63,185,80,0.05);}
+ table.runs tr.row-discard td,.kvtable tr.row-discard td{
+    color:var(--paper-dim);opacity:0.78;}
+ table.runs tr.row-discard td.comp{color:var(--paper-dim);}
+ table.runs tr.row-champion:hover,table.runs tr.row-keep:hover{
+    background:rgba(63,185,80,0.16);}
+ /* winner-row legend chips (reuse the .legend frame) */
+ .legend .lchip .sw.champ{background:var(--v-pass);}
+ .legend .lchip .sw.rowkeep{background:rgba(63,185,80,0.45);}
+ .legend .lchip .sw.rowdiscard{background:var(--paper-dim);}
  /* methodology pane — collapsible <details> sub-sections */
  .method-intro{background:var(--panel);border:1px solid var(--rule);
     border-left:2px solid var(--v-pass);padding:16px 22px;margin:18px 0 18px;
@@ -1097,6 +1156,143 @@ def _interpret(title: str, body_md: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Central column glossary — one canonical (plain-meaning, good-looks-like)
+# definition per metric / config field, reused across every "What is this
+# table?" block so the language never drifts (grounded in the five axes §3,
+# the fingerprinted composite §6, and the ladder §4). Each entry is
+# (column-label, plain meaning + what good looks like). The optional second
+# tuple element marks the good range so the helper can colour it.
+# ---------------------------------------------------------------------------
+COLUMN_GLOSSARY: dict[str, tuple[str, str]] = {
+    "exp#": ("This experiment's sequential id; links to its full per-experiment "
+             "page.", ""),
+    "tag": ("The run's short config tag (campaign · hypothesis · swept axis), "
+            "e.g. <code>HC-E3-layer-18</code>.", ""),
+    "hyp": ("The hypothesis (E1–E50 / N1–N20) this run tests; links to that "
+            "hypothesis page.", ""),
+    "model": ("Which model produced the row — Gemma-3-1b/270m, Qwen, or "
+              "<code>fake</code> (plumbing only).", "real Gemma rows count"),
+    "layer": ("Residual-stream layer the steering vector was injected at.",
+              "a mid-network band usually works best"),
+    "alpha": ("Steering strength &alpha; (multiple of &#8741;h&#8741; added).",
+              "small &#8776;0.1; large &alpha; triggers the cliff"),
+    "behavior": ("Axis 1 — behavior efficacy: how strongly the target "
+                 "concept/behavior was induced.", "high"),
+    "dmmlu": ("Axis 2 — capability tax: MMLU/ARC accuracy drop in percentage "
+              "points vs unsteered.", "&#8776;0 (no capability loss)"),
+    "ppl": ("Axis 3 — coherence: perplexity of the steered generations; rises "
+            "super-linearly past the cliff.", "low / near baseline"),
+    "cr": ("Axis 4 — safety: JailbreakBench compliance rate. Any non-zero value "
+           "is a leak and an automatic DISCARD.", "0 (no leak)"),
+    "over_refusal": ("Axis 5 — selectivity: harmless-prompt refusal rate "
+                     "(over-refusal).", "low"),
+    "offshell": ("Geometry leading indicator: off-shell displacement "
+                 "&Delta;&#8741;h&#8741; — how far the activation left the "
+                 "model's natural manifold.", "small (&lt;~0.05)"),
+    "angular": ("Geometry: angular displacement <code>1&minus;cos</code> — how "
+                "much the activation rotated.", "small"),
+    "fisher": ("Fisher ratio at the injection layer (curvature / sensitivity "
+               "probe).", "diagnostic — no single good value"),
+    "cos_dm_pca": ("<code>cos(DiffMean, PCA-top1)</code> — agreement of the two "
+                   "direction estimators.", "&#8776;1 when they agree (E4)"),
+    "composite": ("The fingerprinted multi-objective score that prices every "
+                  "axis at once; <b>decides keep vs discard</b>. Renders red "
+                  "when negative (a coherence / off-shell blow-up).",
+                  "positive &amp; highest in the table"),
+    "verdict": ("Current hypothesis verdict from IDEA_TABLE.md "
+                "(SUPPORTED / FALSIFIED / DIRECTIONAL / INCONCLUSIVE / PENDING).",
+                "SUPPORTED (green) on a confirmed claim"),
+    "tier": ("Statistical tier: <code>SCREENING</code> (n&le;3, candidate "
+             "signal) vs <code>EVALUATION</code> (n&ge;7, held result).",
+             "EVALUATION for an external claim"),
+    "links": ("Click-through to this row's per-experiment and per-hypothesis "
+              "pages.", ""),
+    "title": ("Short human-readable name of the hypothesis.", ""),
+    "#runs": ("How many logged experiments target this hypothesis.",
+              "&gt;0 once it has been swept"),
+    "rung": ("Highest of the five ladder rungs the method reached "
+             "(UNIT&rarr;SMOKE&rarr;DEV&rarr;STANDARD&rarr;FULL).",
+             "higher is more validated"),
+    "gate": ("Whether the method cleared or failed that rung's promotion gate.",
+             "cleared"),
+    "failure_reason": ("Logged reason a method failed / was demoted at its "
+                       "rung.", "&mdash; (empty) when it cleared"),
+    "term": ("One additive term of the composite formula (a credit or an axis "
+             "penalty).", ""),
+    "weight": ("The pinned &lambda; weight on that term (penalties are "
+               "negative).", "fixed by the fingerprinted formula"),
+    "raw": ("The raw axis value the weight multiplies.", "axis-dependent"),
+    "contribution": ("weight &times; raw — this term's signed push on the "
+                     "composite.", "green credit, orange cost"),
+    "metric": ("The axis / sub-metric being reported on this row.", ""),
+    "good=": ("The direction or value that is desirable for this metric.", ""),
+    "value": ("This run's measured value (with the seed count n).", ""),
+    "probe": ("The behavior-free geometry probe being reported.", ""),
+    "value (n)": ("The probe's value with its seed count.", ""),
+    "ci low": ("Lower bound of the 95% bootstrap confidence interval (when "
+               "computed).", ""),
+    "ci high": ("Upper bound of the 95% bootstrap confidence interval (when "
+                "computed).", ""),
+}
+
+
+def _whatis(title: str, intro: str, columns: list[tuple[str, str]],
+            watch: str) -> str:
+    """A consistent, expandable "What is this table?" block emitted directly
+    ABOVE every table across all three tiers.
+
+    ``title`` names the table; ``intro`` is a 1–2 sentence purpose; ``columns``
+    is a list of ``(column-label, plain-meaning-with-good-looks-like)`` pairs
+    rendered as a glossary <dl>; ``watch`` is the "what to pay attention to"
+    line (which column decides keep/discard + expected ranges). HTML in the
+    values is intentional (entities / <code> / <b>), so it is NOT escaped — the
+    copy is authored in this module, never user data. Blue-accented and closed
+    by default so it stays out of the way until expanded.
+    """
+    cols_html = "".join(
+        f"<dt>{label}</dt><dd>{meaning}</dd>" for label, meaning in columns)
+    return (
+        '<details class="whatis"><summary>What is this table? &mdash; '
+        f'{_esc(title)}</summary>'
+        '<div class="wi-body">'
+        f'<p class="wi-intro">{intro}</p>'
+        '<div class="wi-sub">Columns</div>'
+        f'<dl class="wi-cols">{cols_html}</dl>'
+        f'<div class="wi-watch"><b>What to watch:</b> {watch}</div>'
+        '</div></details>\n')
+
+
+def _whatis_cols(*labels: str) -> list[tuple[str, str]]:
+    """Build a (label, meaning) glossary list from canonical COLUMN_GLOSSARY
+    keys, appending the "good looks like" hint as a green span where defined.
+    Unknown keys degrade to the label itself with an empty meaning so a typo
+    can never crash a build."""
+    out: list[tuple[str, str]] = []
+    for key in labels:
+        meaning, good = COLUMN_GLOSSARY.get(key.lower(), (key, ""))
+        if good:
+            meaning = f'{meaning} <span class="good">good = {good}</span>'
+        out.append((key, meaning))
+    return out
+
+
+def _winner_legend_html() -> str:
+    """Tiny always-visible legend explaining the winner / verdict ROW colours
+    (green = champion/keep, muted = discard) — sits near the first runs table."""
+    return (
+        '<div class="legend" id="winner-legend">\n'
+        '  <span class="legend-title">Row colour coding (winners)</span>\n'
+        '  <div class="chips">\n'
+        '    <span class="lchip"><span class="sw champ"></span>'
+        'champion &#9733; (best composite overall)</span>\n'
+        '    <span class="lchip"><span class="sw rowkeep"></span>'
+        'KEEP / champion-in-table (green)</span>\n'
+        '    <span class="lchip"><span class="sw rowdiscard"></span>'
+        'DISCARD / failed (muted, de-emphasised)</span>\n'
+        '  </div>\n</div>\n')
+
+
+# ---------------------------------------------------------------------------
 # Interpretation copy — one accurate, substantive "what to expect" blurb per
 # table / diagram. Grounded in CLAUDE.md (the five axes §3, the fingerprinted
 # composite §6, the five-rung ladder §4, the hypothesis verdict tiers) and
@@ -1293,6 +1489,137 @@ _INTERP_HYP_COORD = (
     "on the α curve (too little does nothing, too much triggers the cliff) "
     "and a layer band where mid-network injection works best."
 )
+
+
+# ---------------------------------------------------------------------------
+# "What is this table?" blocks — one builder per distinct table shape. Each
+# composes _whatis(title, intro, glossary, watch) from the canonical
+# COLUMN_GLOSSARY so column language never drifts between tables.
+# ---------------------------------------------------------------------------
+def _whatis_runs() -> str:
+    return _whatis(
+        "the runs table",
+        "Each <b>row is one experiment</b> in this campaign; the columns are the "
+        "five measurement axes plus geometry leading-indicators, ending in the "
+        "<b>fingerprinted composite</b> that prices them all at once. "
+        "Rows are colour-coded by outcome: the <b>champion</b> (best composite "
+        "overall) and KEEP rows are tinted green, DISCARD rows are de-emphasised.",
+        _whatis_cols("exp#", "tag", "hyp", "model", "layer", "alpha", "behavior",
+                     "dMMLU", "PPL", "CR", "offshell", "angular", "composite",
+                     "tier", "links"),
+        "The <b>composite</b> column decides keep vs discard — highest positive "
+        "wins (the starred green row is the global champion); a <b>negative "
+        "composite renders red</b> (coherence / off-shell blow-up). A non-zero "
+        "<code>CR</code> is a safety leak and an automatic DISCARD regardless of "
+        "behavior. Expect the composite to peak at small &alpha; (&#8776;0.1) "
+        "and collapse as &alpha; grows.")
+
+
+def _whatis_geometry() -> str:
+    return _whatis(
+        "the geometry table",
+        "Behavior-free geometry leading-indicators per run, sorted by off-shell "
+        "displacement (desc) so the most off-manifold rows surface first. These "
+        "probes predict the coherence cliff before any behavior metric moves.",
+        _whatis_cols("exp#", "tag", "model", "offshell", "angular", "fisher",
+                     "cos_dm_pca", "composite"),
+        "Watch <b>offshell &Delta;&#8741;h&#8741;</b>: once it climbs past "
+        "~0.05–0.1, perplexity rises super-linearly (N17: off-shell linearly "
+        "predicts log-PPL at R&sup2;&#8776;0.81) and the high-off-shell rows "
+        "carry the worst — often negative — composites.")
+
+
+def _whatis_hyp_table() -> str:
+    return _whatis(
+        "the hypothesis table",
+        "All 70 registry hypotheses (E1–E50 in blocks A–F, then N1–N20) as a "
+        "sortable table with each one's current verdict, logged run count, and a "
+        "link to its page.",
+        _whatis_cols("hyp", "title", "verdict", "#runs", "links"),
+        "Use the <b>#runs</b> column to find under-tested hypotheses (count 0 = "
+        "PENDING, not yet swept) and the <b>verdict</b> column to jump to "
+        "evidence; expect runs to concentrate on a few actively-swept ids.")
+
+
+def _whatis_ladder() -> str:
+    return _whatis(
+        "the ladder board",
+        "Per method (tag), the highest of the five benchmark-ladder rungs it "
+        "reached and whether it cleared or failed that rung's promotion gate.",
+        _whatis_cols("tag", "rung", "gate", "failure_reason"),
+        "The <b>gate</b> column is the keep/advance signal: a method must clear "
+        "rung <i>k</i> before spending rung <i>k+1</i> compute, and a regression "
+        "on any axis demotes it. Expect most candidates to stall at SMOKE / DEV.")
+
+
+def _whatis_exp_metrics() -> str:
+    return _whatis(
+        "the five-axis metrics table",
+        "This run's value on each of the five measurement axes (and their "
+        "sub-metrics), the direction that is good, and a 95% bootstrap CI where "
+        "one was computed.",
+        _whatis_cols("metric", "value", "good=", "ci low", "ci high"),
+        "Below the cliff expect <b>MMLU-drop &#8776;0</b> (capability retained) "
+        "and <b>CR &#8776;0</b> (no leak); a <code>CR &gt; 0</code> is a safety "
+        "leak and a large &Delta;PPL_norm is the coherence cost that sinks the "
+        "composite.")
+
+
+def _whatis_exp_breakdown() -> str:
+    return _whatis(
+        "the composite breakdown",
+        "A term-by-term decomposition of this run's fingerprinted composite: each "
+        "axis credit / penalty is shown and summed, then reconciled to the logged "
+        "composite (the &Delta; should be ~0).",
+        _whatis_cols("term", "weight", "raw", "contribution"),
+        "Watch the <b>contribution</b> column: a good run is mostly the green "
+        "behavior credit; a bad run is swamped by the coherence (&Delta;PPL) or "
+        "off-shell geometry penalty, which drags the composite negative.")
+
+
+def _whatis_exp_geometry() -> str:
+    return _whatis(
+        "the geometry probes",
+        "This run's behavior-free geometry probes — they explain the coherence "
+        "number and predict the cliff.",
+        _whatis_cols("probe", "value (n)"),
+        "Expect <b>small off-shell and angular values</b> on a clean run; once "
+        "off-shell crosses ~0.05–0.1 the perplexity in the metrics table should "
+        "rise super-linearly (the N17 off-shell&rarr;log-PPL relationship).")
+
+
+def _whatis_stack() -> str:
+    return _whatis(
+        "the stack / compete matrix",
+        "A square method-by-method composability matrix (rows and columns are the "
+        "same intervention families). Each cell is a mechanism-based prior for "
+        "whether the two families can be combined, with a measured overlay where a "
+        "logged pair exists.",
+        [("row / column", "The two intervention families being paired "
+          "(the diagonal is a family with itself)."),
+         ("STACK", 'Green — the pair composes cleanly (different sites / '
+          "orthogonal axes). <span class=\"good\">good = stackable</span>"),
+         ("CARE", "Amber — stack only with care / until the norm budget is spent."),
+         ("COMPETE", "Red — same-plane operations interfere; pick one."),
+         ("measured: …", "A white-outlined cell carries a measured verdict from a "
+          "logged pair, overriding the prior.")],
+        "This is <b>design knowledge, not a result</b>, until a white-outlined "
+        "<i>measured</i> overlay appears. Expect different-site / orthogonal "
+        "families to STACK and same-plane operations to COMPETE — which is why "
+        "the all-on hybrid is forbidden.")
+
+
+def _whatis_hyp_runs() -> str:
+    return _whatis(
+        "this hypothesis's runs table",
+        "Every logged experiment for this hypothesis, one row each, linking to "
+        "its per-experiment page. Sorted so the best configuration is near the "
+        "top; the best-composite row is tinted green.",
+        _whatis_cols("exp#", "tag", "model", "layer", "alpha", "behavior",
+                     "PPL", "CR", "composite", "tier"),
+        "The <b>composite</b> column ranks the configs; expect it to rise to a "
+        "peak at small &alpha; then fall as the cliff hits, with <code>CR</code> "
+        "pinned at 0 throughout a safe method.")
 
 
 # ===========================================================================
@@ -1796,6 +2123,7 @@ def render_stack_matrix(rows: list[dict]) -> str:
         'cleanly &middot; <span class="sc care scl">CARE</span> stack with care '
         '&middot; <span class="sc compete scl">COMPETE</span> pick one. '
         '<b>Design-knowledge prior, not a measured result.</b></p>\n'
+        f'  {_whatis_stack()}'
         '  <div class="tablewrap"><table class="stackmx">\n'
         f"    <thead><tr>{head}</tr></thead>\n"
         f"    <tbody>\n{body_html}\n    </tbody>\n  </table></div>\n"
@@ -2524,12 +2852,22 @@ def render_master(rows: list[dict], table: dict[str, dict],
             hid = resolve_hyp_id(r, repo_root, idea_dirs)
             verdict = table[hid]["verdict"] if (hid and hid in table) else "PENDING"
             vr = "vr-" + verdict.lower() if (hid and hid in table) else ""
+            status = str(r.get("status") or "")
+            # winner row colour-coding: champion (best composite overall) >
+            # KEEP (status) > DISCARD (status). Survives the sort/filter JS.
+            if is_champ:
+                rowcls = "row-champion"
+            elif status.upper() == "KEEP":
+                rowcls = "row-keep"
+            elif status.upper() == "DISCARD":
+                rowcls = "row-discard"
+            else:
+                rowcls = ""
             rcls = " ".join(c for c in ("champion" if is_champ else "",
-                                        "neg-comp" if neg else "", vr,
+                                        "neg-comp" if neg else "", vr, rowcls,
                                         "task-row") if c)
             model = _short_model(r.get("model"))
             is_real = "0" if model == "fake" else "1"
-            status = str(r.get("status") or "")
             exp_pg = (f"experiments/exp{int(exp):03d}.html" if exp is not None else "")
             data_attrs = (
                 f' data-model="{_esc(model.lower())}"'
@@ -2737,6 +3075,7 @@ def render_master(rows: list[dict], table: dict[str, dict],
         '<span class="sub" style="display:inline">filter, sort, or auto-expand a '
         'row</span></h2>\n')
     parts.append(_runs_legend_html())
+    parts.append(_winner_legend_html())
     # rich filter bar (regex + model dropdown + toggle pills + auto-expand)
     parts.append(
         '<div class="toolbar" id="runs-toolbar">\n'
@@ -2771,6 +3110,7 @@ def render_master(rows: list[dict], table: dict[str, dict],
             f'<section class="group-section">\n  <h2>{_esc(gtitle)} '
             f'<span class="cnt">({n} run{"s" if n != 1 else ""})</span></h2>\n'
             f'  <div class="group-desc">{_esc(gdesc)}</div>\n'
+            f'  {_whatis_runs()}'
             f'  <div class="tablewrap">{_runs_table(grp_rows, f"runs_{gkey}")}</div>\n'
             f'  {_interpret("the runs table", _INTERP_RUNS)}'
             "</section>\n")
@@ -2796,6 +3136,7 @@ def render_master(rows: list[dict], table: dict[str, dict],
                 '  <div class="card panel-2col"><h3>Seed stability</h3>'
                 '<img src="plot_hc_seed.png" alt="hill-climb seed stability">'
                 '<p class="cap">mean composite per config with the seed min/max range.</p></div>\n')
+        parts.append(_whatis_runs())
         parts.append(f'  <div class="tablewrap">{_runs_table(hc_rows, "runs_hillclimb")}</div>\n')
         parts.append(_interpret("the runs table", _INTERP_RUNS))
     else:
@@ -2824,7 +3165,8 @@ def render_master(rows: list[dict], table: dict[str, dict],
     parts.append(TAB_INTRO_LADDER)
     parts.append('<h2 style="margin-top:18px">Ladder board</h2>\n')
     ladder_rows = "".join(
-        f'<tr><td class="l">{_esc(L["tag"])}</td>'
+        f'<tr class="{"row-keep" if L["cleared"] else "row-discard"}">'
+        f'<td class="l">{_esc(L["tag"])}</td>'
         f'<td class="l">{L["rung"]} ({_esc(L["rung_name"])})</td>'
         f'<td class="l">{"cleared" if L["cleared"] else "failed"}</td>'
         f'<td class="l">{_esc(L["failure_reason"] or "—")}</td></tr>'
@@ -2833,6 +3175,7 @@ def render_master(rows: list[dict], table: dict[str, dict],
         '<section class="group-section">\n'
         '  <div class="group-desc">Per method (tag): the highest ladder rung reached '
         'and whether the safety/quality gate cleared.</div>\n'
+        f'  {_whatis_ladder()}'
         '  <div class="tablewrap"><table class="runs">\n'
         '    <thead><tr><th class="l">method (tag)</th><th class="l">highest rung</th>'
         '<th class="l">gate</th><th class="l">failure_reason</th></tr></thead>\n'
@@ -2967,7 +3310,8 @@ def _geometry_table(flat: list[dict]) -> str:
             '<span class="cnt">(sortable)</span></h2>\n'
             '  <div class="group-desc">Sorted by off-shell displacement (desc). '
             'Click a header to re-sort.</div>\n'
-            '  <div class="tablewrap"><table class="runs" data-dir="desc">\n'
+            + _whatis_geometry()
+            + '  <div class="tablewrap"><table class="runs" data-dir="desc">\n'
             f'    <thead><tr>{head}</tr></thead>\n'
             f'    <tbody>\n{body_html}\n    </tbody>\n  </table></div>\n'
             + _interpret("the geometry table", _INTERP_GEO_TABLE)
@@ -2983,8 +3327,12 @@ def _hypotheses_table(table: dict[str, dict], rows_by_hyp: dict[str, int]) -> st
             verdict = info.get("verdict", "PENDING")
             vcls = VERDICT_CLASS.get(verdict, "v-pending")
             nruns = rows_by_hyp.get(hid, 0)
+            vu = verdict.upper()
+            rowcls = ("row-keep" if vu == "SUPPORTED"
+                      else "row-discard" if vu == "FALSIFIED" else "")
+            rowcls_attr = f' class="{rowcls}"' if rowcls else ""
             body.append(
-                f'<tr data-verdict="{_esc(verdict.upper())}">'
+                f'<tr data-verdict="{_esc(vu)}"{rowcls_attr}>'
                 f'<td class="l"><a href="hyp/{_esc(hid)}.html">{_esc(hid)}</a></td>'
                 f'<td class="l">{_esc(info.get("title",""))}</td>'
                 f'<td class="l"><span class="hyp-cell {vcls}" '
@@ -2997,7 +3345,8 @@ def _hypotheses_table(table: dict[str, dict], rows_by_hyp: dict[str, int]) -> st
     return ('<section class="group-section"><h2>All 70 hypotheses</h2>\n'
             '  <div class="group-desc">Verdict, run count, and link per registry '
             'hypothesis.</div>\n'
-            '  <div class="tablewrap"><table class="runs" data-dir="desc">\n'
+            + _whatis_hyp_table()
+            + '  <div class="tablewrap"><table class="runs" data-dir="desc">\n'
             '    <thead><tr><th class="l">id</th><th class="l">title</th>'
             '<th class="l">verdict</th><th># runs</th><th class="l">link</th>'
             '</tr></thead>\n'
@@ -3332,6 +3681,7 @@ def render_experiment(row: dict, ann: dict, table: dict[str, dict],
             f'<td class="mut">{_esc(good)}</td>{_ci_cells(key)}</tr>')
     parts.append(
         '<section class="card"><h2>Five-axis metrics — quick reference</h2>\n'
+        f'  {_whatis_exp_metrics()}'
         '  <table class="kvtable"><thead><tr><th>metric</th><th>value (n)</th>'
         '<th>good=</th><th>CI low</th><th>CI high</th></tr></thead>\n'
         f"  <tbody>{''.join(metric_rows)}</tbody></table>\n"
@@ -3342,6 +3692,7 @@ def render_experiment(row: dict, ann: dict, table: dict[str, dict],
     stack, brk = _composite_stack(flat)
     parts.append(
         '<section class="card"><h2>Composite-score breakdown</h2>\n'
+        f'  {_whatis_exp_breakdown()}'
         f'  {stack}\n  {brk}\n'
         f'  <div class="formula-chip" style="margin-top:14px">composite &#8788; '
         f'<code>{_esc(COMPOSITE_FORMULA)}</code></div>\n'
@@ -3361,6 +3712,7 @@ def render_experiment(row: dict, ann: dict, table: dict[str, dict],
         geo_rows.append('<tr><td colspan="2" class="empty">No geometry probes logged.</td></tr>')
     parts.append(
         '<section class="card"><h2>Geometry probes</h2>\n'
+        f'  {_whatis_exp_geometry()}'
         '  <table class="kvtable"><thead><tr><th>probe</th><th>value (n)</th></tr></thead>\n'
         f"  <tbody>{''.join(geo_rows)}</tbody></table>\n"
         f'  {_interpret("the geometry probes", _INTERP_EXP_GEOMETRY)}'
@@ -3572,16 +3924,30 @@ def render_hypothesis(hid: str, table: dict[str, dict], rows: list[dict],
 
     # Experiments table
     if flat:
+        # best-composite row in this hypothesis becomes the in-table champion;
+        # KEEP/DISCARD status drives the green/muted row tint (survives sort).
+        best_row = max(flat, key=lambda r: _num(r, "composite", -1e18))
+        best_exp = best_row.get("experiment_num")
         body = []
         for r in flat:
             n = int(r.get("n_seeds", 1) or 1)
             tier = _tier_of(r)
             exp = r.get("experiment_num")
+            status = str(r.get("status") or "").upper()
+            if exp is not None and exp == best_exp:
+                rowcls = "row-champion"
+            elif status == "KEEP":
+                rowcls = "row-keep"
+            elif status == "DISCARD":
+                rowcls = "row-discard"
+            else:
+                rowcls = ""
+            rowcls_attr = f' class="{rowcls}"' if rowcls else ""
             page = (f'<a href="../experiments/exp{int(exp):03d}.html">exp{int(exp):03d}</a>'
                     if exp is not None else "—")
             chip = f'<span class="n-chip {"eval" if tier=="EVALUATION" else "scr"}">{tier} n={n}</span>'
             body.append(
-                f'<tr><td class="l">{page}</td>'
+                f'<tr{rowcls_attr}><td class="l">{page}</td>'
                 f'<td class="l"><code>{_esc(r.get("tag") or "")}</code></td>'
                 f'<td class="l">{_esc(_short_model(r.get("model")))}</td>'
                 f'<td>{_esc(r.get("layer"))}</td><td>{_esc(r.get("alpha"))}</td>'
@@ -3593,6 +3959,7 @@ def render_hypothesis(hid: str, table: dict[str, dict], rows: list[dict],
         body_html = "\n".join(body)
         parts.append(
             '<section class="card"><h2>Experiments for this hypothesis</h2>\n'
+            f'  {_whatis_hyp_runs()}'
             '  <div class="tablewrap"><table class="runs">\n'
             '    <thead><tr><th class="l">exp</th><th class="l">tag</th>'
             '<th class="l">model</th><th>layer</th><th>α</th><th>behavior</th>'

@@ -244,3 +244,9 @@ interesting alternative that deserves testing despite the expected gate-first wi
 **NOVEL+TESTABLE.** The suppression architecture is the novel contribution.
 The gate-first win over naive behavior-first (unconditional) is expected; the
 gate-first vs suppression comparison is genuinely informative.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E26.md`.

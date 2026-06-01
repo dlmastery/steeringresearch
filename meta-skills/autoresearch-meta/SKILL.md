@@ -45,6 +45,34 @@ of the process. The topic you are working on now is one *instantiation* of it.
 When you improve the process here, the improvement ports to the next topic for
 free.
 
+### Goal / outcome clarity mandate (binding across all surfaces)
+
+Every external-facing surface — README, master dashboard, paper/report — must
+state the **concrete outcome** up front, not merely "this is a research program."
+The concrete outcome means:
+
+1. **What is being invented or discovered**: the specific trade-off being
+   maximized (e.g., "maximize primary_efficacy while keeping cost_axis_1 and
+   cost_axis_2 within acceptable bounds").
+2. **What SOTA means concretely here**: the current best-known trade-off for this
+   model class / task domain, and why it is the benchmark to beat.
+3. **What a "winner" is**: the exact definition in terms of the composite metric
+   and the Pareto condition (not a vague "best method").
+
+**Anti-pattern:** "This project studies [domain] methods with the goal of
+understanding which techniques work best." — This tells the reader nothing about
+what to optimize or what winning looks like.
+
+**Required pattern:** "This project discovers the [domain] configuration that
+maximizes [primary_efficacy] while keeping [cost_axis_1] below [threshold] and
+[cost_axis_2] below [threshold] — the best simultaneous trade-off known for
+[model class / scope]. A 'winner' is any method that Pareto-dominates the current
+champion on the composite metric (formula fingerprinted in every experiment)."
+
+Apply this mandate at instantiation step 1 (before writing the axis taxonomy)
+and verify it is present on every external-facing surface at the Checkpoint step
+of every campaign milestone.
+
 ---
 
 ## 1. The Karpathy core invariant (and the three adaptations)
@@ -519,7 +547,23 @@ process is "done" for a given claim only when all of the following hold:
       "everything-on" hybrid; each prior was hill-climbed before stacking.
 - [ ] **Dashboard (§7):** master → per-hypothesis → per-experiment links all
       resolve; every numeric cell has `n=` + tier chip; the rendering audit finds
-      no literal markdown leak; the "how to read this" block is present.
+      no literal markdown leak; the "how to read this" block is present; the
+      newcomer grounding block (research goal, domain primitives, open methodology
+      tabs) is present; every table has a "What is this" glossary block; color
+      legend present on all verdict-bearing tables.
+- [ ] **Goal clarity:** README, dashboard, and paper each state the concrete
+      outcome (what is being maximized, what SOTA means, what a winner is) — not
+      just "this is a research program."
+- [ ] **FINDINGS.md self-contained:** preamble with glossary present; every
+      identifier defined before use; summary table present; strongest result
+      stated plainly; zero-cross-reference rule holds.
+- [ ] **EXPERIMENT_LEDGER.md interpretable:** "how to read this ledger" section
+      present; column glossary complete; verdict-tier meanings defined; campaign-
+      arc narrative updated for the current phase.
+- [ ] **Provenance per tested hypothesis:** every tested idea has a provenance
+      artifact (experiment tags, commands, artifact paths, result interpretation);
+      untested ideas declare what new harness code they need; shared-harness
+      architecture disclosed in README and dashboard if applicable.
 - [ ] **Agent discipline (§8):** disjoint scopes, scoped adds, retry-wrapped
       commits; every internal audit carries the circularity disclosure.
 - [ ] **Dual-track audit (§10):** impl-critic + sci-critic + data-split +
@@ -561,6 +605,7 @@ A claim that cannot tick every relevant box is `INTERNAL` only and ships with th
 - The ladder: [`../autoresearch-tiered-ladder/SKILL.md`](../autoresearch-tiered-ladder/SKILL.md)
 - The funnel / hill-climb: [`../autoresearch-per-hypothesis-hillclimb/SKILL.md`](../autoresearch-per-hypothesis-hillclimb/SKILL.md)
 - Rigor floor + verdict tiers: [`../autoresearch-paper-rigor/SKILL.md`](../autoresearch-paper-rigor/SKILL.md)
+- Findings + ledger discipline: [`../autoresearch-findings-ledger/SKILL.md`](../autoresearch-findings-ledger/SKILL.md)
 - Negative control: [`../autoresearch-shuffle-test/SKILL.md`](../autoresearch-shuffle-test/SKILL.md)
 - Leakage audit: [`../autoresearch-data-split-audit/SKILL.md`](../autoresearch-data-split-audit/SKILL.md)
 - Master dashboard: [`../autoresearch-dashboard/SKILL.md`](../autoresearch-dashboard/SKILL.md)

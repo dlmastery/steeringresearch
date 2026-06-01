@@ -261,3 +261,9 @@ the P-controller provides negligible value and N9 is not worth pursuing. Cost ~3
 TESTABLE-MEDIUM. The drift pre-check (30 min) is essential before committing to
 the 4-hour full protocol. If behavioral drift over 512 tokens is large (> 20%),
 the P-controller is motivated; if small, N9 is a solution to a non-problem.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N9.md`.

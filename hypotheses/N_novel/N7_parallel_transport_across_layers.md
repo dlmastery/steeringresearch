@@ -252,3 +252,9 @@ essential pre-screen. If cos(v_L, J_{L-1}*v_{L-1}) < 0.50 even for one step,
 the residual stream is not behaving like a smooth dynamical system with coherent
 parallel transport, and the hypothesis fails immediately. The full 4-step protocol
 is warranted only after the single-step test passes.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N7.md`.

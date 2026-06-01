@@ -351,3 +351,9 @@ clarify the scope of the LRH and steering research. Priority: run the stylistic 
 first (expected to work) to confirm the experimental setup, then the safety concept
 (uncertain), then the sycophancy concept (likely to fail). The sequence itself is a
 contribution.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E8.md`.

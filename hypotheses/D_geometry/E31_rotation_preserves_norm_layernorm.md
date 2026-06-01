@@ -328,3 +328,9 @@ clearly). The important implication is that norm preservation does NOT protect
 capability at practical rotation angles — angular damage dominates. Confirmed E31
 would refine the mechanistic picture of E27-A rather than validate its practical
 advantage.**
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E31.md`.

@@ -283,3 +283,9 @@ experiment that validates or invalidates the program's foundation.
 It should be run in parallel with, not after, the other experiments.
 A 70% reproduction rate would be a strong endorsement of the inherited
 thresholds; below 60% would require a program-wide threshold revision.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E49.md`.

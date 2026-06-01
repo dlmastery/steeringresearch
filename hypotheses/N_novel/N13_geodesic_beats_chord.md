@@ -225,3 +225,9 @@ TESTABLE-MEDIUM. The synthetic manifold validation is essential. If the approxim
 is inaccurate at realistic steering scales, N13 cannot test the true geodesic claim.
 The minimum experiment should include both the synthetic validation and one real-model
 behavior measurement before committing to the full 4-hour protocol.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N13.md`.

@@ -383,6 +383,65 @@
     border-radius:0;color:var(--paper);}
  details.interpret > .md-body strong,details.interpret > .md-body b{
     color:var(--paper);font-weight:600;}
+ /* "What is this table?" expandables (blue-accented, closed by default; sit
+    directly ABOVE every table — purpose + per-column glossary + what-to-watch).
+    Visually distinct from the gold "how to read this" interpret accordions. */
+ details.whatis{margin:8px 0 6px;background:var(--panel2);
+    border:1px solid var(--rule);border-left:2px solid var(--v-derivative);}
+ details.whatis > summary{cursor:pointer;list-style:none;padding:9px 14px;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;
+    letter-spacing:0.14em;color:var(--v-derivative);font-weight:600;user-select:none;}
+ details.whatis > summary:hover{color:var(--paper);background:rgba(88,166,255,0.08);}
+ details.whatis > summary::-webkit-details-marker{display:none;}
+ details.whatis > summary::before{content:"\25B8";margin-right:9px;
+    color:var(--v-derivative);font-size:0.92em;}
+ details.whatis[open] > summary::before{content:"\25BE";}
+ details.whatis[open] > summary{border-bottom:1px solid var(--rule);}
+ details.whatis > .wi-body{padding:11px 16px 13px 16px;font-size:0.92em;
+    line-height:1.6;color:var(--paper);font-family:'Source Serif 4',Georgia,serif;}
+ details.whatis > .wi-body > p{margin:0 0 9px;}
+ details.whatis > .wi-body .wi-intro{margin-bottom:11px;}
+ details.whatis > .wi-body .wi-sub{font-family:'IBM Plex Mono',monospace;
+    font-size:9.5px;text-transform:uppercase;letter-spacing:0.16em;
+    color:var(--paper-dim);margin:4px 0 6px;font-weight:600;}
+ details.whatis > .wi-body dl.wi-cols{margin:0 0 11px;display:grid;
+    grid-template-columns:auto 1fr;gap:4px 14px;align-items:baseline;}
+ details.whatis > .wi-body dl.wi-cols dt{font-family:'IBM Plex Mono',monospace;
+    font-size:0.86em;color:var(--paper);font-weight:600;white-space:nowrap;}
+ details.whatis > .wi-body dl.wi-cols dd{margin:0;color:var(--paper);
+    font-size:0.95em;line-height:1.5;}
+ details.whatis > .wi-body dl.wi-cols dd .good{color:var(--v-pass);
+    font-family:'IBM Plex Mono',monospace;font-size:0.92em;}
+ details.whatis > .wi-body .wi-watch{border-left:2px solid var(--accent);
+    padding:7px 13px;background:var(--ink);margin-top:4px;font-size:0.95em;
+    line-height:1.55;}
+ details.whatis > .wi-body .wi-watch b{color:var(--accent);font-weight:600;}
+ details.whatis > .wi-body code{background:var(--ink);border:1px solid var(--rule);
+    padding:1px 4px;font-family:'IBM Plex Mono',monospace;font-size:0.9em;
+    color:var(--paper);}
+ details.whatis > .wi-body strong,details.whatis > .wi-body b{
+    color:var(--paper);font-weight:600;}
+ /* WINNER / verdict row colour-coding (applies to table.runs + .kvtable).
+    Subtle, legible left-border + tint tiers: champion (strong green) >
+    keep (light green) > neutral > discard (muted/de-emphasised). The class
+    rides on the <tr> so it survives the inline sort/filter JS. */
+ table.runs tr.row-champion,.kvtable tr.row-champion{
+    box-shadow:inset 3px 0 0 var(--v-pass);background:rgba(63,185,80,0.12);}
+ table.runs tr.row-champion td,.kvtable tr.row-champion td{font-weight:600;}
+ table.runs tr.row-champion td.l:first-child::after,
+ .kvtable tr.row-champion td.k:first-child::after{content:" \2605";
+    color:var(--v-pass);}
+ table.runs tr.row-keep,.kvtable tr.row-keep{
+    box-shadow:inset 3px 0 0 var(--v-pass);background:rgba(63,185,80,0.05);}
+ table.runs tr.row-discard td,.kvtable tr.row-discard td{
+    color:var(--paper-dim);opacity:0.78;}
+ table.runs tr.row-discard td.comp{color:var(--paper-dim);}
+ table.runs tr.row-champion:hover,table.runs tr.row-keep:hover{
+    background:rgba(63,185,80,0.16);}
+ /* winner-row legend chips (reuse the .legend frame) */
+ .legend .lchip .sw.champ{background:var(--v-pass);}
+ .legend .lchip .sw.rowkeep{background:rgba(63,185,80,0.45);}
+ .legend .lchip .sw.rowdiscard{background:var(--paper-dim);}
  /* methodology pane — collapsible <details> sub-sections */
  .method-intro{background:var(--panel);border:1px solid var(--rule);
     border-left:2px solid var(--v-pass);padding:16px 22px;margin:18px 0 18px;
@@ -557,11 +616,13 @@
   <p class="cap">Source: experiment_log.jsonl config block.</p>
 </section>
 <section class="card"><h2>Five-axis metrics — quick reference</h2>
+  <details class="whatis"><summary>What is this table? &mdash; the five-axis metrics table</summary><div class="wi-body"><p class="wi-intro">This run's value on each of the five measurement axes (and their sub-metrics), the direction that is good, and a 95% bootstrap CI where one was computed.</p><div class="wi-sub">Columns</div><dl class="wi-cols"><dt>metric</dt><dd>The axis / sub-metric being reported on this row.</dd><dt>value</dt><dd>This run's measured value (with the seed count n).</dd><dt>good=</dt><dd>The direction or value that is desirable for this metric.</dd><dt>ci low</dt><dd>Lower bound of the 95% bootstrap confidence interval (when computed).</dd><dt>ci high</dt><dd>Upper bound of the 95% bootstrap confidence interval (when computed).</dd></dl><div class="wi-watch"><b>What to watch:</b> Below the cliff expect <b>MMLU-drop &#8776;0</b> (capability retained) and <b>CR &#8776;0</b> (no leak); a <code>CR &gt; 0</code> is a safety leak and a large &Delta;PPL_norm is the coherence cost that sinks the composite.</div></div></details>
   <table class="kvtable"><thead><tr><th>metric</th><th>value (n)</th><th>good=</th><th>CI low</th><th>CI high</th></tr></thead>
   <tbody><tr><td class="k">Axis 1 — behavior efficacy</td><td class="v">0.5000 <span class="n-chip scr">n=1</span></td><td class="mut">high</td><td class="mut">(CI not computed)</td><td class="mut">(CI not computed)</td></tr><tr><td class="k">Axis 2 — capability retention</td><td class="v">0.7000 <span class="n-chip scr">n=1</span></td><td class="mut">~baseline</td><td class="mut">(CI not computed)</td><td class="mut">(CI not computed)</td></tr><tr><td class="k">  MMLU drop (pp)</td><td class="v">0.0000 <span class="n-chip scr">n=1</span></td><td class="mut">~0</td><td class="mut">(CI not computed)</td><td class="mut">(CI not computed)</td></tr><tr><td class="k">Axis 3 — perplexity</td><td class="v">90.2102 <span class="n-chip scr">n=1</span></td><td class="mut">low</td><td class="mut">(CI not computed)</td><td class="mut">(CI not computed)</td></tr><tr><td class="k">  ΔPPL_norm</td><td class="v">0.0000 <span class="n-chip scr">n=1</span></td><td class="mut">~0</td><td class="mut">(CI not computed)</td><td class="mut">(CI not computed)</td></tr><tr><td class="k">  repetition rate</td><td class="v">0.0145 <span class="n-chip scr">n=1</span></td><td class="mut">low</td><td class="mut">(CI not computed)</td><td class="mut">(CI not computed)</td></tr><tr><td class="k">Axis 4 — JailbreakBench CR</td><td class="v">0.8000 <span class="n-chip scr">n=1</span></td><td class="mut">0 (no leak)</td><td class="mut">(CI not computed)</td><td class="mut">(CI not computed)</td></tr><tr><td class="k">  harmful refusal rate</td><td class="v">0.2000 <span class="n-chip scr">n=1</span></td><td class="mut">high</td><td class="mut">(CI not computed)</td><td class="mut">(CI not computed)</td></tr><tr><td class="k">Axis 5 — harmless refusal (over-refusal)</td><td class="v">0.0000 <span class="n-chip scr">n=1</span></td><td class="mut">low</td><td class="mut">(CI not computed)</td><td class="mut">(CI not computed)</td></tr><tr><td class="k">  selectivity gap</td><td class="v">0.2000 <span class="n-chip scr">n=1</span></td><td class="mut">high</td><td class="mut">(CI not computed)</td><td class="mut">(CI not computed)</td></tr></tbody></table>
   <details class="interpret"><summary>How to read this &mdash; the five-axis metrics table</summary><div class="md-body"><p>Each <strong>row is one of the five axes</strong> (plus its sub-metrics) with the run&#x27;s value, the direction that is <em>good</em>, and a confidence interval where one was computed. Read it top-to-bottom as the per-axis story the composite summarises. Expect, below the cliff, <strong>MMLU-drop ≈ 0</strong> (capability retained) and <strong>CR ≈ 0</strong> ideally — a <code>CR &amp;gt; 0</code> is a safety leak, and a large ΔPPL_norm is the coherence cost that sinks the composite.</p></div></details>
 </section>
 <section class="card"><h2>Composite-score breakdown</h2>
+  <details class="whatis"><summary>What is this table? &mdash; the composite breakdown</summary><div class="wi-body"><p class="wi-intro">A term-by-term decomposition of this run's fingerprinted composite: each axis credit / penalty is shown and summed, then reconciled to the logged composite (the &Delta; should be ~0).</p><div class="wi-sub">Columns</div><dl class="wi-cols"><dt>term</dt><dd>One additive term of the composite formula (a credit or an axis penalty).</dd><dt>weight</dt><dd>The pinned &lambda; weight on that term (penalties are negative). <span class="good">good = fixed by the fingerprinted formula</span></dd><dt>raw</dt><dd>The raw axis value the weight multiplies. <span class="good">good = axis-dependent</span></dd><dt>contribution</dt><dd>weight &times; raw — this term's signed push on the composite. <span class="good">good = green credit, orange cost</span></dd></dl><div class="wi-watch"><b>What to watch:</b> Watch the <b>contribution</b> column: a good run is mostly the green behavior credit; a bad run is swamped by the coherence (&Delta;PPL) or off-shell geometry penalty, which drags the composite negative.</div></div></details>
   <div class="comp-stack"><div class="seg pos" style="width:23.73%" title="behavior_efficacy = +0.5000">behavior_efficacy +0.500</div><div class="seg cost" style="width:75.93%" title="− λ_safe · compliance = -1.6000">compliance −1.600</div></div>
 <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--paper-dim);margin-top:6px"><span>Σ recomputed: <b style="color:var(--paper)">-1.10725</b></span><span>reported: <b style="color:var(--paper)">-1.10720</b> &middot; Δ -0.000050</span></div>
 
@@ -570,6 +631,7 @@
   <details class="interpret"><summary>How to read this &mdash; the composite breakdown</summary><div class="md-body"><p>A <strong>term-by-term decomposition of the composite</strong>: each axis penalty (weight × raw value) is shown and summed, then <strong>reconciled to the logged composite</strong> (the Δ should be ~0). The stacked bar shows which term dominates — <strong>green is the behavior credit, orange segments are the axis costs</strong>. Expect a good run to be mostly green; a bad run is swamped by the <strong>coherence (ΔPPL) or off-shell geometry</strong> penalty, which is what drags the composite negative.</p></div></details>
 </section>
 <section class="card"><h2>Geometry probes</h2>
+  <details class="whatis"><summary>What is this table? &mdash; the geometry probes</summary><div class="wi-body"><p class="wi-intro">This run's behavior-free geometry probes — they explain the coherence number and predict the cliff.</p><div class="wi-sub">Columns</div><dl class="wi-cols"><dt>probe</dt><dd>The behavior-free geometry probe being reported.</dd><dt>value (n)</dt><dd>The probe's value with its seed count.</dd></dl><div class="wi-watch"><b>What to watch:</b> Expect <b>small off-shell and angular values</b> on a clean run; once off-shell crosses ~0.05–0.1 the perplexity in the metrics table should rise super-linearly (the N17 off-shell&rarr;log-PPL relationship).</div></div></details>
   <table class="kvtable"><thead><tr><th>probe</th><th>value (n)</th></tr></thead>
   <tbody><tr><td class="k">off-shell displacement Δ‖h‖</td><td class="v">0.0000 <span class="n-chip scr">n=1</span></td></tr><tr><td class="k">angular displacement (1−cos)</td><td class="v">0.0000 <span class="n-chip scr">n=1</span></td></tr><tr><td class="k">Fisher ratio at layer</td><td class="v">47.5197 <span class="n-chip scr">n=1</span></td></tr><tr><td class="k">cos(DiffMean, PCA-top1)</td><td class="v">0.9963 <span class="n-chip scr">n=1</span></td></tr></tbody></table>
   <details class="interpret"><summary>How to read this &mdash; the geometry probes</summary><div class="md-body"><p>This run&#x27;s <strong>geometry probes</strong>: off-shell displacement Δ‖h‖, angular displacement <code>1−cos</code>, the Fisher ratio at the injection layer, and <code>cos(DiffMean, PCA-top1)</code>. They are <strong>behavior-free</strong> and explain the coherence number above. Expect <strong>small off-shell and small angular values on a clean run</strong>; once off-shell climbs past ~0.05–0.1 the perplexity in the metrics table should rise super-linearly (the N17 off-shell→log-PPL relationship).</p></div></details>
@@ -590,6 +652,6 @@
   <div class="xrefs-grid"><a class="xref-card" href="../hyp/10.html"><div class="xref-lbl">&#8599; hypothesis</div><div class="xref-tag">10</div><div class="xref-meta">Formal claim for H10 (E1)</div></a><a class="xref-card" href="exp106.html"><div class="xref-lbl">&#8592; previous experiment</div><div class="xref-tag">exp106</div></a><a class="xref-card" href="exp108.html"><div class="xref-lbl">&#8594; next experiment</div><div class="xref-tag">exp108</div></a><a class="xref-card" href="../index.html"><div class="xref-lbl">&#8599; master dashboard</div><div class="xref-tag">index</div><div class="xref-meta">runs table + hypothesis grid</div></a></div>
 </section>
 <div class="doc-footer"><a href="https://github.com/dlmastery/steeringresearch" target="_blank" rel="noopener">Repo</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/paper/PAPER.md" target="_blank" rel="noopener">Paper</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/FINDINGS.md" target="_blank" rel="noopener">FINDINGS</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/IDEA_TABLE.md" target="_blank" rel="noopener">IDEA_TABLE</a> &middot; <a href="https://dlmastery.github.io/steeringresearch/" target="_blank" rel="noopener">GitHub Pages</a></div>
-<div class="meta">composite formula &nbsp; <code>composite = behavior_efficacy - lambda_cap  * max(0, mmlu_drop_pp) - lambda_coh  * max(0, dppl_norm) - lambda_coh_rep * max(0, repetition_rate) - lambda_safe * compliance_rate - lambda_sel  * max(0, harmless_refusal_rate) - lambda_geo  * max(0, offshell_displacement)</code><br>composite fingerprint &nbsp; <code>a9001e87087e</code> &middot; git SHA &nbsp; <code>0ab5e59</code> &middot; generated &nbsp; <code>2026-06-01T11:56:15</code> &middot; experiment <code>exp107</code> &middot; hypothesis <code>10</code><br>Internal QA pass &mdash; external review pending. &middot; Generated by <code>steering.dashboard</code> &middot; brutalist editorial lab notebook &middot; self-contained inline CSS, Google Fonts with offline serif/mono fallback.</div>
+<div class="meta">composite formula &nbsp; <code>composite = behavior_efficacy - lambda_cap  * max(0, mmlu_drop_pp) - lambda_coh  * max(0, dppl_norm) - lambda_coh_rep * max(0, repetition_rate) - lambda_safe * compliance_rate - lambda_sel  * max(0, harmless_refusal_rate) - lambda_geo  * max(0, offshell_displacement)</code><br>composite fingerprint &nbsp; <code>a9001e87087e</code> &middot; git SHA &nbsp; <code>9d09e6f</code> &middot; generated &nbsp; <code>2026-06-01T12:29:19</code> &middot; experiment <code>exp107</code> &middot; hypothesis <code>10</code><br>Internal QA pass &mdash; external review pending. &middot; Generated by <code>steering.dashboard</code> &middot; brutalist editorial lab notebook &middot; self-contained inline CSS, Google Fonts with offline serif/mono fallback.</div>
 </body>
 </html>

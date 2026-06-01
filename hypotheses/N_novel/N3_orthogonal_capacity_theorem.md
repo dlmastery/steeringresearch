@@ -260,3 +260,9 @@ TESTABLE-MEDIUM-CONFIDENCE. The mathematical argument is clean; the empirical te
 direct. The main risk is the layer-depth confound and the corpus-vs-prompt PR mismatch.
 The minimum experiment (2 layers, ~1 hour) should be run first to decide whether the
 full protocol is worth the 4 hours.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N3.md`.

@@ -70,12 +70,17 @@ A project root with many markdown files presents two problems:
 The README must serve a reader who arrives cold. Required sections, in
 this order:
 
-**1. One-paragraph elevator pitch (≤ 80 words).**
+**1. One-paragraph elevator pitch (≤ 80 words) — with concrete outcome.**
 What the project studies, what the methodology contribution is, and
 one calibrated positive finding alongside one calibrated negative
 finding — never the positive alone. The pitch must be factual, not
-marketing: avoid "revolutionary", "state-of-the-art", "novel
-framework".
+marketing: avoid "revolutionary", "state-of-the-art", "novel framework".
+
+The pitch MUST state the **concrete outcome** being pursued: what is being
+invented or discovered, what SOTA means in this domain (the trade-off being
+maximized), and what a "winner" is. "This project studies X" is insufficient —
+state what you are trying to find or build, specifically. See the goal/outcome
+clarity mandate in `../autoresearch-meta/SKILL.md §0`.
 
 **2. Badges row (optional but recommended).**
 Links to the paper, the live dashboard, and the license. Keep it to
@@ -121,6 +126,11 @@ One short paragraph.
 - A quick-start block that doesn't run from a clean clone.
 - Marketing language that contradicts the calibrated findings in the
   paper or statistical tests.
+- A vague goal statement ("this project studies X") with no concrete
+  outcome: what is being maximized, what SOTA means, what a winner is.
+- Implicit shared-harness architecture: if the project uses a single
+  shared runner for multiple hypotheses, state it explicitly so "few
+  files in src/" is not mistaken for incomplete work.
 
 ## Cross-reference rewriting after a restructure
 
@@ -189,3 +199,7 @@ print("Root-file check PASS.")
 - [`../autoresearch-paper-rigor/SKILL.md`](../autoresearch-paper-rigor/SKILL.md)
   — the statistical claims in the README headline section must satisfy
   the rigor floor; the README is an external-facing surface.
+- [`../autoresearch-findings-ledger/SKILL.md`](../autoresearch-findings-ledger/SKILL.md)
+  — the self-contained FINDINGS and interpretable ledger discipline;
+  FINDINGS.md is one of the canonical root-adjacent documents governed
+  by both this skill and the findings-ledger skill.

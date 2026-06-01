@@ -285,3 +285,9 @@ theoretically motivated and practically useful experiment. It directly
 tests the decoupling of behavior and capability in the multi-parameter
 steering space and provides the geometry-check for N17 in the multi-
 dimensional setting.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E46.md`.

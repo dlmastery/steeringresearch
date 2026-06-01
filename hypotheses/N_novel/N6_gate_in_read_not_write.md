@@ -262,3 +262,9 @@ TESTABLE-MEDIUM. The separation principle is sound; the effect size is uncertain
 E32 is the critical pre-check (5 min). If cos(c,b) is naturally low, the hypothesis
 is vacuously satisfied and effort should go elsewhere. If cos(c,b) >= 0.20, this
 is a cheap and potentially high-value intervention.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N6.md`.

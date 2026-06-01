@@ -264,3 +264,9 @@ the removed component was "purely interfering."
 **NOVEL+TESTABLE** with strong geometric grounding. The efficacy-preservation
 claim (>= 95%) is the critical empirical test; the interference reduction
 (>= 80%) is algebraically expected. Low compute cost.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E19.md`.

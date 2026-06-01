@@ -254,3 +254,9 @@ that DoLa's TruthfulQA gain is maintained in the combined condition.
 **NOVEL+TESTABLE.** Low compute cost. The disjoint-site composability claim
 is the cleanest in Block C and will validate a key principle of the 7-axis
 decision rule.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E25.md`.

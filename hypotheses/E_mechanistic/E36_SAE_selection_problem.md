@@ -308,3 +308,16 @@ steering. The screening support from C9b (norm control resolves apparent
 source gaps) is encouraging but must be confirmed on the SAE-specific
 comparison. Mark as SCREENING-SUPPORTED in the DiffMean-PCA sense only;
 SAE-specific claim is UNTESTED.
+
+---
+
+## Provenance & Tracing
+
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E36.md`](../PROVENANCE/E36.md).
+
+- **Experiments:** exp# 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83 (`autoresearch_results/experiment_log.jsonl`).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/campaign_sweep.py --model models/google/gemma-3-270m-it --quant none --hyp E36 --tag-prefix C7-source --behavior ocean --layers 16 --alphas 0.5 1.0 2.0 --ops add --sources diffmean pca
+```

@@ -50,7 +50,15 @@ fields:
    the global best, and per-fold or per-split narrative.
 
 7. **Checkpoint** (>= 40 words on learning). Update every artifact
-   listed in the project's Dashboard Files Update Mandate.
+   listed in the project's Dashboard Files Update Mandate. Additionally:
+   - Regenerate (or update) `PROVENANCE.md` in the relevant hypothesis
+     sub-project (`ideas/<NN>/PROVENANCE.md`) to record this experiment's
+     tag, command, result path, and a 2–3 sentence result interpretation.
+   - If EXPERIMENT_LEDGER.md is updated with a new verdict, verify that
+     the campaign-arc narrative in the ledger's "how to read" section
+     is still accurate and update it if a phase boundary has been crossed.
+   - If a finding graduates to FINDINGS.md, confirm the preamble glossary
+     still defines every identifier used in the new finding.
 
 ## Hard rules
 
@@ -125,6 +133,11 @@ python scripts/build_report.py
 - (The reasoning-entry gates are part of this skill — Steps 1–4 and
   6–7 and their word-count and citation-format validation are defined
   in this SKILL.md directly, not in a separate skill.)
+- [`autoresearch-findings-ledger`](../autoresearch-findings-ledger/SKILL.md)
+  — the Checkpoint step (Step 7) must satisfy the provenance-tracing
+  requirements and the ledger/findings self-contained mandates.
+- [`autoresearch-idea-scaffold`](../autoresearch-idea-scaffold/SKILL.md)
+  — the PROVENANCE.md file that must be updated at every Checkpoint.
 - [`autoresearch-data-split-audit`](../autoresearch-data-split-audit/SKILL.md)
   — Step 5 (Execute) calls the runner's `audit_or_die()` before any
   model build. New dataset? Run the audit first.

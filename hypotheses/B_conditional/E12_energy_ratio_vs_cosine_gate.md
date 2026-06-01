@@ -223,3 +223,9 @@ similar to harmful ones), SCS offers no advantage over cosine.
 **NOVEL+TESTABLE.** Direct gate comparison with a specific numeric criterion.
 The OOD evaluation is the most informative condition — in-distribution
 comparison may be insufficient to distinguish the two gate designs.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E12.md`.

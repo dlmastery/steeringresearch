@@ -226,3 +226,9 @@ within 0.03?). The latency benefit is real if the gap holds.
 
 **NOVEL+TESTABLE** as an engineering result. Low compute cost, clear falsifier,
 practical consequence for deployment.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E13.md`.

@@ -305,3 +305,9 @@ the same angular displacement, the claim is confirmed. Cost: ~2 hours on a 4090.
 **PLAUSIBLE AND TESTABLE. Grounded in the C3b angular-displacement law. Expected
 to show moderate monotonicity improvement at large s. The zero-cost SLERP
 implementation makes this a high-value / low-cost experiment.**
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E29.md`.

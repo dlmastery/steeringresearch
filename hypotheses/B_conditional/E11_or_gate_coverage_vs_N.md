@@ -243,3 +243,9 @@ credible) than the corpus estimate of N = 5.
 **NOVEL+TESTABLE.** The N-scaling curve is a direct design constraint for
 multi-safety-vector deployment and has not been reported for Gemma-2-2B.
 The independence assumption is falsifiable and the cost is low.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E11.md`.

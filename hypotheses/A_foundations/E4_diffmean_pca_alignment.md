@@ -299,3 +299,16 @@ interesting finding.
 hypotheses.** The mathematical foundation is solid, the screening evidence is
 consistent, and the behavioral equivalence at matched displacement (C9b) is the
 directly policy-relevant confirmation. Promote to rung-3 alongside E3.
+
+---
+
+## Provenance & Tracing
+
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E4.md`](../PROVENANCE/E4.md).
+
+- **Experiments:** exp# 1, 55, 56, 57, 58, 59, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109 (`autoresearch_results/experiment_log.jsonl`).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python -m steering.runner  # Rung-0/1 plumbing gate on the offline FakeResidualLM (infra, not a Gemma claim)
+```

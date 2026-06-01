@@ -288,3 +288,9 @@ NormCap.
 sub-program. Its output directly informs E50 (minimal SOTA stack). Strongly
 recommend running at n=7 from the start to achieve sufficient power to
 detect the 3% composite improvement.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E47.md`.

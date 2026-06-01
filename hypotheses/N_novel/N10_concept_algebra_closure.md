@@ -283,3 +283,9 @@ High oracle cos would confirm the linear representation hypothesis applies to be
 vectors; zero-shot synthesis is the operationally important claim that follows.
 Recommend running oracle first; commit to zero-shot and conceptor experiments
 only if oracle cos > 0.55.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N10.md`.

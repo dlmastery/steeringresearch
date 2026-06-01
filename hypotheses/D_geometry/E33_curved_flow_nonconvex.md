@@ -347,3 +347,9 @@ claim is strongly supported. Cost: ~6 hours on a 4090.
 expressivity are the key risks. The experiment is feasible but lower priority than
 E27-A, E29, E31, and E32. The conditionality prediction is the novel contribution;
 validate the proxy first before building the full FLAS infrastructure.**
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E33.md`.

@@ -70,6 +70,31 @@ A finding graduates to FINDINGS.md only when:
 - The verdict is KEEP at rung >= 3 (STANDARD)
 - It carries the qualifier: "Internal QA pass — independent external review pending"
 
+### FINDINGS.md self-contained mandate (steering instantiation)
+
+When a finding is added to or updated in `FINDINGS.md`:
+
+1. **Preamble present**: `FINDINGS.md` must open with: how to read the document,
+   a glossary defining all hypothesis IDs (E1–E50, N1–N20), all result IDs (S-N),
+   all metric abbreviations (behavior_efficacy, MMLU-delta, PPL, CR_jailbreak,
+   over_refusal, composite, delta_norm, eff_rank_drop, norm_budget, part_ratio),
+   and all verdict tiers.
+
+2. **Zero-cross-reference rule**: every sentence in FINDINGS.md is independently
+   interpretable. A finding saying "E4 at layer 6 achieves composite 0.5414" is
+   invalid unless E4 is defined in the preamble as "E4 (Curvature-aware injection,
+   ideas/04/)". No reader should need to open IDEA_TABLE.md, EXPERIMENT_LEDGER.md,
+   or eval.py to understand a sentence in FINDINGS.md.
+
+3. **Summary table**: a table at the top listing all current findings with their
+   IDs, one-line summaries, verdicts, composite deltas, n, and tier.
+
+4. **Strongest result stated plainly**: one sentence naming the strongest result,
+   or explicitly stating "no EXTERNAL-READY result confirmed yet."
+
+See `../../meta-skills/autoresearch-findings-ledger/SKILL.md` for the full
+mandate and template.
+
 ### Citation format (mandatory)
 
 Every cited paper: `Author1, Author2, ..., YEAR VENUE 'Title' (arXiv:XXXX.XXXXX)`
@@ -99,6 +124,7 @@ Every cited paper: `Author1, Author2, ..., YEAR VENUE 'Title' (arXiv:XXXX.XXXXX)
 ## Cross-references
 
 - Meta-process: `../../meta-skills/autoresearch-paper-rigor/SKILL.md`
+- Findings and ledger discipline: `../../meta-skills/autoresearch-findings-ledger/SKILL.md`
 - Findings gate: `../../FINDINGS.md`
 - Statistical contract: CLAUDE.md Section 7
 - Verdict tiers: CLAUDE.md Section 7

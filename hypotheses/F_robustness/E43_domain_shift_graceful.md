@@ -281,3 +281,9 @@ characterisation that is currently absent from the steering literature.
 Even a negative result (catastrophic degradation for code) is highly
 informative for practitioners. Strongly recommend running this experiment
 early in the program.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E43.md`.

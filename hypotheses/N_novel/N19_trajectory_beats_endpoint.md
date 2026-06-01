@@ -259,3 +259,9 @@ TESTABLE-MEDIUM. The mechanism has a clean prediction (lower per-layer off-shell
 that is directly measurable. The minimum experiment (1 hour) is the essential first
 step. GeoSteer replication (the manifold-gradient version) should be run as a parallel
 track to provide a ceiling for what trajectory-aware steering can achieve.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N19.md`.

@@ -338,3 +338,16 @@ equivalent to addition but not better."
 variant untested); E27-B SCREENING-SUPPORTED (scale-fragility ordering at n=1).
 Both sub-claims are testable within current infrastructure. Priority: implement
 selective-plane rotation for E27-A; extend scale comparison to n>=7 for E27-B.**
+
+---
+
+## Provenance & Tracing
+
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E27.md`](../PROVENANCE/E27.md).
+
+- **Experiments:** exp# 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46 (`autoresearch_results/experiment_log.jsonl`).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/campaign_sweep.py --model models/google/gemma-3-270m-it --quant none --hyp E27 --tag-prefix C3-E27-op --behavior ocean --layers 16 --alphas 1.0 2.0 4.0 --ops add rotate project_out --sources diffmean
+```

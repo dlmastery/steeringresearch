@@ -300,3 +300,16 @@ the claim is immediately qualified. Cost: < 1 hour on existing data.
 **TESTABLE AND PRACTICALLY IMPORTANT. UNTESTED. Likely a mixed result stratified
 by trait complexity. Run it; the scree plot will be informative regardless of
 outcome.**
+
+---
+
+## Provenance & Tracing
+
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E28.md`](../PROVENANCE/E28.md).
+
+- **Experiments:** analysis campaign (computed quantities in the campaign JSON; see the provenance file).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/campaign_sweep.py --model models/google/gemma-3-270m-it --quant none --hyp E28 --tag-prefix E28-lowrank --layers 16 --alphas 0.1 --ops relative_add --behaviors anger  # SVD of the contrastive-difference space; variance explained by top-3 dims
+```

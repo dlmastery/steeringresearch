@@ -257,3 +257,9 @@ SUPPORTED(screening) — REPLICATION REQUIRED. The S-7 screening result is stron
 the held-out generalization on Gemma-3-1B is the next required step. The minimum
 1-hour replication run should be the first experiment scheduled after the infrastructure
 for selective 2D-plane rotation is implemented.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N16.md`.

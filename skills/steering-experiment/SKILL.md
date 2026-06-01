@@ -79,6 +79,27 @@ Commit the pre-run reasoning entry BEFORE launching the experiment.
 Commit the post-run entry + EXPERIMENT_LEDGER.md row BEFORE launching the next.
 Never let git status be dirty from experiment N when experiment N+1 launches.
 
+### Provenance tracing at Checkpoint (steering instantiation)
+
+Every Checkpoint (Step 7) must also:
+
+1. **Update `ideas/<NN>/PROVENANCE.md`**: add this experiment's tag, the exact
+   command used, the result artifact path
+   (`autoresearch_results/` + run folder), and a 2–3 sentence interpretation of
+   what the result means for hypothesis NN specifically.
+
+2. **Update EXPERIMENT_LEDGER.md campaign-arc narrative** if a phase boundary
+   has been crossed (e.g., switching from layer-sweep phase to alpha-sweep phase).
+   "Phase boundary" = a deliberate shift in which of the 12 axes is being
+   explored. The narrative groups rows by axis-phase, not just chronologically.
+
+3. **Verify FINDINGS.md preamble** if this experiment's result graduates to a
+   finding: confirm all five axis abbreviations, the hypothesis ID, and the
+   result ID are defined in the preamble before committing.
+
+See `../../meta-skills/autoresearch-findings-ledger/SKILL.md` for the full
+ledger and findings discipline.
+
 ---
 
 ## Quick checklist (copy into pre-run entry)
@@ -101,5 +122,7 @@ Never let git status be dirty from experiment N when experiment N+1 launches.
 - Vector extraction: `../steering-vector-extraction/SKILL.md`
 - Eval bundle: `../steering-eval-bundle/SKILL.md`
 - Ladder gates: `../steering-tiered-ladder/SKILL.md`
+- Findings and ledger discipline: `../../meta-skills/autoresearch-findings-ledger/SKILL.md`
+- Paper rigor (findings gate): `../steering-paper-rigor/SKILL.md`
 - Ledger schema: `../../EXPERIMENT_LEDGER.md`
 - Hypothesis registry: `../../IDEA_TABLE.md`

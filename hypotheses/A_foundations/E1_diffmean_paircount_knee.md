@@ -296,3 +296,9 @@ directional evidence but is underpowered. The hypothesis is worth a full rung-2 
 The falsifier is specific and pre-registered. Risk: the knee may vary so much by concept
 that the 50-pair claim cannot be stated as a single number — which is itself a
 publishable finding.
+
+---
+
+## Provenance & Tracing
+
+No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E1.md`.
