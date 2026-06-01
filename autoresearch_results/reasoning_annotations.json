@@ -790,5 +790,88 @@
     "prediction": "Cell 18/0.4/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
     "verdict": "DISCARD \u2014 composite -92.7700, behavior +0.4188, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
     "learning": "Behavior +0.4188 | MMLU drop 0.3500 | \u0394PPL_norm 181.6193 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0879 | layer 18 | Fisher 36.3461"
+  },
+  "89": {
+    "_manual": true,
+    "diagnosis": "Hill-climb (E7) coordinate-descent cell, optimising axis 'base'. Config: op=relative_add, layer=16, source=diffmean, alpha=0.1 (relative_add \u21d2 fractional displacement). This is the rung-2.5 tuned-ceiling tier: starting from the screening base we optimise one axis at a time and keep the strict-> composite champion.",
+    "citations": "Bergstra & Bengio, 2012 JMLR 'Random Search for Hyper-Parameter Optimization' \u2014 coordinate/region search beats grid in fewer trials. Panickssery et al., 2024 ACL CAA (arXiv:2312.06681) \u2014 the additive steering whose (layer,alpha,source) we tune.",
+    "hypothesis": "Per the screening verdicts (E7 relative steering; E2 max-Fisher is NOT the best layer), the composite-optimal steering config is found by coordinate descent over (alpha, layer, source, operation), not at the max-Fisher default. This cell tests axis 'base' around the current champion.",
+    "prediction": "Cell on axis 'base': finite composite (fingerprint a9001e87087e), n=1 SCREENING/tuned-ceiling. The hill-climb champion should beat the screening base composite. Pre-registered tuned-config measurement, not yet an n>=7 external claim.",
+    "verdict": "DISCARD \u2014 composite -1.6772, behavior +0.6138, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.6138 | MMLU drop 0.0500 | \u0394PPL_norm 0.4625 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0101 | layer 16 | Fisher 18.2502"
+  },
+  "90": {
+    "diagnosis": "TODO-REWRITE: steering experiment #90 (tag=HC-E7-alpha-0.05). Description: E7 hill-climb axis=alpha HC-E7-alpha-0.05. Claude must replace this with: why THIS config now (champion weakness, which of the 12 axes is being perturbed, reference >=1 prior experiment by tag), >=60 words per CLAUDE.md \u00a75.1.",
+    "citations": "TODO-REWRITE: full author(s) + YEAR + VENUE + arXiv ID for every paper motivating this change (e.g. 'Korznikov et al., 2026 ICML \"The Rogue Scalpel\" (arXiv:2509.22067) \u2014 ...'). Parenthetical-only tags insufficient.",
+    "hypothesis": "TODO-REWRITE: mechanistic hypothesis. Config delta: layer=16, alpha=0.05, operation=relative_add, source=diffmean, behavior=ocean, rung=2. Must state which residual-stream mechanism moves and what the cited paper predicts (contains 'mechanism'/'because'/'per [paper]'), >=50 words.",
+    "prediction": "TODO-REWRITE: numeric range on the composite + >=1 sub-metric, authored BEFORE the run (>=25 words). Placeholder here means the 7-step ritual was skipped.",
+    "verdict": "DISCARD \u2014 composite -1.4181, behavior +0.4447, CR 0.9000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4447 | MMLU drop 0.0000 | \u0394PPL_norm 0.1083 | rep 0.0145 | CR 0.9000 | harmless_refusal 0.0000 | offshell 0.0054 | layer 16 | Fisher 18.2502",
+    "_manual": false,
+    "_needs_rewrite": true,
+    "composite_fingerprint": "a9001e87087e"
+  },
+  "91": {
+    "_manual": true,
+    "diagnosis": "Hill-climb (E7) coordinate-descent cell, optimising axis 'alpha'. Config: op=relative_add, layer=16, source=diffmean, alpha=0.1 (relative_add \u21d2 fractional displacement). This is the rung-2.5 tuned-ceiling tier: starting from the screening base we optimise one axis at a time and keep the strict-> composite champion.",
+    "citations": "Bergstra & Bengio, 2012 JMLR 'Random Search for Hyper-Parameter Optimization' \u2014 coordinate/region search beats grid in fewer trials. Panickssery et al., 2024 ACL CAA (arXiv:2312.06681) \u2014 the additive steering whose (layer,alpha,source) we tune.",
+    "hypothesis": "Per the screening verdicts (E7 relative steering; E2 max-Fisher is NOT the best layer), the composite-optimal steering config is found by coordinate descent over (alpha, layer, source, operation), not at the max-Fisher default. This cell tests axis 'alpha' around the current champion.",
+    "prediction": "Cell on axis 'alpha': finite composite (fingerprint a9001e87087e), n=1 SCREENING/tuned-ceiling. The hill-climb champion should beat the screening base composite. Pre-registered tuned-config measurement, not yet an n>=7 external claim.",
+    "verdict": "DISCARD \u2014 composite -1.6772, behavior +0.6138, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.6138 | MMLU drop 0.0500 | \u0394PPL_norm 0.4625 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0101 | layer 16 | Fisher 18.2502"
+  },
+  "92": {
+    "_manual": true,
+    "diagnosis": "Hill-climb (E7) coordinate-descent cell, optimising axis 'alpha'. Config: op=relative_add, layer=16, source=diffmean, alpha=0.15 (relative_add \u21d2 fractional displacement). This is the rung-2.5 tuned-ceiling tier: starting from the screening base we optimise one axis at a time and keep the strict-> composite champion.",
+    "citations": "Bergstra & Bengio, 2012 JMLR 'Random Search for Hyper-Parameter Optimization' \u2014 coordinate/region search beats grid in fewer trials. Panickssery et al., 2024 ACL CAA (arXiv:2312.06681) \u2014 the additive steering whose (layer,alpha,source) we tune.",
+    "hypothesis": "Per the screening verdicts (E7 relative steering; E2 max-Fisher is NOT the best layer), the composite-optimal steering config is found by coordinate descent over (alpha, layer, source, operation), not at the max-Fisher default. This cell tests axis 'alpha' around the current champion.",
+    "prediction": "Cell on axis 'alpha': finite composite (fingerprint a9001e87087e), n=1 SCREENING/tuned-ceiling. The hill-climb champion should beat the screening base composite. Pre-registered tuned-config measurement, not yet an n>=7 external claim.",
+    "verdict": "DISCARD \u2014 composite -2.1108, behavior +0.4900, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4900 | MMLU drop 0.1000 | \u0394PPL_norm 0.9768 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0209 | layer 16 | Fisher 18.2502"
+  },
+  "93": {
+    "_manual": true,
+    "diagnosis": "Hill-climb (E7) coordinate-descent cell, optimising axis 'alpha'. Config: op=relative_add, layer=16, source=diffmean, alpha=0.2 (relative_add \u21d2 fractional displacement). This is the rung-2.5 tuned-ceiling tier: starting from the screening base we optimise one axis at a time and keep the strict-> composite champion.",
+    "citations": "Bergstra & Bengio, 2012 JMLR 'Random Search for Hyper-Parameter Optimization' \u2014 coordinate/region search beats grid in fewer trials. Panickssery et al., 2024 ACL CAA (arXiv:2312.06681) \u2014 the additive steering whose (layer,alpha,source) we tune.",
+    "hypothesis": "Per the screening verdicts (E7 relative steering; E2 max-Fisher is NOT the best layer), the composite-optimal steering config is found by coordinate descent over (alpha, layer, source, operation), not at the max-Fisher default. This cell tests axis 'alpha' around the current champion.",
+    "prediction": "Cell on axis 'alpha': finite composite (fingerprint a9001e87087e), n=1 SCREENING/tuned-ceiling. The hill-climb champion should beat the screening base composite. Pre-registered tuned-config measurement, not yet an n>=7 external claim.",
+    "verdict": "DISCARD \u2014 composite -2.2702, behavior +0.5042, CR 0.9000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5042 | MMLU drop 0.1000 | \u0394PPL_norm 1.7181 | rep 0.0145 | CR 0.9000 | harmless_refusal 0.0000 | offshell 0.0325 | layer 16 | Fisher 18.2502"
+  },
+  "94": {
+    "_manual": true,
+    "diagnosis": "Hill-climb (E7) coordinate-descent cell, optimising axis 'layer'. Config: op=relative_add, layer=12, source=diffmean, alpha=0.05 (relative_add \u21d2 fractional displacement). This is the rung-2.5 tuned-ceiling tier: starting from the screening base we optimise one axis at a time and keep the strict-> composite champion.",
+    "citations": "Bergstra & Bengio, 2012 JMLR 'Random Search for Hyper-Parameter Optimization' \u2014 coordinate/region search beats grid in fewer trials. Panickssery et al., 2024 ACL CAA (arXiv:2312.06681) \u2014 the additive steering whose (layer,alpha,source) we tune.",
+    "hypothesis": "Per the screening verdicts (E7 relative steering; E2 max-Fisher is NOT the best layer), the composite-optimal steering config is found by coordinate descent over (alpha, layer, source, operation), not at the max-Fisher default. This cell tests axis 'layer' around the current champion.",
+    "prediction": "Cell on axis 'layer': finite composite (fingerprint a9001e87087e), n=1 SCREENING/tuned-ceiling. The hill-climb champion should beat the screening base composite. Pre-registered tuned-config measurement, not yet an n>=7 external claim.",
+    "verdict": "DISCARD \u2014 composite -1.7812, behavior +0.3786, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.3786 | MMLU drop 0.0000 | \u0394PPL_norm 0.3030 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0044 | layer 12 | Fisher 30.5679"
+  },
+  "95": {
+    "_manual": true,
+    "diagnosis": "Hill-climb (E7) coordinate-descent cell, optimising axis 'layer'. Config: op=relative_add, layer=14, source=diffmean, alpha=0.05 (relative_add \u21d2 fractional displacement). This is the rung-2.5 tuned-ceiling tier: starting from the screening base we optimise one axis at a time and keep the strict-> composite champion.",
+    "citations": "Bergstra & Bengio, 2012 JMLR 'Random Search for Hyper-Parameter Optimization' \u2014 coordinate/region search beats grid in fewer trials. Panickssery et al., 2024 ACL CAA (arXiv:2312.06681) \u2014 the additive steering whose (layer,alpha,source) we tune.",
+    "hypothesis": "Per the screening verdicts (E7 relative steering; E2 max-Fisher is NOT the best layer), the composite-optimal steering config is found by coordinate descent over (alpha, layer, source, operation), not at the max-Fisher default. This cell tests axis 'layer' around the current champion.",
+    "prediction": "Cell on axis 'layer': finite composite (fingerprint a9001e87087e), n=1 SCREENING/tuned-ceiling. The hill-climb champion should beat the screening base composite. Pre-registered tuned-config measurement, not yet an n>=7 external claim.",
+    "verdict": "DISCARD \u2014 composite -1.4532, behavior +0.3739, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.3739 | MMLU drop 0.0500 | \u0394PPL_norm 0.3365 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0063 | layer 14 | Fisher 17.2313"
+  },
+  "96": {
+    "_manual": true,
+    "diagnosis": "Hill-climb (E7) coordinate-descent cell, optimising axis 'source'. Config: op=relative_add, layer=16, source=pca, alpha=0.05 (relative_add \u21d2 fractional displacement). This is the rung-2.5 tuned-ceiling tier: starting from the screening base we optimise one axis at a time and keep the strict-> composite champion.",
+    "citations": "Bergstra & Bengio, 2012 JMLR 'Random Search for Hyper-Parameter Optimization' \u2014 coordinate/region search beats grid in fewer trials. Panickssery et al., 2024 ACL CAA (arXiv:2312.06681) \u2014 the additive steering whose (layer,alpha,source) we tune.",
+    "hypothesis": "Per the screening verdicts (E7 relative steering; E2 max-Fisher is NOT the best layer), the composite-optimal steering config is found by coordinate descent over (alpha, layer, source, operation), not at the max-Fisher default. This cell tests axis 'source' around the current champion.",
+    "prediction": "Cell on axis 'source': finite composite (fingerprint a9001e87087e), n=1 SCREENING/tuned-ceiling. The hill-climb champion should beat the screening base composite. Pre-registered tuned-config measurement, not yet an n>=7 external claim.",
+    "verdict": "DISCARD \u2014 composite -1.6309, behavior +0.4387, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.4387 | MMLU drop 0.0000 | \u0394PPL_norm 0.1224 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0047 | layer 16 | Fisher 18.2502"
+  },
+  "97": {
+    "_manual": true,
+    "diagnosis": "Hill-climb (E7) coordinate-descent cell, optimising axis 'operation'. Config: op=add, layer=16, source=diffmean, alpha=0.05 (relative_add \u21d2 fractional displacement). This is the rung-2.5 tuned-ceiling tier: starting from the screening base we optimise one axis at a time and keep the strict-> composite champion.",
+    "citations": "Bergstra & Bengio, 2012 JMLR 'Random Search for Hyper-Parameter Optimization' \u2014 coordinate/region search beats grid in fewer trials. Panickssery et al., 2024 ACL CAA (arXiv:2312.06681) \u2014 the additive steering whose (layer,alpha,source) we tune.",
+    "hypothesis": "Per the screening verdicts (E7 relative steering; E2 max-Fisher is NOT the best layer), the composite-optimal steering config is found by coordinate descent over (alpha, layer, source, operation), not at the max-Fisher default. This cell tests axis 'operation' around the current champion.",
+    "prediction": "Cell on axis 'operation': finite composite (fingerprint a9001e87087e), n=1 SCREENING/tuned-ceiling. The hill-climb champion should beat the screening base composite. Pre-registered tuned-config measurement, not yet an n>=7 external claim.",
+    "verdict": "DISCARD \u2014 composite -1.1072, behavior +0.5000, CR 0.8000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5000 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0145 | CR 0.8000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 18.2502"
   }
 }
