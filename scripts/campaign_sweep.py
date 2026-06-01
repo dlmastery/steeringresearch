@@ -84,6 +84,7 @@ def main() -> None:
     ap.add_argument("--hyp", required=True)
     ap.add_argument("--tag-prefix", required=True)
     ap.add_argument("--behavior", default="ocean")
+    ap.add_argument("--behaviors", nargs="+", default=None, help="loop multiple concepts")
     ap.add_argument("--layers", type=int, nargs="+", required=True)
     ap.add_argument("--alphas", type=float, nargs="+", required=True)
     ap.add_argument("--ops", nargs="+", default=["add"])
@@ -98,19 +99,21 @@ def main() -> None:
              "hypothesis": args.hypothesis, "prediction": args.prediction}
 
     rows = []
-    for source in args.sources:
+    behaviors = args.behaviors or [args.behavior]
+    for behavior in behaviors:
+     for source in args.sources:
         for op in args.ops:
             for layer in args.layers:
                 for alpha in args.alphas:
                     num = _next_num()
                     _author(num, args.hyp, layer, alpha, op, source, texts)
-                    tag = f"{args.tag_prefix}-L{layer}-a{alpha}-{op}-{source}"
+                    tag = f"{args.tag_prefix}-{behavior}-L{layer}-a{alpha}-{op}-{source}"
                     print(f"\n>>> exp#{num} {tag}", flush=True)
                     try:
                         e = run_single_experiment(
                             model_name=args.model, rung=args.rung, layer=layer,
                             alpha=alpha, operation=op, source=source,
-                            behavior=args.behavior, seed=0,
+                            behavior=behavior, seed=0,
                             description=f"{args.hyp} sweep {tag}", tag=tag,
                             quant=args.quant, normalize=args.normalize,
                         )

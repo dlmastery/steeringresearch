@@ -106,6 +106,15 @@ confirmed on the 3rd model (cos=0.9945). CR 0.80→1.00 (Rogue-Scalpel). n=1. Se
 > direction, not magnitude. The instrument fixes and the full required-experiment
 > list are tracked below.
 
+**S-10 (E4 cross-BEHAVIOR SUPPORTED, SCREENING).** Added 4 distinct concepts
+(ocean/happiness/anger/formality). cos(DiffMean, PCA-top1) at each concept's
+max-Fisher layer on gemma-3-270m: anger 0.995, formality 0.996, happiness 0.999,
+ocean 0.997 — **E4's >0.95 holds across all 4 behaviors** (and 3 models). The
+single-behavior limitation is substantially addressed: DiffMean≈PCA is behavior-
+and architecture-robust. n=1/concept.
+
+---
+
 ## Rung-3 evaluation attempt (real WikiText, held-out)
 
 **R3-1 (N17 monotone SUPPORTED on real data; N5 universal-law FALSIFIED across scale).**
