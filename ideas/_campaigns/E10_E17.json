@@ -1,0 +1,16 @@
+{
+  "E10_cosines": {
+    "anger-formality": -0.18293121457099915,
+    "anger-happiness": 0.47952598333358765,
+    "anger-ocean": 0.21516068279743195,
+    "formality-happiness": -0.23582637310028076,
+    "formality-ocean": -0.09799128770828247,
+    "happiness-ocean": 0.3245816230773926
+  },
+  "E17_stacking": {
+    "anger_solo": 0.7156686349377922,
+    "anger_joint": 0.7208510200470819,
+    "happy_solo": 0.6221269452144644,
+    "happy_joint": 0.6820550944030249
+  }
+}

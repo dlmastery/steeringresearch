@@ -126,6 +126,16 @@ concrete emotions steer stronger). Pooled cross-behavior-at-fixed-α N17 is weak
 
 ---
 
+**S-12 (E17 stacking SUPPORTED; E10 partial, SCREENING).** Gemma-270m @L16,
+4 concepts. E10: pairwise concept-vector cosines mostly near-orthogonal
+(|cos|<0.3) — anger↔formality −0.18, formality↔ocean −0.10 — EXCEPT anger↔happiness
++0.48 (both high-arousal emotions). E17: stacking anger+happiness (summed, relative
+0.1 each) RETAINS each behavior fully (anger 101%, happiness 110% of solo) — NO
+interference even at +0.48 correlation; the shared emotional direction helps rather
+than hurts. Two behavior vectors compose additively. n=1. See `ideas/_campaigns/E10_E17.json`.
+
+---
+
 ## Rung-3 evaluation attempt (real WikiText, held-out)
 
 **R3-1 (N17 monotone SUPPORTED on real data; N5 universal-law FALSIFIED across scale).**
