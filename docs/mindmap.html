@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Steering — Research Landscape Mindmap</title>
+  <style>
+    /* ── Editorial palette ── */
+    :root {
+      --ink:    #0a0a0d;
+      --paper:  #e6e1d6;
+      --gold:   #bb8c4d;
+      --gold2:  #d4a86a;
+      --muted:  #7a7068;
+      --cream:  #f4f0e8;
+      --red:    #9b3a3a;
+      --green:  #3a6b3a;
+      --amber:  #8a5c00;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    /* ── Masthead ── */
+    header {
+      background: var(--ink);
+      color: var(--paper);
+      padding: 1.1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      border-bottom: 3px solid var(--gold);
+    }
+    header .brand {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: var(--gold2);
+    }
+    header .brand span { color: var(--paper); font-weight: 400; font-size: 1rem; }
+    header nav { display: flex; gap: 1.2rem; flex-wrap: wrap; }
+    header nav a {
+      color: var(--gold2);
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-bottom: 1px solid transparent;
+      padding-bottom: 1px;
+      transition: border-color 0.15s;
+    }
+    header nav a:hover { border-color: var(--gold2); }
+
+    /* ── Page body ── */
+    .page { max-width: 1400px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+    .caption {
+      max-width: 820px;
+      margin: 0 auto 2.2rem;
+      text-align: center;
+      font-size: 0.95rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+    .caption strong { color: var(--ink); }
+
+    /* ── Mindmap SVG wrapper ── */
+    .mindmap-wrap {
+      background: var(--cream);
+      border: 2px solid var(--gold);
+      border-radius: 4px;
+      padding: 1rem;
+      overflow-x: auto;
+      overflow-y: auto;
+    }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem 2rem;
+      justify-content: center;
+      margin: 1.6rem auto 0;
+      max-width: 900px;
+      font-size: 0.8rem;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .legend-dot {
+      width: 13px; height: 13px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      padding: 1.5rem 1rem;
+      border-top: 1px solid #c8c0b0;
+      margin-top: 3rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ MASTHEAD ══════════════════════════════════════════════════════ -->
+<header>
+  <div class="brand">Steering Research <span>/ Mindmap</span></div>
+  <nav>
+    <a href="index.html">Dashboard</a>
+    <a href="dashboard/index.html">Full Dashboard</a>
+    <a href="https://github.com/vgel/awesome-activation-steering" target="_blank" rel="noopener">Awesome&nbsp;Steering&nbsp;↗</a>
+    <a href="https://arxiv.org/search/?searchtype=all&query=activation+steering+LLM" target="_blank" rel="noopener">arXiv&nbsp;Search&nbsp;↗</a>
+  </nav>
+</header>
+
+<!-- ══ PAGE BODY ══════════════════════════════════════════════════════ -->
+<div class="page">
+
+  <div class="caption">
+    <strong>LLM Steering — Research Landscape Mindmap.</strong>
+    A structured overview of the 12-axis intervention taxonomy, method families by injection site,
+    measurement axes, the 70-hypothesis programme (blocks A–F and N1–N20) with current
+    screening verdicts, and the multi-layer Rogue Scalpel guard. All content is grounded in
+    the <em>steeringresearch</em> corpus (May–June 2026). Nodes coloured by theme;
+    verdict badges use green&nbsp;=&nbsp;SUPPORTED, red&nbsp;=&nbsp;FALSIFIED,
+    amber&nbsp;=&nbsp;PARTIAL/INCONCLUSIVE.
+  </div>
+
+  <div class="mindmap-wrap">
+    <!-- ══ HAND-DRAWN SVG MINDMAP ══════════════════════════════════════ -->
+    <!--
+      Layout: central hub at (700, 620).
+      Five radial branches at roughly:
+        Top-centre   (700, 100)  → 12 Axes
+        Right-top    (1280, 260) → Method Families
+        Right-bottom (1280, 900) → Measurement Axes
+        Bottom       (700, 1120) → Hypothesis Programme
+        Left         (120, 560)  → Safety / Rogue Scalpel
+      All edges are curved paths. Child nodes branch further.
+    -->
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 1400 1240"
+      width="1400"
+      height="1240"
+      role="img"
+      aria-label="LLM Steering Research Landscape Mindmap"
+    >
+      <defs>
+        <!-- Gradient for central hub -->
+        <radialGradient id="hubGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%"   stop-color="#2a2010"/>
+          <stop offset="100%" stop-color="#0a0a0d"/>
+        </radialGradient>
+        <!-- Subtle paper texture for node fills -->
+        <filter id="shadow" x="-8%" y="-8%" width="116%" height="116%">
+          <feDropShadow dx="1" dy="2" stdDeviation="3" flood-color="#0a0a0d" flood-opacity="0.18"/>
+        </filter>
+      </defs>
+
+      <!-- ══════════════════════════════════════════════════════════════
+           BRANCH 1: 12 AXES (top, blue family)
+      ══════════════════════════════════════════════════════════════════ -->
+      <!-- Hub → Branch root -->
+      <path d="M 700 585 Q 700 390 700 200" stroke="#4a6fa5" stroke-width="3.5" fill="none" opacity="0.7"/>
+
+      <!-- Branch root node -->
+      <ellipse cx="700" cy="175" rx="115" ry="28" fill="#4a6fa5" filter="url(#shadow)"/>
+      <text x="700" y="170" text-anchor="middle" font-family="Georgia,serif" font-size="13.5" font-weight="700" fill="#f4f0e8">12-Axis Taxonomy</text>
+      <text x="700" y="185" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#c8d8f0">WHERE · WHAT · HOW · GEOMETRY</text>
+
+      <!-- ── Axes 1-7: original framework ── -->
+      <!-- Connector to A1-7 group -->
+      <path d="M 620 162 Q 460 150 380 130" stroke="#4a6fa5" stroke-width="2" fill="none" opacity="0.6"/>
+      <ellipse cx="320" cy="118" rx="100" ry="24" fill="#5a80b5" filter="url(#shadow)"/>
+      <text x="320" y="114" text-anchor="middle" font-family="Georgia,serif" font-size="11.5" font-weight="700" fill="#f4f0e8">A1–A7 Original</text>
+      <text x="320" y="127" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9" fill="#d0e0ff">(static / Euclidean)</text>
+
+      <!-- A1-7 leaves -->
+      <g font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#0a0a0d">
+        <!-- A1 WHERE -->
+        <path d="M 255 106 Q 180 85 130 72" stroke="#4a6fa5" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="50" y="60" width="148" height="22" rx="4" fill="#ddeeff" stroke="#4a6fa5" stroke-width="1"/>
+        <text x="124" y="75" text-anchor="middle" font-weight="600">A1 WHERE — layer/site</text>
+
+        <!-- A2 WHAT -->
+        <path d="M 245 110 Q 175 102 130 98" stroke="#4a6fa5" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="50" y="87" width="155" height="22" rx="4" fill="#ddeeff" stroke="#4a6fa5" stroke-width="1"/>
+        <text x="127" y="102" text-anchor="middle" font-weight="600">A2 WHAT — direction</text>
+
+        <!-- A3 HOW-MUCH -->
+        <path d="M 245 118 Q 178 117 135 118" stroke="#4a6fa5" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="50" y="109" width="162" height="22" rx="4" fill="#ddeeff" stroke="#4a6fa5" stroke-width="1"/>
+        <text x="131" y="124" text-anchor="middle" font-weight="600">A3 HOW-MUCH — alpha α</text>
+
+        <!-- A4 HOW -->
+        <path d="M 248 125 Q 182 133 138 138" stroke="#4a6fa5" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="50" y="129" width="162" height="22" rx="4" fill="#ddeeff" stroke="#4a6fa5" stroke-width="1"/>
+        <text x="131" y="144" text-anchor="middle" font-weight="600">A4 HOW — add / rotate / flow</text>
+
+        <!-- A5 WHEN -->
+        <path d="M 255 130 Q 192 152 148 158" stroke="#4a6fa5" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="50" y="149" width="162" height="22" rx="4" fill="#ddeeff" stroke="#4a6fa5" stroke-width="1"/>
+        <text x="131" y="164" text-anchor="middle" font-weight="600">A5 WHEN — condition/gate</text>
+
+        <!-- A6 WHICH-TOKENS -->
+        <path d="M 263 133 Q 206 170 165 177" stroke="#4a6fa5" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="50" y="169" width="172" height="22" rx="4" fill="#ddeeff" stroke="#4a6fa5" stroke-width="1"/>
+        <text x="136" y="184" text-anchor="middle" font-weight="600">A6 WHICH-TOKENS — span</text>
+
+        <!-- A7 HOW-DERIVED -->
+        <path d="M 270 135 Q 222 188 183 196" stroke="#4a6fa5" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="50" y="189" width="180" height="22" rx="4" fill="#ddeeff" stroke="#4a6fa5" stroke-width="1"/>
+        <text x="140" y="204" text-anchor="middle" font-weight="600">A7 HOW-DERIVED — source</text>
+      </g>
+
+      <!-- ── Axes 8-12: meta-axes (geometry wave) ── -->
+      <path d="M 778 162 Q 910 150 990 130" stroke="#2a5a8a" stroke-width="2" fill="none" opacity="0.6"/>
+      <ellipse cx="1055" cy="118" rx="105" ry="24" fill="#2a5a8a" filter="url(#shadow)"/>
+      <text x="1055" y="114" text-anchor="middle" font-family="Georgia,serif" font-size="11.5" font-weight="700" fill="#f4f0e8">A8–A12 Meta-Axes</text>
+      <text x="1055" y="127" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9" fill="#a0c0e8">(geometry / algebra)</text>
+
+      <!-- A8-12 leaves -->
+      <g font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#0a0a0d">
+        <path d="M 1118 106 Q 1195 90 1235 78" stroke="#2a5a8a" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="1182" y="66" width="186" height="22" rx="4" fill="#b8d4f0" stroke="#2a5a8a" stroke-width="1"/>
+        <text x="1275" y="81" text-anchor="middle" font-weight="600">A8 GEOMETRY — chord vs geodesic</text>
+
+        <path d="M 1128 112 Q 1205 102 1240 98" stroke="#2a5a8a" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="1182" y="88" width="196" height="22" rx="4" fill="#b8d4f0" stroke="#2a5a8a" stroke-width="1"/>
+        <text x="1280" y="103" text-anchor="middle" font-weight="600">A9 METRIC — spherical/hyperbolic/CRH</text>
+
+        <path d="M 1134 118" stroke="#2a5a8a" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <path d="M 1134 118 Q 1210 116 1246 116" stroke="#2a5a8a" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="1182" y="108" width="200" height="22" rx="4" fill="#b8d4f0" stroke="#2a5a8a" stroke-width="1"/>
+        <text x="1282" y="123" text-anchor="middle" font-weight="600">A10 IDENTIFIABILITY — gauge / coset</text>
+
+        <path d="M 1132 126 Q 1208 133 1245 138" stroke="#2a5a8a" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="1182" y="128" width="196" height="22" rx="4" fill="#b8d4f0" stroke="#2a5a8a" stroke-width="1"/>
+        <text x="1280" y="143" text-anchor="middle" font-weight="600">A11 DYNAMICS — trajectory / GeoSteer</text>
+
+        <path d="M 1128 132 Q 1202 153 1240 158" stroke="#2a5a8a" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="1182" y="148" width="202" height="22" rx="4" fill="#b8d4f0" stroke="#2a5a8a" stroke-width="1"/>
+        <text x="1283" y="163" text-anchor="middle" font-weight="600">A12 BASIS — superposition / SAE budget</text>
+      </g>
+
+
+      <!-- ══════════════════════════════════════════════════════════════
+           BRANCH 2: METHOD FAMILIES (right, teal family)
+      ══════════════════════════════════════════════════════════════════ -->
+      <path d="M 740 595 Q 960 430 1145 320" stroke="#2a7a7a" stroke-width="3.5" fill="none" opacity="0.7"/>
+      <ellipse cx="1190" cy="300" rx="125" ry="28" fill="#2a7a7a" filter="url(#shadow)"/>
+      <text x="1190" y="295" text-anchor="middle" font-family="Georgia,serif" font-size="13.5" font-weight="700" fill="#f4f0e8">Method Families</text>
+      <text x="1190" y="310" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#a0e0d8">by intervention site</text>
+
+      <!-- Sub-branches for method families -->
+      <!-- Additive: ActAdd / CAA / RepE -->
+      <path d="M 1240 283 Q 1300 260 1340 248" stroke="#2a7a7a" stroke-width="1.8" fill="none" opacity="0.55"/>
+      <rect x="1285" y="236" width="108" height="22" rx="4" fill="#a8ddd8" stroke="#2a7a7a" stroke-width="1"/>
+      <text x="1339" y="251" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#0a0a0d" font-weight="600">Additive: ActAdd · CAA</text>
+
+      <!-- Conditional meta-layer: CAST / SCS / Selective -->
+      <path d="M 1250 288 Q 1310 275 1352 268" stroke="#2a7a7a" stroke-width="1.8" fill="none" opacity="0.55"/>
+      <rect x="1285" y="258" width="134" height="22" rx="4" fill="#a8ddd8" stroke="#2a7a7a" stroke-width="1"/>
+      <text x="1352" y="273" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#0a0a0d" font-weight="600">Conditional: CAST · SCS · FineSteer</text>
+
+      <!-- Rotational: Angular / Spherical / Selective -->
+      <path d="M 1256 295 Q 1316 292 1356 290" stroke="#2a7a7a" stroke-width="1.8" fill="none" opacity="0.55"/>
+      <rect x="1285" y="280" width="140" height="22" rx="4" fill="#a8ddd8" stroke="#2a7a7a" stroke-width="1"/>
+      <text x="1355" y="295" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#0a0a0d" font-weight="600">Rotational: Angular · Spherical · Selective</text>
+
+      <!-- Geometry: Manifold / Curveball / CRH / GeoSteer -->
+      <path d="M 1258 305 Q 1316 308 1356 312" stroke="#2a7a7a" stroke-width="1.8" fill="none" opacity="0.55"/>
+      <rect x="1285" y="302" width="158" height="22" rx="4" fill="#a8ddd8" stroke="#2a7a7a" stroke-width="1"/>
+      <text x="1364" y="317" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#0a0a0d" font-weight="600">Geometry: Manifold · Curveball · CRH · HyCon</text>
+
+      <!-- Sparse: SAE / FGAA / SAE-TS / Conceptors -->
+      <path d="M 1252 314 Q 1310 325 1350 332" stroke="#2a7a7a" stroke-width="1.8" fill="none" opacity="0.55"/>
+      <rect x="1285" y="323" width="144" height="22" rx="4" fill="#a8ddd8" stroke="#2a7a7a" stroke-width="1"/>
+      <text x="1357" y="338" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#0a0a0d" font-weight="600">Sparse: SAE · FGAA · SAE-TS · Conceptors</text>
+
+      <!-- Attention/KV: DISCO / SKOP / PASTA / SpotLight -->
+      <path d="M 1242 320 Q 1298 342 1338 352" stroke="#2a7a7a" stroke-width="1.8" fill="none" opacity="0.55"/>
+      <rect x="1274" y="342" width="170" height="22" rx="4" fill="#a8ddd8" stroke="#2a7a7a" stroke-width="1"/>
+      <text x="1359" y="357" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#0a0a0d" font-weight="600">Attn/KV: DISCO · SKOP · PASTA · SpotLight</text>
+
+      <!-- Decoding: DoLa -->
+      <path d="M 1232 325 Q 1285 358 1320 370" stroke="#2a7a7a" stroke-width="1.8" fill="none" opacity="0.55"/>
+      <rect x="1258" y="362" width="130" height="22" rx="4" fill="#a8ddd8" stroke="#2a7a7a" stroke-width="1"/>
+      <text x="1323" y="377" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#0a0a0d" font-weight="600">Decoding: DoLa (logits, always stacks)</text>
+
+      <!-- Learned: ReFT / HyperSteer / FLAS / PSR -->
+      <path d="M 1225 330 Q 1272 372 1305 386" stroke="#2a7a7a" stroke-width="1.8" fill="none" opacity="0.55"/>
+      <rect x="1248" y="380" width="148" height="22" rx="4" fill="#a8ddd8" stroke="#2a7a7a" stroke-width="1"/>
+      <text x="1322" y="395" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#0a0a0d" font-weight="600">Learned: ReFT · HyperSteer · BiPO · FLAS</text>
+
+
+      <!-- ══════════════════════════════════════════════════════════════
+           BRANCH 3: MEASUREMENT AXES (right-lower, olive family)
+      ══════════════════════════════════════════════════════════════════ -->
+      <path d="M 745 640 Q 980 720 1145 790" stroke="#6b7a2a" stroke-width="3.5" fill="none" opacity="0.7"/>
+      <ellipse cx="1195" cy="810" rx="120" ry="28" fill="#6b7a2a" filter="url(#shadow)"/>
+      <text x="1195" y="805" text-anchor="middle" font-family="Georgia,serif" font-size="13.5" font-weight="700" fill="#f4f0e8">5 Measurement Axes</text>
+      <text x="1195" y="820" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#d8e8a0">composite fingerprint a9001e87</text>
+
+      <!-- Five leaf nodes -->
+      <g font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#0a0a0d">
+        <path d="M 1250 795 Q 1300 775 1340 768" stroke="#6b7a2a" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="1290" y="757" width="98" height="22" rx="4" fill="#d8e8a0" stroke="#6b7a2a" stroke-width="1"/>
+        <text x="1339" y="772" text-anchor="middle" font-weight="600">Behavior shift</text>
+
+        <path d="M 1262 803 Q 1310 790 1350 784" stroke="#6b7a2a" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="1290" y="775" width="110" height="22" rx="4" fill="#d8e8a0" stroke="#6b7a2a" stroke-width="1"/>
+        <text x="1345" y="790" text-anchor="middle" font-weight="600">Capability (MMLU)</text>
+
+        <path d="M 1268 812" stroke="#6b7a2a" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <path d="M 1268 812 Q 1314 810 1350 808" stroke="#6b7a2a" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="1290" y="798" width="120" height="22" rx="4" fill="#d8e8a0" stroke="#6b7a2a" stroke-width="1"/>
+        <text x="1350" y="813" text-anchor="middle" font-weight="600">Coherence (PPL cliff)</text>
+
+        <path d="M 1265 822 Q 1312 828 1350 832" stroke="#6b7a2a" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="1290" y="822" width="110" height="22" rx="4" fill="#d8e8a0" stroke="#6b7a2a" stroke-width="1"/>
+        <text x="1345" y="837" text-anchor="middle" font-weight="600">Safety (CR / refusal)</text>
+
+        <path d="M 1256 828 Q 1302 846 1338 852" stroke="#6b7a2a" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <rect x="1278" y="843" width="120" height="22" rx="4" fill="#d8e8a0" stroke="#6b7a2a" stroke-width="1"/>
+        <text x="1338" y="858" text-anchor="middle" font-weight="600">Selectivity (over-refusal)</text>
+      </g>
+
+
+      <!-- ══════════════════════════════════════════════════════════════
+           BRANCH 4: HYPOTHESIS PROGRAMME (bottom, gold family)
+      ══════════════════════════════════════════════════════════════════ -->
+      <path d="M 700 650 Q 700 840 700 935" stroke="#bb8c4d" stroke-width="3.5" fill="none" opacity="0.7"/>
+      <ellipse cx="700" cy="960" rx="130" ry="30" fill="#bb8c4d" filter="url(#shadow)"/>
+      <text x="700" y="955" text-anchor="middle" font-family="Georgia,serif" font-size="13.5" font-weight="700" fill="#0a0a0d">Hypothesis Programme</text>
+      <text x="700" y="970" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#2a1a00">70 hypotheses · blocks A–F + N1–N20</text>
+
+      <!-- Block leaves -->
+      <g font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#0a0a0d">
+
+        <!-- Block A -->
+        <path d="M 648 946 Q 560 960 490 970" stroke="#bb8c4d" stroke-width="1.8" fill="none" opacity="0.55"/>
+        <rect x="370" y="960" width="184" height="42" rx="5" fill="#f0d890" stroke="#bb8c4d" stroke-width="1.2"/>
+        <text x="462" y="976" text-anchor="middle" font-weight="700">Block A — Foundations</text>
+        <text x="462" y="990" text-anchor="middle">E1–E8 · tools &amp; measurement</text>
+
+        <!-- verdict badges Block A -->
+        <rect x="375" y="994" width="72" height="14" rx="3" fill="#3a6b3a"/>
+        <text x="411" y="1004" text-anchor="middle" font-size="8.5" fill="#f4f0e8">E3 E4 E7 SUPPORTED</text>
+        <rect x="452" y="994" width="56" height="14" rx="3" fill="#9b3a3a"/>
+        <text x="480" y="1004" text-anchor="middle" font-size="8.5" fill="#f4f0e8">E2 FALSIFIED</text>
+
+        <!-- Block B -->
+        <path d="M 640 940 Q 555 920 480 908" stroke="#bb8c4d" stroke-width="1.8" fill="none" opacity="0.55"/>
+        <rect x="348" y="896" width="188" height="42" rx="5" fill="#f0d890" stroke="#bb8c4d" stroke-width="1.2"/>
+        <text x="442" y="912" text-anchor="middle" font-weight="700">Block B — Conditional / CAST</text>
+        <text x="442" y="926" text-anchor="middle">E9–E16 · gated steering</text>
+
+        <rect x="355" y="930" width="90" height="14" rx="3" fill="#8a5c00"/>
+        <text x="400" y="940" text-anchor="middle" font-size="8.5" fill="#f4f0e8">E10 PARTIAL · rest PENDING</text>
+
+        <!-- Block C -->
+        <path d="M 636 930 Q 560 885 495 858" stroke="#bb8c4d" stroke-width="1.8" fill="none" opacity="0.55"/>
+        <rect x="348" y="840" width="196" height="42" rx="5" fill="#f0d890" stroke="#bb8c4d" stroke-width="1.2"/>
+        <text x="446" y="856" text-anchor="middle" font-weight="700">Block C — Stacking</text>
+        <text x="446" y="870" text-anchor="middle">E17–E26 · multi-vector composition</text>
+
+        <rect x="355" y="874" width="78" height="14" rx="3" fill="#3a6b3a"/>
+        <text x="394" y="884" text-anchor="middle" font-size="8.5" fill="#f4f0e8">E17 E22 SUPPORTED</text>
+        <rect x="438" y="874" width="56" height="14" rx="3" fill="#8a5c00"/>
+        <text x="466" y="884" text-anchor="middle" font-size="8.5" fill="#f4f0e8">E18 PARTIAL</text>
+
+        <!-- Block D -->
+        <path d="M 756 940 Q 840 920 912 908" stroke="#bb8c4d" stroke-width="1.8" fill="none" opacity="0.55"/>
+        <rect x="856" y="896" width="188" height="42" rx="5" fill="#f0d890" stroke="#bb8c4d" stroke-width="1.2"/>
+        <text x="950" y="912" text-anchor="middle" font-weight="700">Block D — Geometry</text>
+        <text x="950" y="926" text-anchor="middle">E27–E33 · rotational methods</text>
+
+        <rect x="862" y="930" width="56" height="14" rx="3" fill="#9b3a3a"/>
+        <text x="890" y="940" text-anchor="middle" font-size="8.5" fill="#f4f0e8">E27 E28 FALSIFIED</text>
+        <rect x="924" y="930" width="56" height="14" rx="3" fill="#8a5c00"/>
+        <text x="952" y="940" text-anchor="middle" font-size="8.5" fill="#f4f0e8">rest PENDING</text>
+
+        <!-- Block E -->
+        <path d="M 762 946 Q 850 960 918 970" stroke="#bb8c4d" stroke-width="1.8" fill="none" opacity="0.55"/>
+        <rect x="856" y="960" width="196" height="42" rx="5" fill="#f0d890" stroke="#bb8c4d" stroke-width="1.2"/>
+        <text x="954" y="976" text-anchor="middle" font-weight="700">Block E — Mechanistic</text>
+        <text x="954" y="990" text-anchor="middle">E34–E40 · interpretability</text>
+
+        <rect x="862" y="994" width="80" height="14" rx="3" fill="#3a6b3a"/>
+        <text x="902" y="1004" text-anchor="middle" font-size="8.5" fill="#f4f0e8">E36 E40 SUPPORTED</text>
+        <rect x="948" y="994" width="60" height="14" rx="3" fill="#8a5c00"/>
+        <text x="978" y="1004" text-anchor="middle" font-size="8.5" fill="#f4f0e8">E35 PARTIAL</text>
+
+        <!-- Block F -->
+        <path d="M 760 968 Q 845 1012 900 1038" stroke="#bb8c4d" stroke-width="1.8" fill="none" opacity="0.55"/>
+        <rect x="848" y="1030" width="196" height="38" rx="5" fill="#f0d890" stroke="#bb8c4d" stroke-width="1.2"/>
+        <text x="946" y="1046" text-anchor="middle" font-weight="700">Block F — Robustness / Safety</text>
+        <text x="946" y="1060" text-anchor="middle">E41–E50 · Pareto frontier · full stack</text>
+
+        <!-- Novel N1-N12 -->
+        <path d="M 695 990 Q 620 1050 560 1080" stroke="#bb8c4d" stroke-width="1.8" fill="none" opacity="0.55"/>
+        <rect x="420" y="1070" width="200" height="42" rx="5" fill="#ffe8b0" stroke="#bb8c4d" stroke-width="1.5"/>
+        <text x="520" y="1086" text-anchor="middle" font-weight="700">Novel N1–N12</text>
+        <text x="520" y="1100" text-anchor="middle">First-principles hypotheses</text>
+
+        <rect x="427" y="1104" width="80" height="14" rx="3" fill="#3a6b3a"/>
+        <text x="467" y="1114" text-anchor="middle" font-size="8.5" fill="#f4f0e8">N5 N7 SUPPORTED</text>
+        <rect x="513" y="1104" width="56" height="14" rx="3" fill="#8a5c00"/>
+        <text x="541" y="1114" text-anchor="middle" font-size="8.5" fill="#f4f0e8">rest PENDING</text>
+
+        <!-- Novel N13-N20 (geometry wave) -->
+        <path d="M 705 992 Q 745 1055 762 1082" stroke="#bb8c4d" stroke-width="1.8" fill="none" opacity="0.55"/>
+        <rect x="648" y="1070" width="210" height="58" rx="5" fill="#ffe8b0" stroke="#bb8c4d" stroke-width="1.5"/>
+        <text x="753" y="1086" text-anchor="middle" font-weight="700">Novel N13–N20</text>
+        <text x="753" y="1100" text-anchor="middle">Geometry wave hypotheses</text>
+        <text x="753" y="1112" text-anchor="middle" font-size="8.5" fill="#5a4a20">(geodesic · metric · curvature · trajectory)</text>
+
+        <rect x="655" y="1118" width="96" height="14" rx="3" fill="#3a6b3a"/>
+        <text x="703" y="1128" text-anchor="middle" font-size="8.5" fill="#f4f0e8">N16 N17 SUPPORTED</text>
+        <rect x="757" y="1118" width="82" height="14" rx="3" fill="#8a5c00"/>
+        <text x="798" y="1128" text-anchor="middle" font-size="8.5" fill="#f4f0e8">N20 INCONCLUSIVE</text>
+      </g>
+
+
+      <!-- ══════════════════════════════════════════════════════════════
+           BRANCH 5: SAFETY / ROGUE SCALPEL (left, red family)
+      ══════════════════════════════════════════════════════════════════ -->
+      <path d="M 658 615 Q 460 580 300 560" stroke="#8a3030" stroke-width="3.5" fill="none" opacity="0.7"/>
+      <ellipse cx="240" cy="550" rx="120" ry="30" fill="#8a3030" filter="url(#shadow)"/>
+      <text x="240" y="545" text-anchor="middle" font-family="Georgia,serif" font-size="13.5" font-weight="700" fill="#f4f0e8">Safety: Rogue Scalpel</text>
+      <text x="240" y="562" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#f0b0a0">817/1000 SAE features → bypass</text>
+
+      <!-- 5-layer guard: A through E -->
+      <g font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#0a0a0d">
+
+        <!-- Guard A -->
+        <path d="M 168 536 Q 110 505 68 488" stroke="#8a3030" stroke-width="1.8" fill="none" opacity="0.55"/>
+        <rect x="0" y="476" width="190" height="38" rx="5" fill="#f8d0c8" stroke="#8a3030" stroke-width="1.2"/>
+        <text x="95" y="492" text-anchor="middle" font-weight="700">Guard A — Manifold fence</text>
+        <text x="95" y="506" text-anchor="middle">Monitor off-shell Δ‖h‖; reject OOD edits</text>
+
+        <!-- Guard B -->
+        <path d="M 162 545 Q 105 530 65 522" stroke="#8a3030" stroke-width="1.8" fill="none" opacity="0.55"/>
+        <rect x="0" y="512" width="190" height="38" rx="5" fill="#f8d0c8" stroke="#8a3030" stroke-width="1.2"/>
+        <text x="95" y="528" text-anchor="middle" font-weight="700">Guard B — Norm-budget cap</text>
+        <text x="95" y="542" text-anchor="middle">Cap ‖Δh‖ / ‖h‖ at empirical q-quantile</text>
+
+        <!-- Guard C -->
+        <path d="M 160 556 Q 102 556 64 556" stroke="#8a3030" stroke-width="1.8" fill="none" opacity="0.55"/>
+        <rect x="0" y="547" width="190" height="38" rx="5" fill="#f8d0c8" stroke="#8a3030" stroke-width="1.2"/>
+        <text x="95" y="563" text-anchor="middle" font-weight="700">Guard C — Conditional gate</text>
+        <text x="95" y="577" text-anchor="middle">CAST: fire only when context triggers</text>
+
+        <!-- Guard D -->
+        <path d="M 162 565 Q 104 580 65 588" stroke="#8a3030" stroke-width="1.8" fill="none" opacity="0.55"/>
+        <rect x="0" y="580" width="190" height="38" rx="5" fill="#f8d0c8" stroke="#8a3030" stroke-width="1.2"/>
+        <text x="95" y="596" text-anchor="middle" font-weight="700">Guard D — Orthogonal basis</text>
+        <text x="95" y="610" text-anchor="middle">SAE-TS: orthogonalize vs fragile features</text>
+
+        <!-- Guard E -->
+        <path d="M 168 573 Q 112 605 72 620" stroke="#8a3030" stroke-width="1.8" fill="none" opacity="0.55"/>
+        <rect x="0" y="614" width="190" height="38" rx="5" fill="#f8d0c8" stroke="#8a3030" stroke-width="1.2"/>
+        <text x="95" y="630" text-anchor="middle" font-weight="700">Guard E — KV hygiene</text>
+        <text x="95" y="644" text-anchor="middle">SKOP: key-orthogonal projection, long-gen</text>
+
+        <!-- High-dim JL note -->
+        <path d="M 180 574 Q 165 650 170 680" stroke="#8a3030" stroke-width="1.5" fill="none" opacity="0.45"/>
+        <rect x="100" y="673" width="215" height="38" rx="5" fill="#fce8e0" stroke="#bb6040" stroke-width="1"/>
+        <text x="207" y="689" text-anchor="middle" font-weight="700" fill="#5a1818">High-dim geometry insight</text>
+        <text x="207" y="703" text-anchor="middle" fill="#5a1818">JL: exp(d) near-orthog dirs → any SAE feature</text>
+        <text x="207" y="716" text-anchor="middle" fill="#5a1818" font-size="8.5">can jailbreak; harmful subspace is GENERIC</text>
+      </g>
+
+
+      <!-- ══════════════════════════════════════════════════════════════
+           KEY VERDICTS CALLOUT (lower-left accent)
+      ══════════════════════════════════════════════════════════════════ -->
+      <rect x="60" y="740" width="290" height="170" rx="6" fill="#f4f0e8" stroke="#bb8c4d" stroke-width="1.5"/>
+      <text x="205" y="760" text-anchor="middle" font-family="Georgia,serif" font-size="12" font-weight="700" fill="#0a0a0d">Key Screening Verdicts</text>
+      <text x="205" y="775" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="8.5" fill="#7a7068">(n=1 screening — not yet external-ready)</text>
+
+      <g font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5">
+        <!-- SUPPORTED -->
+        <rect x="72" y="783" width="56" height="13" rx="3" fill="#3a6b3a"/>
+        <text x="100" y="793" text-anchor="middle" font-size="8.5" fill="#f4f0e8">SUPPORTED</text>
+        <text x="135" y="793" fill="#0a0a0d">E3 E4 E7 E17 E22 E36 E40</text>
+
+        <rect x="72" y="802" width="56" height="13" rx="3" fill="#3a6b3a"/>
+        <text x="100" y="812" text-anchor="middle" font-size="8.5" fill="#f4f0e8">SUPPORTED</text>
+        <text x="135" y="812" fill="#0a0a0d">N5 N7 N16 N17</text>
+
+        <!-- FALSIFIED -->
+        <rect x="72" y="822" width="52" height="13" rx="3" fill="#9b3a3a"/>
+        <text x="98" y="832" text-anchor="middle" font-size="8.5" fill="#f4f0e8">FALSIFIED</text>
+        <text x="130" y="832" fill="#0a0a0d">E2 (Fisher layer) E27 E28</text>
+
+        <!-- PARTIAL / INCONCLUSIVE -->
+        <rect x="72" y="842" width="48" height="13" rx="3" fill="#8a5c00"/>
+        <text x="96" y="852" text-anchor="middle" font-size="8.5" fill="#f4f0e8">PARTIAL</text>
+        <text x="126" y="852" fill="#0a0a0d">E10 E18 E35 · N20 INCONCL.</text>
+
+        <!-- Key laws -->
+        <line x1="72" y1="863" x2="338" y2="863" stroke="#bb8c4d" stroke-width="0.8"/>
+        <text x="205" y="877" text-anchor="middle" fill="#0a0a0d" font-weight="600">Key empirical laws (screening)</text>
+        <text x="205" y="891" text-anchor="middle" fill="#0a0a0d">log PPL = 5.40 + 2.87 · Δ‖h‖  (R²=0.81)</text>
+        <text x="205" y="904" text-anchor="middle" fill="#0a0a0d">Angular R²=0.997 · Radial R²=0.81 (CRH)</text>
+      </g>
+
+
+      <!-- ══════════════════════════════════════════════════════════════
+           CENTRAL HUB
+      ══════════════════════════════════════════════════════════════════ -->
+      <ellipse cx="700" cy="618" rx="100" ry="42" fill="url(#hubGrad)" stroke="#bb8c4d" stroke-width="2.5" filter="url(#shadow)"/>
+      <text x="700" y="611" text-anchor="middle" font-family="Georgia,serif" font-size="17" font-weight="700" fill="#d4a86a" letter-spacing="0.5">LLM Steering</text>
+      <text x="700" y="628" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9.5" fill="#a09080">inference-time intervention</text>
+      <text x="700" y="643" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="9" fill="#6a5a48">activation space · May 2026</text>
+
+    </svg>
+    <!-- ══ END SVG ══════════════════════════════════════════════════════ -->
+  </div>
+
+  <!-- ══ LEGEND ══════════════════════════════════════════════════════════ -->
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#4a6fa5"></div>
+      <span>12 Axes of intervention</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#2a7a7a"></div>
+      <span>Method families (by injection site)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#6b7a2a"></div>
+      <span>5 Measurement axes</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#bb8c4d"></div>
+      <span>Hypothesis programme (A–F, N1–N20)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#8a3030"></div>
+      <span>Safety / Rogue Scalpel guard</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#3a6b3a"></div>
+      <span>SUPPORTED (screening)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#9b3a3a"></div>
+      <span>FALSIFIED (screening)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#8a5c00"></div>
+      <span>PARTIAL / INCONCLUSIVE</span>
+    </div>
+  </div>
+
+</div><!-- /.page -->
+
+<footer>
+  steeringresearch &mdash; LLM Steering Landscape &mdash; May&ndash;June 2026 &middot;
+  All verdicts are screening observations (n&le;1); none has cleared the rung-3 external-ready gate.
+  Grounded in: <em>steering-missed-dimensions-and-highdim-algebra.md</em>,
+  <em>steering-stackable-vs-competing-analysis.md</em>,
+  <em>IDEA_TABLE.md</em>, <em>FINDINGS.md</em>.
+</footer>
+
+</body>
+</html>

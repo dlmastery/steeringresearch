@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Awesome LLM Steering &mdash; a curated literature survey</title>
+<style>
+  :root{
+    --ink:#211c16; --muted:#5f574c; --line:#ddd5c8; --bg:#f7f3ea;
+    --panel:#fffdf7; --gold:#b07b1e; --gold-deep:#8a5d12; --accent:#5b4636;
+    --warn:#7a4a00; --warnbg:#fbf1de; --chip:#ece4d4; --link:#8a5d12;
+  }
+  *{box-sizing:border-box}
+  html{font-size:17px; scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Source Serif 4","Source Serif Pro","Iowan Old Style",Georgia,"Times New Roman",serif;
+    line-height:1.6;
+  }
+  .wrap{max-width:920px; margin:0 auto; padding:2.2rem 1.4rem 4rem}
+  code,.mono{font-family:"IBM Plex Mono","SFMono-Regular",Consolas,Menlo,monospace; font-size:.84em}
+
+  /* masthead */
+  .masthead{border-bottom:2px solid var(--ink); padding-bottom:1rem; margin-bottom:1.2rem}
+  .masthead .kicker{font-family:"IBM Plex Mono",monospace; font-size:.72rem; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--gold-deep); margin:0 0 .5rem}
+  .masthead h1{font-size:2.5rem; line-height:1.08; margin:0 0 .4rem; font-weight:600;
+    letter-spacing:-.01em}
+  .masthead h1 .gold{color:var(--gold)}
+  .masthead .sub{color:var(--muted); font-size:1.05rem; margin:.2rem 0 .9rem; max-width:62ch}
+  .navlinks{font-family:"IBM Plex Mono",monospace; font-size:.8rem; display:flex; flex-wrap:wrap; gap:.2rem .4rem}
+  .navlinks a{color:var(--gold-deep); text-decoration:none; border-bottom:1px solid transparent}
+  .navlinks a:hover{border-bottom-color:var(--gold)}
+  .navlinks .sep{color:var(--line)}
+
+  a{color:var(--link)}
+  a:hover{color:var(--gold)}
+
+  .banner{
+    background:var(--warnbg); border:1px solid #e8d2a4; border-left:5px solid var(--gold);
+    color:var(--warn); padding:.95rem 1.15rem; border-radius:5px; margin:1.4rem 0; font-size:.96rem;
+  }
+  .banner strong{color:var(--gold-deep)}
+
+  .toc{background:var(--panel); border:1px solid var(--line); border-radius:7px; padding:1rem 1.2rem; margin:1.5rem 0}
+  .toc .th{font-family:"IBM Plex Mono",monospace; font-size:.72rem; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--gold-deep); margin:0 0 .55rem}
+  .toc ol{margin:0; padding-left:1.4rem; columns:2; column-gap:2rem}
+  .toc li{margin:.18rem 0; break-inside:avoid}
+  .toc a{text-decoration:none; color:var(--ink)}
+  .toc a:hover{color:var(--gold)}
+
+  h2{font-size:1.36rem; font-weight:600; margin:2.6rem 0 .4rem; padding-top:.5rem;
+    border-bottom:1px solid var(--line); padding-bottom:.35rem; scroll-margin-top:1rem}
+  h2 .num{font-family:"IBM Plex Mono",monospace; color:var(--gold); font-size:.95rem; margin-right:.5rem}
+  .lead{color:var(--muted); font-size:.97rem; margin:.5rem 0 1rem; max-width:74ch}
+
+  ul.papers{list-style:none; padding:0; margin:1rem 0}
+  ul.papers li{padding:.7rem 0 .7rem 1.5rem; position:relative; border-bottom:1px dotted var(--line)}
+  ul.papers li:before{content:"\25C6"; position:absolute; left:.1rem; top:.78rem; color:var(--gold); font-size:.7rem}
+  ul.papers li:last-child{border-bottom:none}
+  ul.papers .ttl{font-weight:600}
+  ul.papers .meta{color:var(--muted)}
+  .arxiv{font-family:"IBM Plex Mono",monospace; font-size:.8rem; white-space:nowrap}
+  .tag{font-family:"IBM Plex Mono",monospace; font-size:.68rem; letter-spacing:.04em;
+    padding:.05rem .4rem; border-radius:3px; vertical-align:.08em; margin-left:.15rem}
+  .tag.nv{background:#f3e2c4; color:#7a4a00; border:1px solid #e2c690}
+  .tag.uv{background:#eadfe8; color:#6a3a5e; border:1px solid #d3bccd}
+  .tag.gemma{background:#dfe9dc; color:#34603f; border:1px solid #bcd3c0}
+
+  table{border-collapse:collapse; width:100%; margin:1.2rem 0; font-size:.86rem}
+  th,td{border:1px solid var(--line); padding:.45rem .6rem; text-align:left; vertical-align:top}
+  th{background:var(--chip); font-weight:600}
+  td .ax{font-weight:600}
+  tr:nth-child(even) td{background:#fcf8f0}
+
+  .callout{background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--gold);
+    border-radius:5px; padding:.85rem 1.1rem; margin:1.2rem 0; font-size:.95rem}
+
+  footer{margin-top:3.2rem; padding-top:1.1rem; border-top:2px solid var(--ink);
+    color:var(--muted); font-size:.85rem}
+  .toplink{font-family:"IBM Plex Mono",monospace; font-size:.74rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="masthead" id="top">
+  <p class="kicker">steeringresearch &middot; literature backbone</p>
+  <h1>Awesome&nbsp;<span class="gold">LLM&nbsp;Steering</span></h1>
+  <p class="sub">A curated literature survey of activation / representation steering &mdash;
+  every paper cited with a clickable arXiv link, organized by method family, oldest-to-newest.
+  60 papers, 10 sections.</p>
+  <nav class="navlinks">
+    <a href="dashboard/index.html">&#8592; dashboard</a><span class="sep">|</span>
+    <a href="../README.md">repository</a><span class="sep">|</span>
+    <a href="../paper/PAPER.md">the paper</a><span class="sep">|</span>
+    <a href="../AWESOME_STEERING.md">markdown twin</a>
+  </nav>
+</div>
+
+<div class="banner">
+  <strong>Provenance &amp; caveat.</strong> Synthesized from the research transcripts in
+  <span class="mono">corpus/</span> (SuperGrok Expert-mode literature sessions, 2026-05-29, plus
+  targeted arXiv sweeps). The corpus ran multiple ID-verification rounds, so <strong>arXiv IDs are
+  mostly real</strong> on independent spot-checks &mdash; but the transcripts are known to fabricate
+  model-usage and quantitative details (e.g. an invented &ldquo;Gemma-4-E4b-it&rdquo;; the newest open
+  family is Gemma-3). Quantitative / Gemma-usage claims are tagged
+  <span class="tag nv">NEEDS&nbsp;VERIFICATION</span> where the corpus flagged them; unconfirmed IDs are
+  tagged <span class="tag uv">UNVERIFIED</span> with the title preserved.
+</div>
+
+<div class="toc">
+  <p class="th">How to navigate</p>
+  <ol>
+    <li><a href="#s1">Foundations &mdash; activation-addition lineage</a></li>
+    <li><a href="#s2">Conditional / gated steering</a></li>
+    <li><a href="#s3">Learned / flow / distilled steering</a></li>
+    <li><a href="#s4">Geometry-aware steering</a></li>
+    <li><a href="#s5">Sparse / SAE-feature steering</a></li>
+    <li><a href="#s6">Attention / KV / decoding-site steering</a></li>
+    <li><a href="#s7">Composition / stacking</a></li>
+    <li><a href="#s8">Safety &amp; the Rogue Scalpel</a></li>
+    <li><a href="#s9">Evaluation &amp; benchmarks</a></li>
+    <li><a href="#s10">The 12-axis intervention taxonomy</a></li>
+  </ol>
+</div>
+
+<p class="lead">Sections 1&ndash;7 trace the method families from the train-free linear lineage through
+conditional gating, learned steering, geometry-aware steering, sparse/SAE steering,
+attention/KV/decoding-site steering, and composition. Section 8 is the safety frontier; section 9 the
+evaluation substrate; section 10 the synthesizing 12-axis taxonomy. A paper that <em>gates</em> others
+(CAST, Selective, FineSteer-SCS) is a meta-layer; a paper that <em>injects</em> behavior (CAA, FLAS)
+is an injector &mdash; the distinction drives &sect;7 and &sect;10.</p>
+
+<!-- ===================== 1 ===================== -->
+<h2 id="s1"><span class="num">01</span>Foundations &mdash; the activation-addition lineage</h2>
+<p class="lead">The train-free, linear, residual-stream-addition family: compute a direction
+(difference-of-means or PCA on contrastive pairs) and add / subtract / project it at inference time,
+no weight updates.</p>
+<ul class="papers">
+  <li><span class="ttl">Inference-Time Intervention: Eliciting Truthful Answers from a Language Model (ITI)</span> &mdash;
+    <span class="meta">Li, Patel, Vi&eacute;gas, Pfister, Wattenberg, 2023 NeurIPS spotlight.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2306.03341">arXiv:2306.03341</a>.</span>
+    Shifts activations along truthful-vs-false directions on a few attention heads (diff-of-means on heads, found by linear probing).
+    <em>Key result:</em> truthfulness on TruthfulQA 32.5% &rarr; 65.1% on Alpaca.</li>
+  <li><span class="ttl">Steering Language Models With Activation Engineering (ActAdd)</span> &mdash;
+    <span class="meta">Turner, Thiergart, Leech, Udell, Vazquez, Mini, MacDiarmid, 2023 (rev. 2024).</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2308.10248">arXiv:2308.10248</a>.</span>
+    Contrasts activations on prompt pairs (&ldquo;Love&rdquo; &minus; &ldquo;Hate&rdquo;) to compute a vector added in the forward pass.
+    <em>Key result:</em> SOTA sentiment shift + detoxification with single-pair efficiency, off-target capabilities preserved.</li>
+  <li><span class="ttl">Representation Engineering: A Top-Down Approach to AI Transparency (RepE)</span> &mdash;
+    <span class="meta">Zou, Phan, Chen, Campbell, &hellip; Hendrycks, 2023.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2310.01405">arXiv:2310.01405</a>.</span>
+    Population-level representations (not neurons) at the center; contrastive reading vectors monitor and manipulate concepts.
+    <em>Key result:</em> &gt;90% accuracy distinguishing harmful/harmless even under jailbreaks; emotion steering raises harmful compliance despite RLHF.</li>
+  <li><span class="ttl">Steering Llama 2 via Contrastive Activation Addition (CAA)</span> &mdash;
+    <span class="meta">Panickssery, Gabrieli, Schulz, Tong, Hubinger, Turner, 2024 ACL.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2312.06681">arXiv:2312.06681</a>.</span>
+    Averages residual-stream activation differences between positive/negative example pairs; adds at all post-prompt positions with a signed coefficient.
+    <em>Key result:</em> significantly alters sycophancy / hallucination / refusal on Llama-2, stacks over finetuning + system prompts, minimal capability loss.</li>
+  <li><span class="ttl">Refusal in Language Models Is Mediated by a Single Direction</span> &mdash;
+    <span class="meta">Arditi, Obeso, Syed, Paleka, Panickssery, Gurnee, Nanda, 2024 NeurIPS.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2406.11717">arXiv:2406.11717</a>.</span>
+    Diff-of-means of harmful vs harmless instruction activations yields one refusal direction; ablate to bypass, add to induce.
+    <em>Key result:</em> erasing prevents refusal, adding elicits refusal on harmless prompts, across 13 models up to 72B.</li>
+  <li><span class="ttl">Activation Interventions Can Be Transferred Between Large Language Models</span> &mdash;
+    <span class="meta">Oozeer, Nathawani, Prakash, Lan, Harrasse, Abdullah, 2025 ICML poster.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2503.04429">arXiv:2503.04429</a>.</span>
+    Transfers pre-computed diff-of-means vectors across distinct LLMs for the same safety behaviors.
+    <em>Key result:</em> predictable transfer for backdoor removal and harmful-prompt refusal.</li>
+  <li><span class="ttl">Scaling Laws for Activation Steering with Llama 2 Models and Refusal Mechanisms</span> &mdash;
+    <span class="meta">Ali et al., 2025.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2507.11771">arXiv:2507.11771</a>.</span>
+    A CAA scaling study across Llama-2 sizes.
+    <em>Key result:</em> effectiveness grows with model size but saturates differently for refusal. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">StyleVector: Personalized Text Generation with Contrastive Activation Steering</span> &mdash;
+    <span class="meta">J. Zhang, Wang, Chua et al., 2025 ACL long.</span>
+    <span class="tag uv">UNVERIFIED &mdash; ACL Anthology confirmed, no standalone arXiv ID; search &ldquo;StyleVector contrastive activation&rdquo;</span>
+    Derives a user-specific style vector by contrasting authentic-user vs generic-model activations, added for personalization.
+    <em>Key result:</em> matches/exceeds RAG and PEFT on stylistic consistency at negligible cost. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+</ul>
+
+<!-- ===================== 2 ===================== -->
+<h2 id="s2"><span class="num">02</span>Conditional / gated steering (the meta-layer)</h2>
+<p class="lead">Not peer injectors &mdash; a meta-layer that reads context and decides <em>whether</em> to apply a behavior vector.
+The gate is a read-only probe on a different axis/layer than the write, so it stacks on top of nearly every method in &sect;1.</p>
+<ul class="papers">
+  <li><span class="ttl">Programming Refusal with Conditional Activation Steering (CAST)</span> &mdash;
+    <span class="meta">B. W. Lee, Padhi, Ramamurthy, Miehling, Dognin, Nagireddy, Dhurandhar, 2025 ICLR Spotlight.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2409.05907">arXiv:2409.05907</a>.</span>
+    Condition vector (PCA on contrastive prompt activations) + thresholding gates a behavior vector; OR/AND/complement composition.
+    <em>Key result:</em> &ldquo;if hate speech then refuse&rdquo; keeps harmful-refusal high, harmless-refusal &asymp;2% (Qwen-1.8B). <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">FineSteer: A Unified Framework for Fine-Grained Inference-Time Steering</span> &mdash;
+    <span class="meta">Weng, J. Zhang, Cai, Y. Li, P. Wang, Tian, 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2604.15488">arXiv:2604.15488</a>.</span>
+    Subspace-guided Conditional Steering (SCS) energy-ratio gate, then Mixture-of-Steering-Experts (MoSE).
+    <em>Key result:</em> +7.6% TruthfulQA over Llama-3, near-100% safety, minimal utility loss; SCS is a direct CAST successor.
+    <span class="tag gemma">Gemma-2-9B-IT</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Selective Steering: Norm-Preserving Control Through Discriminative Layer Selection</span> &mdash;
+    <span class="meta">Quy-Anh Dang, Chris Ngo, 2026 ACL.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2601.19375">arXiv:2601.19375</a>.</span>
+    Norm-preserving rotation applied only at discriminative layers (&micro;<sub>pos</sub>&middot;&micro;<sub>neg</sub>&le;0) &mdash; a layer-gate.
+    <em>Key result:</em> 5.5&times; higher ASR, zero perplexity violations, &asymp;100% retention; 82.69% ASR on gemma-2-2b where SAS=0%.
+    <span class="tag gemma">Gemma-2-2B/9B-IT</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">In-Distribution Steering: Balancing Control and Coherence (IDS)</span> &mdash;
+    <span class="meta">IDS team (CAA/MERA comparisons), 2025.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2510.13285">arXiv:2510.13285</a>.</span>
+    Input-dependent modulation keeps steered activations in-distribution before addition.
+    <em>Key result:</em> avg rank 1.67 over 6 behaviors vs CAA-1's 3.07; refusal SPI 0.92 on Gemma-2-2B at PPL&lt;8.
+    <span class="tag gemma">Gemma-2-2B/9B-IT</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Contextual Linear Activation Steering of Language Models</span> &mdash;
+    <span class="meta">Brandon Hsu et al., 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2604.24693">arXiv:2604.24693</a>.</span>
+    Extends linear diff-of-means with input-dependent contextual modulation (projection conditioned on prompt embedding).
+    <em>Key result:</em> stable multi-turn coherence over baseline CAA while preserving &gt;98% MMLU. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+</ul>
+
+<!-- ===================== 3 ===================== -->
+<h2 id="s3"><span class="num">03</span>Learned / flow / distilled steering</h2>
+<p class="lead">Methods that <em>learn</em> the intervention &mdash; a low-rank map, a token-specific gain field, a velocity field, or a hypernetwork &mdash; rather than reading a fixed difference-of-means vector.</p>
+<ul class="papers">
+  <li><span class="ttl">ReFT / LoReFT: Representation Finetuning for Language Models</span> &mdash;
+    <span class="meta">Wu, Arora, Z. Wang, Geiger, Jurafsky, Manning, Potts, 2024 NeurIPS.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2404.03592">arXiv:2404.03592</a>.</span>
+    Learns low-rank interventions on frozen-model representations (a learned subspace edit) instead of weight updates.
+    <em>Key result:</em> 15&times;&ndash;65&times; more parameter-efficient than prior PEFT, competitive/superior on commonsense + reasoning.</li>
+  <li><span class="ttl">Improved Representation Steering for Language Models (RePS / BiPO objective)</span> &mdash;
+    <span class="meta">Wu et al., 2025 NeurIPS poster.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2505.20809">arXiv:2505.20809</a>.</span>
+    Bidirectional preference objective (steer + suppress) trains low-rank reference-free preference steering.
+    <em>Key result:</em> beats LM-objective training, narrows gap to prompting on Gemma 2B&ndash;27B, jailbreak-resilient.
+    <span class="tag gemma">Gemma-2-2B/9B, Gemma-3-12B/27B</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">HyperSteer: Hypernetwork-Generated Steering Vectors</span> &mdash;
+    <span class="meta">HyperSteer team, 2025.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2506.03292">arXiv:2506.03292</a>.</span>
+    A hypernetwork generates a steering vector conditioned on a natural-language prompt, replacing per-behavior extraction.
+    <em>Key result:</em> prompt-conditioned vectors generalize across behaviors without re-extraction. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Steer Like the LLM: Activation Steering that Mimics Prompting (PSR)</span> &mdash;
+    <span class="meta">Geert Heyman, Frederik Vandeputte, 2026 ICML.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2605.03907">arXiv:2605.03907</a>.</span>
+    Distills the token-specific gain g(h<sub>t</sub>) that real prompting induces &mdash; a learned per-token coefficient field on a fixed direction.
+    <em>Key result:</em> outperforms existing steering, compares favorably to prompting on AxBench + persona (0.618 @ 2B-L20, 0.900 @ 9B-L20).
+    <span class="tag gemma">Gemma-2-2B/9B-IT</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Beyond Steering Vector: Flow-based Activation Steering (FLAS)</span> &mdash;
+    <span class="meta">Jin, Deng, J. Wang, Shen, C. Zhang, 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2605.05892">arXiv:2605.05892</a>.</span>
+    Learns a concept-conditioned velocity field v<sub>t</sub>(h,t,c) transporting unsteered &rarr; steered activations (curved, multi-step) from a ~97.6M-param FlowBlock.
+    <em>Key result:</em> first learned method to consistently beat prompting on AxBench held-out (HMean 1.015 @ 2B-IT, 1.113 @ 9B-IT), no per-concept tuning.
+    <span class="tag gemma">Gemma-2-2B/9B-IT</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">YaPO: Learnable Sparse Activation Steering Vectors for Domain Adaptation</span> &mdash;
+    <span class="meta">Abdine, Nakov, Vazirgiannis, Shang et al., 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2601.08441">arXiv:2601.08441</a>.</span>
+    Reference-free policy optimization learns trainable sparse steering vectors in a pretrained SAE latent space (BiPO-style), added at inference.
+    <em>Key result:</em> faster convergence, no measurable MMLU degradation, consistent gains over CAA on safety.
+    <span class="tag gemma">Gemma-2-2B / 9B-It</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">LinEAS: End-to-end Learning of Activation Steering with a Distributional Loss</span> &mdash;
+    <span class="meta">NeurIPS 2025 team.</span>
+    <span class="tag uv">UNVERIFIED &mdash; poster confirmed, no arXiv ID; search &ldquo;LinEAS activation steering&rdquo;</span>
+    Trains linear maps with a global distributional loss across all layers plus sparsifying regularizers.
+    <em>Key result:</em> beats comparable baselines on toxicity using unpaired data only, competitive with oracle methods. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Activation Steering for Aligned Open-ended Generation without Sacrificing Coherence (StTP / StMP)</span> &mdash;
+    <span class="meta">StTP/StMP team, 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2604.08169">arXiv:2604.08169</a>.</span>
+    Targeted residual addition with trait prompts (StTP) / multi-prompt (StMP) to restore honesty/compassion under malicious system prompts.
+    <em>Key result:</em> recovers traits while preserving MMLU / MT-Bench / AlpacaEval and reducing repetition. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+</ul>
+
+<!-- ===================== 4 ===================== -->
+<h2 id="s4"><span class="num">04</span>Geometry-aware steering</h2>
+<p class="lead">The 2026 geometry wave: the residual stream is not flat Euclidean &#8477;<sup>d</sup>.
+These works replace <em>find the right direction</em> with <em>find the right geometry</em> &mdash;
+curved paths, spherical/hyperbolic/cylindrical metrics, gauge/identifiability, trajectory dynamics.</p>
+<ul class="papers">
+  <li><span class="ttl">Angular Steering</span> &mdash;
+    <span class="meta">Angular Steering team, 2025.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2510.26243">arXiv:2510.26243</a>.</span>
+    Rotates the activation within a 2D plane toward the target instead of adding (spherical-family anchor).
+    <em>Key result:</em> directional control without norm increase &mdash; but a norm-violation flaw on &lt;7B models that Selective Steering later fixes. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">GeoSteer: Faithful Chain-of-Thought Steering via Latent Manifold Gradients</span> &mdash;
+    <span class="meta">Kazama et al., 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2601.10229">arXiv:2601.10229</a>.</span>
+    Steers reasoning by following gradients along the latent manifold across CoT steps (trajectory-aware, axes 8+11).
+    <em>Key result:</em> +0.9 accuracy / +4.5 reasoning-quality points avg vs baseline. <span class="tag nv">NEEDS&nbsp;VERIFICATION / NEEDS&nbsp;REPLICATION</span></li>
+  <li><span class="ttl">On the Non-Identifiability of Steering Vectors</span> &mdash;
+    <span class="meta">Venkatesh &amp; Kurapath (Manipal), 2026 ICLR workshop.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2602.06801">arXiv:2602.06801</a>.</span>
+    Theory: under white-box single-layer access, steering vectors are fundamentally non-identifiable &mdash; large behaviorally-indistinguishable equivalence classes exist (large readout null space).
+    <em>Key result:</em> behavioral testing alone cannot recover &ldquo;the&rdquo; direction; structural constraints required (axis 10).</li>
+  <li><span class="ttl">Curveball Steering: The Right Direction To Steer Isn't Always Linear</span> &mdash;
+    <span class="meta">Raval, Song, Wu, Harrasse, Phillips, Barez, Abdullah, 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2603.09313">arXiv:2603.09313</a>.</span>
+    The optimal steering path is curved; respecting manifold curvature beats a global linear direction (axis 8).
+    <em>Key result:</em> geometry-aware nonlinear steering reduces off-manifold displacement at matched behavior change. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Not All Latent Spaces Are Flat: Hyperbolic Concept Control (HyCon)</span> &mdash;
+    <span class="meta">Briglia, Facchiano, Cursi, Sampieri, Rodol&agrave; et al., 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2603.14093">arXiv:2603.14093</a>.</span>
+    Models hierarchical/tree-like concepts in hyperbolic (negative-curvature) space, where they embed with low distortion (axis 9).
+    <em>Key result:</em> increased stability (&ldquo;geometric pacing under strong steering&rdquo;) vs Euclidean. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Global Evolutionary Refined Steering (GER-steer): Cross-Layer Consistency</span> &mdash;
+    <span class="meta">X. Jiang, W. Yu, D. Wang, L. Hu, 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2603.12298">arXiv:2603.12298</a>.</span>
+    Training-free extraction of a global invariant direction across layers via spectral consensus + evolutionary refinement before addition.
+    <em>Key result:</em> AdvBench refusal &uarr; 0.948 on Gemma-2-9B-it (vs ~0.77), superior transfer across five domains.
+    <span class="tag gemma">Gemma-2-9B-it</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">The Cylindrical Representation Hypothesis (CRH)</span> &mdash;
+    <span class="meta">Gao, Zhang, Liu, &hellip; Chen (MBZUAI), 2026 ICML.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2605.01844">arXiv:2605.01844</a>.</span>
+    Representation differences live on a cylinder S<sup>d-1</sup>&times;&#8477;: radial (magnitude) &times; angular (semantic) components (axis 9).
+    <em>Key result:</em> decomposing into radius (strength) &times; angle (meaning) makes steering more stable and predictable. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Manifold Steering</span> &mdash;
+    <span class="meta">Wurgaft, Rager, Kowal, &hellip; Goodman, Fel, Geiger, Lubana (Goodfire/Stanford/Harvard), 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2605.05115">arXiv:2605.05115</a>.</span>
+    Fits an activation manifold M<sub>h</sub> and behavior manifold M<sub>y</sub>; steering along M<sub>h</sub> follows M<sub>y</sub>, while linear steering cuts through off-manifold regions.
+    <em>Key result:</em> &ldquo;recasts steering from finding the right direction to finding the right geometry&rdquo;; bidirectional link holds across reasoning geometries + a video world model. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Manifold-Guided Attention Steering (MAGS)</span> &mdash;
+    <span class="meta">I. Li, Guruprasad, Sengupta, Satish, D'Antoni, R. Yu, 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2605.21770">arXiv:2605.21770</a>.</span>
+    Learns a correctness manifold vs error subspace, then projects attention-head outputs back onto it before W<sub>O</sub>, writing the correction into the KV cache (axes 1+11).
+    <em>Key result:</em> up to +10.8% on MATH-500/GSM8K/HumanEval/MBPP, beating ITI / Angular / Contrastive Decoding.
+    <span class="tag nv">corpus &ldquo;Gemma-4&rdquo; claim is fabricated</span></li>
+  <li><span class="ttl">Steered LLM Activations are Non-Surjective</span> &mdash;
+    <span class="meta">Mishra, Khashabi, A. Liu, 2026 (v2).</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2604.09839">arXiv:2604.09839</a>.</span>
+    Frames addition as a surjectivity problem; proves steered states lie off the manifold reachable by any discrete prompt.
+    <em>Key result:</em> &ldquo;almost surely no prompt can reproduce&rdquo; steered behavior; L2 distances confirm no close preimages.
+    <span class="tag gemma">Gemma-3-1B</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+</ul>
+
+<!-- ===================== 5 ===================== -->
+<h2 id="s5"><span class="num">05</span>Sparse / SAE-feature steering</h2>
+<p class="lead">Steering in the sparse, interpretable basis of a Sparse Autoencoder &mdash; clamp or add along monosemantic feature directions instead of dense residual directions. Anchored by GemmaScope.</p>
+<ul class="papers">
+  <li><span class="ttl">Towards Monosemanticity: Decomposing Language Models With Dictionary Learning</span> &mdash;
+    <span class="meta">Bricken, Templeton, &hellip; Olah (Anthropic), 2023 Transformer Circuits.</span>
+    <span class="arxiv"><a href="https://transformer-circuits.pub/2023/monosemantic-features/index.html">transformer-circuits.pub/2023</a> (no arXiv).</span>
+    First large-scale demonstration that SAEs recover thousands of monosemantic, causally steerable features.
+    <em>Key result:</em> 512-neuron MLP &rarr; &gt;4,096 (up to 131k) features; feature pinning steers output.</li>
+  <li><span class="ttl">Jumping Ahead: Improving Reconstruction Fidelity with JumpReLU SAEs</span> &mdash;
+    <span class="meta">Rajamanoharan, Lieberum, Sonnerat, Conmy, Varma, Kram&aacute;r, Nanda (DeepMind), 2024.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2407.14435">arXiv:2407.14435</a>.</span>
+    Learned-threshold JumpReLU + direct L0 penalty via straight-through estimators.
+    <em>Key result:</em> SOTA reconstruction-sparsity Pareto on Gemma-2-9B (beats Gated &amp; TopK).
+    <span class="tag gemma">Gemma-2-9B</span></li>
+  <li><span class="ttl">Scaling Monosemanticity: Interpretable Features from Claude 3 Sonnet (Golden Gate Claude)</span> &mdash;
+    <span class="meta">Templeton, Conerly, &hellip; Henighan (Anthropic), 2024 Transformer Circuits.</span>
+    <span class="arxiv"><a href="https://transformer-circuits.pub/2024/scaling-monosemanticity/">transformer-circuits.pub/2024</a> (no arXiv).</span>
+    Scales SAEs to production Claude 3 Sonnet; feature clamping as a steering primitive.
+    <em>Key result:</em> ~34M features; the Golden Gate feature clamped to 10&times; makes the model obsess about the bridge while staying coherent.</li>
+  <li><span class="ttl">Gemma Scope: Open Sparse Autoencoders Everywhere All At Once on Gemma 2</span> &mdash;
+    <span class="meta">Lieberum, Rajamanoharan, Conmy, Smith, Sonnerat, Varma, Kram&aacute;r, Dragan, Shah, Nanda (DeepMind), 2024 BlackboxNLP.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2408.05147">arXiv:2408.05147</a>.</span>
+    Open release of JumpReLU SAEs covering every layer/sublayer of Gemma 2.
+    <em>Key result:</em> &gt;400 SAEs / &gt;30M features &mdash; the infrastructure under nearly all small-Gemma sparse steering.
+    <span class="tag gemma">Gemma-2-2B/9B</span></li>
+  <li><span class="ttl">Improving Steering Vectors by Targeting Sparse Autoencoder Features (SAE-TS)</span> &mdash;
+    <span class="meta">Chalnev, Siu, Conmy, 2024 (rev. 2025).</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2411.02193">arXiv:2411.02193</a>.</span>
+    Uses SAEs to measure side-effects of any vector, then optimizes a replacement activating only the desired feature.
+    <em>Key result:</em> better effect/coherence trade-off than CAA and single-feature steering.
+    <span class="tag gemma">Gemma-2-2B (L12)</span></li>
+  <li><span class="ttl">Interpretable Steering with Feature Guided Activation Additions (FGAA)</span> &mdash;
+    <span class="meta">Soo, Guang, Teng, Balaganesh, Guoxian, Ming, 2025.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2501.09929">arXiv:2501.09929</a>.</span>
+    Combines CAA + SAE-TS in SAE latent space (16,384 features, Gemma Scope L12), optimizing feature selection.
+    <em>Key result:</em> outperforms CAA, SAE-decoder, and SAE-TS; optimal in 8/9 tasks on 2B.
+    <span class="tag gemma">Gemma-2-2B/9B</span></li>
+  <li><span class="ttl">AxBench: Even Simple Baselines Outperform Sparse Autoencoders</span> &mdash;
+    <span class="meta">Wu, Arora, Geiger, Z. Wang, Huang, Jurafsky, Manning, Potts (Stanford), 2025 ICML spotlight.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2501.17148">arXiv:2501.17148</a>.</span>
+    Apples-to-apples benchmark separating concept detection vs steering across prompting / finetuning / probes / steering vectors / ReFT / SAEs.
+    <em>Key result (verbatim):</em> &ldquo;On both evaluations, SAEs are not competitive&rdquo;; prompting wins steering, probes win detection; ReFT-r1 is the competitive interpretable method.
+    <span class="tag gemma">Gemma-2-2B/9B</span></li>
+  <li><span class="ttl">Steering Large Language Model Activations in Sparse Spaces (SAS)</span> &mdash;
+    <span class="meta">Bayat, Rahimi-Kalahroudi, Pezeshki, Chandar, Vincent, 2025.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2503.00177">arXiv:2503.00177</a>.</span>
+    Isolates behavior-specific SAE features via contrastive prompt-pairing to reinforce/suppress in sparse space.
+    <em>Key result:</em> nuanced modulation at &lambda;=&plusmn;1, &tau;=0.7; scaling SAEs improves monosemanticity, beats dense baselines.
+    <span class="tag gemma">Gemma-2-2B (main), 9B</span></li>
+  <li><span class="ttl">Interpretable LLM Guardrails via Sparse Representation Steering (SRS)</span> &mdash;
+    <span class="meta">He et al., 2025.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2503.16851">arXiv:2503.16851</a>.</span>
+    Disentangles activations via Gemma-Scope SAE; selects dimensions via bidirectional KL on positive/negative pairs.
+    <em>Key result:</em> improved controllability across safety/fairness/truthfulness (single- and multi-attribute), quality preserved.
+    <span class="tag gemma">Gemma-2-2B/9B-IT</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">CorrSteer: Generation-Time Steering via Correlated SAE Feature Selection</span> &mdash;
+    <span class="meta">Cho, Z. Wu, Koshiyama, 2025 (v3 2026).</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2508.12535">arXiv:2508.12535</a>.</span>
+    Correlates SAE-feature activations on generated tokens with labels on-the-fly (O(1) streaming, no contrast dataset), then steers with top-correlated features.
+    <em>Key result:</em> +3.3% MMLU, +27.1% HarmBench on Gemma-2-2B with lower side-effect ratio than finetuning.
+    <span class="tag gemma">Gemma-2-2B</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Steered Generation via Gradient-Based Optimization on Sparse Query Features</span> &mdash;
+    <span class="meta">Bhattacharyya et al., 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2605.23040">arXiv:2605.23040</a>.</span>
+    SAEs on query activations, decomposed into sparse features, gradient-optimized at inference to align with class prototypes.
+    <em>Key result:</em> progressive refinement with cognitive-style accuracy gains over dense query steering (Bloom/Phi). <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+</ul>
+
+<!-- ===================== 6 ===================== -->
+<h2 id="s6"><span class="num">06</span>Attention / KV / decoding-site steering</h2>
+<p class="lead">Interventions that leave the residual stream and act on the attention mechanism (Q/V vectors, attention scores), the KV cache, or the decoding distribution &mdash; orthogonal sites that stack with residual methods and often cost less.</p>
+<ul class="papers">
+  <li><span class="ttl">DoLa: Decoding by Contrasting Layers Improves Factuality</span> &mdash;
+    <span class="meta">Chuang et al., 2023 ICLR.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2309.03883">arXiv:2309.03883</a>.</span>
+    Contrasts logits from a mature vs premature layer at decode time (logit-site, after all residual edits).
+    <em>Key result:</em> improves TruthfulQA + factual generation across LLaMA sizes, no retraining.</li>
+  <li><span class="ttl">Tell Your Model Where to Attend: Post-hoc Attention Steering (PASTA)</span> &mdash;
+    <span class="meta">Q. Zhang, Singh, L. Liu, X. Liu, B. Yu, Gao, T. Zhao, 2024 ICLR.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2311.02262">arXiv:2311.02262</a>.</span>
+    Profiles a few heads offline, then upweights user-marked tokens in those heads at inference.
+    <em>Key result:</em> +22% avg accuracy on LLaMA-7B across instruction-following / knowledge-integration.</li>
+  <li><span class="ttl">Spotlight Your Instructions: Dynamic Attention Steering (SpotLight)</span> &mdash;
+    <span class="meta">Venkateswaran, Contractor, 2025 EACL long.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2505.12025">arXiv:2505.12025</a>.</span>
+    Monitors attention mass on instruction tokens each step, applies proportional only-when-needed logit bias to attention scores.
+    <em>Key result:</em> fixes PASTA's offline-profiling cost and rigid targeting; strong on multi-turn / refusal / complex instructions.</li>
+  <li><span class="ttl">KV Cache Steering for Controlling Frozen LLMs</span> &mdash;
+    <span class="meta">Belitsky, Kopiczko, Dorkenwald, Mirza, Glass, Snoek, Asano, 2025 (v2).</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2507.08799">arXiv:2507.08799</a>.</span>
+    Builds steering vectors from teacher traces, applies one additive edit to the KV cache after prompt processing (zero per-token overhead).
+    <em>Key result:</em> +7.4% MATH, +4.6% GPQA-Diamond on Llama-3.1-70B; 95% style-transfer on small models. <span class="tag nv">NEEDS&nbsp;VERIFICATION &mdash; no Gemma</span></li>
+  <li><span class="ttl">DISCO: Disentangled Communication Steering</span> &mdash;
+    <span class="meta">Torop, Masoomi, Eskandar, Dy, 2025 NeurIPS.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2509.16820">arXiv:2509.16820</a>.</span>
+    Injects steering vectors directly into the query and value spaces inside attention heads (not the residual stream).
+    <em>Key result:</em> steering efficacy up to 19.1% higher than the runner-up.
+    <span class="tag gemma">Gemma-2-9B</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Memory Inception: Latent-Space KV Cache Manipulation</span> &mdash;
+    <span class="meta">A. Z. Liu, M. Zhang, Greenberg, Alnasser, Baker, Sous, 2026 (v2).</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2605.06225">arXiv:2605.06225</a>.</span>
+    Training-free encoding of reminder text into frozen-model KV vectors injected at selected layers as hidden slots.
+    <em>Key result:</em> 60&ndash;118&times; KV-storage reduction vs full prompting; beats CAA on control-drift and prompting on structured reasoning. <span class="tag nv">NEEDS&nbsp;VERIFICATION &mdash; no Gemma</span></li>
+  <li><span class="ttl">Periodic KV Cache Consolidation for Generalised Reasoning</span> &mdash;
+    <span class="meta">Oomerjee et al., 2025 (v3).</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2505.16950">arXiv:2505.16950</a>.</span>
+    A non-causal auxiliary Cache Processor rewrites KV entries at reasoning-step boundaries, consolidating recent + top-k prior entries.
+    <em>Key result:</em> better long-horizon generalization; frames KV edits as a third pillar beside token-mediated and residual steering. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Don't Lose Focus: Activation Steering via Key-Orthogonal Projection (SKOP)</span> &mdash;
+    <span class="meta">SKOP / Prompt-Activation Duality team, 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2605.06342">arXiv:2605.06342</a>.</span>
+    Projects steering vectors orthogonal to the key matrix so additions don't contaminate the KV cache.
+    <em>Key result:</em> retains &gt;95% of vanilla query-space efficacy, utility degradation under 10%; best trade-off (rank 2/44) on Gemma-2-9B-IT.
+    <span class="tag gemma">Gemma-2-9B-IT</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Improving Activation Steering via Attention-Level Delta Gating and Cropping (GCAD)</span> &mdash;
+    <span class="meta">GCAD team, 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2605.10664">arXiv:2605.10664</a></span> <span class="tag uv">UNVERIFIED &mdash; ID flagged in source</span>
+    Cropped, gated multi-layer attention-delta steering (instead of raw residual) to mitigate KV-cache contamination.
+    <em>Key result:</em> higher per-trait expression &Delta; and coherence than single-layer residual baselines on Llama-3.1-8B / Qwen2.5-7B. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">AntiPaSTO: Self-Supervised Honesty Steering via Anti-Parallel Representations</span> &mdash;
+    <span class="meta">M. J. Clark et al., 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2601.07473">arXiv:2601.07473</a>.</span>
+    Learns antiparallel steering directions operating through attention and KV-cache pathways (beyond residual) for bidirectional control.
+    <em>Key result:</em> 6.9&times; Steering F1 over prompting on Gemma-3-1B (DailyDilemmas); tables span Gemma-3-270M &rarr; 12B.
+    <span class="tag gemma">Gemma-3-270M/1B/4B/12B</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+</ul>
+
+<!-- ===================== 7 ===================== -->
+<h2 id="s7"><span class="num">07</span>Composition / stacking</h2>
+<p class="lead">Algebras and frameworks built to combine multiple steering goals <em>without interference</em> &mdash; the explicit answer to &ldquo;can I run several safety vectors at once?&rdquo;</p>
+<ul class="papers">
+  <li><span class="ttl">Steering LLMs using Conceptors: Improving Addition-Based Activation Engineering</span> &mdash;
+    <span class="meta">Postmus, Abreu, M&uuml;ller et al., 2024.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2410.16314">arXiv:2410.16314</a>.</span>
+    Represents activation sets as ellipsoidal conceptor / steering-matrix regions, enabling AND/OR/NOT Boolean composition.
+    <em>Key result:</em> the AND-combined conceptor outperformed mean-combined steering vectors on multi-goal tasks. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">From Steering Vectors to Conceptors: Compositional Affine Activation Steering</span> &mdash;
+    <span class="meta">Abreu et al., 2025 OpenReview.</span>
+    <span class="tag uv">UNVERIFIED &mdash; OpenReview, no arXiv ID in sources</span>
+    Conceptor matrices for affine composition of addition vectors.
+    <em>Key result:</em> provably optimal compositional control with low utility loss on multi-property steering. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">EasyEdit2: An Easy-to-use Steering Framework for Editing LLMs</span> &mdash;
+    <span class="meta">EasyEdit2 team, 2025.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2504.15133">arXiv:2504.15133</a>.</span>
+    Unified framework: CAA/STA + vector merging (Linear / TIES / DARE-TIES) for multi-task residual addition in one intervention.
+    <em>Key result:</em> merged safety+sentiment CAA vectors reach joint scores (e.g. 66.89 safety on Gemma) vs single-task baselines.
+    <span class="tag gemma">Gemma (L24), Qwen</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Persona Vectors: Monitoring and Controlling Character Traits in Language Models</span> &mdash;
+    <span class="meta">Anthropic persona-vectors team, 2025.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2507.21509">arXiv:2507.21509</a>.</span>
+    Reusable directions for distinct traits (evil, sycophancy, hallucination) extracted automatically from trait descriptions &mdash; a bank of vectors per property.
+    <em>Key result:</em> persona vectors predict and preventatively steer trait shifts (incl. during finetuning). <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Fine-Grained Activation Steering: Steering Less, Achieving More (AUSteer)</span> &mdash;
+    <span class="meta">Feng, T. Li, Zhu, H. Zhou, Qian, L. Zhang, Chua, Mak, Ng, Mao, 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2602.04428">arXiv:2602.04428</a>.</span>
+    Identifies discriminative atomic units via activation momenta and assigns adaptive per-unit strengths, steering only beneficial activations.
+    <em>Key result:</em> +1.85 over SADI on LLaMA2-7B-Chat, +1.91 on Gemma2-9B-it, steering &le;100 activations vs thousands for CAA/STA.
+    <span class="tag gemma">Gemma2-9B-it</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+</ul>
+
+<!-- ===================== 8 ===================== -->
+<h2 id="s8"><span class="num">08</span>Safety &amp; the Rogue Scalpel</h2>
+<p class="lead">The frontier finding that steering damages alignment as a side effect of leaving the manifold &mdash; plus the mechanistic and scaling work that frames it.</p>
+<ul class="papers">
+  <li><span class="ttl">The Rogue Scalpel: Activation Steering Compromises LLM Safety</span> &mdash;
+    <span class="meta">Korznikov, Galichin, Dontsov, Rogov, Oseledets, Tutubalina, 2025 (v2 2026) ICML.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2509.22067">arXiv:2509.22067</a>.</span>
+    On JailbreakBench (baseline compliance 0%), random/benign steering breaks refusal.
+    <em>Key results:</em> random directions &rarr; 1&ndash;13% compliance; benign SAE features as bad or worse (817/1000 jailbreak &ge;1 prompt); peaks in early-middle layers; averaging 20 weak vectors yields a universal attack (Falcon3-7B 5.7%&rarr;63.4%); App. E &mdash; attacks near-orthogonal to the refusal direction (cos 0.027&plusmn;0.021), so the mechanism is off-manifold displacement, not refusal cancellation.</li>
+  <li><span class="ttl">What Drives Representation Steering? A Mechanistic Case Study on Steering Refusal</span> &mdash;
+    <span class="meta">S. Cheng, Wiegreffe, Manocha, 2026.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2604.08524">arXiv:2604.08524</a>.</span>
+    Circuit analysis of refusal steering: primary interaction via the OV circuit, largely ignoring QK; 90&ndash;99% sparsification.
+    <em>Key result:</em> freezing all attention scores drops performance only 8.75%; vectors sparsify to 90&ndash;99% with most performance retained.
+    <span class="tag gemma">Gemma-2-2B (L15)</span> <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Scaling Laws for Activation Steering with Llama 2 Models and Refusal Mechanisms</span> &mdash;
+    <span class="meta">Ali et al., 2025.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2507.11771">arXiv:2507.11771</a>.</span>
+    Explicit scaling laws for CAA-style refusal steering (cross-listed from &sect;1).
+    <em>Key result:</em> effectiveness grows with model size but saturates differently for refusal. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+  <li><span class="ttl">Refusal Steering: Fine-grained Control over LLM Refusal Behaviour for Sensitive Topics</span> &mdash;
+    <span class="meta">Garc&iacute;a-Ferrero, Montero, Orus, 2025.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2512.16602">arXiv:2512.16602</a>.</span>
+    Replaces pattern-based refusal detection with an LLM-as-judge and a ridge-regularized refusal&ndash;compliance direction to remove political refusal while keeping harmful-content safety.
+    <em>Key result:</em> maintains safety on JailbreakBench and near-baseline general performance. <span class="tag nv">NEEDS&nbsp;VERIFICATION</span></li>
+</ul>
+
+<!-- ===================== 9 ===================== -->
+<h2 id="s9"><span class="num">09</span>Evaluation &amp; benchmarks</h2>
+<p class="lead">The measurement substrate. Steering has four things to measure at once &mdash; did behavior change, did capability survive, did text stay coherent, did safety survive &mdash; plus selectivity for gated methods.</p>
+<ul class="papers">
+  <li><span class="ttl">AxBench: Even Simple Baselines Outperform Sparse Autoencoders</span> &mdash;
+    <span class="meta">Wu, Arora, Geiger, Z. Wang, Huang, Jurafsky, Manning, Potts (Stanford), 2025 ICML spotlight.</span>
+    <span class="arxiv"><a href="https://arxiv.org/abs/2501.17148">arXiv:2501.17148</a>.</span>
+    The canonical fine-grained concept-steering benchmark + apples-to-apples harness; supplies the 500-concept holdout used by FLAS/PSR.
+    <em>Key result:</em> &ldquo;SAEs are not competitive&rdquo; for steering; prompting wins. <span class="tag gemma">Gemma-2-2B/9B</span></li>
+  <li><span class="ttl">JailbreakBench</span> &mdash; the safety-integrity benchmark (100 harmful prompts, 10 categories), the Rogue Scalpel testbed; baseline compliance must be 0%, measure Compliance Rate. Mandatory for stacking/guard experiments.</li>
+  <li><span class="ttl">HarmBench</span> &mdash; broader harmful-behavior evaluation; cross-checks Compliance-Rate generalization beyond JailbreakBench.</li>
+  <li><span class="ttl">AdvBench</span> &mdash; harmful behaviors + strings; the refusal-rate target reported by GER-steer and Selective Steering.</li>
+  <li><span class="ttl">StrongREJECT</span> &mdash; stricter jailbreak scoring to avoid LLM-judge over-counting of &ldquo;successful&rdquo; jailbreaks.</li>
+  <li><span class="ttl">XSTest</span> &mdash; the over-refusal dual: benign prompts that <em>look</em> harmful, measuring the over-refusal cost of safety steering.</li>
+  <li><span class="ttl">TruthfulQA</span> &mdash; truthfulness (MC + generative); ITI's home benchmark and the FineSteer +7.6% target.</li>
+  <li><span class="ttl">Capability &amp; coherence probes</span> &mdash; MMLU / ARC / GSM8K / HellaSwag (capability-tax, &le;1&ndash;2% drop = acceptable); WikiText-103 perplexity + repetition/MAUVE + LLM-judge coherence (the coherence cliff); MT-Bench / AlpacaEval (open-ended helpfulness retention).</li>
+</ul>
+
+<!-- ===================== 10 ===================== -->
+<h2 id="s10"><span class="num">10</span>The 12-axis intervention taxonomy</h2>
+<p class="lead">The synthesizing artifact. Any steering <em>method</em> is one setting along each axis; most &ldquo;new methods&rdquo;
+in the arXiv firehose are a new <em>point</em> in this space, not a new dimension. Axes 1&ndash;7 are the original knobs;
+axes 8&ndash;12 are <strong>meta-axes</strong> that change the <em>space</em> the first seven live in.</p>
+<table>
+  <thead><tr><th>#</th><th>Axis</th><th>Question</th><th>Default</th><th>Representative papers</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td class="ax">WHERE (site)</td><td>which layer / stream / head</td><td>one mid layer</td><td>CAA &sect;1, DISCO &sect;6 (Q/V), PASTA/SpotLight &sect;6 (attn scores), KV-Cache/MAGS &sect;6, DoLa &sect;6 (logits), ReFT &sect;3</td></tr>
+    <tr><td>2</td><td class="ax">WHAT (direction)</td><td>which vector / subspace</td><td>one fixed vector</td><td>refusal-direction &sect;1, ReFT &sect;3, SAE feature &sect;5, conceptor ellipsoid &sect;7, persona vector &sect;7</td></tr>
+    <tr><td>3</td><td class="ax">HOW MUCH (coeff)</td><td>edit magnitude</td><td>flat global &alpha;</td><td>global &alpha; (CAA &sect;1); adaptive per-unit (AUSteer &sect;7); token-specific g(h<sub>t</sub>) (PSR &sect;3); radius of CRH &sect;4</td></tr>
+    <tr><td>4</td><td class="ax">HOW (operation)</td><td>add / rotate / clamp / project / flow</td><td>add</td><td>add (CAA &sect;1); rotate (Angular/Spherical/Selective &sect;2,&sect;4); project-out (refusal &sect;1, SKOP &sect;6); flow (FLAS &sect;3)</td></tr>
+    <tr><td>5</td><td class="ax">WHEN (condition)</td><td>always, or gated on input</td><td>always</td><td>CAST &sect;2; FineSteer-SCS &sect;2; Selective layer-gate &sect;2; persona preventative &sect;7</td></tr>
+    <tr><td>6</td><td class="ax">WHICH TOKENS (span)</td><td>all positions, or selected</td><td>all tokens</td><td>classic all-token (CAA &sect;1); token-selective g(h<sub>t</sub>) (PSR &sect;3)</td></tr>
+    <tr><td>7</td><td class="ax">HOW DERIVED (source)</td><td>source of the vector</td><td>diff-of-means</td><td>diff-of-means / PCA (&sect;1); SAE decoder column (&sect;5); hypernetwork (HyperSteer &sect;3); distilled/learned (PSR, FLAS, BiPO &sect;3)</td></tr>
+    <tr><td>8</td><td class="ax">GEOMETRY (path)</td><td>chord vs geodesic</td><td>chord (linear)</td><td>Manifold &sect;4, Curveball &sect;4, GeoSteer &sect;4</td></tr>
+    <tr><td>9</td><td class="ax">METRIC (space)</td><td>which geometry</td><td>Euclidean</td><td>Spherical/Angular &sect;4, HyCon &sect;4 (hyperbolic), CRH &sect;4 (cylindrical)</td></tr>
+    <tr><td>10</td><td class="ax">IDENTIFIABILITY (gauge)</td><td>which equivalent rep + null space</td><td>ignore it</td><td>Non-Identifiability &sect;4 (optimize over the equivalence class)</td></tr>
+    <tr><td>11</td><td class="ax">DYNAMICS (time)</td><td>one-shot vs trajectory</td><td>one-shot</td><td>GeoSteer &sect;4, MAGS &sect;4/&sect;6, FLAS &sect;3 (multi-step flow)</td></tr>
+    <tr><td>12</td><td class="ax">BASIS / SUPERPOSITION</td><td>dense vs sparse + interference budget</td><td>dense, no budget</td><td>GemmaScope &sect;5, FGAA &sect;5, SAS &sect;5, SAE-TS &sect;5, CorrSteer &sect;5</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <strong>The single most important taxonomy insight.</strong> Conditional steering (CAST and its descendants)
+  is <em>not a peer method &mdash; it is a meta-layer</em> (axis 5). It wraps any axis-1&ndash;4 behavior injector and
+  gates it on context, which is why it stacks orthogonally with almost everything. Stackability is precise: two
+  methods <strong>stack</strong> iff they differ on axis 1 (site) OR are orthogonal on axis 2 (direction); they
+  <strong>compete</strong> iff same site + same direction + different axis-4 operation (additive vs rotational on the
+  same plane), or if they jointly blow the norm/manifold budget. Fixing axes 8&ndash;12 to the Euclidean/static/single-vector
+  defaults is exactly the &ldquo;naive additive steering&rdquo; the Rogue Scalpel punishes. See
+  <span class="mono">corpus/steering-stackable-vs-competing-analysis.md</span> for the full pairwise decision matrix.
+</div>
+
+<footer>
+  <p>Synthesized from the research transcripts in <span class="mono">corpus/</span>. arXiv IDs are mostly real on
+  independent spot-checks; quantitative and Gemma-usage claims are tagged
+  <span class="tag nv">NEEDS&nbsp;VERIFICATION</span> where the corpus flagged fabrication risk, and unconfirmed IDs
+  are tagged <span class="tag uv">UNVERIFIED</span> with the title preserved. 60 papers, 10 sections.</p>
+  <p>This page is the literature backbone of the <a href="dashboard/index.html">steeringresearch</a> autoresearch project &mdash;
+  see the <a href="dashboard/index.html">dashboard</a> for the harness, ladder, and screening results.
+  Markdown twin: <a href="../AWESOME_STEERING.md">AWESOME_STEERING.md</a>.
+  Self-contained page (no CDN, no JS framework). <span class="toplink"><a href="#top">&uarr; back to top</a></span></p>
+</footer>
+
+</div>
+</body>
+</html>

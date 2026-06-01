@@ -2,14 +2,59 @@
 
 Autonomous, principled autoresearch on **conditional / activation steering of
 small Gemma models** (Gemma-3-270M-it / Gemma-3-1B-it) on a single **RTX 4090
-Laptop (16 GB)**. Publication-grade rigor, a CIFAR-style benchmark ladder, and a
-transparent multi-page dashboard.
+Laptop (16 GB)** — an AI-driven research program that forms falsifiable
+hypotheses, runs them on a CIFAR-style benchmark ladder, prices every result with
+a Goodhart-resistant composite, and publishes the whole thing to a transparent,
+clickable, multi-page dashboard.
 
-- **Repo:** https://github.com/dlmastery/steeringresearch
-- **Live dashboard (GitHub Pages):** https://dlmastery.github.io/steeringresearch/
-- **Status:** methodology + harness + **n=1 screening** results; external steering
-  claims are gated on the required experiments (see `FINDINGS.md`). Composite
-  fingerprint `a9001e87087e`.
+## 🚀 Start here — everything is reachable from these links
+
+| | link |
+|---|---|
+| 📊 **Live dashboard** (master → per-hypothesis → per-experiment) | https://dlmastery.github.io/steeringresearch/dashboard/ |
+| 🏠 **Landing page** | https://dlmastery.github.io/steeringresearch/ |
+| 📚 **Awesome LLM Steering** — curated literature survey (60 papers, arXiv links) | https://dlmastery.github.io/steeringresearch/awesome-steering.html |
+| 🧠 **Mindmap** — the steering landscape (12 axes, method families, hypotheses) | https://dlmastery.github.io/steeringresearch/mindmap.html |
+| 📄 **Paper** (honest ICML methods / harness / screening draft) | [paper/PAPER.md](paper/PAPER.md) |
+| 🔬 **FINDINGS** (rigor-gated; S-1…S-14 + rung-3) | [FINDINGS.md](FINDINGS.md) |
+| 🧪 **Hypothesis registry** (70 hypotheses E1–E50 + N1–N20 + verdicts) | [IDEA_TABLE.md](IDEA_TABLE.md) |
+| 📐 **70 hypothesis design docs** (12-section each) | [hypotheses/](hypotheses/) |
+| ✅ **Verification rubrics** (A–E) + the ICML sign-off | [audits/RUBRICS.md](audits/RUBRICS.md) · [audits/ICML_SIGNOFF_v2.md](audits/ICML_SIGNOFF_v2.md) |
+| ♻️ **Reusable meta-skill pack** (domain-agnostic autoresearch process) | [meta-skills/](meta-skills/) |
+| 🛠️ **Constitution** (rules, composite, ladder, dashboard mandate) | [CLAUDE.md](CLAUDE.md) |
+
+**Status:** methodology + reproducible harness + **n=1 SCREENING** results across
+**19 hypotheses with two-sided verdicts** (11 SUPPORTED · 3 FALSIFIED · 3 PARTIAL ·
+1 DIRECTIONAL · 1 INCONCLUSIVE) plus the program's **first rung-3 evaluation**
+(N17 on real WikiText-2). External steering claims remain gated on the required
+experiments in `FINDINGS.md`. **ICML reviewer: unconditional sign-off, Rubric E
+8/8.** Composite fingerprint `a9001e87087e`.
+
+## What's been learned (headline screening results)
+
+- **N17** (off-shell Δ‖h‖ predicts incoherence) — the strongest result; survives the
+  **rung-3 evaluation on real WikiText-2** (Spearman +0.585, 95% CI [0.35, 0.76]).
+- **N5's "universal law"** — honestly **falsified across scale** (held-out R²=−1.6);
+  the screening R²=0.81 was a within-pool artifact that rung-3 rigor caught.
+- **E4** (DiffMean ≈ PCA-top1) holds across **4 behaviors × 3 models** (cos 0.995–0.999).
+- **E7** relative steering — a clean ‖h‖-independent cliff; the knee is **scale-invariant
+  at ~10 % of ‖h‖**. **E17** two-vector stacking retains 101 %/110 % (no interference).
+- **Falsified honestly:** **E2** (max-Fisher ≠ best layer), **E27**-rotation, **E28** (not low-rank).
+
+## Architecture — a SHARED HARNESS, not per-hypothesis code
+
+Everything is tested through **one shared harness** (`src/steering/`, ~10 modules),
+the same design as the reference `dlmastery/autoresearch*` projects — NOT via a
+separate code file per hypothesis. So "few files in `src/`" is by design: those 10
+modules (intervention `hooks`, `extract`, `geometry`, the 5-axis `eval` + composite,
+the `runner`, the `dashboard`) are the complete machinery, and every hypothesis is
+screened by composing them via the drivers in `scripts/` (`campaign_sweep`,
+`run_hillclimb`, `rung3_n17`). The 70 hypothesis **design docs** live in
+`hypotheses/`; the **dashboard pages** (72) are generated from the experiment log.
+The ~50 still-UNTESTED hypotheses are honest about *what new harness code they need*
+(CAST gating, multi-vector orchestration, SAE features, a calibrated LLM judge,
+hypernetworks) — that missing infra is exactly why they are marked UNTESTED, not
+silently skipped.
 
 ## Layout
 

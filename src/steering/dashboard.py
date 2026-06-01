@@ -79,6 +79,8 @@ PAGES_URL = "https://dlmastery.github.io/steeringresearch/"
 PAPER_URL = REPO_URL + "/blob/master/paper/PAPER.md"
 FINDINGS_URL = REPO_URL + "/blob/master/FINDINGS.md"
 IDEATABLE_URL = REPO_URL + "/blob/master/IDEA_TABLE.md"
+AWESOME_URL = PAGES_URL + "awesome-steering.html"
+MINDMAP_URL = PAGES_URL + "mindmap.html"
 FINGERPRINT = composite_fingerprint()
 
 # ---------------------------------------------------------------------------
@@ -1539,6 +1541,8 @@ def _mast_row() -> str:
         f'<a class="mast-pill paper" href="{PAPER_URL}" target="_blank" rel="noopener">paper</a>'
         f'<a class="mast-pill lit" href="{FINDINGS_URL}" target="_blank" rel="noopener">FINDINGS</a>'
         f'<a class="mast-pill lit" href="{IDEATABLE_URL}" target="_blank" rel="noopener">IDEA_TABLE</a>'
+        f'<a class="mast-pill lit" href="{AWESOME_URL}" target="_blank" rel="noopener">awesome steering survey</a>'
+        f'<a class="mast-pill lit" href="{MINDMAP_URL}" target="_blank" rel="noopener">mindmap</a>'
         f'<a class="live-link" href="{PAGES_URL}" target="_blank" rel="noopener">live &middot; GitHub Pages</a>'
         '</div>\n')
 
