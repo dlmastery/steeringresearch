@@ -401,6 +401,38 @@ SHARED_CSS = r"""
  details.deep[open] > summary::before{content:"\25BE";}
  details.deep > .body{padding:14px 0 6px 24px;font-size:0.95em;
     border-left:1px solid var(--rule);margin-left:5px;margin-top:6px;}
+ /* methodology pane — collapsible <details> sub-sections */
+ .method-intro{background:var(--panel);border:1px solid var(--rule);
+    border-left:2px solid var(--v-pass);padding:16px 22px;margin:18px 0 18px;
+    line-height:1.6;color:var(--paper);}
+ .method-intro b{color:var(--paper);}
+ details.method{background:var(--panel);border:1px solid var(--rule);
+    border-left:2px solid var(--accent);margin:0 0 12px;padding:0 22px;}
+ details.method > summary{cursor:pointer;list-style:none;padding:15px 0;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;text-transform:uppercase;
+    letter-spacing:0.12em;color:var(--paper);font-weight:600;}
+ details.method > summary:hover{color:var(--accent);}
+ details.method > summary::-webkit-details-marker{display:none;}
+ details.method > summary::before{content:"\25B8";margin-right:12px;
+    color:var(--accent);font-size:0.9em;}
+ details.method[open] > summary::before{content:"\25BE";}
+ details.method > summary .mtag{float:right;color:var(--paper-dim);font-weight:400;
+    font-size:0.84em;letter-spacing:0.06em;text-transform:none;}
+ details.method > .md-body{padding:2px 0 20px 30px;border-left:1px solid var(--rule);
+    margin:0 0 6px 6px;font-size:0.96em;line-height:1.62;}
+ details.method > .md-body h3,details.method > .md-body h4{color:var(--paper);
+    text-transform:none;letter-spacing:0;font-family:'Source Serif 4',Georgia,serif;
+    font-size:16px;margin:14px 0 6px;}
+ details.method > .md-body code{background:var(--ink);border:1px solid var(--rule);
+    padding:1px 5px;font-family:'IBM Plex Mono',monospace;font-size:0.86em;
+    border-radius:0;color:var(--paper);}
+ details.method > .md-body table{border-collapse:collapse;margin:10px 0;
+    font-size:0.9em;width:auto;}
+ details.method > .md-body th,details.method > .md-body td{
+    border:1px solid var(--rule);padding:6px 11px;text-align:left;}
+ details.method > .md-body th{background:var(--panel2);color:var(--paper-dim);
+    font-family:'IBM Plex Mono',monospace;font-size:0.86em;font-weight:600;}
+ details.method .fp{color:var(--accent);font-family:'IBM Plex Mono',monospace;}
  /* cross-references grid */
  .xrefs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
              gap:10px;margin-top:6px;}
@@ -1625,17 +1657,24 @@ SORT_SCRIPT = r"""
     });
   };
   // ---- tab switching (dependency-free) ----
+  window.showTab = function(paneId) {
+    var tabs = document.querySelectorAll("#tabbar .tab");
+    tabs.forEach(function(x) { x.classList.remove("active"); });
+    document.querySelectorAll(".tab-pane").forEach(function(p) {
+      p.classList.remove("active");
+    });
+    tabs.forEach(function(t) {
+      if (t.getAttribute("data-pane") === paneId) t.classList.add("active");
+    });
+    var pane = document.getElementById(paneId);
+    if (pane) pane.classList.add("active");
+    return false;
+  };
   function initTabs() {
     var tabs = document.querySelectorAll("#tabbar .tab");
     tabs.forEach(function(t) {
       t.addEventListener("click", function() {
-        tabs.forEach(function(x) { x.classList.remove("active"); });
-        document.querySelectorAll(".tab-pane").forEach(function(p) {
-          p.classList.remove("active");
-        });
-        t.classList.add("active");
-        var pane = document.getElementById(t.getAttribute("data-pane"));
-        if (pane) pane.classList.add("active");
+        window.showTab(t.getAttribute("data-pane"));
       });
     });
   }
@@ -1807,6 +1846,236 @@ def _hc_best_callout(hc_rows: list[dict], link_prefix: str = "") -> str:
         '</div>\n')
 
 
+# ===========================================================================
+# Methodology pane — a few pages of grounded context on HOW the research works.
+# Sourced from CLAUDE.md (§3 axes, §4 ladder, §5 ritual, §6 composite, §7 rigor
+# floor, §8 funnel, §9 combo ladder, §10 Rogue Scalpel), AUTORESEARCH_PROCESS.md,
+# corpus/steering-missed-dimensions-and-highdim-algebra.md (12-axis taxonomy),
+# FINDINGS.md (verdict tiers + the rung-3 N17/N5 result), audits/RUBRICS.md.
+# Each sub-section is a collapsible <details>; the first is open by default.
+# Prose is authored as markdown and routed through md_to_html so no literal
+# ** / ## markup ever leaks into the page.
+# ===========================================================================
+_METHODOLOGY_SECTIONS: list[tuple[str, str, bool, str]] = [
+    # (summary label, summary tag, open?, markdown body)
+    (
+        "1 · What this is", "orientation", True,
+        "This is an **autonomous autoresearch program** on **conditional / "
+        "activation steering** of small Gemma models (Gemma-3-1B-it as the "
+        "smoke/dev default, Gemma-2-2B-it as the standard; a single 16 GB "
+        "RTX 4090 Laptop is the hard ceiling). Steering means editing a model's "
+        "residual-stream activations at inference — adding or rotating a learned "
+        "direction at a chosen layer — to push a target behaviour up or down "
+        "*without retraining weights*.\n\n"
+        "The **deliverable is not weights — it is a defensible body of "
+        "evidence**: this multi-page dashboard (master + per-hypothesis + "
+        "per-experiment), a findings ledger, and an auditable paper. Every "
+        "experiment is a falsifiable, pre-registered, citation-gated unit that "
+        "climbs a CIFAR-style benchmark ladder. The methodology is itself a "
+        "deliverable — the `meta-skills/` pack encodes the whole process so any "
+        "future topic can reuse it; steering is its first instantiation.\n\n"
+        "**Honest status.** Every result on this dashboard is **SCREENING "
+        "(n=1)** plus **one rung-3 evaluation**. Screening observations surface "
+        "mechanism *direction*, not magnitude; they are explicitly **not "
+        "external claims**. A finding is promoted off screening only when it "
+        "clears the rigor floor below — external claims are gated, and as of the "
+        "current ledger there are **zero external-ready findings**."
+    ),
+    (
+        "2 · The five measurement axes", "CLAUDE.md §3", False,
+        "Steering has no single scalar — controlling one behaviour is worthless "
+        "if it breaks the model. So **every experiment logs all five axes**:\n\n"
+        "| # | Axis | Primary metric | Good = |\n"
+        "|---|------|----------------|--------|\n"
+        "| 1 | Behavior efficacy | concept / behaviour success score | high |\n"
+        "| 2 | Capability retention | MMLU / ARC / GSM8K delta | ~0 drop |\n"
+        "| 3 | Coherence | perplexity, repetition, judge-coherence | low PPL |\n"
+        "| 4 | Safety integrity | JailbreakBench Compliance Rate | ~0% (no leak) |\n"
+        "| 5 | Selectivity (gated) | harmful − harmless refusal gap | high |\n\n"
+        "Alongside the five, the high-dimensional-geometry sweep adds cheap, "
+        "**behaviour-free leading indicators** that predict the coherence cliff "
+        "and rogue-fragility *before* a behaviour eval is spent: **off-shell "
+        "displacement** Δ‖h‖ (how far the edit pushes the activation off the "
+        "data manifold), **angular** displacement (1−cos), **effective-rank "
+        "drop** and participation ratio at the injection layer, and the "
+        "**cumulative norm budget** ‖Δh‖/‖h‖ (N5). The same five axes are "
+        "measured at *every* rung — only the size and realism of the data grow."
+    ),
+    (
+        "3 · The Goodhart-resistant composite", "CLAUDE.md §6", False,
+        "Because steering is inherently multi-objective, the scalar that ranks "
+        "methods **must price every axis** so a method cannot win by sacrificing "
+        "one. The composite is a behaviour reward minus a penalty per axis:\n\n"
+        "```\n"
+        "composite = behavior_efficacy\n"
+        "          - lambda_cap  * max(0, MMLU_drop_pp)         # capability tax\n"
+        "          - lambda_coh  * max(0, dPPL_norm)            # coherence tax\n"
+        "          - lambda_safe * compliance_rate              # safety leak (Rogue Scalpel)\n"
+        "          - lambda_sel  * max(0, harmless_refusal_rate)# over-refusal / selectivity\n"
+        "          - lambda_geo  * max(0, offshell_displacement)# off-manifold indicator\n"
+        "```\n\n"
+        "A method that emits gibberish may score SAFE on harm, but it FAILS "
+        "coherence — the coherence tax dominates and it cannot win. The weights "
+        "`lambda_*` are pinned in `src/steering/eval.py` and the formula is "
+        "**SHA-256 fingerprinted** as `"
+        + FINGERPRINT + "`, stamped into every reasoning entry and every "
+        "dashboard footer. Editing the formula changes the fingerprint and "
+        "breaks the project — that is the point. Results are always reported to "
+        "4 dp **and** broken out per axis; the composite is never collapsed to "
+        "one number in prose without the per-axis breakdown."
+    ),
+    (
+        "4 · The five-rung benchmark ladder", "CLAUDE.md §4", False,
+        "*Never run an expensive benchmark to find a bug a cheap one would "
+        "catch.* Every method climbs a CIFAR-10 → ImageNet style ladder:\n\n"
+        "| Rung | Nickname | Cost | Proves | Gate to next rung |\n"
+        "|------|----------|------|--------|-------------------|\n"
+        "| 0 | UNIT | seconds | plumbing works | vector changes logits; state restores |\n"
+        "| 1 | SMOKE | 1-3 min | right direction | monotone effect + bounded PPL + no leak |\n"
+        "| 2 | DEV | 10-20 min | generalizes a little | beats baseline on held-out concepts |\n"
+        "| 3 | STANDARD | 1-3 h | real result | Pareto-dominates prior method (no axis regresses) |\n"
+        "| 4 | FULL | half-day+ | publication | multi-axis win + ablations + red-team neutralized |\n\n"
+        "**Promotion-gate rule:** a method must clear rung *k*'s gate before it "
+        "may consume rung *k+1* compute. A regression at any rung **demotes** the "
+        "method with a logged `failure_reason`. There is a rung-2.5 hill-climb "
+        "stage (coordinate descent) between DEV and STANDARD; the dashboard's "
+        "Ladder tab shows, per method, the highest rung reached and whether its "
+        "gate cleared or failed."
+    ),
+    (
+        "5 · The seven-step experiment ritual", "CLAUDE.md §5", False,
+        "No experiment runs without a validated **pre-run** reasoning entry; the "
+        "runner refuses placeholders and re-validates on launch. The discipline "
+        "is **pre-registration** — the hypothesis and the predicted numeric range "
+        "are committed to git *before* the run, so a loser cannot be re-labelled "
+        "after the fact (that would be HARKing, a BLOCKER).\n\n"
+        "1. **Diagnose** (>=60 words) — read the last log row; name the specific "
+        "failure mode; reference >=1 prior experiment by tag.\n"
+        "2. **Cite** (>=40 words) — the exact paper that motivates the change, in "
+        "full `Author, YEAR VENUE 'Title' (arXiv:XXXX.XXXXX)` format; every arXiv "
+        "ID must be real or marked `[UNVERIFIED]`.\n"
+        "3. **Hypothesize** (>=50 words) — the mechanism: which of the 12 axes "
+        "moves, what it does in the residual stream, what the cited paper "
+        "predicts.\n"
+        "4. **Predict** (>=25 words) — a numeric range on the composite + >=1 "
+        "sub-metric, stored *before* the run.\n"
+        "5. **Execute** — exactly **one** config change, always starting from the "
+        "current champion (the Karpathy single-axis-perturbation loop).\n"
+        "6. **Analyse** (>=30 words) — actual vs predicted; verdict KEEP / "
+        "DISCARD / NEAR-MISS; composite to 4 dp; per-axis narrative.\n"
+        "7. **Checkpoint** (>=40 words) — update every dashboard artifact; commit "
+        "and push.\n\n"
+        "`experiment_log.jsonl` is append-only; there is no `--bypass`. Reasoning "
+        "quality gates experiment quality — Claude *is* the expert researcher, "
+        "not a blind search."
+    ),
+    (
+        "6 · The statistical rigor floor", "CLAUDE.md §7 · FINDINGS.md", False,
+        "The hardest line in the project: **screening = n<=3 seeds; evaluation = "
+        "n>=7 seeds.** n=3 cannot reach p<0.05 under a paired Wilcoxon test, so "
+        "n<=3 is screening, full stop. Any sentence using *winner / beats "
+        "baseline / outside seed noise / statistically significant* binds a "
+        "four-part contract: (1) paired **Wilcoxon** signed-rank, (2) 95% "
+        "**bootstrap CI** (>=10k resamples) on the delta, (3) **Holm-Bonferroni** "
+        "correction across the sweep family, (4) an empirically-derived per-model "
+        "noise band. A claim is external-ready only when the **worst evaluation "
+        "seed beats the best baseline seed** (the ordinal gate) at rung >=3.\n\n"
+        "**Verdict tiers** a hypothesis can land in: `SUPPORTED`, `FALSIFIED`, "
+        "`PARTIAL`, `DIRECTIONAL`, `INCONCLUSIVE`, `UNTESTED` (the registry also "
+        "tracks `NOVEL+TESTABLE` / `DERIVATIVE+TESTABLE` / `NUMEROLOGY` for the "
+        "idea-quality screen). The hypothesis grid on the Hypotheses tab colours "
+        "each cell by its current verdict.\n\n"
+        "**What the one rung-3 evaluation found.** On *real* WikiText-2 (n=50 "
+        "pooled model x layer x alpha points across Gemma-3-270m and Gemma-3-1b), "
+        "the N17 monotone claim held: Spearman(off-shell Δ‖h‖, log real-PPL) = "
+        "**+0.585, 95% bootstrap CI [+0.353, +0.758]** (excludes 0, p=8e-6) — "
+        "off-shell displacement governs the coherence cliff on held-out text "
+        "across two scales. **But** the N5 universal collapse-law did *not* "
+        "transfer: fitting 270m and predicting 1b gave held-out **R² = -1.6**. "
+        "So the relationship is directionally robust yet quantitatively "
+        "model-specific — the screening R²=0.81 was a within-pool artifact. This "
+        "is the program's first and only rung-3 evaluation; everything else is "
+        "screening."
+    ),
+    (
+        "7 · The twelve-axis intervention taxonomy", "corpus · high-dim algebra", False,
+        "Every experiment changes **exactly one** of twelve intervention axes "
+        "from the champion. The original framework had seven Euclidean, static "
+        "axes; a 2026 wave of geometry papers added five **meta-axes** that "
+        "change the *space* the first seven live in.\n\n"
+        "The original seven — **WHERE** (which layer / site), **WHAT** (which "
+        "direction: diff-mean, PCA, SAE feature), **HOW MUCH** (the magnitude "
+        "alpha), **HOW** (the operation: add vs rotate vs project), **WHEN** "
+        "(always-on vs conditional gating), **WHICH TOKENS** (prompt / response / "
+        "span), and **HOW DERIVED** (the method that produced the direction).\n\n"
+        "The five geometry meta-axes (A8-A12) — **GEOMETRY / curvature** of the "
+        "path (straight chord vs geodesic on a curved manifold), **METRIC** of "
+        "the space (Euclidean vs spherical vs hyperbolic vs cylindrical), "
+        "**IDENTIFIABILITY / gauge** (steering vectors are non-identifiable — "
+        "large equivalence classes give the same behaviour, so behavioural "
+        "testing alone can't recover 'the' direction), **DYNAMICS / trajectory** "
+        "(a one-shot shift vs trajectory-aware control across the forward pass), "
+        "and **SUPERPOSITION / basis** (dense entangled basis vs sparse feature "
+        "basis; the interference budget when stacking). These explain the "
+        "Rogue-Scalpel off-manifold damage and motivate the N1-N20 "
+        "first-principles hypotheses tested here."
+    ),
+    (
+        "8 · How to read this dashboard", "navigation", False,
+        "This master page is one of three linked tiers: **master** (here), "
+        "**per-hypothesis** pages, and **per-experiment** pages, with full "
+        "bidirectional click-through.\n\n"
+        "**The tabs.** *Runs* groups every experiment into campaign sections "
+        "(rows tinted by their hypothesis verdict; the starred gold row is the "
+        "global champion). *Methodology* is this tab. *Geometry* holds the "
+        "off-shell / angular / Fisher probes. *Ladder* shows the per-method rung "
+        "board and the stack-vs-compete matrix. *Hypotheses* holds the verdict "
+        "grid and the five-axis radar / parallel-coordinate / Pareto panels. "
+        "*Raw* dumps the slimmed `experiment_log.jsonl`.\n\n"
+        "**The hypothesis grid colours** encode the current verdict per cell: "
+        "green = supported, orange-red = falsified, amber = directional, grey = "
+        "inconclusive, dark = pending. **Click-throughs:** click a grid cell to "
+        "open that hypothesis's page (statement, falsifier, predicted Δ, verdict, "
+        "campaign writeup, all its runs); click a runs-table row link to open its "
+        "per-experiment page (the 7-step reasoning blob, config, five-axis "
+        "metrics, composite breakdown, geometry, steered-vs-unsteered samples).\n\n"
+        "**The chips.** Every numeric cell carries an `n=X` seed count and a "
+        "SCREENING (n<=3) or EVALUATION (n>=7) tier chip — there are no bare "
+        "numbers, because the tier is what tells you whether a number is a "
+        "candidate signal or a defensible result. Negative (red) composites mark "
+        "a coherence / off-shell blow-up."
+    ),
+]
+
+
+def _methodology_pane() -> str:
+    """Render the Methodology tab: an intro callout + several collapsible
+    <details class="method"> sub-sections (the first open by default). All prose
+    is routed through md_to_html so no literal ** / ## markup leaks."""
+    out: list[str] = []
+    out.append('<h2 style="margin-top:18px">Methodology '
+               '<span class="sub" style="display:inline">how this research '
+               'works — expand any section</span></h2>\n')
+    out.append(
+        '<div class="method-intro">An autonomous, principled autoresearch '
+        'program on conditional / activation steering of small Gemma models. '
+        'Each panel below expands to a page of grounded context — the five '
+        'measurement axes, the fingerprinted composite, the five-rung ladder, '
+        'the 7-step ritual, the rigor floor, the 12-axis taxonomy, and how to '
+        'read every surface here. <b>Sources:</b> <code>CLAUDE.md</code> (the '
+        'constitution), <code>AUTORESEARCH_PROCESS.md</code>, '
+        '<code>FINDINGS.md</code>, and the corpus.</div>\n')
+    for label, tag, is_open, body in _METHODOLOGY_SECTIONS:
+        op = " open" if is_open else ""
+        out.append(
+            f'<details class="method"{op}>\n'
+            f'  <summary>{_esc(label)}'
+            f'<span class="mtag">{_esc(tag)}</span></summary>\n'
+            f'  <div class="md-body">{md_to_html(body)}</div>\n'
+            f'</details>\n')
+    return "".join(out)
+
+
 def render_master(rows: list[dict], table: dict[str, dict],
                   plots: dict[str, bool], ladder: list[dict],
                   repo_root: Path, idea_dirs: list[Path]) -> str:
@@ -1973,6 +2242,12 @@ def render_master(rows: list[dict], table: dict[str, dict],
         'its per-experiment page (reasoning blob, config, five-axis metrics, '
         'composite breakdown, geometry, samples). Run rows are tinted by their '
         'hypothesis verdict; the starred gold row is the global champion.</li>\n'
+        '    <li><b>Methodology.</b> new to the program? open the '
+        '<a href="#pane-methodology" onclick="return window.showTab(\'pane-methodology\')">'
+        'Methodology tab</a> — a few pages of expandable context on the five '
+        'measurement axes, the fingerprinted composite, the five-rung ladder, the '
+        '7-step ritual, the rigor floor, the 12-axis taxonomy, and how to read every '
+        'surface here.</li>\n'
         '  </ul>\n</section>\n')
 
     # KPI ribbon
@@ -2034,11 +2309,12 @@ def render_master(rows: list[dict], table: dict[str, dict],
 
     # =====================================================================
     # TAB BAR (dsbench interaction model ported to the editorial palette).
-    # Five panes: Runs (default), Geometry, Ladder, Hypotheses, Raw.
+    # Six panes: Runs (default), Methodology, Geometry, Ladder, Hypotheses, Raw.
     # =====================================================================
     parts.append(
         '<div class="tabs" id="tabbar">\n'
         '  <div class="tab active" data-pane="pane-runs">Runs</div>\n'
+        '  <div class="tab" data-pane="pane-methodology">Methodology</div>\n'
         '  <div class="tab" data-pane="pane-geometry">Geometry</div>\n'
         '  <div class="tab" data-pane="pane-ladder">Ladder</div>\n'
         '  <div class="tab" data-pane="pane-hypotheses">Hypotheses</div>\n'
@@ -2113,6 +2389,11 @@ def render_master(rows: list[dict], table: dict[str, dict],
         parts.append(HC_PLACEHOLDER)
     parts.append('</section>\n')
     parts.append('</div>\n')  # end pane-runs
+
+    # ---- PANE: METHODOLOGY ----
+    parts.append('<div class="tab-pane" id="pane-methodology">\n')
+    parts.append(_methodology_pane())
+    parts.append('</div>\n')  # end pane-methodology
 
     # ---- PANE: GEOMETRY ----
     parts.append('<div class="tab-pane" id="pane-geometry">\n')

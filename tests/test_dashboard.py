@@ -307,6 +307,41 @@ def test_master_has_tabbar_filter_pills_and_autoexpand(tmp_path):
     assert "function initAutoExpand" in text, "inline auto-expand JS must be present"
 
 
+def test_master_has_methodology_tab_and_details_subsections(tmp_path):
+    """The Methodology tab is the 2nd tab (after Runs) and its pane holds the
+    eight collapsible <details class="method"> sub-sections, the first open."""
+    _root, master = _build(tmp_path)
+    text = master.read_text(encoding="utf-8")
+    # tab bar carries a Methodology tab targeting the methodology pane
+    assert 'data-pane="pane-methodology"' in text, "tab bar must have a Methodology tab"
+    assert ">Methodology</div>" in text, "Methodology tab label must render"
+    # the pane exists and is built from collapsible <details class="method">
+    assert 'id="pane-methodology"' in text, "the methodology pane must exist"
+    assert 'class="method"' in text, "methodology sub-sections must be <details class=method>"
+    # at least the eight required sub-sections render, first one open by default
+    assert text.count('<details class="method"') >= 8, \
+        "all eight methodology sub-sections must render"
+    assert '<details class="method" open>' in text, \
+        "the first methodology sub-section must be open by default"
+    # each required sub-section summary is present (grounded content, not invented)
+    for label in (
+        "What this is", "five measurement axes", "Goodhart-resistant composite",
+        "five-rung benchmark ladder", "seven-step experiment ritual",
+        "statistical rigor floor", "twelve-axis intervention taxonomy",
+        "How to read this dashboard",
+    ):
+        assert label in text, f"methodology section '{label}' must render"
+    # grounded specifics: the fingerprint and the rung-3 N17/N5 result
+    assert composite_fingerprint() in text
+    assert "+0.585" in text, "the rung-3 N17 evaluation result must be cited"
+    # the how-to-read block links to the new tab and the tab-switch JS exists
+    assert "window.showTab" in text, "a showTab JS hook must drive the methodology link"
+    # no markdown leak in the rendered methodology prose
+    pane = text.split('id="pane-methodology"', 1)[1].split('id="pane-geometry"', 1)[0]
+    assert "**" not in pane, "methodology markdown must not leak bold markers"
+    assert "##" not in pane, "methodology markdown must not leak heading markers"
+
+
 def test_master_hillclimb_placeholder_when_no_hc_rows(tmp_path):
     # the synthetic fixtures carry NO HC-* rows -> honest placeholder must show
     _root, master = _build(tmp_path)
