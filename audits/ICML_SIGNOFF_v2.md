@@ -252,3 +252,69 @@ E2 +0.14; N5 R²=0.81); the completed experiments are rigorous and honest; the f
 rung-3 evaluation is legitimate with its non-iid caveat correctly disclosed; the ~53
 untested hypotheses are honestly future-work-gated. **Fix the one lint/type
 regression and the program signs off.**
+
+> **UPDATE 2026-06-01:** BLOCKER-1 fixed and pushed. Re-verified clean — see §11.
+> This conditional verdict is **superseded by the unconditional sign-off below.**
+
+---
+
+## 11. Final sign-off (post-fix) — 2026-06-01
+
+BLOCKER-1 was fixed in `src/steering/dashboard.py` (the 3 ambiguous `l` loop vars
+renamed → `lab`; the dead `exp = r.get(...)` line removed; the 4 mypy `None` cases
+guarded: `float(v if v is not None else 0.0)` ×2, `_num(champ, …) if (flat and champ)`,
+`resolve_hyp_id(…) or ""`). I **independently re-verified** read-only:
+
+| Check | Command | Result |
+|---|---|---|
+| ruff | `python -m ruff check src/steering tests` | **PASS** — "All checks passed!" (exit 0) |
+| mypy | `python -m mypy src/steering --ignore-missing-imports` | **PASS** — "Success: no issues found in 10 source files" (exit 0) |
+| Rubrics A/C/D | `python scripts/verify_rubrics.py` | **PASS 25 / FAIL 1** (`D7 ruff` + `D7 mypy` + `D7 pytest` all PASS) |
+| Rubric B (dashboard) | `python scripts/verify_dashboard.py` | **PASS 15/15** (exit 0, from §2) |
+| pytest | (via `verify_rubrics.py` D7) | **PASS** (green) |
+
+The single remaining `verify_rubrics.py` FAIL is `D4` — rows **1–9** untagged. This is
+the **expected, tracked** pre-fix projection-proxy / stubbed-safety era (superseded,
+demoted in PAPER §5.1, tracked in `RUBRICS.md` §F). It is **not** a blocker and affects
+no claim. With ruff+mypy now green, PAPER §8's clean-gate attestation is **true**, and
+Rubric E6 and E8 both clear.
+
+### Rubric E — final scorecard (post-fix)
+
+| # | Criterion | Verdict |
+|---|---|---|
+| E1 | Reproducible harness, correct mechanics | **PASS** |
+| E2 | Honest instruments (non-circular behavior, real safety) | **PASS** |
+| E3 | Rigor protocol present & followed | **PASS** |
+| E4 | Findings correctly scoped to SCREENING; no overclaiming | **PASS** |
+| E5 | Limitations in abstract; required-experiments enumerated | **PASS** |
+| E6 | Reproducibility from README + token (clean-gate claim now true) | **PASS** |
+| E7 | Novelty/value stated honestly | **PASS** |
+| E8 | No internal contradictions; circularity disclosed | **PASS** |
+
+**8 / 8 PASS.**
+
+### UNCONDITIONAL SIGN-OFF (Rubric E target statement)
+
+> **ACCEPT as a methodology/infrastructure contribution with reproducible screening
+> results; the steering EFFICACY claims remain correctly gated on the enumerated
+> required-experiments (real AxBench + calibrated judge + n≥7 + prompting baseline +
+> multi-behavior). No overclaiming detected.**
+
+For this v2 pass, the sign-off additionally certifies: **the experimental program is
+complete to the extent feasible under the 4090 / synthetic-data constraints, rigorously
+executed, and honestly scoped; the screening campaign and the first rung-3 evaluation
+(N17 monotone +0.585 on real held-out WikiText with the non-iid caveat; N5-universal
+honestly falsified across scale at held-out R²=−1.6) meet the rubric; the ~53 remaining
+hypotheses are honestly future-work-gated on infrastructure not yet built and data not
+yet wired.** All spot-checked numbers were reproduced from the committed raw data; no
+SCREENING result leaks into an external claim; limitations are in the abstract; the
+required-experiments list is present and honest; and the same-model-family circularity
+is disclosed. The one mechanical blocker is cleared and independently re-verified.
+**Sign-off granted.**
+
+**Circularity caveat (unchanged):** this is an internal-QA-grade pass by a
+Claude-family reviewer (see §9), the same family that authored, implemented, and
+audited the program — **not** an external seal of approval. It certifies "internally
+consistent, numerically reproduced, and honestly scoped," not "externally validated."
+Independent, different-family external review remains pending.
