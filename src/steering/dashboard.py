@@ -403,6 +403,29 @@ SHARED_CSS = r"""
  details.deep[open] > summary::before{content:"\25BE";}
  details.deep > .body{padding:14px 0 6px 24px;font-size:0.95em;
     border-left:1px solid var(--rule);margin-left:5px;margin-top:6px;}
+ /* per-panel "how to read this" interpretation accordions (gold-accented,
+    closed by default; sit directly under every table / diagram) */
+ details.interpret{margin:10px 0 4px;background:var(--panel2);
+    border:1px solid var(--rule);border-left:2px solid var(--accent);}
+ details.interpret > summary{cursor:pointer;list-style:none;padding:9px 14px;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;
+    letter-spacing:0.14em;color:var(--accent);font-weight:600;user-select:none;}
+ details.interpret > summary:hover{color:var(--paper);background:rgba(187,140,77,0.07);}
+ details.interpret > summary::-webkit-details-marker{display:none;}
+ details.interpret > summary::before{content:"\25B8";margin-right:9px;
+    color:var(--accent);font-size:0.92em;}
+ details.interpret[open] > summary::before{content:"\25BE";}
+ details.interpret[open] > summary{border-bottom:1px solid var(--rule);}
+ details.interpret > .md-body{padding:10px 16px 12px 16px;font-size:0.92em;
+    line-height:1.6;color:var(--paper);
+    font-family:'Source Serif 4',Georgia,serif;}
+ details.interpret > .md-body p{margin:6px 0;}
+ details.interpret > .md-body p:first-child{margin-top:0;}
+ details.interpret > .md-body code{background:var(--ink);border:1px solid var(--rule);
+    padding:1px 4px;font-family:'IBM Plex Mono',monospace;font-size:0.9em;
+    border-radius:0;color:var(--paper);}
+ details.interpret > .md-body strong,details.interpret > .md-body b{
+    color:var(--paper);font-weight:600;}
  /* methodology pane — collapsible <details> sub-sections */
  .method-intro{background:var(--panel);border:1px solid var(--rule);
     border-left:2px solid var(--v-pass);padding:16px 22px;margin:18px 0 18px;
@@ -1016,6 +1039,220 @@ def md_to_html(md: str) -> str:
     return "\n".join(out)
 
 
+def _interpret(title: str, body_md: str) -> str:
+    """A consistent, expandable "how to read this / what to expect" block.
+
+    Emitted directly under each table and each diagram across all three tiers.
+    Closed by default (so it never clutters the surface) but obvious — a
+    gold-accented, mono-summary collapsible matching the :root palette. The
+    body is rendered through ``md_to_html`` so no raw markdown (``**`` / ``##``
+    / ``|---|``) ever leaks into the page.
+    """
+    return (
+        '<details class="interpret"><summary>How to read this &mdash; '
+        f'{_esc(title)}</summary>'
+        f'<div class="md-body">{md_to_html(body_md)}</div></details>\n')
+
+
+# ---------------------------------------------------------------------------
+# Interpretation copy — one accurate, substantive "what to expect" blurb per
+# table / diagram. Grounded in CLAUDE.md (the five axes §3, the fingerprinted
+# composite §6, the five-rung ladder §4, the hypothesis verdict tiers) and
+# FINDINGS.md (the α / off-shell coherence cliff, N17 off-shell→log-PPL,
+# N16 angular→rotation-PPL, E2 Fisher falsified). Written as GFM so md_to_html
+# strips any stray markdown — no `**` / `##` / `|---|` ever reaches the page.
+# ---------------------------------------------------------------------------
+_INTERP_RUNS = (
+    "Each **row is one experiment**; the columns are the five measurement axes "
+    "(behavior efficacy, capability retention via MMLU-drop, coherence via "
+    "perplexity, JailbreakBench compliance, selectivity) plus geometry, and the "
+    "**last column is the fingerprinted composite** that prices all of them at "
+    "once. A **negative composite renders red** — it means a coherence / "
+    "off-shell blow-up, not a small loss. Every numeric cell carries an "
+    "`n=…` / tier chip: `SCREENING` (n≤3, candidate signal) vs `EVALUATION` "
+    "(n≥7, a held result); the starred gold row is the global champion and "
+    "rows are tinted by their hypothesis verdict. **Click a row link** to open "
+    "its experiment page. Expect the composite to **peak at small steering** "
+    "(roughly α≈0.1 / ~10% of ‖h‖) and to **collapse as α "
+    "grows** and the model leaves its activation manifold."
+)
+_INTERP_RADAR = (
+    "Each polygon is one method's **profile across the five axes** "
+    "(behavior, capability, coherence, safety, selectivity), each normalised so "
+    "**1 = best** and the outer ring is the ideal. A **good method is balanced** "
+    "— a large, round shape with no single axis collapsed inward. Read a deep "
+    "notch on one spoke as that axis being sacrificed; the composite refuses to "
+    "reward it. Expect **over-steering to crater the coherence and safety "
+    "spokes first** while behavior keeps climbing — the visual signature of the "
+    "Goodhart trap the composite is built to catch."
+)
+_INTERP_PARCOORDS = (
+    "Each line is one method traced **left-to-right across the same five axes**; "
+    "the vertical position on every axis is its normalised score (**higher = "
+    "better**, 1 = ideal). A line that stays **high across all five** is a "
+    "genuine multi-objective win; a line that dives on any axis has paid a cost "
+    "the composite will price in. Crossing lines reveal trade-offs between "
+    "methods. Expect aggressive-α runs to **start high on behavior then "
+    "plunge on coherence and safety** — the same cliff the radar shows, unrolled "
+    "into parallel axes."
+)
+_INTERP_PARETO = (
+    "Each panel plots **behavior efficacy (y) against one cost axis (x)** — "
+    "capability (MMLU-drop), coherence (ΔPPL_norm), or safety (compliance "
+    "rate); **left is cheaper / safer, up is more effective**, so the desirable "
+    "corner is top-left. **Stars mark baselines.** A point that another point "
+    "beats on *both* axes is **dominated (red-outlined)** — strictly worse, and "
+    "its mere existence proves the harness actually discriminates rather than "
+    "rating everything alike. Expect a **frontier, not a blob**: a clean trade-off "
+    "edge where buying more behavior starts costing coherence or a safety leak."
+)
+_INTERP_GEOMETRY = (
+    "These are the **behavior-free geometry leading indicators**: off-shell "
+    "displacement Δ‖h‖ (how far the steered activation leaves the model's "
+    "natural manifold, radial), angular displacement `1−cos` (how much it "
+    "rotates), and the effective-rank / Fisher probes. They are logged on every "
+    "run and **predict the coherence cliff before any behavior metric moves** "
+    "(N17: off-shell linearly predicts log-PPL at `R²≈0.81`; N16: angular "
+    "predicts rotation log-PPL at `R²≈0.997`). Read rising bars as the model "
+    "being pushed off-manifold. Expect **perplexity to rise super-linearly once "
+    "off-shell crosses roughly 0.05–0.1** — that is the early-warning line for "
+    "the cliff."
+)
+_INTERP_STACK = (
+    "A **mechanism-based prior** transcribed from the corpus: each cell says "
+    "whether two intervention families **compose cleanly (STACK, green)**, need "
+    "**care (CARE, amber)**, or **interfere (COMPETE, red)** — it is design "
+    "knowledge, not a measured result, until a logged pair overlays its own "
+    "**measured** verdict (white-outlined cell). The diagonal is self-pairing. "
+    "Expect methods that act at **different sites / on orthogonal axes to "
+    "stack**, and **same-plane operations (e.g. additive-vs-rotate on one layer) "
+    "to compete** — which is exactly why the stacking discipline forbids the "
+    "all-on hybrid."
+)
+_INTERP_LADDER = (
+    "The board shows, **per method (tag), the highest of the five ladder rungs "
+    "it reached** — UNIT → SMOKE → DEV → STANDARD → FULL — "
+    "and whether it **cleared or failed that rung's gate** (with the logged "
+    "`failure_reason`). The promotion rule is strict: a method must clear rung "
+    "*k* before it may spend rung *k+1* compute, and a regression on **any** of "
+    "the five axes demotes it. Expect most candidates to **stall at SMOKE / DEV** "
+    "— clearing STANDARD requires Pareto-dominating the prior method with no axis "
+    "regressing, which is deliberately hard."
+)
+_INTERP_HYP_GRID = (
+    "A **70-cell map of the whole hypothesis registry** (E1–E50 in blocks A–F, "
+    "then N1–N20). **Cell colour = current verdict** from IDEA_TABLE.md: "
+    "**green SUPPORTED**, **orange FALSIFIED**, **amber DIRECTIONAL / PARTIAL**, "
+    "**grey INCONCLUSIVE**, and **dim PENDING** (pre-registered, not yet run). "
+    "**Click any cell** to open that hypothesis's page — statement, falsifier, "
+    "predicted Δ, verdict, and all its runs. Expect a mostly-PENDING grid "
+    "early in the program, with green/orange cells accreting only where a "
+    "falsifiable result has actually cleared its threshold."
+)
+_INTERP_KPI = (
+    "The **program-level counters**: total experiments, real-LM vs FakeLM split, "
+    "real-Gemma rows, distinct models, the **champion composite**, the verdict "
+    "tally across all 70 hypotheses, and the **composite fingerprint** (the "
+    "SHA of the scoring formula — it must match the footer and never drift). "
+    "Read it as the dashboard's vital signs. Expect the champion composite to be "
+    "**modestly positive** (large steering self-destructs), and the fingerprint "
+    "to be **identical everywhere** — a changed fingerprint means the metric was "
+    "edited and prior numbers are no longer comparable."
+)
+_INTERP_HEADLINE = (
+    "The **S-1…S-8 screening highlights** — the headline findings so far, each "
+    "**explicitly tagged SCREENING (n=1)**: candidate signal from a single seed, "
+    "*not* an external claim. They summarise the cliff (S-2), cross-model "
+    "replication (S-3/S-4), the E2 Fisher falsification (S-5), and the "
+    "off-shell→log-PPL law (S-6/S-7). Read each as a pointer into a "
+    "hypothesis page, not a settled result. Expect these to **harden or fall** "
+    "only once promoted to EVALUATION (n≥7) with confidence intervals."
+)
+_INTERP_HYP_TABLE = (
+    "The same 70 registry hypotheses as a **sortable table**: id, title, current "
+    "**verdict**, **number of logged runs**, and a link to each hypothesis page. "
+    "Use it to find under-tested hypotheses (run-count 0) and to jump straight "
+    "to a verdict's evidence. Expect **run-count to concentrate** on the few "
+    "actively-swept hypotheses while most stay PENDING with zero runs."
+)
+_INTERP_GEO_TABLE = (
+    "The geometry probes as a **sortable table, defaulting to off-shell "
+    "Δ‖h‖ descending** so the most off-manifold runs surface first. "
+    "Columns pair each behavior-free probe with the run's composite, so you can "
+    "see the cliff arithmetic directly. Expect the **high off-shell rows to also "
+    "carry the worst (often negative) composites** — off-shell displacement is "
+    "the leading indicator that the coherence penalty is about to dominate."
+)
+# ---- per-experiment interpretation copy ----
+_INTERP_EXP_KN = (
+    "The **key-numbers strip** is this run's headline vitals: composite, "
+    "behavior, perplexity, MMLU-drop, JailbreakBench CR, and the tier (n). "
+    "**Green/red tints** flag good-vs-bad: a positive composite and a "
+    "**CR of 0 are good**; any non-zero CR is a safety leak and an automatic "
+    "DISCARD regardless of behavior. Expect a healthy run to pair a positive "
+    "composite with `CR=0` and a near-zero MMLU-drop."
+)
+_INTERP_EXP_METRICS = (
+    "Each **row is one of the five axes** (plus its sub-metrics) with the run's "
+    "value, the direction that is *good*, and a confidence interval where one "
+    "was computed. Read it top-to-bottom as the per-axis story the composite "
+    "summarises. Expect, below the cliff, **MMLU-drop ≈ 0** (capability "
+    "retained) and **CR ≈ 0** ideally — a `CR > 0` is a safety leak, and a "
+    "large ΔPPL_norm is the coherence cost that sinks the composite."
+)
+_INTERP_EXP_BREAKDOWN = (
+    "A **term-by-term decomposition of the composite**: each axis penalty "
+    "(weight × raw value) is shown and summed, then **reconciled to the "
+    "logged composite** (the Δ should be ~0). The stacked bar shows which "
+    "term dominates — **green is the behavior credit, orange segments are the "
+    "axis costs**. Expect a good run to be mostly green; a bad run is swamped by "
+    "the **coherence (ΔPPL) or off-shell geometry** penalty, which is what "
+    "drags the composite negative."
+)
+_INTERP_EXP_GEOMETRY = (
+    "This run's **geometry probes**: off-shell displacement Δ‖h‖, angular "
+    "displacement `1−cos`, the Fisher ratio at the injection layer, and "
+    "`cos(DiffMean, PCA-top1)`. They are **behavior-free** and explain the "
+    "coherence number above. Expect **small off-shell and small angular values "
+    "on a clean run**; once off-shell climbs past ~0.05–0.1 the perplexity in "
+    "the metrics table should rise super-linearly (the N17 off-shell→log-PPL "
+    "relationship)."
+)
+_INTERP_EXP_SWEEP = (
+    "The **sweep curve** traces **behavior efficacy (left axis) and perplexity "
+    "(right axis) against the swept α / layer axis** for this hypothesis "
+    "group, accumulating as more rows are logged. Read the gap between the two "
+    "curves as the steering window. Expect behavior to rise then plateau while "
+    "**PPL stays flat then turns sharply upward** — the knee where the curves "
+    "diverge is the coherence cliff, and the best operating point sits just "
+    "*before* it."
+)
+_INTERP_EXP_SAMPLES = (
+    "**Side-by-side generations**: the unsteered baseline (left) vs the steered "
+    "output (right) for the same prompt. This is the qualitative gut-check behind "
+    "the behavior number. Expect a good run to show the **target behavior "
+    "clearly expressed while staying fluent and on-topic**; a steered column that "
+    "is repetitive, broken, or off-the-rails is the coherence cliff made visible, "
+    "and should line up with a high perplexity / negative composite above."
+)
+_INTERP_HYP_RUNS = (
+    "**Every logged experiment for this hypothesis**, one row each, linking to "
+    "its experiment page; columns are tag, model, layer, α, behavior, PPL, "
+    "CR, and composite, with a tier chip. Sorted by composite so the **best "
+    "configuration is on top** (also called out above). Expect a coherent sweep "
+    "to show composite **rising to a peak at small α then falling** as the "
+    "cliff hits, with CR pinned at 0 throughout a safe method."
+)
+_INTERP_HYP_COORD = (
+    "The **coordinate-descent panel** sweeps one knob at a time around the "
+    "champion — **composite vs injection layer and composite vs α** — so "
+    "you can read the optimum on each axis independently. Read each curve's peak "
+    "as the locally-best setting for that knob. Expect a **single interior peak** "
+    "on the α curve (too little does nothing, too much triggers the cliff) "
+    "and a layer band where mid-network injection works best."
+)
+
+
 # ===========================================================================
 # matplotlib PNG plots (lazy import; degrade gracefully if unavailable)
 # ===========================================================================
@@ -1520,7 +1757,9 @@ def render_stack_matrix(rows: list[dict]) -> str:
         '  <div class="tablewrap"><table class="stackmx">\n'
         f"    <thead><tr>{head}</tr></thead>\n"
         f"    <tbody>\n{body_html}\n    </tbody>\n  </table></div>\n"
-        f'  <p class="cap">{note}</p>\n</div>\n')
+        f'  <p class="cap">{note}</p>\n'
+        f'  {_interpret("the stack / compete matrix", _INTERP_STACK)}'
+        "</div>\n")
 
 
 # ===========================================================================
@@ -2274,6 +2513,7 @@ def render_master(rows: list[dict], table: dict[str, dict],
         f'<div class="kpi {mood}"><div class="label">{lbl}</div>'
         f'<div class="value">{val}</div></div>'
         for lbl, val, mood in kpis) + "</div>\n")
+    parts.append(_interpret("the KPI ribbon", _INTERP_KPI))
 
     # Headline screening-findings banner (S-1..S-8)
     parts.append(
@@ -2299,9 +2539,12 @@ def render_master(rows: list[dict], table: dict[str, dict],
         '<code>R&sup2;=0.997</code> — the Cylindrical Representation Hypothesis.</li>\n'
         '      <li><b>S-8 / E27 cross-scale.</b> The cliff replicates on gemma-3-1b '
         '@L18 with a clean steering window — the window emerges with scale.</li>\n'
-        '    </ul>\n  </div>\n')
+        '    </ul>\n'
+        + _interpret("the screening headlines", _INTERP_HEADLINE)
+        + '  </div>\n')
 
-    def card(name: str, title: str, cap: str, wide: bool = False) -> str:
+    def card(name: str, title: str, cap: str, wide: bool = False,
+             interpret: tuple[str, str] | None = None) -> str:
         cls = "card panel-2col" if wide else "card"
         if not plots.get(name):
             inner = (f'<p class="cap">({_esc(cap)} — plot unavailable: matplotlib '
@@ -2309,6 +2552,8 @@ def render_master(rows: list[dict], table: dict[str, dict],
         else:
             inner = (f'<img src="{name}" alt="{_esc(cap)}">'
                      f'<p class="cap">{_esc(cap)}</p>')
+        if interpret is not None:
+            inner += _interpret(interpret[0], interpret[1])
         return f'<div class="{cls}"><h3>{_esc(title)}</h3>{inner}</div>'
 
     # =====================================================================
@@ -2367,6 +2612,7 @@ def render_master(rows: list[dict], table: dict[str, dict],
             f'<span class="cnt">({n} run{"s" if n != 1 else ""})</span></h2>\n'
             f'  <div class="group-desc">{_esc(gdesc)}</div>\n'
             f'  <div class="tablewrap">{_runs_table(grp_rows, f"runs_{gkey}")}</div>\n'
+            f'  {_interpret("the runs table", _INTERP_RUNS)}'
             "</section>\n")
     # Hill-climb subsection (rung-2.5)
     parts.append(
@@ -2382,13 +2628,16 @@ def render_master(rows: list[dict], table: dict[str, dict],
             parts.append(
                 '  <div class="card panel-2col"><h3>Per-axis coordinate descent</h3>'
                 '<img src="plot_hc_coord.png" alt="hill-climb coordinate descent">'
-                '<p class="cap">behavior_efficacy + composite vs each swept axis.</p></div>\n')
+                '<p class="cap">behavior_efficacy + composite vs each swept axis.</p>'
+                + _interpret("the coordinate-descent plot", _INTERP_HYP_COORD)
+                + '</div>\n')
         if plots.get("plot_hc_seed.png"):
             parts.append(
                 '  <div class="card panel-2col"><h3>Seed stability</h3>'
                 '<img src="plot_hc_seed.png" alt="hill-climb seed stability">'
                 '<p class="cap">mean composite per config with the seed min/max range.</p></div>\n')
         parts.append(f'  <div class="tablewrap">{_runs_table(hc_rows, "runs_hillclimb")}</div>\n')
+        parts.append(_interpret("the runs table", _INTERP_RUNS))
     else:
         parts.append(HC_PLACEHOLDER)
     parts.append('</section>\n')
@@ -2403,7 +2652,8 @@ def render_master(rows: list[dict], table: dict[str, dict],
     parts.append('<div class="tab-pane" id="pane-geometry">\n')
     parts.append('<h2 style="margin-top:18px">Geometry</h2>\n')
     parts.append(card("plot_geometry.png", "Geometry probes",
-        "Off-shell displacement, angular displacement, and Fisher ratio per experiment.", wide=True))
+        "Off-shell displacement, angular displacement, and Fisher ratio per experiment.", wide=True,
+        interpret=("the geometry panel", _INTERP_GEOMETRY)))
     parts.append(_geometry_table(flat))
     parts.append('</div>\n')  # end pane-geometry
 
@@ -2423,7 +2673,9 @@ def render_master(rows: list[dict], table: dict[str, dict],
         '  <div class="tablewrap"><table class="runs">\n'
         '    <thead><tr><th class="l">method (tag)</th><th class="l">highest rung</th>'
         '<th class="l">gate</th><th class="l">failure_reason</th></tr></thead>\n'
-        f"    <tbody>{ladder_rows}</tbody>\n  </table></div>\n</section>\n")
+        f"    <tbody>{ladder_rows}</tbody>\n  </table></div>\n"
+        f'  {_interpret("the ladder board", _INTERP_LADDER)}'
+        "</section>\n")
     parts.append(render_stack_matrix(rows))
     parts.append('</div>\n')  # end pane-ladder
 
@@ -2435,18 +2687,25 @@ def render_master(rows: list[dict], table: dict[str, dict],
         '  <p class="cap" style="margin-bottom:10px">All 70 registry hypotheses '
         '(E1–E50 in blocks A–F, then N1–N20). Cell colour = current verdict from '
         'IDEA_TABLE.md; click a cell to open that hypothesis page.</p>\n'
-        + _hypothesis_grid_html(table) + "\n</section>\n")
+        + _hypothesis_grid_html(table)
+        + _interpret("the hypothesis grid", _INTERP_HYP_GRID)
+        + "\n</section>\n")
     parts.append('<h2>5-axis profiles</h2>\n<div class="grid">\n')
     parts.append(card("plot_radar.png", "5-axis radar",
-        "5-axis radar per method: behavior, capability, coherence, safety, selectivity (1 = best)."))
+        "5-axis radar per method: behavior, capability, coherence, safety, selectivity (1 = best).",
+        interpret=("the 5-axis radar", _INTERP_RADAR)))
     parts.append(card("plot_parcoords.png", "Parallel coordinates",
-        "Parallel coordinates across the same five axes — lines high everywhere are multi-objective wins."))
+        "Parallel coordinates across the same five axes — lines high everywhere are multi-objective wins.",
+        interpret=("the parallel-coordinates panel", _INTERP_PARCOORDS)))
     parts.append(card("plot_pareto_capability.png", "Pareto · capability",
-        "behavior vs capability (MMLU drop on x; left = better capability retention)."))
+        "behavior vs capability (MMLU drop on x; left = better capability retention).",
+        interpret=("the Pareto panels", _INTERP_PARETO)))
     parts.append(card("plot_pareto_coherence.png", "Pareto · coherence",
-        "behavior vs coherence (ΔPPL_norm on x; left = better coherence)."))
+        "behavior vs coherence (ΔPPL_norm on x; left = better coherence).",
+        interpret=("the Pareto panels", _INTERP_PARETO)))
     parts.append(card("plot_pareto_safety.png", "Pareto · safety",
-        "behavior vs safety (compliance rate on x; left = safer / no leak)."))
+        "behavior vs safety (compliance rate on x; left = safer / no leak).",
+        interpret=("the Pareto panels", _INTERP_PARETO)))
     parts.append("</div>\n")
     parts.append(_hypotheses_table(table, rows_by_hyp=_count_rows_by_hyp(flat, repo_root, idea_dirs)))
     parts.append('</div>\n')  # end pane-hypotheses
@@ -2544,7 +2803,9 @@ def _geometry_table(flat: list[dict]) -> str:
             'Click a header to re-sort.</div>\n'
             '  <div class="tablewrap"><table class="runs" data-dir="desc">\n'
             f'    <thead><tr>{head}</tr></thead>\n'
-            f'    <tbody>\n{body_html}\n    </tbody>\n  </table></div>\n</section>\n')
+            f'    <tbody>\n{body_html}\n    </tbody>\n  </table></div>\n'
+            + _interpret("the geometry table", _INTERP_GEO_TABLE)
+            + '</section>\n')
 
 
 def _hypotheses_table(table: dict[str, dict], rows_by_hyp: dict[str, int]) -> str:
@@ -2574,7 +2835,9 @@ def _hypotheses_table(table: dict[str, dict], rows_by_hyp: dict[str, int]) -> st
             '    <thead><tr><th class="l">id</th><th class="l">title</th>'
             '<th class="l">verdict</th><th># runs</th><th class="l">link</th>'
             '</tr></thead>\n'
-            f'    <tbody>\n{body_html}\n    </tbody>\n  </table></div>\n</section>\n')
+            f'    <tbody>\n{body_html}\n    </tbody>\n  </table></div>\n'
+            + _interpret("the hypothesis table", _INTERP_HYP_TABLE)
+            + '</section>\n')
 
 
 # ===========================================================================
@@ -2656,7 +2919,9 @@ def _samples_section(row: dict) -> str:
             '<pre class="sample empty">(no samples captured for this run)</pre></div>\n'
             '    <div><h3>Steered</h3>'
             '<pre class="sample empty">(no samples captured for this run)</pre></div>\n'
-            "  </div>\n</section>\n")
+            "  </div>\n"
+            + _interpret("the side-by-side samples", _INTERP_EXP_SAMPLES)
+            + "</section>\n")
     blocks = []
     for i, s in enumerate(samples, 1):
         prompt_html = (f'  <p class="cap">Prompt {i}: <code>{_esc(s["prompt"])}</code></p>\n'
@@ -2669,7 +2934,9 @@ def _samples_section(row: dict) -> str:
             f'<pre class="sample">{_esc(s["steered"]) or "(empty)"}</pre></div>\n  </div>\n')
     return ('<section class="card"><h2>Side-by-side samples (steered vs unsteered)</h2>\n'
             f'  <p class="cap">{len(samples)} captured generation pair(s) from the '
-            "experiment row.</p>\n" + "".join(blocks) + "</section>\n")
+            "experiment row.</p>\n" + "".join(blocks)
+            + _interpret("the side-by-side samples", _INTERP_EXP_SAMPLES)
+            + "</section>\n")
 
 
 def _composite_stack(flat: dict) -> tuple[str, str]:
@@ -2806,6 +3073,7 @@ def render_experiment(row: dict, ann: dict, table: dict[str, dict],
              "neg" if _num(flat,'compliance_rate') > 0 else "pos")
         + kn(f"n={n_seeds}", f"tier {tier.lower()}", "neu")
         + "</div>\n")
+    parts.append(_interpret("the key-numbers strip", _INTERP_EXP_KN))
 
     # Hypothesis digest card
     if hid and (hinfo.get("title") or hinfo.get("hypothesis")):
@@ -2900,7 +3168,9 @@ def render_experiment(row: dict, ann: dict, table: dict[str, dict],
         '<section class="card"><h2>Five-axis metrics — quick reference</h2>\n'
         '  <table class="kvtable"><thead><tr><th>metric</th><th>value (n)</th>'
         '<th>good=</th><th>CI low</th><th>CI high</th></tr></thead>\n'
-        f"  <tbody>{''.join(metric_rows)}</tbody></table>\n</section>\n")
+        f"  <tbody>{''.join(metric_rows)}</tbody></table>\n"
+        f'  {_interpret("the five-axis metrics table", _INTERP_EXP_METRICS)}'
+        "</section>\n")
 
     # Composite breakdown
     stack, brk = _composite_stack(flat)
@@ -2908,7 +3178,9 @@ def render_experiment(row: dict, ann: dict, table: dict[str, dict],
         '<section class="card"><h2>Composite-score breakdown</h2>\n'
         f'  {stack}\n  {brk}\n'
         f'  <div class="formula-chip" style="margin-top:14px">composite &#8788; '
-        f'<code>{_esc(COMPOSITE_FORMULA)}</code></div>\n</section>\n')
+        f'<code>{_esc(COMPOSITE_FORMULA)}</code></div>\n'
+        f'  {_interpret("the composite breakdown", _INTERP_EXP_BREAKDOWN)}'
+        "</section>\n")
 
     # Geometry probes
     geo_rows = []
@@ -2924,7 +3196,9 @@ def render_experiment(row: dict, ann: dict, table: dict[str, dict],
     parts.append(
         '<section class="card"><h2>Geometry probes</h2>\n'
         '  <table class="kvtable"><thead><tr><th>probe</th><th>value (n)</th></tr></thead>\n'
-        f"  <tbody>{''.join(geo_rows)}</tbody></table>\n</section>\n")
+        f"  <tbody>{''.join(geo_rows)}</tbody></table>\n"
+        f'  {_interpret("the geometry probes", _INTERP_EXP_GEOMETRY)}'
+        "</section>\n")
 
     # Sweep curve
     if sweep_plot:
@@ -2940,7 +3214,9 @@ def render_experiment(row: dict, ann: dict, table: dict[str, dict],
                       'more alpha/layer rows are logged.)</p>')
     parts.append(
         '<section class="card"><h2>Sweep curve (behavior + PPL vs alpha/layer)</h2>\n'
-        f'  {sweep_body}\n</section>\n')
+        f'  {sweep_body}\n'
+        f'  {_interpret("the sweep curve", _INTERP_EXP_SWEEP)}'
+        "</section>\n")
 
     # Samples
     parts.append(_samples_section(row))
@@ -3097,7 +3373,9 @@ def render_hypothesis(hid: str, table: dict[str, dict], rows: list[dict],
             '<section class="card"><h2>Coordinate descent</h2>\n'
             f'  <img src="hyp{hid}_coord.png" alt="composite vs layer / alpha">\n'
             '  <p class="cap">composite vs injection layer and vs alpha for this '
-            'hypothesis sweep.</p>\n</section>\n')
+            'hypothesis sweep.</p>\n'
+            f'  {_interpret("the coordinate-descent plot", _INTERP_HYP_COORD)}'
+            "</section>\n")
 
     # Hill-climb (rung-2.5) tier for this hypothesis
     hc_rows = [r for r in flat if is_hillclimb(r)]
@@ -3109,7 +3387,8 @@ def render_hypothesis(hid: str, table: dict[str, dict], rows: list[dict],
             hc_inner.append(
                 f'  <img src="hyp{hid}_hc_coord.png" alt="hill-climb coordinate descent">\n'
                 '  <p class="cap">behavior_efficacy + composite vs each swept axis '
-                '(layer / alpha / source / operation).</p>\n')
+                '(layer / alpha / source / operation).</p>\n'
+                + _interpret("the coordinate-descent plot", _INTERP_HYP_COORD))
         if plots.get(f"hyp{hid}_hc_seed.png"):
             hc_inner.append(
                 f'  <img src="hyp{hid}_hc_seed.png" alt="hill-climb seed stability">\n'
@@ -3152,7 +3431,9 @@ def render_hypothesis(hid: str, table: dict[str, dict], rows: list[dict],
             '    <thead><tr><th class="l">exp</th><th class="l">tag</th>'
             '<th class="l">model</th><th>layer</th><th>α</th><th>behavior</th>'
             '<th>PPL</th><th>CR</th><th>composite</th><th class="l">tier</th></tr></thead>\n'
-            f'    <tbody>{body_html}</tbody></table></div>\n</section>\n')
+            f'    <tbody>{body_html}</tbody></table></div>\n'
+            f'  {_interpret("the runs table", _INTERP_HYP_RUNS)}'
+            "</section>\n")
     else:
         parts.append(
             '<section class="card"><h2>Experiments for this hypothesis</h2>\n'

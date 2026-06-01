@@ -342,6 +342,61 @@ def test_master_has_methodology_tab_and_details_subsections(tmp_path):
     assert "##" not in pane, "methodology markdown must not leak heading markers"
 
 
+def test_interpret_blocks_under_tables_and_panels(tmp_path):
+    """Every table and diagram carries an expandable <details class="interpret">
+    "how to read this / what to expect" block, on the master and on a
+    per-experiment page (CLAUDE.md §11 transparency mandate)."""
+    root, master = _build(tmp_path)
+    mtext = master.read_text(encoding="utf-8")
+
+    # the reusable accordion + its CSS class are present and consistent
+    assert 'details class="interpret"' in mtext, \
+        "master must carry expandable interpretation blocks"
+    assert "How to read this &mdash;" in mtext, \
+        "each interpret block uses the consistent 'How to read this —' summary"
+    assert "details.interpret" in mtext, "interpret CSS must ship with the page"
+
+    # there must be SEVERAL of them on the master (one per table / panel)
+    n_master = mtext.count('details class="interpret"')
+    assert n_master >= 8, f"master should have many interpret blocks, got {n_master}"
+
+    # the runs table, the radar/parcoords/pareto panels, the geometry panel,
+    # the stack/compete matrix, the ladder board, the hypothesis grid and the
+    # KPI ribbon must each be annotated (match on the summary titles).
+    for title in (
+        "the runs table", "the 5-axis radar", "the parallel-coordinates panel",
+        "the Pareto panels", "the geometry panel", "the stack / compete matrix",
+        "the ladder board", "the hypothesis grid", "the KPI ribbon",
+    ):
+        assert f"How to read this &mdash; {title}" in mtext, \
+            f"master must carry an interpret block for {title!r}"
+
+    # grounded, substantive content (not a placeholder) — the cliff + the law
+    assert "peak at small steering" in mtext, "runs interpretation must be substantive"
+    assert "R²≈0.81" in mtext or "off-shell" in mtext, \
+        "geometry interpretation must cite the off-shell leading indicator"
+    # no markdown leak inside the interpretation prose
+    assert "**" not in mtext, "interpret prose must not leak bold markers"
+
+    # closed by default (no `open` attribute on interpret accordions) so they
+    # don't clutter the surface
+    assert 'details class="interpret" open' not in mtext, \
+        "interpret accordions must be collapsed by default"
+
+    # ---- a per-experiment page is annotated too (kn-strip, metrics, composite
+    # breakdown, geometry probes, sweep curve, samples) ----
+    exp = (root / "docs" / "dashboard" / "experiments" / "exp001.html").read_text(encoding="utf-8")
+    n_exp = exp.count('details class="interpret"')
+    assert n_exp >= 5, f"per-experiment page should have several interpret blocks, got {n_exp}"
+    for title in (
+        "the five-axis metrics table", "the composite breakdown",
+        "the geometry probes", "the sweep curve", "the side-by-side samples",
+    ):
+        assert f"How to read this &mdash; {title}" in exp, \
+            f"experiment page must carry an interpret block for {title!r}"
+    assert "**" not in exp, "experiment interpret prose must not leak bold markers"
+
+
 def test_master_hillclimb_placeholder_when_no_hc_rows(tmp_path):
     # the synthetic fixtures carry NO HC-* rows -> honest placeholder must show
     _root, master = _build(tmp_path)

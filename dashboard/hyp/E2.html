@@ -318,6 +318,29 @@
  details.deep[open] > summary::before{content:"\25BE";}
  details.deep > .body{padding:14px 0 6px 24px;font-size:0.95em;
     border-left:1px solid var(--rule);margin-left:5px;margin-top:6px;}
+ /* per-panel "how to read this" interpretation accordions (gold-accented,
+    closed by default; sit directly under every table / diagram) */
+ details.interpret{margin:10px 0 4px;background:var(--panel2);
+    border:1px solid var(--rule);border-left:2px solid var(--accent);}
+ details.interpret > summary{cursor:pointer;list-style:none;padding:9px 14px;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;
+    letter-spacing:0.14em;color:var(--accent);font-weight:600;user-select:none;}
+ details.interpret > summary:hover{color:var(--paper);background:rgba(187,140,77,0.07);}
+ details.interpret > summary::-webkit-details-marker{display:none;}
+ details.interpret > summary::before{content:"\25B8";margin-right:9px;
+    color:var(--accent);font-size:0.92em;}
+ details.interpret[open] > summary::before{content:"\25BE";}
+ details.interpret[open] > summary{border-bottom:1px solid var(--rule);}
+ details.interpret > .md-body{padding:10px 16px 12px 16px;font-size:0.92em;
+    line-height:1.6;color:var(--paper);
+    font-family:'Source Serif 4',Georgia,serif;}
+ details.interpret > .md-body p{margin:6px 0;}
+ details.interpret > .md-body p:first-child{margin-top:0;}
+ details.interpret > .md-body code{background:var(--ink);border:1px solid var(--rule);
+    padding:1px 4px;font-family:'IBM Plex Mono',monospace;font-size:0.9em;
+    border-radius:0;color:var(--paper);}
+ details.interpret > .md-body strong,details.interpret > .md-body b{
+    color:var(--paper);font-weight:600;}
  /* methodology pane — collapsible <details> sub-sections */
  .method-intro{background:var(--panel);border:1px solid var(--rule);
     border-left:2px solid var(--v-pass);padding:16px 22px;margin:18px 0 18px;
@@ -464,6 +487,7 @@
 <section class="card"><h2>Coordinate descent</h2>
   <img src="hypE2_coord.png" alt="composite vs layer / alpha">
   <p class="cap">composite vs injection layer and vs alpha for this hypothesis sweep.</p>
+  <details class="interpret"><summary>How to read this &mdash; the coordinate-descent plot</summary><div class="md-body"><p>The <strong>coordinate-descent panel</strong> sweeps one knob at a time around the champion — <strong>composite vs injection layer and composite vs α</strong> — so you can read the optimum on each axis independently. Read each curve&#x27;s peak as the locally-best setting for that knob. Expect a <strong>single interior peak</strong> on the α curve (too little does nothing, too much triggers the cliff) and a layer band where mid-network injection works best.</p></div></details>
 </section>
 <section class="card" id="hillclimb-hyp"><h2>Hill-climb (rung-2.5 coordinate descent)</h2>
 <div class="hc-empty">
@@ -511,8 +535,9 @@
 <tr><td class="l"><a href="../experiments/exp026.html">exp026</a></td><td class="l"><code>C1-E2-layer-L14-a2.0-add-diffmean</code></td><td class="l">gemma-3-270m</td><td>14</td><td>2.0</td><td>0.4785</td><td>253.18</td><td>0.90</td><td class="comp">-2.2878</td><td class="l"><span class="n-chip scr">SCREENING n=1</span></td></tr>
 <tr><td class="l"><a href="../experiments/exp024.html">exp024</a></td><td class="l"><code>C1-E2-layer-L10-a2.0-add-diffmean</code></td><td class="l">gemma-3-270m</td><td>10</td><td>2.0</td><td>0.4848</td><td>252.16</td><td>1.00</td><td class="comp">-2.4708</td><td class="l"><span class="n-chip scr">SCREENING n=1</span></td></tr>
 <tr><td class="l"><a href="../experiments/exp025.html">exp025</a></td><td class="l"><code>C1-E2-layer-L12-a2.0-add-diffmean</code></td><td class="l">gemma-3-270m</td><td>12</td><td>2.0</td><td>0.3192</td><td>322.31</td><td>0.90</td><td class="comp">-2.8888</td><td class="l"><span class="n-chip scr">SCREENING n=1</span></td></tr></tbody></table></div>
+  <details class="interpret"><summary>How to read this &mdash; the runs table</summary><div class="md-body"><p><strong>Every logged experiment for this hypothesis</strong>, one row each, linking to its experiment page; columns are tag, model, layer, α, behavior, PPL, CR, and composite, with a tier chip. Sorted by composite so the <strong>best configuration is on top</strong> (also called out above). Expect a coherent sweep to show composite <strong>rising to a peak at small α then falling</strong> as the cliff hits, with CR pinned at 0 throughout a safe method.</p></div></details>
 </section>
 <div class="doc-footer"><a href="https://github.com/dlmastery/steeringresearch" target="_blank" rel="noopener">Repo</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/paper/PAPER.md" target="_blank" rel="noopener">Paper</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/FINDINGS.md" target="_blank" rel="noopener">FINDINGS</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/IDEA_TABLE.md" target="_blank" rel="noopener">IDEA_TABLE</a> &middot; <a href="https://dlmastery.github.io/steeringresearch/" target="_blank" rel="noopener">GitHub Pages</a></div>
-<div class="meta">composite formula &nbsp; <code>composite = behavior_efficacy - lambda_cap  * max(0, mmlu_drop_pp) - lambda_coh  * max(0, dppl_norm) - lambda_coh_rep * max(0, repetition_rate) - lambda_safe * compliance_rate - lambda_sel  * max(0, harmless_refusal_rate) - lambda_geo  * max(0, offshell_displacement)</code><br>composite fingerprint &nbsp; <code>a9001e87087e</code> &middot; git SHA &nbsp; <code>898e080</code> &middot; generated &nbsp; <code>2026-06-01T08:23:00</code> &middot; hypothesis <code>E2</code><br>Internal QA pass &mdash; external review pending. &middot; Generated by <code>steering.dashboard</code> &middot; brutalist editorial lab notebook &middot; self-contained inline CSS, Google Fonts with offline serif/mono fallback.</div>
+<div class="meta">composite formula &nbsp; <code>composite = behavior_efficacy - lambda_cap  * max(0, mmlu_drop_pp) - lambda_coh  * max(0, dppl_norm) - lambda_coh_rep * max(0, repetition_rate) - lambda_safe * compliance_rate - lambda_sel  * max(0, harmless_refusal_rate) - lambda_geo  * max(0, offshell_displacement)</code><br>composite fingerprint &nbsp; <code>a9001e87087e</code> &middot; git SHA &nbsp; <code>d0726be</code> &middot; generated &nbsp; <code>2026-06-01T08:49:41</code> &middot; hypothesis <code>E2</code><br>Internal QA pass &mdash; external review pending. &middot; Generated by <code>steering.dashboard</code> &middot; brutalist editorial lab notebook &middot; self-contained inline CSS, Google Fonts with offline serif/mono fallback.</div>
 </body>
 </html>
