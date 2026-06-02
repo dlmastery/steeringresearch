@@ -1026,5 +1026,14 @@
     "prediction": "real - random behavior delta > 0 with CI excluding 0 at the knee; single-model EXTERNAL-READY(this-scale) iff all four legs + matched coherence + extraction stability hold; cross-scale required for the unqualified claim. fingerprint a9001e87087e.",
     "verdict": "DISCARD \u2014 composite +0.0222, behavior +0.0826, CR 0.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
     "learning": "Behavior +0.0826 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0000 | CR 0.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 0.0000"
+  },
+  "115": {
+    "_manual": true,
+    "diagnosis": "First CONTROLLED, multi-seed confirmation in the program: take E7's relative-alpha knee all the way. relative_add fixes the displacement magnitude (alpha*||h|| along a unit dir) at layer 18, so a random unit direction and a shuffled-label unit direction get the IDENTICAL push \u2014 isolating DIRECTION from MAGNITUDE, the control the program previously lacked (only alpha=0 existed).",
+    "citations": "Panickssery et al., 2024 'Contrastive Activation Addition' (arXiv:2312.06681); E7/N17 (this project) \u2014 relative displacement is the control variable and off-shell ||dh|| predicts incoherence. The matched-norm random-direction control is the standard guard against magnitude-induced effects.",
+    "hypothesis": "Mechanism: if the DiffMean direction carries the concept (not just norm), then at matched displacement and matched coherence the real direction yields higher judged behavior than a random or shuffled-label direction, across >=20 seeds \u2014 paired Wilcoxon p<0.05, bootstrap CI excluding 0, Holm across the alpha family, worst real seed > best random seed.",
+    "prediction": "real - random behavior delta > 0 with CI excluding 0 at the knee; single-model EXTERNAL-READY(this-scale) iff all four legs + matched coherence + extraction stability hold; cross-scale required for the unqualified claim. fingerprint a9001e87087e.",
+    "verdict": "DISCARD \u2014 composite -0.0194, behavior +0.0660, CR 0.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.0660 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0000 | CR 0.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 18 | Fisher 0.0000"
   }
 }
