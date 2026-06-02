@@ -78,6 +78,7 @@ TAG_RULES: list[tuple[str, list[str]]] = [
     ("E45-hypersteer", ["E45"]),           # trainable: description->vector hypernetwork
     ("E20-diffmean-3stack", ["E20"]),      # SAE-TS baseline (DiffMean 3-stack)
     ("E20-saets-3stack", ["E20"]),         # SAE-TS optimized 3-stack
+    ("E7-confirm", ["E7"]),                # controlled n>=20 cross-scale confirmation
 ]
 
 # Hypotheses whose evidence comes from a gradient-trained auxiliary component
@@ -252,6 +253,7 @@ PREFIX_CAMPAIGN: dict[str, str] = {
     "E45-hypersteer": "E45-hypersteer.json",
     "E20-diffmean-3stack": "E20-saets.json",
     "E20-saets-3stack": "E20-saets.json",
+    "E7-confirm": "E7-confirm-gemma-3-270m-it.json + E7-confirm-gemma-3-1b-it.json",
 }
 
 # Reproduce command(s) for each tag-prefix (the real invocation that produced it).
@@ -314,6 +316,10 @@ PREFIX_REPRODUCE: dict[str, str] = {
     "E20-saets-3stack": "PYTHONPATH=src python scripts/run_e20.py "
     "--model models/google/gemma-3-270m-it --quant none --layer 6 "
     "# trains a sparse autoencoder + optimizes SAE-TS vectors; Gram mass + 3-stack coherence",
+    "E7-confirm": "PYTHONPATH=src python scripts/confirm_e7.py "
+    "--model models/google/gemma-3-270m-it --quant none --layer 16 --alphas 0.05 0.1 0.15 "
+    "--knee 0.1 --seeds 20 --prompts 4    # then --model .../gemma-3-1b-it --layer 18 ; then --combine. "
+    "GEMINI_API_KEY set => off-family judge instrument; controls = matched-displacement random + shuffled-label.",
 }
 
 PREFIX_SCRIPT: dict[str, str] = {
@@ -336,6 +342,7 @@ PREFIX_SCRIPT: dict[str, str] = {
     "E45-hypersteer": "scripts/run_e45.py  (steering.hypersteer)",
     "E20-diffmean-3stack": "scripts/run_e20.py  (steering.sae)",
     "E20-saets-3stack": "scripts/run_e20.py  (steering.sae)",
+    "E7-confirm": "scripts/confirm_e7.py  (steering.controls + steering.stats + steering.judge)",
 }
 
 

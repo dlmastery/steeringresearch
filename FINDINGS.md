@@ -35,9 +35,14 @@ that a cheap geometric measurement — how far a steering operation pushes the m
 hidden state off the surface of its normal activation sphere (called "off-shell
 displacement") — predicts how incoherent the model's outputs will become.
 
-**S-1 through S-14** are the screening observations recorded in this document. Each
-is a directional finding from a single experimental run (n=1). They are interesting
-enough to document but do not meet the statistical bar required for an external claim.
+**S-1 through S-15** are the screening/confirmation observations recorded in this
+document. S-1 through S-14 are directional findings from single experimental runs
+(n=1). S-15 is different: it is the program's first controlled, multi-seed (n=20),
+off-family-judged, cross-scale result — measured the way the earlier single-seed
+screens were not. It is the strongest and most rigorous observation in the program,
+but it is still PROVISIONAL (not external-ready) for the precise reasons given in
+its entry. None of S-1 through S-15 meets the full six-part bar required for an
+external claim.
 
 **"rung-3"** refers to the third level on a five-rung evaluation ladder this project
 uses. Rung 0–2 experiments are cheap, fast, and run on small synthetic datasets.
@@ -128,14 +133,22 @@ a HARKing violation (Hypothesizing After Results are Known) and is a project BLO
 
 ## Current status
 
-**No external-ready findings yet — 83 experiments run, all at screening level (n=1).**
+**No external-ready findings yet — 117 experiments run; the strongest (E7, exp#116/117)
+is a controlled n=20 cross-scale result but remains PROVISIONAL, not external-ready.**
 
-83 experiments have run on real Gemma-3-270m, Gemma-3-1B, and Qwen-2.5-0.5B. They
-produced 14 screening observations (S-1 through S-14) spanning 18 of the 70
-hypotheses. One rung-3 evaluation attempt has been completed. None has cleared the
-full six-part statistical gate, so by the program's own rigor floor there are zero
-external-ready findings. The screening observations motivate the next required
-experiments but are NOT citable claims.
+117 experiments have run on real Gemma-3-270m, Gemma-3-1B, and Qwen-2.5-0.5B. They
+produced 15 screening/confirmation observations (S-1 through S-15) spanning 18 of
+the 70 hypotheses. Two rung-3 evaluation attempts have been completed: N17 (off-shell
+displacement predicts incoherence) and E7 (relative-steering directional control,
+exp#116/117 — the program's first result with real matched-displacement controls,
+n=20 seeds, an off-family LLM judge, and cross-scale replication). The E7 result is
+the strongest and most defensible in the program: its real concept direction beats a
+matched-displacement shuffled-label control on BOTH model scales under Holm-corrected
+statistics with bootstrap CIs excluding zero. But it falls short of the two strictest
+legs of the six-part contract (the ordinal gate on both scales; matched-coherence on
+1B), so by the program's own rigor floor there are STILL zero external-ready findings.
+E7 is now the closest the program has come. The screening observations motivate the
+next required experiments but are NOT citable claims.
 
 ---
 
@@ -149,7 +162,7 @@ All verdicts are SCREENING (single-run, n=1) unless marked [rung-3].
 | E2: Fisher layer selection | Is the most linearly separable layer the best one to inject the steering vector? | FALSIFIED | Spearman(Fisher ratio, efficacy) = +0.14, p=0.74; the most separable layer on Gemma-270m (layer 12) is not the best steering layer |
 | E3: Alpha coherence cliff | Does output quality collapse super-linearly once steering strength exceeds a threshold? | SUPPORTED | Confirmed on all three models across a wide range of steering strengths; the safe window emerges with model scale |
 | E4: DiffMean vs PCA-top1 alignment | Do the cheap and expensive vector construction methods produce the same direction? | SUPPORTED | Cosine alignment 0.994–0.999 across 3 models and 4 behaviors; the two methods are effectively equivalent |
-| E7: Norm-relative alpha | Does expressing steering strength as a fraction of activation magnitude reduce variability? | SUPPORTED | Relative steering gives a clean, norm-independent cliff; behavior peaks at ~10% displacement |
+| E7: Norm-relative alpha | Does expressing steering strength as a fraction of activation magnitude reduce variability — and does the real concept direction beat a matched-displacement control? | SUPPORTED (directional, scale-replicated; n=20 judge) but PROVISIONAL [rung-3] | Relative steering gives a clean, norm-independent cliff peaking at ~10% displacement; under an off-family judge the real direction beats a matched-displacement shuffled-label control on BOTH scales (270m +0.135 p=4e-4; 1B +0.096 p=.014, Holm-corrected, bootstrap CIs exclude 0), but fails the strict ordinal gate (both scales) and matched-coherence (1B) — see S-15 |
 | E10: Category orthogonality | Do steering vectors for distinct concepts point in different directions? | PARTIAL | Mostly orthogonal (|cosine| < 0.3) except anger and happiness share a component (cosine = +0.48) |
 | E17: Near-orthogonal stacking | Can two behavior vectors be applied simultaneously without mutual interference? | SUPPORTED | Stacking anger + happiness retains 101%/110% of solo behavior despite +0.48 cosine overlap |
 | E18: Interference vs Gram mass | Does interference between stacked vectors grow proportionally to their geometric overlap? | PARTIAL | Stacking retains 85–94% behavior, but retention is not monotone in Gram off-diagonal mass |
@@ -244,10 +257,17 @@ FALSIFIED at the across-scale level.
 
 ## Screening observations (SCREENING ONLY — not external claims)
 
-All 14 observations below come from n=1 runs on models of 270M–1B parameters
-using synthetic mini-datasets and an activation-projection behavior proxy. They
-establish directional evidence and motivate the required next experiments. None
-can be cited as a research finding.
+Observations S-1 through S-14 below come from n=1 runs on models of 270M–1B
+parameters using synthetic mini-datasets and an activation-projection behavior
+proxy. They establish directional evidence and motivate the required next
+experiments. None can be cited as a research finding.
+
+S-15 is in a different class: it is the program's first controlled confirmation —
+n=20 seeds, real matched-displacement directional controls, an off-family LLM
+judge, and cross-scale replication. It is the strongest and most rigorous
+observation in the program. It is nonetheless PROVISIONAL (not external-ready) for
+the two specific reasons stated in its entry, so it too cannot yet be cited as a
+finding. It is documented in full below, after S-14.
 
 ---
 
@@ -642,6 +662,171 @@ more vectors are stacked). The strict pre-registered prediction that
 **Model / data:** Gemma-3-270m, layer 16, 4 concepts, n=1.
 
 **SCREENING ONLY. E22 SUPPORTED; E18 PARTIAL.**
+
+---
+
+### S-15: E7 relative-steering is a real, scale-replicated DIRECTIONAL effect — but not yet EXTERNAL-READY
+
+**This is the program's first controlled, multi-seed, off-family-judged, cross-scale
+result.** Every prior observation (S-1 through S-14) used a single run (n=1) and an
+activation-projection behavior proxy — a circular measure that scores how well a
+steered output's activation aligns with the very vector used to steer it. S-15 was
+measured the way the earlier 113 single-seed screens were not: with real controls,
+n=20 seeds, an independent off-family judge, and replication across two model scales.
+It is the strongest and most rigorous observation in this program. It is still
+PROVISIONAL — not external-ready — for the two precise reasons given at the end of
+this entry.
+
+---
+
+**What hypothesis this tests:** "E7 — Norm-relative alpha." The pre-registered
+prediction is that expressing steering strength as a fraction of the activation's
+own length (rather than as a raw absolute coefficient) gives a clean, norm-independent
+steering effect. The controlled test here asks the sharper question that no proxy run
+could answer: **at a fixed displacement magnitude, does the real concept direction
+actually steer behavior better than a content-free direction of the same length?**
+
+**Every term defined inline (assume the reader cross-references nothing):**
+
+- **relative_add (the operation under test).** Ordinary additive steering adds
+  `alpha × v` to a hidden-layer activation `h`, where `v` is the steering vector and
+  `alpha` is a raw coefficient. The trouble: activation lengths `||h||` vary a lot
+  across prompts and layers, so the same `alpha` produces a wildly different actual
+  push in different contexts. `relative_add` fixes this by (1) normalizing the
+  steering vector to unit length (a pure direction), and (2) setting the push size to
+  `alpha × ||h||` along that unit direction. So `alpha = 0.1` means "push the
+  activation 10% of its own current length in the steering direction," regardless of
+  prompt or layer. Crucially, because the direction is always a unit vector, **every
+  condition compared below receives the identical displacement magnitude `alpha × ||h||`
+  — only the DIRECTION differs.** This is what makes the controls fair.
+
+- **The DiffMean concept direction (the "real" condition).** Take the average
+  hidden-layer activation over a set of positive-class examples (here, sentences about
+  the "ocean" concept), subtract the average over negative-class examples, and use that
+  difference, normalized to unit length, as the steering direction.
+
+- **The shuffled-label control (the PRIMARY directional control).** Take the exact
+  same pooled set of activations used to build the real direction, but randomly
+  re-partition them into two groups whose labels have nothing to do with "ocean," then
+  compute DiffMean on that random split. This destroys the semantic contrast while
+  keeping the data, the dimensionality, the procedure, and — via relative_add — the
+  displacement magnitude all identical. If the real direction beats this control, the
+  effect is attributable to the *meaning* in the contrast, not to the mechanics of
+  pushing the activation around. This is the matched-coherence directional control.
+
+- **The random-direction control (a SECONDARY control).** A random unit direction,
+  unrelated to any data, pushed at the same displacement magnitude. This is a weaker,
+  sanity-check control: a content-free push of equal size.
+
+- **The off-family LLM judge (the behavior instrument).** The generator is Gemma; the
+  judge is Google's Gemini (gemini-2.5-flash-lite), a DIFFERENT model family. This
+  matters because the project's own audits disclose a same-model-family circularity
+  risk: if the judge and the generator share a family, the judge may reward
+  family-typical text rather than genuine on-concept behavior. Using an off-family
+  judge breaks that circularity. The judge rates each generated text from 0 to 10 on
+  behavior (does the text express the ocean concept?) AND, separately, on coherence
+  (is the text fluent and sensible?), at temperature 0 (deterministic), and the
+  ratings are cached. **Judge validation:** real ocean prose scores behavior 8/10;
+  off-topic tax text scores 0/10; and keyword-stuffing ("ocean ocean sea sea") scores
+  only 2/10 — i.e., the judge is NOT fooled by keyword soup, unlike the old lexicon
+  proxy. Behavior is reported below as judge_behavior/10, rescaled into [0,1].
+
+- **The four rigor legs (the four-part contract applied here).** A directional win is
+  asserted only if all four hold: (1) a **paired Wilcoxon signed-rank test** on the
+  per-seed real-minus-control deltas gives p < 0.05; (2) a **bootstrap 95% confidence
+  interval** on the paired delta (≥10,000 resamples) excludes zero; (3) **Holm-Bonferroni
+  correction** across the family of alphas tested {0.05, 0.10, 0.15} still rejects the
+  null (guards against picking the one lucky alpha); and (4) the **ordinal gate** — the
+  WORST real seed must beat the BEST control seed (ensures the win is not driven by a
+  few lucky seeds at the distribution's edge). An **extraction-stability gate** is also
+  reported: the bootstrap cosine of the DiffMean direction to the full-data direction,
+  which checks the concept direction itself is stable under resampling.
+
+**Design specifics.** Behavior concept: "ocean." n=20 seeds with stochastic generation
+(temperature 0.8); each seed's behavior is the mean of the judge's scores over 4
+evaluation prompts. Two scales: gemma-3-270m-it (injection layer 16) and gemma-3-1b-it
+(injection layer 18). Run by `scripts/confirm_e7.py`, composing
+`src/steering/controls.py` (the matched-displacement controls),
+`src/steering/stats.py` (the rigor_report contract), and `src/steering/judge.py` (the
+off-family judge). The primary comparison is **real vs shuffled-label** at the knee
+alpha = 0.10.
+
+**Results at the knee (alpha = 0.10), real concept direction vs the shuffled-label control:**
+
+| Quantity | 270M (exp#116) | 1B (exp#117) |
+|---|---|---|
+| Real behavior (judge/10, in [0,1]) | 0.730 | 0.549 |
+| Shuffled-label behavior | 0.595 | 0.453 |
+| Paired delta (real − shuffled) | **+0.135** | **+0.096** |
+| Bootstrap 95% CI on the delta | **[+0.084, +0.184]** | **[+0.025, +0.163]** |
+| Paired Wilcoxon p | **0.0004** | **0.014** |
+| Holm-rejected across alpha family {0.05,0.10,0.15} | TRUE | TRUE |
+| Extraction-stability (bootstrap cosine to full-data direction) | 0.94 | 0.92 |
+| Matched-coherence at the knee? | TRUE (real 0.614 vs shuffled 0.715) | **FALSE** (real 0.345 vs shuffled 0.699) |
+| Ordinal gate (worst real seed > best shuffled seed)? | **FALSE** | **FALSE** |
+| Secondary: real vs random-direction, paired Wilcoxon p | 0.0001 | 0.0004 |
+
+On the secondary random-direction control, the random direction at the same
+displacement magnitude does not merely lose — it collapses coherence to ~0.002 with
+perplexity around 52,000 (effectively gibberish), confirming that a content-free push
+of equal size destroys the output while the real direction does not.
+
+**Cross-scale conclusion.** The real concept direction SIGNIFICANTLY beats the
+matched-displacement shuffled-label control on BOTH scales — Holm-corrected on both,
+with bootstrap confidence intervals excluding zero on both. The directional effect of
+relative-steering therefore REPLICATES across model scale. This is the program's first
+cross-scale, controlled, off-family-judged directional win.
+
+**Honest verdict — PROVISIONAL, not a null.** This is NOT external-ready, but for an
+INFORMATIVE reason, not because the effect failed. The effect is statistically robust
+and scale-replicated. It falls short of ONLY the two strictest legs of the four-part
+contract:
+1. **The ordinal gate fails on both scales** — the worst real seed does not exceed the
+   best shuffled seed.
+2. **Matched-coherence fails on 1B** — at the knee, the real direction trades away more
+   coherence (0.345) than the shuffled control (0.699).
+
+The mechanistic reason the ordinal gate fails is itself informative: **the shuffled-label
+control is unexpectedly strong.** A random split of a small, concept-dominated contrast
+set still recovers roughly 0.45–0.60 of the ocean direction — because the pooled
+activations are so dominated by the concept that even a random re-partition picks up a
+large fraction of it. As a result the per-seed distributions of the real and shuffled
+conditions overlap at their extremes, so the worst real seed and the best shuffled seed
+cross. On 1B, the real direction additionally spends more coherence than the shuffled
+control at the knee, so the matched-coherence leg fails there (alpha ≈ 0.05 is more
+coherence-matched on 1B). Neither failure indicates the effect is absent; both indicate
+the *control* and the *knee tuning* need refinement to separate the distributions cleanly.
+
+**Why this result matters — the proxy-vs-judge contrast (the measurement-validity
+lesson).** The SAME experiment, run earlier with the OLD activation-projection lexicon
+proxy, produced a noise-level result: on 270m (exp#114) the proxy gave a real-minus-shuffled
+delta of only +0.022, and on 1B (exp#115) the proxy gave shuffled BEATING real by −0.019.
+The proxy's conclusion was that the effect "does not replicate across scale." That
+conclusion was an ARTIFACT of an invalid instrument. Swapping in the validated off-family
+judge amplified the behavior signal roughly 6× and revealed that the effect DOES replicate
+across scale and DOES beat the matched control. This is concrete, within-program evidence
+for why an unvalidated proxy must never back a claim: the same data yielded opposite
+scientific conclusions under the two instruments, and only the validated instrument
+(the one not fooled by keyword soup) is trustworthy.
+
+**Next steps to push E7 toward EXTERNAL-READY:**
+1. A cleaner null control than label-shuffling on a tiny, concept-dominated set — e.g.
+   an orthogonalized direction (the real direction with its concept component removed)
+   or a genuine random-concept direction — so the control no longer leaks ~0.5 of the
+   real direction.
+2. More evaluation prompts and more seeds to tighten the per-seed distributions and
+   close the ordinal separation.
+3. Per-scale knee tuning — alpha ≈ 0.05 is more coherence-matched on 1B than the
+   0.10 knee used for the primary comparison.
+4. Add a 2B (or larger) scale to extend the cross-scale ladder.
+5. Calibrate the off-family judge against human labels.
+
+**Model / data:** gemma-3-270m-it (layer 16) and gemma-3-1b-it (layer 18), concept
+"ocean", n=20 seeds, off-family Gemini judge, exp#116/117.
+
+**PROVISIONAL — E7 SUPPORTED (directional, scale-replicated) at rung-3, NOT external-ready.**
+This is the closest the program has come to an external-ready finding; the external-ready
+count remains zero.
 
 ---
 

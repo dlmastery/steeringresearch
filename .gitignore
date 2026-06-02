@@ -45,3 +45,6 @@ Thumbs.db
 # downloaded model weights/tokenizers (re-fetch via scripts/hf_fetch.py)
 models/
 *.parquet
+
+# Gemini judge response cache (regenerable; results are in the campaign artifacts)
+autoresearch_results/judge_cache/
