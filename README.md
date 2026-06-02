@@ -30,6 +30,7 @@ and to do so with publication-grade rigor so the winners are real, not noise.
 | 🔬 **FINDINGS** (rigor-gated; S-1…S-14 + rung-3) | [FINDINGS.md](FINDINGS.md) |
 | 🧪 **Hypothesis registry** (70 hypotheses E1–E50 + N1–N20 + verdicts) | [IDEA_TABLE.md](IDEA_TABLE.md) |
 | 📐 **70 hypothesis design docs** (12-section each) | [hypotheses/](hypotheses/) |
+| 🏋️ **Is there training?** (no — steering is inference-time; what the per-hypothesis "fit" actually is) | [hypotheses/TRAINING-PROCESS.md](hypotheses/TRAINING-PROCESS.md) |
 | ✅ **Verification rubrics** (A–E) + the ICML sign-off | [audits/RUBRICS.md](audits/RUBRICS.md) · [audits/ICML_SIGNOFF_v2.md](audits/ICML_SIGNOFF_v2.md) |
 | ♻️ **Reusable meta-skill pack** (domain-agnostic autoresearch process) | [meta-skills/](meta-skills/) |
 | 🛠️ **Constitution** (rules, composite, ladder, dashboard mandate) | [CLAUDE.md](CLAUDE.md) |
@@ -66,6 +67,13 @@ The ~50 still-UNTESTED hypotheses are honest about *what new harness code they n
 (CAST gating, multi-vector orchestration, SAE features, a calibrated LLM judge,
 hypernetworks) — that missing infra is exactly why they are marked UNTESTED, not
 silently skipped.
+
+**Is anything trained?** No — activation steering is **inference-time**: the model
+weights are frozen, and each hypothesis's steering vector is *extracted* in one
+shot (a mean difference or a single SVD over cached activations), with no
+optimizer, loss, or epochs. The per-hypothesis iteration is a config **sweep**
+(layer × α × source × operation × seed), not a gradient loop. Full explanation,
+code-verified: [hypotheses/TRAINING-PROCESS.md](hypotheses/TRAINING-PROCESS.md).
 
 ## Layout
 
