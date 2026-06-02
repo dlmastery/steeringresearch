@@ -56,6 +56,72 @@ Axis 10: basis        — {dense, sae_reconstruction, causal_objective}
    been tried for all axes (cube is exhausted).
 6. Log every trial to EXPERIMENT_LEDGER.md, including rejected ones.
 
+### L3 — No selection decisions at n=1 (adaptive seed allocation)
+
+**Never make a champion-update decision on a single seed.** A single-seed
+result is pure noise: you condition on the noise, and the apparent gain
+regresses to the mean. The winner's curse is acute in steering because
+behavior scores have high seed variance.
+
+**Adaptive seed allocation within the hill-climb (successive-halving rule):**
+
+| Stage | Seeds | Action |
+|---|---|---|
+| Initial comparison | n=1 per candidate | Narrow field: keep top 50% of candidates |
+| Promoted candidates | n=3 | Retain only those that still beat the champion |
+| Finalist (potential champion) | n=7 | Confirm before updating `best_config.json` |
+
+- A trial at n=1 is EXPLORATORY. It can add to the log, but it cannot
+  replace the champion. Only a trial confirmed at n ≥ 3 may replace the
+  champion in the inner hill-climb loop.
+- A trial confirmed at n ≥ 7 with the full four-part statistical contract
+  (per [[steering-paper-rigor]]) is EVALUATION tier.
+- The hard budget of 25 trials is over EXPLORATORY trials. Promotion to
+  n=3 and n=7 is additional and is drawn from the rung's compute budget,
+  not the trial budget.
+
+**New harness support:** `src/steering/stats.py:seed_noise_band`,
+`src/steering/stats.py:paired_wilcoxon`.
+
+### L4 — Use a joint response surface when axes interact
+
+Coordinate descent is correct when the objective surface is approximately
+axis-aligned convex (each axis has a single optimum independent of the others).
+In activation steering, **layer and alpha interact non-convexly**: the
+coherence cliff location is layer-dependent, so the optimal alpha at layer L
+is not the same as the optimal alpha at layer L+2.
+
+**When to fit a joint surface:**
+
+- If coordinate descent oscillates (the same axis reverses direction on the
+  second pass), the surface is non-convex — switch to joint modeling.
+- If geometry leading indicators (off-shell displacement Δ‖h‖, effective-rank)
+  show a cliff that moves as the layer changes, the layer×alpha interaction is
+  confirmed — fit the joint surface before any champion update.
+
+**Joint-surface protocol:**
+
+1. Allocate up to 15 of the 25-trial budget to a structured grid over
+   (layer, alpha) — the two strongest interacting axes in steering.
+2. Fit a quadratic or Gaussian-process (GP) response surface to the n=1
+   composite values over this grid.
+3. Use the geometric surrogate (off-shell displacement Δ‖h‖, which is a
+   confirmed incoherence predictor) as a cheap inner-loop coherence proxy
+   — constrain the fitted surface to the sub-region where Δ‖h‖ < 0.10.
+4. Pick the predicted knee of the constrained surface analytically as the
+   starting champion before resuming coordinate descent on the remaining axes.
+
+The surrogate is cheap (one forward pass per trial for the geometry probe),
+so it does not add materially to the compute budget. Use
+`src/steering/controls.py` for the surrogate fitting utilities.
+
+**Why this matters:** a coordinate-descent sweep that first optimizes layer
+(holding alpha fixed at the default) will select a layer where the default
+alpha is in the safe region. It then optimizes alpha at that layer — and may
+find a higher composite, but it has never seen the joint landscape. The joint
+surface reveals the cliff shape and prevents you from discovering the coherence
+breakdown only after committing to a champion layer.
+
 ### Stopping conditions
 
 Stop hill-climbing when:
@@ -85,6 +151,30 @@ These are cheap and provide the off-manifold signal needed by N5, N11, N20.
 A trial that improves composite but increases delta_norm past the N5 budget
 threshold is a FALSE POSITIVE — flag it and check.
 
+### L5 — Pareto-climb, not scalar-climb
+
+The fixed-weight composite is a **tiebreak summary**, not the sole champion
+criterion. A fixed scalarization bakes arbitrary trade-off priors into every
+ranking and can be Goodharted: a method that over-optimizes one cheap axis
+(e.g., inflating behavior score at the cost of coherence) wins the composite
+if that axis's weight is under-priced.
+
+**The Pareto frontier is the primary scientific object:**
+
+- Accept a move iff it **Pareto-dominates** the current champion (no axis
+  regresses) OR **extends the frontier** at matched coherence (same coherence
+  tier, behavior improves).
+- Use the scalar composite as a tiebreak when two configs are not Pareto-
+  comparable (one is better on behavior, the other on coherence).
+- The per-hypothesis dashboard's **per-axis Pareto small-multiples** (behavior
+  vs capability, behavior vs coherence, behavior vs safety) are the canonical
+  view — never collapse to a single-axis ranking for a champion decision.
+- At each rung, the promotion gate is Pareto-dominance over the prior champion
+  on all five axes — not just a composite improvement.
+
+Log the five-axis vector for every trial so the Pareto frontier can be
+reconstructed from the EXPERIMENT_LEDGER at any point.
+
 ### The N5 norm-budget constraint
 
 If cumulative ||delta h||/||h|| exceeds the empirical activation-norm quantile
@@ -97,12 +187,18 @@ norm budget is a hard constraint, not a soft penalty.
 
 - [ ] Starting from `best_config.json` (not from memory)
 - [ ] Only one axis changes per trial
-- [ ] Strict-greater-than champion rule (no ties accepted)
+- [ ] Metric calibrated (ρ ≥ 0.70) against reference labels before first hill-climb
+      (see [[steering-eval-bundle]] §10)
+- [ ] Strict-greater-than champion rule — no champion update at n=1 (L3)
+- [ ] Adaptive seed allocation: n=1 explore → n=3 promote → n=7 confirm
+- [ ] Layer × alpha interaction checked; joint surface fitted if oscillation detected (L4)
+- [ ] Geometry surrogate (Δ‖h‖) used as inner-loop coherence constraint (L4)
+- [ ] Pareto-dominance check on ALL five axes before each champion update (L5)
 - [ ] Geometry leading indicators logged every trial
 - [ ] N5 norm-budget constraint applied
 - [ ] VERIFY.md signed before hill-climbing
 - [ ] Plateau detection: 8 consecutive non-improvements -> stop
-- [ ] Trial budget: <= 25 trials total
+- [ ] Trial budget: <= 25 exploratory trials total
 
 ---
 
@@ -114,3 +210,8 @@ norm budget is a hard constraint, not a soft penalty.
 - Participation ratio: hypothesis N3 in `../../IDEA_TABLE.md`
 - Champion config: `../../autoresearch_results/best_config.json`
 - Ledger: `../../EXPERIMENT_LEDGER.md`
+- Metric calibration + off-family judge: `../steering-eval-bundle/SKILL.md` §10–11
+- Statistical rigor floor + power requirements: `../steering-paper-rigor/SKILL.md`
+- Controls (matched-norm random, shuffled-label): `../steering-experiment/SKILL.md` §Controls
+- Harness modules: `src/steering/stats.py` (seed_noise_band, paired_wilcoxon),
+  `src/steering/controls.py` (surrogate fitting, matched_norm_random)

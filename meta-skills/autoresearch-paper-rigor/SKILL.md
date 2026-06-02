@@ -149,7 +149,88 @@ The `UNTESTED_ON_RIGHT_DATASET` tier prevents a reviewer from labelling
 a hypothesis NUMEROLOGY solely because the project happened to run on
 the wrong testbed. The incorrect labelling is a BLOCKER-level finding.
 
-## Pillar 4 — Limitations in the abstract; internal-contradiction audit
+## Pillar 4A — Single-scale results are PROVISIONAL
+
+**L7 (domain-agnostic).** A result characterized on a single model size,
+dataset, or domain scope is **PROVISIONAL** by construction. Phenomena can
+invert, attenuate, or change character across scale or distribution shift.
+
+**Requirements before upgrading from PROVISIONAL to SUPPORTED:**
+
+- At least one cross-scale or cross-distribution replication: the effect must
+  be reproduced on a setting that is meaningfully different in scale (≥ 3×
+  larger in the primary capacity dimension) or distribution scope.
+- Tag every finding with its scale/scope coverage:
+  `"tested on [setting_1]; replicated on [setting_2]; PROVISIONAL / SUPPORTED / SCALE-LIMITED"`.
+- If a cross-scale replication FAILS, tag the result as SCALE-LIMITED.
+  A SCALE-LIMITED finding is real on the tested setting, but its
+  generalization is unconfirmed.
+
+**Implication for abstract claims:** no generalization language ("this method
+works on X") is permitted for a PROVISIONAL result. The abstract must state:
+"results are preliminary and characterized on [setting only]."
+
+## Pillar 4B — Program-level multiple-comparisons control
+
+**L8 (domain-agnostic).** Per-hypothesis pre-registration alone does not
+control family-wise false positives when N hypotheses are screened and the
+good-looking ones are promoted. This is the garden-of-forking-paths problem
+at the program level.
+
+**Requirements (binding at the STANDARD rung and above):**
+
+1. **Confirmation holdout:** before any screening begins, designate a set of
+   evaluation items (examples, prompts, seeds, or dataset splits) that will
+   NEVER be used during screening or hill-climbing. Pre-register the
+   composition of this set in version control.
+
+2. **Promotion budget:** pre-commit to a maximum K hypotheses that may advance
+   to the confirmation stage. This K is the family size for Holm-Bonferroni
+   correction. Log K in the project's hypothesis registry.
+
+3. **No retroactive expansion:** after screening is complete, K is fixed.
+   Promoting hypothesis K+1 requires a documented amendment committed to
+   version control with justification (and K is updated for the correction).
+
+4. **Confirmation set integrity:** any use of confirmation-set items for
+   debugging, calibration, or pilot runs invalidates those items; they must
+   be replaced and the replacement logged.
+
+These four requirements are in addition to per-hypothesis pre-registration —
+they are complementary, not redundant.
+
+## Pillar 4C — Power for an effect size, not just a p-value
+
+**L9 (domain-agnostic).** Pre-register the **minimum delta of interest** (the
+smallest effect size that would be practically or scientifically meaningful)
+and choose the sample/seed count to provide ≥ 80% power for THAT delta.
+
+**General protocol:**
+
+1. Estimate σ from the project's own same-config repeated-measurement runs
+   (the empirically-derived noise band from the statistical-rigor floor,
+   Pillar 1). Do NOT use a rule-of-thumb σ.
+
+2. Compute the required n: for the pre-registered minimum delta, target power
+   (≥ 0.80), and the Holm-Bonferroni-corrected α'_1 for the family size K.
+
+3. Pre-register: {minimum_delta_of_interest, estimated_sigma, target_power,
+   required_n, K, alpha} in the pre-registration file BEFORE the sweep.
+
+4. After the sweep, classify the result:
+   - **SIGNIFICANT:** p ≤ α' with adequate power — a real detection.
+   - **INCONCLUSIVE:** p > α' with adequate power — failure to detect; the
+     effect, if it exists, is smaller than the pre-registered minimum delta.
+   - **UNDERPOWERED:** n was insufficient for the minimum delta — result is
+     uninterpretable regardless of p-value.
+
+   Never report an underpowered null as evidence of absence.
+
+**Reporting rule:** every external claim must state: "This experiment is
+[adequately / underpowered] for detecting the pre-registered minimum delta
+of [value] at σ=[value]."
+
+## Pillar 5 — Limitations in the abstract; internal-contradiction audit
 
 ### Limitations IN THE ABSTRACT
 

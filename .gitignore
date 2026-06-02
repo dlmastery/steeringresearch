@@ -27,6 +27,10 @@ autoresearch_results/**/*.pt
 .env
 *.token
 hf_token.txt
+.gemini_key
+*api_key*
+*apikey*
+gemini_key.txt
 
 # OS
 .DS_Store

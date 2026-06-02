@@ -220,6 +220,22 @@ Design principles:
   invalidates every prior comparison.
 - **Always report the composite to 4 dp AND every axis separately.** Never
   collapse to one number in prose without the per-axis breakdown.
+- **L1 — Validate the primary efficacy axis before optimizing it.** The
+  `primary_efficacy` term is the engine of every keep/discard decision. Before
+  the first hill-climb on a new topic or behavior, validate that the metric
+  correctly measures the real phenomenon by computing its correlation/agreement
+  with a trustworthy reference signal (human labels or an independent strong
+  judge) on a calibration set. An endogenous proxy (one whose scoring logic
+  was derived from the same source as the intervention) can score an opposite
+  intervention as a success — this invalidates the entire optimization. See
+  [`autoresearch-experiment`](../autoresearch-experiment/SKILL.md) §L6 for
+  the domain-agnostic controls protocol.
+- **L5 — The Pareto frontier is the primary scientific object.** The scalar
+  composite is a convenience tiebreak. The core accept criterion is
+  Pareto-dominance: a new config is accepted iff it is at least as good on
+  every axis and strictly better on at least one. See
+  [`autoresearch-per-hypothesis-hillclimb`](../autoresearch-per-hypothesis-hillclimb/SKILL.md)
+  §L5 for the full protocol.
 
 > *Worked example (image-classification).* `primary_efficacy` = held-out
 > accuracy; cost axes = `accuracy_drop_on_clean`, `ECE_increase`,
@@ -571,6 +587,28 @@ process is "done" for a given claim only when all of the following hold:
       addressed) before the external claim.
 - [ ] **Checkpoint (§11 wrap):** the working tree is clean; the session-resume
       document is current; nothing is at risk to a crash.
+- [ ] **Objective validity (L1):** the primary efficacy metric has been validated
+      against a trustworthy reference (correlation ≥ threshold on a calibration
+      set) before the first hill-climb. Calibration result logged.
+- [ ] **Mandatory controls (L6):** every effect-claim experiment row in the ledger
+      includes delta_vs_random_magnitude and delta_vs_inverted_signal; both > 0
+      for any kept result.
+- [ ] **Extraction stability (L10):** every extracted direction used downstream
+      has stability_p5 ≥ 0.85 (100-bootstrap cosine stability); logged in ledger.
+- [ ] **Adaptive seeds (L3):** no champion update was made at n=1; confirmation
+      follows the n=1 → n=3 → n=7 escalation.
+- [ ] **Interaction surface (L4):** if coordinate descent oscillated, a joint
+      surface was fitted and the champion derived from it.
+- [ ] **Pareto-dominance gate (L5):** each champion update was verified to
+      Pareto-dominate the prior champion on all cost axes, not just composite.
+- [ ] **Scale tagging (L7):** every finding is tagged PROVISIONAL / SUPPORTED /
+      SCALE-LIMITED with the model/setting coverage stated.
+- [ ] **Confirmation holdout + promotion budget (L8):** confirmation set
+      composition and K pre-registered in version control before screening;
+      integrity maintained (no use during screening or hill-climb).
+- [ ] **Power adequacy (L9):** minimum delta of interest pre-registered; n chosen
+      to provide ≥ 80% power for that delta; result classified as SIGNIFICANT /
+      INCONCLUSIVE / UNDERPOWERED.
 
 A claim that cannot tick every relevant box is `INTERNAL` only and ships with the
 "independent external review pending" qualifier.
@@ -596,6 +634,15 @@ A claim that cannot tick every relevant box is `INTERNAL` only and ships with th
 | Self-graded ACCEPT banner | Carry the "independent external review pending" disclosure |
 | Run the FULL benchmark to find a plumbing bug | Catch it at UNIT/SMOKE; climb the ladder |
 | Skip the negative control | A method that wins on shuffled labels is measuring an artifact |
+| Hill-climb before validating the objective metric | Validate the primary metric against a reference first (ρ ≥ threshold); see L1 in [`autoresearch-experiment`](../autoresearch-experiment/SKILL.md) |
+| Champion update at n=1 | No champion decision without ≥ n=3 confirmation; see L3 in [`autoresearch-per-hypothesis-hillclimb`](../autoresearch-per-hypothesis-hillclimb/SKILL.md) |
+| Coordinate descent when axes interact | Detect interaction → fit joint surface → resume CD; see L4 |
+| Scalar-only ranking for Pareto-multiobjective problems | Use Pareto dominance as the primary accept criterion; composite is a tiebreak only; see L5 |
+| Claim directional effect without random + inverted controls | Both controls mandatory; delta over null is not sufficient; see L6 in [`autoresearch-experiment`](../autoresearch-experiment/SKILL.md) |
+| External claim from single-scale results | Tag PROVISIONAL until cross-scale replication; see L7 in [`autoresearch-paper-rigor`](../autoresearch-paper-rigor/SKILL.md) |
+| No program-level confirmation holdout | Pre-designate and never-touch confirmation set + promotion budget K; see L8 |
+| n=7 assumed adequate for all effect sizes | Pre-register minimum delta; compute required n; see L9 |
+| Use an extracted direction without checking stability | Bootstrap-cosine stability_p5 ≥ 0.85 gate; see L10 in [`autoresearch-experiment`](../autoresearch-experiment/SKILL.md) |
 
 ---
 

@@ -60,6 +60,68 @@ fields:
    - If a finding graduates to FINDINGS.md, confirm the preamble glossary
      still defines every identifier used in the new finding.
 
+## L6 — Mandatory controls in every effect-claim experiment
+
+Every experiment that claims a directional or causal effect must beat at
+least **two controls** beyond the do-nothing (null-intervention) baseline:
+
+**Control A — Matched-magnitude random-direction baseline:**
+Apply an intervention of the same magnitude as the experimental intervention,
+but in a random direction (drawn fresh for each experiment). Report the
+benefit delta over this control, not over the null baseline. A real
+directional effect must exceed a random perturbation of the same magnitude.
+
+*Why it matters:* any sufficiently large perturbation can change output
+statistics in ways that inflate metrics measured by pattern-matching or
+correlation proxies. If the random-direction control scores nearly as high
+as the intended direction, the effect is not directional — it is a
+magnitude artifact.
+
+**Control B — Semantically-inverted / shuffled-label baseline:**
+Apply the intervention using the OPPOSITE or semantically-inverted version
+of the intervention signal (e.g., flipped labels, reversed contrast,
+permuted condition). The benefit score on this inverted control must be
+significantly lower than on the true intervention. If not, the metric is
+not detecting a real directional effect.
+
+*Why it matters:* this is the generalization of the shuffle test to within-
+experiment controls. A metric that rewards both a direction and its near-
+opposite is measuring something other than the intended effect.
+
+**Reporting rule:** every experiment row in the project's ledger must include:
+- `delta_vs_random_magnitude`: benefit − benefit of matched-magnitude random
+- `delta_vs_inverted_signal`: benefit − benefit of inverted/shuffled signal
+
+A claimed effect requires BOTH deltas to be positive. An experiment where
+`delta_vs_random_magnitude ≤ 0` is DISCARD regardless of raw benefit.
+
+## L10 — Extraction stability gate (before any direction-based downstream use)
+
+When an experiment uses a direction or basis extracted from a limited sample
+(contrast pairs, principal components, few-shot examples), that extracted
+direction may be unstable: a different random draw of the same sample size
+can yield a substantially different direction, making all downstream results
+noise.
+
+**Bootstrap-stability gate (domain-agnostic):**
+
+1. Bootstrap the extraction sample K ≥ 100 times (sample with replacement).
+2. For each bootstrap, re-extract the direction.
+3. Compute pairwise cosines between each bootstrap direction and the original.
+   Report `stability_p5` — the 5th-percentile cosine (the stability floor).
+4. **Gate:** if `stability_p5 < 0.85`, the direction is UNSTABLE. Do NOT
+   use it downstream until stability clears (more data or a more robust
+   estimator).
+
+Log `stability_p5` and sample size in the experiment ledger row for any
+experiment that depends on an extracted direction.
+
+**Near-tautological estimator caveat:** when two estimators are computed on
+a very small sample and agree closely, this is often a tautology (the sample
+is too small to discriminate the estimators), not a quality indicator. Tag
+such rows as `NEAR_TAUTOLOGICAL` and do not cite their agreement as evidence
+of correctness.
+
 ## Hard rules
 
 - **No `--bypass` flag.** If a gate refuses, fix the failing field.
@@ -67,6 +129,12 @@ fields:
   the project's comparability guarantee.
 - **One config change per experiment.** Do not compound changes.
 - **The experiment log is append-only.** Never rewrite a committed row.
+- **Two mandatory controls for every effect-claim experiment** (L6):
+  matched-magnitude random + inverted/shuffled signal. An experiment
+  without these controls cannot claim a directional effect.
+- **Extraction stability gate** (L10): any experiment depending on an
+  extracted direction must report stability_p5 ≥ 0.85. Do not proceed
+  downstream with an unstable direction.
 
 ## How to execute (typical commands)
 
@@ -127,6 +195,13 @@ python scripts/build_report.py
 - Running two simultaneous config changes and attributing the combined
   delta to one of them.
 - Writing the prediction field after seeing the result.
+- Claiming a directional effect without both mandatory controls (L6).
+  "Beats null baseline" is not sufficient — beats random-direction AND
+  beats inverted-signal.
+- Using an extracted direction without checking stability_p5 (L10).
+  An unstable direction makes the experiment's results uninterpretable.
+- Citing high agreement between two estimators on a tiny sample as
+  quality evidence (near-tautology caveat, L10).
 
 ## Cross-references
 

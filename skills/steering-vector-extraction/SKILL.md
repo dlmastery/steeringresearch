@@ -279,19 +279,80 @@ collateral post-processing step from hypothesis N15.
 
 ---
 
+## 10. L10 — Extraction stability gate (mandatory before downstream use)
+
+A steering vector extracted from a small contrast set is subject to high
+sampling variance: a different random draw of the same N pairs can yield a
+substantially different direction. Downstream experiments built on an unstable
+vector produce noisy, non-reproducible results — the entire hill-climb becomes
+arbitrary.
+
+### Bootstrap-cosine stability protocol
+
+Run this BEFORE any vector enters a sweep or is cached for reuse:
+
+```python
+# src/steering/controls.py:extraction_stability
+import numpy as np
+
+def extraction_stability(pairs_pos, pairs_neg, n_bootstrap=100, estimator='diffmean'):
+    """
+    Returns: {
+        'bootstrap_cosine_mean': float,
+        'bootstrap_cosine_p5':   float,   # 5th-percentile = stability floor
+        'n_pairs': int
+    }
+    """
+    original_vec = extract(pairs_pos, pairs_neg, estimator)
+    cosines = []
+    rng = np.random.default_rng(0)
+    for _ in range(n_bootstrap):
+        idx = rng.integers(0, len(pairs_pos), size=len(pairs_pos))
+        boot_vec = extract(pairs_pos[idx], pairs_neg[idx], estimator)
+        cosines.append(np.dot(original_vec, boot_vec))
+    return {
+        'bootstrap_cosine_mean': float(np.mean(cosines)),
+        'bootstrap_cosine_p5':   float(np.percentile(cosines, 5)),
+        'n_pairs': len(pairs_pos)
+    }
+```
+
+**Gate:** if `bootstrap_cosine_p5 < 0.85` the direction is UNSTABLE. Do
+NOT use the vector downstream until the gate clears. To clear it: increase
+N_pairs (add more contrast pairs) and re-run stability. The gate is a
+prerequisite to caching — only stable vectors enter
+`cache/activations/`.
+
+Log `bootstrap_cosine_mean`, `bootstrap_cosine_p5`, and `n_pairs` in
+every EXPERIMENT_LEDGER.md row that involves a new or modified vector.
+
+### Near-tautological estimator caveat
+
+When DiffMean and PCA-top1 are computed on a tiny contrast set (N < 20)
+and their cosine is ≈ 0.99, this is almost always a **near-tautology**: the
+sample is too small to discriminate between estimators, not evidence that
+either is well-estimated. Tag such rows `NEAR_TAUTOLOGICAL` in the ledger
+and do not cite the high cosine agreement as quality evidence.
+
+**New harness support:** `src/steering/controls.py:extraction_stability`.
+
+---
+
 ## Hard rules
 
 1. NEVER use the extraction pairs as the eval set. Disjoint splits are
    enforced by `audit_or_die()` in `src/steering/extract.py`.
 2. ALWAYS run E4 (cosine agreement) before using any vector in a sweep.
    If cosine < 0.80, STOP and fix the pairs.
-3. ALWAYS cache activations once; do not recompute inside a sweep loop.
-4. Pin contrast-pair indices with a fixed seed before any experiment. Record
+3. ALWAYS run the extraction stability gate (§10) before caching any vector.
+   If bootstrap_cosine_p5 < 0.85, do NOT cache — increase N_pairs first.
+4. ALWAYS cache activations once; do not recompute inside a sweep loop.
+5. Pin contrast-pair indices with a fixed seed before any experiment. Record
    the seed in `metadata.json`.
-5. ALWAYS pre-register the predicted knee (E1) and the predicted optimal
+6. ALWAYS pre-register the predicted knee (E1) and the predicted optimal
    layer range (E2) BEFORE running the experiments.
-6. Use unit-normed vectors throughout; the alpha parameter controls magnitude.
-7. The default estimator is DiffMean (lower variance); PCA-top1 is a
+7. Use unit-normed vectors throughout; the alpha parameter controls magnitude.
+8. The default estimator is DiffMean (lower variance); PCA-top1 is a
    diagnostic and an alternative only when pre-registered.
 
 ---
@@ -302,6 +363,8 @@ collateral post-processing step from hypothesis N15.
 |---|---|---|
 | Same pairs for extraction and eval | Behavior score is inflated; the vector memorized the eval prompts | Strict train/eval split enforced at extraction time |
 | Skipping E4 | Using a noisy vector; poor SMOKE results that look like a method failure | Always run cosine agreement diagnostic first |
+| Skipping stability gate (§10) | Unstable vector makes all downstream experiments noise | Run bootstrap-cosine stability; cache only stable vectors |
+| Small N with cos(DiffMean, PCA)~0.99 cited as quality evidence | Near-tautology: too small to discriminate estimators | Tag NEAR_TAUTOLOGICAL; increase N before any external quality claim |
 | Recomputing activations in each sweep trial | 10× slowdown; risk of non-reproducibility | Cache once with pinned prompts |
 | Sweeping alpha without a fixed injection layer | Two-axis confound; can't attribute gain | Fix layer (from E2) before sweeping alpha |
 | Treating PCA-top1 as "more accurate" than DiffMean | PCA-top1 can pick up confounding axes | Use cosine agreement to choose; DiffMean is default |
@@ -313,7 +376,7 @@ collateral post-processing step from hypothesis N15.
 
 - Applying the extracted vector to a live model:
   `../../skills/steering-intervention-lib/SKILL.md`
-- Evaluating the extracted vector's behavioral effect:
+- Evaluating the extracted vector's behavioral effect (incl. metric calibration):
   `../../skills/steering-eval-bundle/SKILL.md`
 - Guard-layer C (avoid fragile layers, relevant to E2 layer selection):
   `../../skills/steering-rogue-scalpel-guard/SKILL.md`
@@ -321,4 +384,7 @@ collateral post-processing step from hypothesis N15.
   `corpus/steering-missed-dimensions-and-highdim-algebra.md`
 - Meta-process data-split audit discipline:
   `../../meta-skills/autoresearch-meta/SKILL.md`
-- Source modules: `src/steering/extract.py`, `src/steering/hooks.py`
+- Experiment controls (matched-norm random, shuffled-label):
+  `../../skills/steering-experiment/SKILL.md` §L6
+- Source modules: `src/steering/extract.py`, `src/steering/hooks.py`,
+  `src/steering/controls.py` (extraction_stability)

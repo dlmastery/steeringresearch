@@ -329,6 +329,94 @@ producing gibberish.
 
 ---
 
+## 10. Objective-validation gate (validate before optimizing)
+
+**L1 — Validate the primary metric before any hill-climb or selection.**
+
+The behavior-change efficacy score is the primary axis of the composite and the
+engine of every keep/discard decision. If that score is systematically wrong —
+because the lexicon, projection direction, or judge prompt is endogenous to the
+intervention — you can hill-climb indefinitely toward a metric that does not
+measure the real phenomenon.
+
+**Documented failure mode (activated in this project):** a cosine −0.88 vector
+(near-opposite to the target direction) was scored efficacy ratio 1.07 by a
+lexical proxy whose keyword list was derived from the same contrast pairs used
+to extract the vector. The lexicon was endogenous: it rewarded any output that
+used the target-concept vocabulary, regardless of direction.
+
+### Calibration protocol (mandatory before first sweep on any new behavior)
+
+1. Sample a **calibration set** of 50–100 steered and unsteered outputs that
+   spans the full efficacy range (including clearly wrong steers and clearly
+   correct ones).
+2. Collect a **trustworthy reference label** for each output: either a human
+   annotation or a judgment from a strong model that is (a) from a different
+   model family than the system under test, and (b) given the output only
+   (blind to the steering config).
+3. Compute **correlation / agreement** between the primary metric and the
+   reference labels. Report Pearson r and/or rank correlation (Spearman ρ).
+   - Acceptable floor: ρ ≥ 0.70 on the calibration set.
+   - Below floor: the metric is NOT a valid optimization objective; stop and
+     fix the metric before any sweep.
+4. Log the calibration result in
+   `autoresearch_results/metric_calibration.json` alongside the judge id,
+   calibration set size, and correlation values.
+5. Re-calibrate whenever: (a) a new behavior type is added, (b) the judge
+   model changes, or (c) the contrast pair distribution changes materially.
+
+**Endogeneity red flag:** if the scoring lexicon, projection direction, or
+judge prompt was derived from the same dataset used to extract the steering
+vector, flag it as ENDOGENOUS and treat the calibration step as mandatory
+(not optional) before any promotion decision. Use `src/steering/controls.py`
+and `src/steering/judge.py:calibration_agreement` to run this check.
+
+**Why this matters:** a metric whose validity is unproven can score a
+near-opposite vector as a success. Every selection decision conditioned on
+that metric is noise. Fix the metric first; only then hill-climb.
+
+---
+
+## 11. Off-family judge mandate
+
+**L2 — Use a judge from a DIFFERENT model family than the system under test.**
+
+Same-family judging (e.g., using a Gemma judge to evaluate Gemma outputs)
+creates a circularity: the judge may share the same biases, blindspots, and
+behavioral tendencies as the model being steered. This is the model-level
+analogue of the same-team audit circularity disclosure in the meta-process.
+
+### Requirements
+
+- **Confirmation rungs (Rung 2+):** the behavior judge MUST be from a different
+  model family than the Gemma model under test. The current supported off-family
+  judge is the Gemini API judge in `src/steering/judge.py`. Log the judge model
+  id in every reasoning entry.
+- **Rung-0 and Rung-1 (SMOKE):** an off-family judge is OPTIONAL (to keep
+  cheap rungs offline/hermetic). Rule-based or keyword-based judging is
+  acceptable at SMOKE, BUT the SMOKE judge must be validated against the
+  off-family judge on a calibration set before any KEEP decision propagates
+  to Rung-2.
+- **Cache all judgments** (deterministic at temperature 0). The cache key is
+  `hash(output_text + judge_model_id + judge_prompt)`. Never re-query for a
+  cached (output, judge) pair. Cache path: `cache/judge/<judge_id>/<run_tag>/`.
+- **Log raw verdicts.** Every judgment entry must record: judge model id,
+  the exact prompt sent, the raw response text, and the parsed
+  SAFE/UNSAFE/SCORE verdict. Use `src/steering/judge.py` for all
+  judgment calls; do not implement ad hoc judge calls outside this module.
+- **Audit trail.** The off-family judge id and calibration agreement (ρ value
+  from §10 above) must appear in the per-experiment dashboard page.
+
+**Disclosure on internal evaluations:** when the off-family judge is not
+available (offline runs, cost budget), document this as a limitation in the
+reasoning entry and tag the result as `INTERNAL_JUDGE` — it cannot carry an
+EXTERNAL-READY verdict until re-evaluated with the off-family judge.
+
+**New harness support:** `src/steering/judge.py` (Gemini off-family judge +
+`calibration_agreement`).
+
+---
+
 ## Hard rules
 
 1. ALWAYS log all five axes + all four geometry probes for EVERY experiment,
@@ -343,6 +431,11 @@ producing gibberish.
 6. A degenerate row (gibberish output) MUST lose the composite despite
    having low CR on the safety axis. Verify this property before any sweep.
 7. Report composite to 4 dp AND per-axis breakdown in every reasoning entry.
+8. VALIDATE the primary efficacy metric against a trustworthy reference
+   (correlation ρ ≥ 0.70) on a calibration set BEFORE the first hill-climb
+   on any behavior. Log in `autoresearch_results/metric_calibration.json`.
+9. The behavior judge at Rung 2+ MUST be off-family (not Gemma).
+   Cache judgments; log raw verdicts and judge model id.
 
 ---
 
@@ -357,6 +450,10 @@ producing gibberish.
 | Using an uncalibrated judge | CR estimates are systematically wrong | Run calibration before any eval campaign |
 | Logging geometry probes only at Rung-4 | No early warning of off-manifold drift | Log all probes at every rung |
 | Changing the composite weights to crown a row | Invalidates all prior comparisons | Formula is fingerprinted; change is a BLOCKER |
+| Hill-climbing before metric calibration | Optimizing a metric that doesn't measure the real phenomenon | Validate metric against reference labels (ρ ≥ 0.70) first |
+| Using an endogenous scoring lexicon | Opposite-direction vectors score as "successes" | Derive scoring lexicon from an independent source; flag ENDOGENOUS |
+| Using a same-family judge at Rung 2+ | Circular: judge shares biases with tested model | Use off-family judge (Gemini); cache verdicts; log judge id |
+| Judging without caching | Requery costs and non-determinism across runs | Cache by hash(output + judge_id + prompt); reuse across runs |
 
 ---
 
@@ -364,7 +461,7 @@ producing gibberish.
 
 - Applying the intervention being evaluated:
   `../../skills/steering-intervention-lib/SKILL.md`
-- Extracting the vectors under test:
+- Extracting the vectors under test (incl. extraction stability gate):
   `../../skills/steering-vector-extraction/SKILL.md`
 - Safety guard experiments (guard layers A–E, validation V1–V5):
   `../../skills/steering-rogue-scalpel-guard/SKILL.md`
@@ -372,5 +469,8 @@ producing gibberish.
   `../../skills/steering-tiered-ladder/SKILL.md`
 - Composite formula and statistical rigor floor:
   `../../meta-skills/autoresearch-meta/SKILL.md` §4 and §5
-- Source module: `src/steering/eval.py`
+- Matched-norm random control and shuffled-label control (mandatory baselines):
+  `../../skills/steering-experiment/SKILL.md` §Controls
+- Source modules: `src/steering/eval.py`, `src/steering/judge.py`,
+  `src/steering/controls.py`
 - Dashboard rendering: `src/steering/dashboard.py`
