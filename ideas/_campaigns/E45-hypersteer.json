@@ -1,0 +1,45 @@
+{
+  "hyp": "E45",
+  "model": "models/google/gemma-3-270m-it",
+  "layer": 9,
+  "behaviors": [
+    "ocean",
+    "happiness",
+    "anger",
+    "formality"
+  ],
+  "mean_holdout_cosine": -0.02015054839510025,
+  "mean_efficacy_ratio": 1.3080425060093839,
+  "folds": [
+    {
+      "held_out": "ocean",
+      "cosine": -0.1015,
+      "eff_supervised": 0.9319,
+      "eff_predicted": 0.9775,
+      "efficacy_ratio": 1.0489
+    },
+    {
+      "held_out": "happiness",
+      "cosine": 0.852,
+      "eff_supervised": 0.5875,
+      "eff_predicted": 0.7181,
+      "efficacy_ratio": 1.2223
+    },
+    {
+      "held_out": "anger",
+      "cosine": 0.0489,
+      "eff_supervised": 0.5164,
+      "eff_predicted": 0.9785,
+      "efficacy_ratio": 1.8947
+    },
+    {
+      "held_out": "formality",
+      "cosine": -0.88,
+      "eff_supervised": 0.573,
+      "eff_predicted": 0.611,
+      "efficacy_ratio": 1.0662
+    }
+  ],
+  "verdict": "INCONCLUSIVE",
+  "exp_num": 111
+}

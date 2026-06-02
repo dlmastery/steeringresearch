@@ -9,7 +9,12 @@
 >
 > **Block:** F — Robustness, safety, and evaluation (E41-E50).
 > **Primary axis:** A7 (HOW DERIVED — source of vector).
-> **Implementation status:** `o planned / UNTESTED`.
+> **Implementation status:** `SCREENED (n=1) — INCONCLUSIVE`; infrastructure
+> implemented + offline unit-tested (`src/steering/hypersteer.py` MLP +
+> `scripts/run_e45.py`). At the 4-behavior smoke scale the description->vector
+> mapping does not reliably generalize (leave-one-behavior-out mean held-out
+> cosine ~= 0 with huge variance); the non-causal projection-efficacy proxy
+> cannot validate the claim — needs more behaviors + a real-generation/LLM-judge.
 
 ---
 
@@ -241,6 +246,27 @@ different model?**
   AxBench + CAA), all-MiniLM embeddings, hypernetwork training loop
   (small MLP), real behavior evaluation infrastructure.
 
+- 2026-06-01 — SCREENED (n=1) on real Gemma-3-270m-it. **Verdict: INCONCLUSIVE.**
+  Built `src/steering/hypersteer.py` (an MLP hypernetwork trained by Adam/MSE,
+  description->vector) driven by `scripts/run_e45.py` (exp#111, tag
+  `E45-hypersteer-loo`) in a 4-behavior leave-one-behavior-out protocol.
+  **Mean held-out cosine(predicted, supervised) = -0.0202 with std 0.6147** —
+  i.e. ~0 mean direction agreement with enormous fold-to-fold variance (folds:
+  ocean -0.10, happiness +0.85, anger +0.05, formality -0.88). The mean
+  projection efficacy ratio is 1.308 BUT this is a **non-causal proxy and must
+  NOT be read as success**: the formality fold has cosine -0.88 (predicted
+  vector nearly OPPOSITE the supervised one) yet still scores efficacy ratio
+  1.07 — direct evidence that the projection-efficacy proxy cannot validate the
+  hypernetwork, exactly why §10 / the design mandates real-generation /
+  LLM-judge efficacy rather than a projection proxy. At n=4 the description->
+  vector mapping does not reliably generalize (mean cosine ~0, huge variance),
+  so neither the 70% (§2) nor the 50%-all-folds (§3) criteria can be evaluated.
+  The mechanism DOES generalize on a larger synthetic set in the offline unit
+  test (held-out cosine 0.93 vs shuffled-control -0.01), so the implementation
+  is sound; the result is INCONCLUSIVE purely at this 4-behavior smoke scale.
+  Next step (does not alter the pre-registered hypothesis/falsifier): more
+  behaviors + a real LLM-judge efficacy harness before any verdict.
+
 ---
 
 ## Addendum: Research-Scientist Critique
@@ -285,4 +311,11 @@ to determine whether this shortcut is viable.
 
 ## Provenance & Tracing
 
-No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E45.md`.
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E45.md`](../PROVENANCE/E45.md).
+
+- **Experiments:** exp# 111 (`autoresearch_results/experiment_log.jsonl`).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/run_e45.py --model models/google/gemma-3-270m-it --quant none # leave-one-behavior-out hypernetwork (Adam/MSE) description->vector cosine + efficacy
+```

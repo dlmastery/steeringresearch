@@ -981,5 +981,41 @@
     "prediction": "Cell 16/0.2/relative_add: finite composite (fingerprint a9001e87087e), n=1 SCREENING; off-shell \u0394\u2016h\u2016 rises with |alpha|; PPL rises super-linearly past the per-layer cliff. Pre-registered measurement, not an external claim.",
     "verdict": "DISCARD \u2014 composite -4.4167, behavior +0.5333, CR 1.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
     "learning": "Behavior +0.5333 | MMLU drop 0.1000 | \u0394PPL_norm 5.6761 | rep 0.0145 | CR 1.0000 | harmless_refusal 0.0000 | offshell 0.0189 | layer 16 | Fisher 47.5197"
+  },
+  "110": {
+    "_manual": true,
+    "diagnosis": "E15 was UNTESTED for lack of a gate trainer. The new steering.gate module (a gradient-trained multi-layer logistic gate + a pure-numpy PR/ROC-AUC + the fixed CosineGate baseline) now lets us screen whether a learned multi-layer gate beats a single-layer fixed cosine threshold under distribution shift, using feature layers [4, 8, 11, 14]. In-dist = direct harmful requests (jailbreak_mini); OOD = indirect/roleplay/fiction-framed requests (ood_harmful_mini), a genuine surface-form shift.",
+    "citations": "Wu et al., 2024 'Conditional Activation Steering' (arXiv:2409.05907) \u2014 the CAST fixed-threshold gate, not evaluated under shift; Tang et al., 2025 'FineSteer/SCS' (arXiv:2604.15488) \u2014 energy-ratio gate; Korznikov et al., 2026 ICML 'The Rogue Scalpel' (arXiv:2509.22067, F4: poor cross-prompt generalization) \u2014 motivates the OOD test; Arditi et al., 2024 (arXiv:2406.11717) \u2014 refusal direction shifts OOD.",
+    "hypothesis": "Mechanism: because the logistic gate combines dot products from multiple layers, it can exploit complementary harm signals (shallow syntax-level, deep semantic) that a single-layer cosine dot product misses, making the decision boundary more invariant to OOD surface form. We predict the learned gate's OOD PR-AUC exceeds the best fixed cosine threshold's by >= 0.06 (the falsifier).",
+    "prediction": "OOD AUC gap (logistic - best cosine) in [-0.05, +0.30]; SUPPORTED iff >= 0.06. In-dist AUC is resubstitution at this tiny scale. n=1 SCREENING, fingerprint a9001e87087e.",
+    "verdict": "DISCARD \u2014 composite -0.1679, behavior +0.5498, CR 0.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.5498 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0000 | CR 0.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 4 | Fisher 0.0000"
+  },
+  "111": {
+    "_manual": true,
+    "diagnosis": "E45 was UNTESTED for lack of a hypernetwork trainer. The new steering.hypersteer module (an MLP trained by Adam on MSE regression from description embeddings to DiffMean vectors) now lets us screen whether a behavior's steering vector is predictable from its text description alone, at injection layer 9. Leave-one-behavior-out over the 4 available concepts; the unit test already proved generalization on a larger synthetic set.",
+    "citations": "Hernandez et al., 2025 'HyperSteer: Concept-based Activation Steering via Hypernetworks' (arXiv:2506.03292) \u2014 the primary method; Zou et al., 2023 'Representation Engineering' (arXiv:2310.01405) \u2014 DiffMean target; Zhong et al., 2025 'AxBench' (arXiv:2501.17148) \u2014 held-out concept evaluation methodology.",
+    "hypothesis": "Mechanism: because the description-embedding space and the steering-vector space are both low-dimensional and smoothly related, a small hypernetwork can learn the mapping and generalize to a held-out behavior it never saw a contrast set for. We predict held-out cosine > 0 and an efficacy ratio approaching the >= 0.70 supervised-efficacy threshold; this is the description-only (zero-contrast-set) workflow per HyperSteer.",
+    "prediction": "Mean held-out cosine in [0.2, 0.9]; mean efficacy ratio in [0.3, 0.9]; SUPPORTED iff ratio >= 0.70. 4-behavior LOO is smoke-scale, n=1 SCREENING, fingerprint a9001e87087e.",
+    "verdict": "DISCARD \u2014 composite -0.0202, behavior +1.3080, CR 0.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +1.3080 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0000 | CR 0.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 9 | Fisher 0.0000"
+  },
+  "112": {
+    "_manual": true,
+    "diagnosis": "E20 was UNTESTED for lack of SAE infrastructure. With the new steering.sae module (a self-contained sparse autoencoder + the SAE-TS gradient-ascent vector optimizer) we can now screen the core claim: do SAE-TS vectors, optimized to activate target features while suppressing side-effect features, form a more orthogonal 3-stack than raw DiffMean vectors, at injection layer 6? This is the first run that optimizes the steering vector itself rather than extracting it closed-form.",
+    "citations": "Templeton et al., 2024 arXiv 'Targeted Steering via SAE Side-Effect Analysis' (arXiv:2411.02193, SAE-TS) \u2014 side-effect minimization in SAE feature space; Chen et al., 2025 arXiv 'FGAA' (arXiv:2501.09929); N5 (this project): lower joint norm \u2192 lower logPPL, the mechanistic path from orthogonality to coherence.",
+    "hypothesis": "Mechanism: because SAE-TS minimizes activation of non-target features, two SAE-TS vectors for different behaviors share fewer feature directions than two DiffMean vectors, so |cos| and the Gram off-diagonal mass drop; per N5 the lower joint norm of a more-orthogonal stack yields lower perplexity (better coherence). We predict gram_mass(SAE-TS) < gram_mass(DiffMean) and a non-negative coherence gap.",
+    "prediction": "Gram mass reduction > 0 (SAE-TS more orthogonal); coherence gap in [-0.05, +0.20]; SUPPORTED only if gram reduction AND coherence gap >= 0.10. n=1 SCREENING, fingerprint a9001e87087e.",
+    "verdict": "DISCARD \u2014 composite -0.0014, behavior +0.9986, CR 0.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.9986 | MMLU drop 0.0000 | \u0394PPL_norm 0.0014 | rep 0.0000 | CR 0.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 6 | Fisher 0.0000"
+  },
+  "113": {
+    "_manual": true,
+    "diagnosis": "E20 was UNTESTED for lack of SAE infrastructure. With the new steering.sae module (a self-contained sparse autoencoder + the SAE-TS gradient-ascent vector optimizer) we can now screen the core claim: do SAE-TS vectors, optimized to activate target features while suppressing side-effect features, form a more orthogonal 3-stack than raw DiffMean vectors, at injection layer 6? This is the first run that optimizes the steering vector itself rather than extracting it closed-form.",
+    "citations": "Templeton et al., 2024 arXiv 'Targeted Steering via SAE Side-Effect Analysis' (arXiv:2411.02193, SAE-TS) \u2014 side-effect minimization in SAE feature space; Chen et al., 2025 arXiv 'FGAA' (arXiv:2501.09929); N5 (this project): lower joint norm \u2192 lower logPPL, the mechanistic path from orthogonality to coherence.",
+    "hypothesis": "Mechanism: because SAE-TS minimizes activation of non-target features, two SAE-TS vectors for different behaviors share fewer feature directions than two DiffMean vectors, so |cos| and the Gram off-diagonal mass drop; per N5 the lower joint norm of a more-orthogonal stack yields lower perplexity (better coherence). We predict gram_mass(SAE-TS) < gram_mass(DiffMean) and a non-negative coherence gap.",
+    "prediction": "Gram mass reduction > 0 (SAE-TS more orthogonal); coherence gap in [-0.05, +0.20]; SUPPORTED only if gram reduction AND coherence gap >= 0.10. n=1 SCREENING, fingerprint a9001e87087e.",
+    "verdict": "DISCARD \u2014 composite +0.0000, behavior +1.0000, CR 0.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +1.0000 | MMLU drop 0.0000 | \u0394PPL_norm -0.0085 | rep 0.0000 | CR 0.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 6 | Fisher 0.0000"
   }
 }

@@ -1,0 +1,22 @@
+{
+  "hyp": "E15",
+  "model": "models/google/gemma-3-270m-it",
+  "feature_layers": [
+    4,
+    8,
+    11,
+    14
+  ],
+  "results": {
+    "metric": "pr_auc",
+    "best_cosine_column": 3.0,
+    "auc_indist_cosine": 1.0,
+    "auc_indist_logistic": 1.0,
+    "auc_ood_cosine": 0.7176691364191363,
+    "auc_ood_logistic": 0.5497794237925817,
+    "auc_gap_ood": -0.1678897126265546,
+    "falsifier_gap": 0.06,
+    "verdict": "FALSIFIED_OOD"
+  },
+  "exp_num": 110
+}

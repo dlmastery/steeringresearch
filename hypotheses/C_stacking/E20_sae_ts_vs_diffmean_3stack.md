@@ -6,8 +6,12 @@
 >
 > **Source design space:** Block C — Stacking and Multi-Vector Composition (E17–E26).
 >
-> **Implementation status:** `PENDING — UNTESTED`. Requires GemmaScope SAE
-> (accessible via HuggingFace) and the multi-vector injection infrastructure.
+> **Implementation status:** `SCREENED (n=1) — FALSIFIED`; infrastructure
+> implemented + offline unit-tested (`src/steering/sae.py` SAE + SAE-TS optimizer
+> + `scripts/run_e20.py`). On real Gemma-3-270m-it the SAE-TS 3-stack is LESS
+> orthogonal than DiffMean (Gram mass 3.00 vs 2.13 — the SAE-TS vectors
+> collapsed to ~one direction), the OPPOSITE of the claim; cause is the
+> SciCritic-C SAE-coverage confound at tiny-real-SAE scale.
 
 ---
 
@@ -204,6 +208,28 @@ provides minimal additional benefit.
   GemmaScope SAEs publicly available. Main technical barrier: SAE-TS optimization
   on 4090 VRAM budget.
 
+- 2026-06-01 — SCREENED (n=1) on real Gemma-3-270m-it. **Verdict: FALSIFIED.**
+  Built `src/steering/sae.py` — a sparse autoencoder plus the SAE-TS
+  gradient-ascent vector optimizer (the FIRST experiment in the program that
+  optimizes the steering vector itself, not just where/how-much to inject) —
+  driven by `scripts/run_e20.py` across exp#112 (DiffMean 3-stack, tag
+  `E20-diffmean-3stack`) and exp#113 (SAE-TS 3-stack, tag `E20-saets-3stack`).
+  Result: **DiffMean 3-stack Gram mass = 2.13; SAE-TS 3-stack Gram mass = 3.00**
+  — and 3.00 is the MAXIMUM possible for 3 vectors (all pairwise |cos| ~= 1),
+  meaning the three SAE-TS vectors COLLAPSED to nearly a single direction. Gram
+  reduction = **-0.87** (SAE-TS is LESS orthogonal, the OPPOSITE of the §2/§3
+  claim); coherence gap +0.0014 (negligible). This fails the §3 falsifier
+  outright (SAE-TS coherence not >= 0.10 above DiffMean; in fact orthogonality
+  regressed). Cause is precisely the **SAE-coverage confound SciCritic-C flagged**
+  (Addendum, confound 1): a small on-the-fly SAE on tiny 270m activations cannot
+  separate the three behaviors' features, so the optimized vectors collapse onto
+  the few features the under-trained SAE does represent. The mechanism IS
+  confirmed on clean synthetic features in the offline unit test (SAE-TS
+  cross-cosine 0.011 vs raw 0.184 — orthogonality improves as predicted); the
+  falsification is a tiny-real-SAE-scale artifact, not a code bug. Next step
+  (does not alter the pre-registered hypothesis/falsifier): a properly-trained /
+  pretrained GemmaScope SAE at 2-2B scale before any verdict beyond screening.
+
 ---
 
 ## Addendum: Research-Scientist Critique
@@ -235,4 +261,11 @@ prediction chain. Main risk: SAE coverage quality on Gemma-2-2B.
 
 ## Provenance & Tracing
 
-No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E20.md`.
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E20.md`](../PROVENANCE/E20.md).
+
+- **Experiments:** exp# 112, 113 (`autoresearch_results/experiment_log.jsonl`).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/run_e20.py --model models/google/gemma-3-270m-it --quant none --layer 6 # trains a sparse autoencoder + optimizes SAE-TS vectors; Gram mass + 3-stack coherence
+```

@@ -5,8 +5,11 @@
 >
 > **Source design space:** Block B — Conditional / Gated Steering (E9–E16).
 >
-> **Implementation status:** `PENDING — UNTESTED`. Requires E9 CAST pipeline
-> plus logistic-gate training infrastructure and an OOD evaluation set.
+> **Implementation status:** `SCREENED (n=1) — FALSIFIED_OOD`; infrastructure
+> implemented + offline unit-tested (`src/steering/gate.py` + `scripts/run_e15.py`).
+> Learned multi-layer logistic gate overfits the tiny in-dist set and generalizes
+> WORSE than the fixed cosine threshold under distribution shift (OOD AUC gap
+> -0.17, far below the +0.06 falsifier).
 
 ---
 
@@ -201,6 +204,26 @@ genuinely be OOD — not just a restyled version of the training prompts.
   (a) E9 CAST pipeline (blocked); (b) OOD evaluation set construction;
   (c) logistic gate training script (trivial once activations are extracted).
 
+- 2026-06-01 — SCREENED (n=1) on real Gemma-3-270m-it. **Verdict: FALSIFIED_OOD.**
+  Built `src/steering/gate.py` (the multi-layer logistic gate + the fixed cosine-
+  threshold baseline) driven by `scripts/run_e15.py` (exp#110, tag
+  `E15-learned-gate`). Result on the tiny 10-harmful / 8-benign contrast set:
+  **in-distribution PR-AUC** is 1.000 for BOTH gates (cosine 1.000, logistic
+  1.000 — perfect resubstitution, a textbook overfitting signature on so few
+  points). **OOD PR-AUC**: cosine 0.7177 vs logistic 0.5498, so the OOD AUC gap
+  (logistic − best cosine) = **-0.1679** — NEGATIVE and far below the
+  pre-registered +0.06 falsifier threshold (§3). Interpretation: the multi-layer
+  logistic gate OVERFITS the tiny in-dist set and generalizes WORSE than the
+  simple fixed cosine threshold under distribution shift — exactly the §3
+  overfitting failure mode ("in-distribution AUC high but OOD AUC low"). The
+  mechanism itself is sound on clean data: the offline unit test shows the
+  multi-layer logistic gate at AUC 0.998 vs single-layer cosine 0.70 when no
+  single feature separates the classes. The falsification here is driven by the
+  tiny 270m-scale training data, NOT a code bug — the implementation is
+  offline-unit-tested and the in-dist numbers confirm it learns the boundary.
+  Next step (does not change the pre-registered hypothesis): re-screen with a
+  larger, genuinely-OOD training set before any verdict beyond screening.
+
 ---
 
 ## Addendum: Research-Scientist Critique
@@ -231,4 +254,11 @@ specific and defensible.
 
 ## Provenance & Tracing
 
-No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E15.md`.
+Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E15.md`](../PROVENANCE/E15.md).
+
+- **Experiments:** exp# 110 (`autoresearch_results/experiment_log.jsonl`).
+- **Reproduce:**
+
+```bash
+PYTHONPATH=src python scripts/run_e15.py --model models/google/gemma-3-270m-it --quant none # trains the multi-layer logistic gate + fixed cosine baseline, in-dist + OOD PR-AUC
+```

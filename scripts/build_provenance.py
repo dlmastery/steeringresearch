@@ -74,7 +74,16 @@ TAG_RULES: list[tuple[str, list[str]]] = [
     ("C10-rel1b", ["E7"]),
     ("C11-xbeh", ["E3", "E4"]),            # cross-behavior cliff (E3) + dm/pca cos (E4)
     ("HC-E7", ["E7"]),
+    ("E15-learned-gate", ["E15"]),         # trainable: learned multi-layer logistic gate
+    ("E45-hypersteer", ["E45"]),           # trainable: description->vector hypernetwork
+    ("E20-diffmean-3stack", ["E20"]),      # SAE-TS baseline (DiffMean 3-stack)
+    ("E20-saets-3stack", ["E20"]),         # SAE-TS optimized 3-stack
 ]
+
+# Hypotheses whose evidence comes from a gradient-trained auxiliary component
+# (gate / hypernetwork / SAE+optimized vector). Their provenance banner must NOT
+# claim "no weights are trained".
+TRAINABLE_METHODS = {"E15", "E45", "E20"}
 
 # Hypotheses whose evidence is an ANALYSIS campaign (JSON only, no experiment_log
 # rows) or a standalone rung-3 script.  Each entry carries the campaign artifact,
@@ -239,6 +248,10 @@ PREFIX_CAMPAIGN: dict[str, str] = {
     "C10-rel1b": "C10-rel1b.json",
     "C11-xbeh": "C11-xbeh.json",
     "HC-E7": "HC-E7.json",
+    "E15-learned-gate": "E15-learned-gate.json",
+    "E45-hypersteer": "E45-hypersteer.json",
+    "E20-diffmean-3stack": "E20-saets.json",
+    "E20-saets-3stack": "E20-saets.json",
 }
 
 # Reproduce command(s) for each tag-prefix (the real invocation that produced it).
@@ -289,6 +302,18 @@ PREFIX_REPRODUCE: dict[str, str] = {
     "--model models/google/gemma-3-270m-it --quant none --hyp E7 --behavior ocean "
     "--base-op relative_add --base-layer 16 --base-source diffmean --base-alpha 0.1 "
     "--alphas 0.05 0.1 0.15 0.2 --layers 12 14 --sources diffmean pca --ops relative_add add",
+    "E15-learned-gate": "PYTHONPATH=src python scripts/run_e15.py "
+    "--model models/google/gemma-3-270m-it --quant none "
+    "# trains the multi-layer logistic gate + fixed cosine baseline, in-dist + OOD PR-AUC",
+    "E45-hypersteer": "PYTHONPATH=src python scripts/run_e45.py "
+    "--model models/google/gemma-3-270m-it --quant none "
+    "# leave-one-behavior-out hypernetwork (Adam/MSE) description->vector cosine + efficacy",
+    "E20-diffmean-3stack": "PYTHONPATH=src python scripts/run_e20.py "
+    "--model models/google/gemma-3-270m-it --quant none --layer 6 "
+    "# trains a sparse autoencoder + optimizes SAE-TS vectors; Gram mass + 3-stack coherence",
+    "E20-saets-3stack": "PYTHONPATH=src python scripts/run_e20.py "
+    "--model models/google/gemma-3-270m-it --quant none --layer 6 "
+    "# trains a sparse autoencoder + optimizes SAE-TS vectors; Gram mass + 3-stack coherence",
 }
 
 PREFIX_SCRIPT: dict[str, str] = {
@@ -307,6 +332,10 @@ PREFIX_SCRIPT: dict[str, str] = {
     "C10-rel1b": "scripts/campaign_sweep.py",
     "C11-xbeh": "scripts/campaign_sweep.py",
     "HC-E7": "scripts/run_hillclimb.py",
+    "E15-learned-gate": "scripts/run_e15.py  (steering.gate)",
+    "E45-hypersteer": "scripts/run_e45.py  (steering.hypersteer)",
+    "E20-diffmean-3stack": "scripts/run_e20.py  (steering.sae)",
+    "E20-saets-3stack": "scripts/run_e20.py  (steering.sae)",
 }
 
 
@@ -510,11 +539,20 @@ def build_experiment_backed(hid: str, info: dict, rows: list[dict], ann: dict) -
               "`experiment_log.jsonl` + `reasoning_annotations.json` + "
               "`ideas/_campaigns/`. Do not hand-edit; re-run the generator._")
     md.append("")
-    md.append("> **No weights are trained.** The runs below are *inference-time* "
-              "steering: the model is frozen and the steering vector is extracted "
-              "in one shot (mean difference or one SVD). That is why the rows are "
-              "configs (layer/α/op/source), not training checkpoints. See "
-              "[`../TRAINING-PROCESS.md`](../TRAINING-PROCESS.md).")
+    if hid in TRAINABLE_METHODS:
+        md.append("> **This hypothesis trains a small auxiliary component** (a "
+                  "logistic gate / an MLP hypernetwork / a sparse autoencoder + an "
+                  "optimized steering vector) — the base model stays frozen. These "
+                  "are the project's only gradient-trained experiments; the rows "
+                  "below carry method-specific metrics (gate AUC / held-out cosine / "
+                  "Gram mass) in their `method_extra`, not the standard 5-axis "
+                  "composite. See [`../TRAINING-PROCESS.md`](../TRAINING-PROCESS.md) §4.")
+    else:
+        md.append("> **No weights are trained.** The runs below are *inference-time* "
+                  "steering: the model is frozen and the steering vector is extracted "
+                  "in one shot (mean difference or one SVD). That is why the rows are "
+                  "configs (layer/α/op/source), not training checkpoints. See "
+                  "[`../TRAINING-PROCESS.md`](../TRAINING-PROCESS.md).")
     md.append("")
     md.append("## 1. The exact experiments")
     md.append("")

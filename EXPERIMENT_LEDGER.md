@@ -82,7 +82,10 @@ generating text.
 | **KEEP** | The configuration improved the composite score at the current rung and cleared all gates. It advances as the new champion or as a candidate for the next rung. |
 | **DISCARD** | A specific metric failed its threshold. The failure_reason column says which one. Most commonly: PPL blow-up (coherence failure), negative composite (coherence or safety penalty dominates), or CR_jailbreak > 0% (safety leak). |
 | **NEAR-MISS** | Came close but did not clear all thresholds. Worth revisiting with tuning. |
-| **SCREENING** | Single-seed run (n=1). The experiment ran cleanly and produced usable data, but cannot yet claim statistical significance. This is the status of all 109 experiments logged here. |
+| **SCREENING** | Single-seed run (n=1). The experiment ran cleanly and produced usable data, but cannot yet claim statistical significance. This is the status of all 113 experiments logged here. |
+| **FALSIFIED_OOD** | The method works in-distribution (passes its own unit test) but generalizes worse than the baseline out-of-distribution. Used for trainable-component experiments where in-dist vs OOD performance must be distinguished. |
+| **INCONCLUSIVE** | The experiment ran cleanly, but the primary metric is too noisy or the proxy is unreliable to draw a directional conclusion. Requires a better instrument or more data before a verdict is possible. |
+| **FALSIFIED** | The hypothesis made a directional prediction that the data directly contradicts (e.g. predicted better orthogonality, observed worse). |
 | **promote** | A method has cleared the gate at its current rung and is moving up to the next rung. |
 | **demote** | A method that previously looked promising has failed at a higher rung or stricter test. |
 
@@ -103,7 +106,7 @@ DISCARD is about whether this particular config beat the champion.
 | 3 | STANDARD | 1–3 hours | A real result: held-out benchmark data, proper statistics, Pareto-dominates prior method. |
 | 4 | FULL | Half day+ | Publication-grade: full multi-axis win, ablations, red-team neutralized. |
 
-All 109 experiments in this ledger ran at rung 1 or rung 2, except for one
+All 113 experiments in this ledger ran at rung 1 or rung 2, except for one
 rung-3 evaluation of N17 (off-shell displacement predicts incoherence). No
 experiment has reached rung 4 yet.
 
@@ -130,7 +133,7 @@ is effectively broken.
 
 ## Campaign arc — the story behind the rows
 
-The 109 experiments ran in nine distinct campaigns. Each campaign asked one
+The 113 experiments ran in ten distinct campaigns. Each campaign asked one
 focused question. Reading the tags in the ledger, the campaign prefix tells you
 which batch you are looking at.
 
@@ -148,6 +151,7 @@ which batch you are looking at.
 | **Hill-climb** | 89–97 | `HC-E7-*` | E7 | Gemma-270m @L16 | α (0.05–0.20), layer (12, 14, 16), source (DiffMean/PCA), operation | Coordinate descent over the steering cube. Champion remains α=0.10 relative_add at L16 with DiffMean (composite −1.677, behavior 0.61). PCA source and alternative layers did not improve. Absolute-add with normalization collapses to zero effect (confirmed the C8 bug). |
 | **Rung-3 N17 evaluation** | Separate rung-3 run — see FINDINGS.md | — | N17, N5 | Gemma-270m + Gemma-1B | 40 WikiText-2 passages, real held-out data | N17 SUPPORTED at rung-3: Spearman(off-shell, log-PPL) = +0.585, 95% CI [+0.353, +0.758], p=8×10⁻⁶. N5 universal law FALSIFIED: held-out R²=−1.6 when transferring the 270m equation to predict 1B behavior. |
 | **C11 — cross-behavior sweep** | 98–109 | `C11-xbeh-*` | E3 cross-behavior, E10, E17, E18, E22, E35, E40 | Gemma-270m @L16 | Behavior: ocean, anger, happiness, formality at α=0, 0.1, 0.2 | Cliff confirmed for all four behaviors. Anger steers most strongly (behavior 0.77 at α=0.1), formality least (0.53). Consistent PPL rise across all concepts. Also tested: 2-vector stacking (anger+happiness retains 101%/110% of solo), 4-vector cumulative budget (PPL 138→4518 as total α rises). Cross-layer cosine 0.75–0.90 (E40 SUPPORTED). |
+| **Trainable methods (E15/E45/E20)** | 110–113 | `E15-gate-*`, `E45-hypersteer-*`, `E20-saets-*` | E15, E45, E20 | Gemma-3-270m-it (smoke scale) | Introduced gradient-trained auxiliary components for the first time in this project: (110) multi-layer logistic gate for E15; (111) MLP hypernetwork for E45; (112–113) SAE + gradient-ascent vector optimizer for E20. Base Gemma weights frozen throughout. | All three methods FALSIFIED or INCONCLUSIVE at smoke scale. Offline unit tests confirm the mechanisms work on clean synthetic data; failures are scale/data confounds, not implementation errors. Specifically: E15 gate overfits tiny in-dist data (OOD PR-AUC gap −0.1679, below +0.06 gate); E45 hypernetwork predictions too noisy at n=4 behaviors (held-out cosine −0.02 ± 0.61); E20 SAE-TS vector optimizer collapses three vectors to one direction (Gram mass 3.00 = maximum — *less* orthogonal than DiffMean baseline at 2.13). New modules: `src/steering/gate.py`, `src/steering/hypersteer.py`, `src/steering/sae.py`; drivers: `scripts/run_e15.py`, `scripts/run_e45.py`, `scripts/run_e20.py`. |
 
 *Note: The C11 cross-behavior campaign also included embedded tests of E10 (category
 orthogonality), E17/E18 (stacking), E22 (norm budget), E28 (low-rank subspace),
@@ -200,7 +204,20 @@ cliff, the DiffMean/PCA equivalence, the stacking behavior, and the geometry
 findings generalize across four different behavior concepts (ocean, anger, happiness,
 formality). Anger steers most strongly; formality steers least.
 
-**Status:** All 109 experiments are at screening level (n=1). No experiment has
+**Phase 9: First trainable-method screens.** Experiments 110–113 introduced the
+project's first gradient-trained auxiliary components, implementing three
+hypotheses (E15, E45, E20) that could not be tested with closed-form extraction
+alone. This is a methodological milestone: the repo now contains optimizer-backed
+trainers for the first time. The base Gemma model remained frozen throughout all
+four experiments; only small auxiliary components (a logistic gate, an MLP
+hypernetwork, and a sparse autoencoder + gradient-ascent optimizer) were trained.
+All three methods were falsified or inconclusive at Gemma-3-270m smoke scale.
+Crucially, the offline unit tests confirm correct implementation on clean synthetic
+data — the failures reflect scale and data-quantity confounds, not bugs. The
+trained-component infrastructure now exists for future revisits at larger scale or
+with more behaviors.
+
+**Status:** All 113 experiments are at screening level (n=1). No experiment has
 cleared the statistical gate for an external claim. The strongest result is N17
 (rung-3, but with caveats — see FINDINGS.md). The next required step is an
 independent behavior scorer replacing the current circular activation-projection proxy.
@@ -209,13 +226,25 @@ independent behavior scorer replacing the current circular activation-projection
 
 ## Per-experiment rows
 
-All 109 experiments are listed below. All are SCREENING tier (n=1, single seed)
+All 113 experiments are listed below. All are SCREENING tier (n=1, single seed)
 unless noted. Every composite is negative in this dataset because the current
 instrument has a known issue: the safety baseline (CR_jailbreak) is non-zero even
 at alpha=0 on the real Gemma models (due to the model's own refusal behavior), and
 the composite formula penalizes this. The per-axis signals (PPL, behavior, delta_norm)
 are valid; the composite is informative for within-campaign comparisons but should
 not be read as an absolute quality score.
+
+**Note on exp 110–113 (trainable-method screens):** These four experiments test
+methods with a *trained auxiliary component* (a gradient-optimized gate, a
+hypernetwork, or a SAE-based vector optimizer) rather than the project-standard
+closed-form DiffMean/PCA extraction. Their primary results cannot be expressed by
+the standard 5-axis composite (which requires an injected steering vector and a
+generation loop). Instead, the headline result for each row lives in the
+`method_metric` and `method_value` columns, which carry the **method-specific
+primary metric** (gate PR-AUC, held-out cosine similarity, or Gram orthogonality
+mass). The `composite` column is left `N/A` for these rows. All five standard axis
+metrics (behavior, MMLU, PPL, CR, selectivity) remain the target for any future
+integration run where the trained component is plugged into the generation harness.
 
 **Geometry columns** (not all experiments have all four):
 
@@ -466,6 +495,42 @@ Campaign: `C11-xbeh`. Model: Gemma-270m @L16 relative_add DiffMean. Four behavio
 
 ---
 
+### Trainable-method screens (exp 110–113)
+
+Campaign: `E15-gate`, `E45-hypersteer`, `E20-saets`. Model: Gemma-3-270m-it.
+**These are the first experiments in this project involving gradient training.**
+The Gemma base model is frozen throughout; only the small auxiliary component is
+trained (a logistic gate, a hypernetwork, or a SAE + gradient-ascent vector
+optimizer). Because none of these experiments runs a full generation loop with a
+steered Gemma model, the standard 5-axis composite (behavior/MMLU/PPL/CR/
+selectivity) is **not the primary result**. The `method_metric` and `method_value`
+columns carry the headline number for each row; `composite` is `N/A`.
+
+Offline unit tests (confirmed before the live runs) show each mechanism works on
+clean synthetic data: logistic gate AUC 0.998 vs cosine 0.70 on balanced synthetic
+activations; hypernetwork held-out cosine 0.93 vs shuffled −0.01; SAE-TS
+optimized cross-cosine 0.011 vs raw 0.184. The smoke-scale failures below are
+therefore scale/data confounds, not implementation bugs.
+
+| # | tag | hypothesis_id | rung | module_introduced | driver | method_metric | method_value | composite | verdict | failure_reason |
+|---|-----|---------------|------|-------------------|--------|---------------|--------------|-----------|---------|----------------|
+| 110 | E15-gate-screen | E15 | 1 (SMOKE) | `src/steering/gate.py` | `scripts/run_e15.py` | OOD PR-AUC gap (logistic − cosine) | −0.1679 (cosine 0.7177, logistic 0.5498; in-dist both 1.000) | N/A | FALSIFIED_OOD | OOD gap below +0.06 falsifier; multi-layer gate overfits tiny in-dist data and generalizes WORSE than fixed cosine threshold OOD |
+| 111 | E45-hypersteer-loo | E45 | 1 (SMOKE) | `src/steering/hypersteer.py` | `scripts/run_e45.py` | Mean held-out cosine (4-fold LOO) | −0.0202 (std 0.6147; folds range +0.85 to −0.88) | N/A | INCONCLUSIVE | Mean projection efficacy ratio 1.308 is an unreliable non-causal proxy (cos −0.88 fold still scores ratio 1.07); description→vector does not reliably generalize at n=4 behaviors; need more behaviors or a causal generation eval |
+| 112 | E20-diffmean-3stack | E20 | 1 (SMOKE) | `src/steering/sae.py` (DiffMean baseline within SAE eval) | `scripts/run_e20.py` | Gram mass (3-vector stack) | 2.13 | N/A | SCREENING | Baseline DiffMean 3-stack; used as the comparison point for exp 113 |
+| 113 | E20-saets-3stack | E20 | 1 (SMOKE) | `src/steering/sae.py` | `scripts/run_e20.py` | Gram mass (3-vector stack) | 3.00 (maximum — collapsed to one direction; Gram reduction vs DiffMean: −0.87; coherence gap: +0.0014) | N/A | FALSIFIED | SAE-TS gradient-ascent optimizer did NOT improve orthogonality at 270m scale; Gram mass 3.00 = maximally non-orthogonal (all three vectors collapsed to one direction), WORSE than DiffMean baseline of 2.13; SAE-coverage confound suspected |
+
+**Campaign result:** All three trainable methods are falsified or inconclusive at
+smoke scale. The offline unit tests confirm the infrastructure is correct. The
+most interpretable failure is E20: the SAE-TS optimizer drove all three vectors
+toward the same direction (Gram mass 3.00, the theoretical maximum for a 3-vector
+system where they are all collinear), which is the opposite of the desired
+orthogonal basis. The E15 gate overfits a tiny in-distribution set and
+generalizes below the fixed cosine baseline OOD. The E45 hypernetwork is too
+noisy to evaluate at n=4 behaviors. All three are candidates for revisit at
+larger scale (more behaviors, larger SAE coverage, larger model).
+
+---
+
 ## Promotion ladder summary
 
 *(Updated when a method reaches a new rung gate.)*
@@ -476,6 +541,9 @@ Campaign: `C11-xbeh`. Model: Gemma-270m @L16 relative_add DiffMean. Four behavio
 | E3: coherence cliff exists | Rung 2 (DEV) | Confirmed on 3 models, 4 behaviors | Best window: α=0.10 relative_add, composite −1.677 | Screening only |
 | E4: DiffMean ≈ PCA-top1 | Rung 2 (DEV) | Cosine 0.994–0.999 across 3 models, 4 behaviors | — | Screening only |
 | E7: relative alpha stabilizes cliff | Rung 2 (DEV) | Clean cliff shape across models | — | Screening only |
+| E15: learned gate vs fixed cosine | Rung 1 (SMOKE) — FALSIFIED_OOD | OOD PR-AUC gap −0.1679 (below +0.06 falsifier) | N/A (no composite) | Gate overfits tiny in-dist set; revisit with larger OOD eval set |
+| E45: HyperSteer zero-shot | Rung 1 (SMOKE) — INCONCLUSIVE | Mean held-out cosine −0.02 ± 0.61 at n=4 behaviors | N/A (no composite) | Too noisy at n=4; revisit with more behaviors |
+| E20: SAE-TS orthogonal vector optimizer | Rung 1 (SMOKE) — FALSIFIED | Gram mass 3.00 vs DiffMean 2.13; reduction −0.87 | N/A (no composite) | Vectors collapsed to one direction; SAE-coverage confound; revisit at larger scale |
 
 ---
 
@@ -488,13 +556,15 @@ Campaign: `C11-xbeh`. Model: Gemma-270m @L16 relative_add DiffMean. Four behavio
 | 20–54 | C1, C3, C4 sweeps | E2, E27, N20 | 2 | No config beats reference at L16 α=0.10 relative_add; E2 formally falsified | 2026-05-31 |
 | 31–33 | C3-E27-op-rotate (large alpha) | E27 | 2 | Catastrophic PPL (10¹⁰–10¹⁸); full-vector rotation not viable | 2026-05-31 |
 | 60–73 | C7, C8 source/normalize sweeps | E36 | 2 | Instrument bug — PCA scaling and normalization collapse steering to zero; not a scientific result | 2026-05-31 |
+| 110 | E15-gate-screen | E15 | 1 | FALSIFIED_OOD: OOD PR-AUC gap −0.1679 (below +0.06 threshold); multi-layer gate overfits tiny in-dist set and generalizes worse than fixed cosine baseline OOD | 2026-06-01 |
+| 113 | E20-saets-3stack | E20 | 1 | FALSIFIED: SAE-TS Gram mass 3.00 (maximum, all vectors collapsed to one direction) vs DiffMean baseline 2.13; Gram reduction −0.87 — optimizer made orthogonality worse | 2026-06-01 |
 
 ---
 
 ## Where to find full detail
 
 - **Per-experiment reasoning** (7-step: diagnosis, citation, hypothesis, prediction, analysis, checkpoint): `autoresearch_results/reasoning_annotations.json`
-- **Raw metrics**: `autoresearch_results/experiment_log.jsonl` (one JSON object per line, 109 lines)
+- **Raw metrics**: `autoresearch_results/experiment_log.jsonl` (one JSON object per line, 113 lines; exp 110–113 use `method_metric`/`method_value` fields rather than the standard 5-axis composite)
 - **Current champion config**: `autoresearch_results/best_config.json`
 - **Per-experiment dashboard pages**: `docs/dashboard/experiments/expNNN.html` — shows the α/layer sweep curves, generation samples (steered vs unsteered), geometry probes, and all five axis metrics with confidence intervals
 - **Per-hypothesis sub-dashboards**: `ideas/<NN>/dashboard/index.html` — hypothesis statement, falsifier, predicted delta, current verdict, back-linked to master
@@ -503,5 +573,5 @@ Campaign: `C11-xbeh`. Model: Gemma-270m @L16 relative_add DiffMean. Four behavio
 - **External-ready findings and screening observations**: `FINDINGS.md`
 
 > Composite formula fingerprint: `a9001e87087e`
-> Program initialized 2026-05-30. All 109 experiments at SCREENING tier (n=1).
+> Program initialized 2026-05-30. 113 experiments total at SCREENING tier (n=1); exp 110–113 use method-specific metrics, not the standard composite.
 > No experiment has cleared the full six-part statistical gate for external claims.

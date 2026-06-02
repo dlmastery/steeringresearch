@@ -1,0 +1,22 @@
+{
+  "hyp": "E20",
+  "model": "models/google/gemma-3-270m-it",
+  "layer": 6,
+  "behaviors": [
+    "ocean",
+    "happiness",
+    "anger"
+  ],
+  "n_features": 128,
+  "gram_mass_diffmean": 2.126609855746575,
+  "gram_mass_saets": 2.9999999400000052,
+  "gram_reduction": -0.8733900842534301,
+  "ppl_base": 90.21020134772114,
+  "ppl_diffmean_stack": 90.33848526407805,
+  "ppl_saets_stack": 89.44749052506062,
+  "coherence_diffmean": 0.9985799638330475,
+  "coherence_saets": 1.0,
+  "coherence_gap": 0.0014200361669525208,
+  "verdict": "FALSIFIED",
+  "exp_num": 113
+}
