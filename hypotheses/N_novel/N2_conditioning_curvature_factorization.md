@@ -261,6 +261,50 @@ first; promote to full protocol only if the minimum finds agreement > 80% jointl
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N2 claims every gate is one operator `g(h)·v`: a scalar field `g(h)` (where-to-act) times a fixed direction `v` (what-to-do). **UNTESTED** — needs a learned-gate fitting harness.
+
+### 1. Steering-vector recipe (factorized gate × direction)
+
+The direction `v` is ordinary DiffMean; the novelty is the learned scalar `g(h)`:
+
+```python
+c = diffmean_vector(harmful, harmless, L)               # condition vector (extract.diffmean_vector)
+b = diffmean_vector(refuse, comply, L)                  # behavior direction
+
+# candidate gates, all functions of h:
+g_CAST = sigmoid((cos(h, c) - theta) / tau)
+g_SCS  = sigmoid((E_c(h)/E_total(h) - 0.5) / tau)
+g_disc = 1.0 if L == argmax_L fisher_ratio(L) else 0.0  # extract.fisher_ratio
+
+# learned unifier g*(h): logistic / 2-layer MLP on [h_L, cos(h,c), E_c/E_total, layer-embed]
+delta = g_star(h) * b                                   # the factorized edit; inject via add (METHODOLOGY §2)
+```
+
+### 2. Experiment procedure
+
+```text
+1. Build c, b at L16; train g*(h) on 100 harmful + 100 harmless (80/20 split), BCE on should_steer labels.
+2. On held-out test: compute agreement(g*, g_CAST), agreement(g*, g_SCS), agreement(g*, g_disc).
+3. Measure gate PR-AUC (harmful vs harmless), XSTest over-refusal, JailbreakBench true-positive rate.
+4. Repeat over 3 train/test splits x 3 extraction seeds; report agreement matrix + PR-AUC.
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metric:** gate PR-AUC of `g*` and its agreement with each named gate.
+- **Pre-registered falsifier (§3):** recovery accuracy ≤ 85% for any of CAST/SCS/disc, OR PR-AUC(g*) ≤ max(PR-AUC_CAST, PR-AUC_SCS) ⇒ unification FALSIFIED (methods are genuinely distinct).
+- **Verdict logic:** KEEP only if one `g*` simultaneously hits 85/80/75% agreement on held-out prompts.
+
+### 4. Where the code is / status
+
+UNTESTED. The five-axis bundle (`eval.evaluate_bundle`) and safety/over-refusal probes exist, but the **learned scalar-field gate `g*(h)` training loop** and the SCS energy-ratio feature are not implemented — that missing harness is why N2 is UNTESTED.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N2.md`.

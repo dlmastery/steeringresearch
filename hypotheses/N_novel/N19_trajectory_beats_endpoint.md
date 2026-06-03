@@ -262,6 +262,45 @@ track to provide a ceiling for what trajectory-aware steering can achieve.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N19 distributes a fixed budget across layers (small nudges) instead of one large endpoint shift, predicting less collateral at matched behavior. **UNTESTED** — needs the multi-layer split-budget driver.
+
+### 1. Steering-vector recipe (distributed trajectory injection)
+
+```python
+v = bank[L]["diffmean"]
+# endpoint: alpha*v at L only                              (METHODOLOGY §2 add at one layer)
+# trajectory: alpha/N * v at each of N layers (same final layer); total ||edit|| matched
+#   per-layer off-shell stays in the LINEAR N17 regime, avoiding the super-linear cliff
+for L_i in trajectory_layers:                              # e.g. {L10,L12,L14,L16,L18} for N=5
+    inject(h_{L_i}, (alpha/N) * v)                         # SteeringContext over multiple layers
+off_max = max(offshell_displacement(h_Li, h_Li') for L_i)  # geometry.offshell_displacement per nudge
+```
+
+### 2. Experiment procedure
+
+```text
+1. For N in {1 (endpoint), 3, 5, 10}: build the layer set; per-step alpha = alpha/N.
+2. Tune endpoint alpha to MATCH the N=5 trajectory's delta_cos within 5% (behavior-matched, not alpha-matched).
+3. Measure log-PPL, per-layer off-shell (max across trajectory), total off-shell, rogue-compliance.
+4. Prereq: N7 Jacobian check cos(J_L*v, v) at adjacent layers (is v the right direction at each layer?).
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metrics:** log-PPL(trajectory) vs log-PPL(endpoint), and max per-layer off-shell.
+- **Pre-registered falsifier (§3):** PPL(trajectory) ≥ PPL(endpoint) at matched behavior for any N ⇒ (B) FALSIFIED; per-layer off-shell not lower ⇒ mechanism (A) fails.
+- **Verdict logic:** both A and B must fail for full FALSIFIED; if layers ≈ identity (N7), N19 predicts a null.
+
+### 4. Where the code is / status
+
+UNTESTED. Multi-layer `SteeringContext` and `geometry.offshell_displacement` exist, but the **split-budget trajectory driver with behavior-matched endpoint tuning** (and the N7 Jacobian prerequisite) is the missing machinery — that is why N19 is UNTESTED.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N19.md`.

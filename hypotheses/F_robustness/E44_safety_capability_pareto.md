@@ -294,6 +294,65 @@ theoretical claim.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E44, a
+**safety** test: a 3-vector safety stack traces a safety-vs-capability Pareto
+frontier as a shared multiplier lambda is swept, and the knee falls in the
+N17/C9b off-shell window. Three orthogonalised DiffMean vectors.
+
+### 1. Steering-vector recipe (3 orthogonal safety DiffMean vectors)
+
+```python
+# §1.3 METHODOLOGY: three closed-form DiffMean directions, then Gram-Schmidt (E19).
+v_ref   = bank("refusal")["diffmean"]
+v_syco  = bank("anti_sycophancy")["diffmean"]        # CAA sycophancy pairs
+v_hon   = bank("honesty")["diffmean"]                # TruthfulQA contrastive
+V = gram_schmidt([v_ref, v_syco, v_hon])             # |cos_ij| < 0.05 by construction
+V = [vi / norm(vi) for vi in V]                      # unit (relative_add comparable)
+```
+
+### 2. Experiment procedure (lambda sweep + geometry check)
+
+```text
+1. lambda in {0, 0.1, ..., 1.0}; base alpha_i = 0.10 relative_add per vector.
+2. Inject the stack scaled by lambda via hooks.apply_operation, "relative_add" (§2):
+       h' = h + sum_i (lambda*alpha_i)*||h||*unit(v_i)
+3. At each lambda MEASURE (§3 METHODOLOGY):
+       safety(lambda)     = JailbreakBench refusal rate (off-family judge)
+       capability(lambda) = MMLU-500 accuracy
+   plus WikiText PPL (coherence), XSTest over-refusal (selectivity), and the
+   off-shell displacement ||sum_i lambda*alpha_i*v_i|| / ||h|| (geometry probe).
+4. Pareto knee = argmax_lambda |d(safety)/d(capability)|; locate it on the curve.
+5. Geometry check: does the knee coincide with off-shell ~ 0.10-0.20?
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metric:** the (safety, capability) Pareto frontier over lambda and the
+  knee's off-shell displacement.
+- **Hypothesis (§2):** monotone frontier; knee at off-shell ~ 0.10-0.20 (the N17
+  law logPPL = 5.40 + 2.87*offshell, R^2=0.81; C9b clean window at 10%).
+- **Pre-registered FALSIFIER (§3):** if the frontier is NOT monotone (safety gain
+  at zero capability cost), OR the knee falls OUTSIDE off-shell 0.05-0.30, the
+  norm-budget geometry fails to predict the knee and the hypothesis is DISCARDED
+  (`x disproved`).
+
+### 4. Where the code is / status — UNTESTED (geometry screened)
+
+- **No driver yet** (campaign + `scripts/build_provenance.py` -> `PROVENANCE/E44.md`).
+- **Screening anchors:** FINDINGS.md S-6 (N17 R^2=0.81) and S-9 (C9b 10% clean
+  window) support the knee prediction; S-4/S-8 confirm safety effects are real on
+  Gemma. **Missing machinery (why UNTESTED):** **Gram-Schmidt 3-vector stacking**;
+  an **honesty/anti-sycophancy vector set**; **JailbreakBench + XSTest wiring**;
+  the **lambda-sweep multi-vector injection**; and the off-shell geometry probe at
+  each lambda. The single-vector geometry exists; the multi-vector Pareto sweep
+  does not.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E44.md`.

@@ -285,6 +285,67 @@ recommended.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E38, a
+**mechanistic/compositional** test: do an ICL task vector and a DiffMean style
+vector share subspace and compose additively in one residual-stream edit? Two
+difference-of-means directions are built and summed.
+
+### 1. Steering-vector recipe (task vector + style vector)
+
+```python
+# (a) STYLE vector — closed-form DiffMean (§1.3 METHODOLOGY):
+v_style = extract.build_vector_bank(model, tok, load_concept("formal"), layer)[layer]["diffmean"]
+          # also: conciseness, refusal (CAA / model-written evals)
+
+# (b) TASK vector — Todd et al. (arXiv:2310.15916) function-vector form, the SAME
+#     difference-of-means shape but ICL-vs-zero-shot instead of pos-vs-neg:
+v_task = mean(h_ICL_demonstrations) - mean(h_zero_shot)     # e.g. "translate to French"
+v_task, v_style = v_task/norm(v_task), v_style/norm(v_style)
+
+# Subspace check: top-10 PCA of {all task vectors, all style vectors};
+# report each vector's cosine into that shared subspace (extract.pca_top1_vector generalised).
+```
+
+### 2. Experiment procedure (solo vs combined, norm-budget guarded)
+
+```text
+1. Pairs: (French, formal), (sentiment-reversal, concise), + one more.
+2. Conditions: task-only; style-only; task+style combined.
+3. COMBINED injection = two relative_add edits (§2):
+       h' = h + alpha_task*||h||*unit(v_task) + alpha_style*||h||*unit(v_style)
+   alpha_task = alpha_style = 0.10. If |cos(v_task,v_style)| > 0.2, apply
+   Gram-Schmidt (E19) before summing (sub-condition). NORM BUDGET (E22/N5):
+   if ||combined Δh||/||h|| > 0.20, renormalise the sum to the budget boundary.
+4. MEASURE (§3 METHODOLOGY): task-success AND style-success (off-family
+   judge.GeminiJudge, each calibrated on a human slice); WikiText PPL; MMLU-500;
+   JailbreakBench CR baseline 0%.
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metric:** the JOINT condition — combined task-success as a fraction
+  of solo-task AND combined style-success as a fraction of solo-style.
+- **Hypothesis (§2):** combined achieves >= 90% of EACH solo metric; shared-PCA
+  cosine > 0.3.
+- **Pre-registered FALSIFIER (§3):** if combined achieves < 75% of EITHER solo
+  metric on >= 2 pairs, the non-interference claim is DISCARDED; if shared-PCA
+  cosine < 0.15, the shared-subspace claim is separately falsified.
+
+### 4. Where the code is / status — UNTESTED
+
+- **No driver yet** (campaign + `scripts/build_provenance.py` -> `PROVENANCE/E38.md`).
+- **Missing machinery (why UNTESTED):** an **ICL task-vector extractor** (Todd et
+  al. mean(h_ICL) − mean(h_zero-shot)) on Gemma-2-2B — distinct from the existing
+  `extract.diffmean_vector` contrast-pair path; a **two-vector composed injection**
+  with the E22 norm-budget renormalisation; and dual task/style judges. The
+  DiffMean style side reuses existing infra; the task-vector side does not exist.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E38.md`.

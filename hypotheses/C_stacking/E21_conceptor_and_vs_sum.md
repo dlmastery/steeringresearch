@@ -260,6 +260,62 @@ claim makes this a genuine reproduction test.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to Conceptor
+AND-composition vs summed vectors for ≥3 goals. Status: `UNTESTED` — needs a
+Conceptor module (matrix algebra, no backprop) plus multi-goal evaluation.
+
+### 1. Steering-"operator" recipe (Conceptor matrices, not a single vector)
+
+```python
+# Summed baseline (METHODOLOGY §1.3 + §2 add): plain DiffMean sum, the thing to beat.
+v_sum = sum(alpha * normalize(extract.build_vector_bank(model,tok,load_concept(b),L)[L]["diffmean"])
+            for b in three_behaviors)
+
+# Conceptor arm — region intersection, NOT additive displacement (§5.1):
+# Collect ~50 activations A_B per behavior at layer L (same forward passes as DiffMean).
+def conceptor(A, aperture):                 # C_B is PSD with eigenvalues in [0,1]
+    R = A @ A.T / A.shape[0]
+    return R @ inv(R + aperture**-2 * I)
+C = [conceptor(collect_activations(b, L), aperture) for b in three_behaviors]
+C_AND = inv( sum(inv(Ci) for Ci in C) - (N-1)*I )   # soft AND (§5.1, Jaeger 2014)
+```
+
+### 2. Experiment procedure
+
+```text
+conditions = { solo each behavior,
+               summed( inject v_sum via hooks.apply_operation(h, v_sum, "add", alpha) ),
+               conceptor_AND( h_steered = C_AND @ h  -- a projection, no norm growth ) }
+for cond in conditions:
+  for seed in 1..3:                                  # screening; 7 if gap in [7,13] pp
+    measure: multi_goal_success (all 3 behaviors achieved simultaneously),
+             PPL, MMLU_delta,
+             geometry.offshell_displacement(h_base, h_steer)  # ||(C_AND - I) h|| for the AND arm
+# matched-PPL comparison: tune aperture so Conceptor PPL ~ summed PPL within 0.5 logPPL
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metric: multi-goal success rate (all 3 simultaneously) at matched PPL
+  (within 0.5 logPPL of solo baseline).
+- Pre-registered FALSIFIER (§3): Conceptor AND not `>= 10 pp` above summed ⇒ FALSIFIED.
+  Within 2 pp of summed ⇒ NEAR-MISS.
+- Mechanism check (§6): Conceptor AND PPL overhead `[0,+0.5]` vs summed `[+0.5,+2.0]`
+  (N16: AND is an angular/projection operation, not the radial additive excursion N5 penalizes).
+
+### 4. Where the code is / status
+
+DiffMean + `add` exist for the summed baseline. MISSING: the Conceptor construction
+`A A^T (A A^T + α^-2 I)^-1`, the soft-AND operator, the `C_AND @ h` injection path,
+and aperture calibration for matched PPL. All closed-form matrix algebra (one forward
+pass per behavior to collect activations; no gradient descent). `UNTESTED`.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E21.md`.

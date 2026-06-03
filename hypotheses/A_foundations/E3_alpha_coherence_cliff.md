@@ -313,6 +313,58 @@ location defines the operating envelope for all subsequent work.
 
 ---
 
+## Pseudocode & Methodology
+
+This hypothesis characterizes the **alpha coherence cliff**. The knob varied is
+**alpha** (additive `add` operation); everything else (layer, source, concept) is
+fixed. It is the absolute-alpha twin of E7's relative-alpha version.
+
+### 1. Steering-vector recipe
+
+```python
+# source = DiffMean, layer L16, fixed for the whole sweep (METHODOLOGY §1.3)
+bank = extract_bank(model, tok, load_concept(behavior), layer=16)
+v    = bank[16]["diffmean"]          # diffmean_vector(pos,neg) = mean(pos)-mean(neg)
+```
+
+### 2. Experiment procedure
+
+```text
+1. Fix v (DiffMean @ L16), concept, model.
+2. for alpha in {0, 0.5, 1, 1.5, 2, 3, 4, 6, 8}:           # the ONE knob
+3.     h' = apply_operation(h, v, "add", alpha)            # h' = h + alpha*v  (METHODOLOGY §2)
+4.     PPL  = eval.perplexity(steered)                     # real WikiText
+5.     MMLU = eval.mcq_accuracy(steered)                   # >=100 items
+6.     beh  = judge.GeminiJudge.score(generation)          # behavior efficacy
+7.     CR   = JailbreakBench compliance rate
+8.     dH   = geometry.offshell_displacement(h, h')        # = alpha*||v|| (off-shell)
+9. CONTROL: zero-vector inject at each alpha (PPL baseline stability check).
+10. Fit log(PPL) vs alpha: test power-law exponent k and d^2(logPPL)/dalpha^2 > 0.
+```
+
+### 3. Measurement & decision rule
+
+PRIMARY metric: the functional form of `log(PPL)` vs `alpha` (super-linear vs linear),
+plus `alpha_cliff` location and MMLU-drop below it. FALSIFIER (§3): fires if the
+power-law exponent `k <= 1.0` (sub-linear/linear) on Gemma-2-2B@L16, OR MMLU drops
+`> 2 pp` below `alpha_cliff`, OR no alpha exists where behavior improves while PPL
+stays within 30% of baseline. Pre-registered (§6): super-linear `k>1.5`;
+`alpha_cliff ~ 1` (270m) / `~1–2` (1B); CR rises to ~1.0 above the cliff. Verdict:
+**SUPPORTED at screening** (super-linear cliff confirmed S-2/S-4/S-8; behavior peaks
+at alpha=1 on 1B). Open: real MMLU below the cliff, real WikiText PPL, formal
+power-law fit, n≥7 on Gemma-2-2B.
+
+### 4. Where the code is / status
+
+Driver: `scripts/campaign_sweep.py` (the alpha sweeps; exp# 2–19, 55–59, 98–109 across
+Qwen-0.5B / Gemma-270m / Gemma-1B). PPL/MMLU/geometry from `eval.py` + `geometry.py`.
+Status **SUPPORTED (screening)** across three models / two architectures; promotion to
+Rung-3 needs the real-MMLU + generation-judge + n≥7 run — no new machinery required.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E3.md`](../PROVENANCE/E3.md).

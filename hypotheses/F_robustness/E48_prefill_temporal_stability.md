@@ -276,6 +276,59 @@ tokens to fully characterise the drift curve.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E48, a
+**robustness/efficiency** test: is once-at-prefill steering as effective as
+per-token re-injection across generation length? The vector is standard DiffMean;
+the variable is WHEN it is injected (axis A6, span/temporal).
+
+### 1. Steering-vector recipe (standard DiffMean refusal/formality)
+
+```python
+# §1.3 METHODOLOGY: closed-form DiffMean, nothing exotic about the vector.
+v = bank("refusal")["diffmean"]; v = v / norm(v)     # also formality (non-safety generality)
+```
+
+### 2. Experiment procedure (prefill-only vs per-token vs periodic)
+
+```text
+1. Injection conditions, all via hooks.apply_operation, "relative_add" alpha=0.10 (§2):
+   (A) PREFILL-ONLY: inject at the last prefill token only; let the KV cache carry it.
+   (B) PER-TOKEN:    re-inject at the injection layer at EVERY generated token.
+   (C) PERIODIC:     re-inject every 32nd generated token (hybrid).
+2. Generation lengths: 32, 64, 128, 256 tokens; greedy AND sampled decoding.
+3. INTERNAL DIAGNOSTIC: at each generated token t record the projection
+       p(t) = <h_t, v>            # does the behavior projection decay with length?
+4. MEASURE (§3 METHODOLOGY): behavior efficacy (off-family judge on the FULL
+   generation); PPL on the GENERATED text vs the unsteered baseline; per-token
+   overhead of (B) vs (A).
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metric:** prefill-only (A) behavior-success vs per-token (B) at each
+  generation length; the projection-decay curve p(t).
+- **Hypothesis (§2):** A within 5 pp of B up to 256 tokens; PPL within 5% — the
+  behavior direction is temporally stable and per-token recomputation is needless.
+- **Pre-registered FALSIFIER (§3):** if prefill-only is > 10 pp LOWER behavior-
+  success than per-token at 128-256 tokens, temporal drift is real and prefill-only
+  is insufficient (`x disproved`); N9 closed-loop control becomes higher priority.
+
+### 4. Where the code is / status — UNTESTED (low-cost)
+
+- **No driver yet** (campaign + `scripts/build_provenance.py` -> `PROVENANCE/E48.md`).
+- **Missing machinery (why UNTESTED):** a **per-token re-injection mode** (hook
+  fires at each decode step, not just prefill) and a **per-token projection logger**
+  `<h_t, v>` over the autoregressive pass; plus generated-text PPL and judge
+  efficacy at four lengths under greedy and sampled decoding. This is the lowest-
+  infra experiment in the block (no new datasets/judges beyond efficacy), but the
+  per-token hook variant is not yet wired into `hooks.py`.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E48.md`.

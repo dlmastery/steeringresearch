@@ -281,6 +281,49 @@ the hypothesis may be FALSIFIED and the curvature-fragility mechanism requires r
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N20 predicts **effective rank** at a layer negatively predicts that layer's rogue-fragility — a cheap, behavior-free way to pick safe injection layers. **Status: INCONCLUSIVE (screening, n=1, underpowered).**
+
+### 1. Steering-vector recipe (effective rank as a fragility sensor)
+
+The sensor is computed directly from `geometry.effective_rank` on natural activations — no behavior vector needed for the predictor:
+
+```python
+# 2000 natural forward passes -> activation batch H_L  [n, dim]
+eff_rank_L = effective_rank(H_L)        # geometry.effective_rank = exp(entropy of normalized singular spectrum)
+
+# fragility(L): rogue-compliance-rate increase per unit alpha when steering with the max-Fisher direction
+#   v = max_fisher_direction(L)  (extract.fisher_ratio / best_layer)
+#   inject via add (METHODOLOGY §2); CR measured on adversarial prompts
+```
+
+Low eff_rank (concentrated covariance) ⇒ hypothesized high curvature ⇒ high fragility.
+
+### 2. Experiment procedure
+
+```text
+1. For L in {8,10,12,14,16,18,20,22}: eff_rank_L = effective_rank(2000 natural activations).
+2. Fisher_ratio(L) on the same data (comparison predictor, expected to fail per E2/S-5).
+3. fragility(L) = CR per unit alpha, steering with the max-Fisher direction (adversarial probe).
+4. rho = Spearman(eff_rank, fragility); also Spearman(Fisher, fragility).
+5. Layer-selection test: is max-eff_rank layer the lowest-CR? Consistency check vs C4 (L12 most fragile).
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metric:** Spearman(eff_rank, fragility) across the 8 layers (negative expected).
+- **Pre-registered falsifier (§3):** Spearman in (−0.40, +0.20) ⇒ FALSIFIED; the full claim targets ≤ −0.60.
+- **Screening result (C4, Gemma-270m, n=1):** Spearman = **−0.21** (correct sign, underpowered); max-Fisher L12 = most fragile (consistent). **VERDICT so far: INCONCLUSIVE** — held-out 8-layer/3-seed test on Gemma-3-1B is the next required step.
+
+### 4. Where the code is / status
+
+INCONCLUSIVE (screening). `geometry.effective_rank` and `extract.fisher_ratio` exist, and the C4 screening ran via `scripts/campaign_sweep.py` (exp# 47–54). The held-out test needs the **rogue-compliance fragility probe** wired across 8 layers. See the reproduce command in §Provenance below.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/N20.md`](../PROVENANCE/N20.md).

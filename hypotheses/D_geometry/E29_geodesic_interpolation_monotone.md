@@ -308,6 +308,58 @@ implementation makes this a high-value / low-cost experiment.**
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to SLERP (geodesic
+arc) vs LERP (linear add) control curves. Status: `UNTESTED` — SLERP is a ~10-line
+addition to `geometry.py`. This is a GEOMETRY/OPERATION hypothesis: the same DiffMean
+direction, swept along an arc instead of a chord.
+
+### 1. Steering-vector recipe (DiffMean target; SLERP vs the add chord)
+
+```python
+v = extract.build_vector_bank(model, tok, load_concept(trait), L)[L]["diffmean"]  # METHODOLOGY §1.3
+t = h + v                                          # the LERP endpoint at alpha=1 (target direction)
+# LERP baseline = METHODOLOGY §2 relative_add: h' = h + alpha*||h||*unit(v)  (chord; changes norm+dir)
+# SLERP (§5.1) — norm-preserving geodesic on the hypersphere, parameter s in [0,1]:
+def slerp(h, t, s):
+    h_hat, t_hat = unit(h), unit(t)
+    theta = arccos(dot(h_hat, t_hat))
+    arc = (sin((1-s)*theta)/sin(theta))*h_hat + (sin(s*theta)/sin(theta))*t_hat
+    return ||h|| * unit(arc)                        # rescale to original norm -> ||h'||=||h|| for all s
+```
+
+### 2. Experiment procedure
+
+```text
+for model in {270M @L16, 1B @L18}:
+  LERP: relative_add at fractional alpha in {0.02,0.05,0.10,0.20,0.40}     # hooks.apply_operation
+  SLERP: s in {0.1,...,0.8}; h' = slerp(h, h + v*||h||, s)
+  for each point, seed in 1..3:
+    measure behavior, PPL,
+            geometry.offshell_displacement   # ~0 for SLERP (norm held), radial>0 for LERP
+            geometry.angular_displacement    # 1-cos; grows monotone s*theta under SLERP
+monotone_fraction = frac of adjacent (s_i,s_{i+1}) with non-decreasing behavior
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metric: monotone fraction of the behavior-vs-control curve (+ PPL ceiling).
+- Pre-registered FALSIFIER (§3): SLERP monotone fraction `< 0.80`, OR SLERP PPL `> 2x`
+  baseline anywhere in `s∈[0,0.8]`, OR LERP equally monotone (`>= 0.85`) ⇒ DISCARDED.
+- Predicted (§6): SLERP monotone fraction `>= 0.85` vs LERP `~0.60`; PPL at s=0.5 `< 1.5x` baseline.
+
+### 4. Where the code is / status
+
+LERP (`relative_add`) and the geometry probes exist; the C9b LERP baseline is already
+logged for 270M. MISSING: the **SLERP operator** in `geometry.py` (unit-test:
+slerp(h,t,0)=h, slerp(h,t,1)=t̂·‖h‖, ‖slerp‖=‖h‖ ∀s) plus its injection wiring.
+`UNTESTED`.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E29.md`.

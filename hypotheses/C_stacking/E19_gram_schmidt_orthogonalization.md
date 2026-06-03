@@ -267,6 +267,59 @@ claim (>= 95%) is the critical empirical test; the interference reduction
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to Gram-Schmidt
+orthogonalization of a new behavior vector against an active stack. Status:
+`UNTESTED` — GS is trivial linear algebra but rides on E17's multi-vector injection.
+
+### 1. Steering-vector recipe (DiffMean + Gram-Schmidt projection)
+
+```python
+# Each vector is a closed-form DiffMean (METHODOLOGY §1.3). Active set assumed orthonormal.
+v1 = normalize(extract.build_vector_bank(model, tok, load_concept("refusal"), L)[L]["diffmean"])
+v_new_raw = normalize(extract.build_vector_bank(model, tok, load_concept(B_new), L)[L]["diffmean"])
+
+# Gram-Schmidt: remove the component of v_new lying in span{v_1..v_k}  (§5.1)
+v_new_orth = v_new_raw
+for vi in active_set:                       # {v_1, ..., v_k}
+    v_new_orth = v_new_orth - dot(v_new_orth, vi) * vi   # project out
+v_new_orth = v_new_orth / norm(v_new_orth)  # renormalize -> cos(v_new_orth, vi)=0 for all i
+# removed-mass = sqrt(Σ_i cos(v_new, vi)^2); efficacy survives iff removed mass was interfering
+```
+
+### 2. Experiment procedure
+
+```text
+conditions = { solo(v_new),
+               raw_joint( inject v1 + v_new ),               # raw add, leaves cross-cosine
+               gs_joint( inject v1 + v_new_orth ) }          # orthogonalized
+for cond in conditions:
+  for seed in 1..3:
+    inject combined vector via hooks.apply_operation(h, v_sum, "add"/"relative_add", alpha)
+    log: efficacy_B1(refusal), efficacy_Bnew, interference_index, PPL,
+         cos(v_new, v1) before/after GS  (~0 after, to float precision),
+         geometry.offshell_displacement   # joint norm = sqrt(k+1)*alpha post-GS (Pythagorean, §5.3)
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metrics: (a) `v_new_orth` efficacy vs solo `v_new`; (b) interference
+  reduction vs raw add.
+- Pre-registered FALSIFIER (§3): efficacy `< 95%` of solo (GS removed behavior-carrying
+  information) OR interference reduction `< 80%` ⇒ FALSIFIED. Either failure rejects.
+- Secondary (§6): joint PPL overhead `[−0.3,−0.1]` logPPL vs raw (N5: lower joint norm).
+
+### 4. Where the code is / status
+
+The GS projection is a few lines (`extract.py`-style closed form, no backprop) and
+DiffMean exists. The blocker is the same **multi-vector injection** orchestration
+as E17. `UNTESTED`.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E19.md`.

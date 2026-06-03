@@ -241,6 +241,45 @@ and should be run first as the most likely-to-succeed sub-claim. The hyperbolic 
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N14 routes the operation to the concept's geometry: hierarchical→hyperbolic (Möbius), intensity→cylindrical, directional→spherical (rotate). **UNTESTED** — needs Möbius and cylindrical operators.
+
+### 1. Steering-vector recipe (metric-matched operation per concept)
+
+```python
+v = bank[L]["diffmean"]
+# (C) directional -> spherical: selective 2D-plane rotation (METHODOLOGY §2 rotate) -- ALREADY available
+# (B) intensity   -> cylindrical: control angle and radius INDEPENDENTLY
+#        h' = scale_radius(rotate_angle(h, theta), r)         # NEW
+# (A) hierarchical-> hyperbolic Poincare-ball Mobius addition (NEW):
+#        v_hyp = exp_0(v) ;  h' = h (+)_Mobius (alpha * v_hyp)   # curvature c=1
+# each concept is pre-classified (hierarchical/intensity/directional) by a behavior-FREE criterion
+```
+
+### 2. Experiment procedure
+
+```text
+1. Pre-register concept class for each behavior (ontology / annotation scale / binary contrast).
+2. For each (concept, operation in {additive, metric-matched}): match delta_cos = 0.08.
+3. Measure log-PPL, behavior cosine, offshell (geometry.offshell_displacement), and rogue-compliance (class A).
+4. Run in order C (directional, strongest S-7 prior) -> B (intensity) -> A (hierarchical).
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metric:** PPL advantage of the metric-matched op vs additive at matched behavior, per concept class.
+- **Pre-registered falsifier (§3):** metric-matched op fails to beat additive PPL by ≥5% for a class ⇒ that class FALSIFIED; all three < 5% ⇒ the general principle FALSIFIED.
+- **Verdict logic:** per-class verdicts; (C) leans on the S-7 directional screening prior.
+
+### 4. Where the code is / status
+
+UNTESTED. Selective 2D rotation (the directional case) maps onto `hooks.apply_operation(rotate)`, but **Möbius addition (Poincaré ball, exp-map) and independent radius/angle cylindrical control** are not implemented — that missing machinery is why N14 is UNTESTED.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N14.md`.

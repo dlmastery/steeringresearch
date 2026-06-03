@@ -286,6 +286,63 @@ thresholds; below 60% would require a program-wide threshold revision.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E49, a
+**meta-level robustness** audit: do the corpus papers' quantitative claims
+reproduce on our Gemma-2-2B harness? There is no single steering vector — E49
+re-runs OTHER hypotheses' recipes and compares to reported numbers.
+
+### 1. Recipe (re-run each claim's native METHODOLOGY path)
+
+```python
+# Each claim is reproduced with the CLOSEST available harness path, e.g.:
+#   CAA pair-count knee (E1)      -> extract.diffmean_vector over pair budgets
+#   E4 cosine alignment           -> cos(diffmean_vector, pca_top1_vector)
+#   Rogue Scalpel random-vec CR   -> controls.matched_norm_random + JailbreakBench CR
+#   HyperSteer held-out efficacy  -> src/steering/hypersteer.py (see E45)
+#   Persona causal control        -> DiffMean persona steer (see E39)
+# All injection via hooks.apply_operation; all behavior via judge.GeminiJudge (§3,§5).
+```
+
+### 2. Experiment procedure (20-claim locked audit)
+
+```text
+1. PRE-REGISTER 20 specific claims in EXPERIMENT_LEDGER.md (>=3 per paper, >=1
+   headline each); each row = {paper, metric, reported value, ±20% window,
+   Gemma-2-2B protocol adaptation}. List LOCKED before any reproduction.
+2. For each claim: run the closest harness reproduction; record our value.
+3. Classify: REPRODUCED (within ±20%) / PARTIAL (±50%) / FAILED (outside ±50%
+   or wrong direction) / NOT-TESTABLE (needs A100-scale or proprietary data;
+   excluded from numerator AND denominator, with written justification).
+4. Build a deviation catalogue (why each non-reproduced claim failed).
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metric:** reproduction rate = REPRODUCED / testable claims, vs the
+  pre-registered 70% (14/20) threshold; reported with binomial 95% CI.
+- **Hypothesis (§2):** >= 14/20 reproduce within ±20% on Gemma-2-2B.
+- **Pre-registered FALSIFIER (§3):** if fewer than 12/20 (60%) reproduce within
+  ±20%, the corpus is unreliable as a threshold source; all inherited
+  pre-registered thresholds are flagged `[UNVERIFIED, corpus non-replicable]` and
+  Status -> `x disproved (meta)`.
+
+### 4. Where the code is / status — UNTESTED (some screening pre-cursors)
+
+- **No driver yet** (campaign + `scripts/build_provenance.py` -> `PROVENANCE/E49.md`).
+- **Pre-cursors:** FINDINGS.md S-4/S-8 partially reproduce Rogue Scalpel CR on
+  Gemma; S-1/S-3 reproduce E4's cos > 0.95. **Missing machinery (why UNTESTED):**
+  the **locked 20-claim list** must be written into EXPERIMENT_LEDGER.md FIRST; and
+  many claims depend on infra not yet built (GemmaScope SAE for AxBench claims,
+  JailbreakBench for Rogue Scalpel CR, the E45 hypernetwork for HyperSteer,
+  persona vectors). The audit is a meta-experiment gated on the other blocks'
+  tooling and a calibrated judge.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E49.md`.

@@ -331,6 +331,56 @@ advantage.**
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to the downstream
+LayerNorm-variance consequence of norm-preserving rotation vs additive steering.
+**Status: PARTIALLY OBSERVED** — the rotate op is norm-preserving by construction
+(off-shell Δ‖h‖ = 0 confirmed in C3b); the LN-variance claim is UNTESTED. GEOMETRY/
+mechanism hypothesis: same DiffMean direction, two operations, measure downstream LN stats.
+
+### 1. Steering-vector recipe (one DiffMean direction; rotate vs add)
+
+```python
+v = extract.build_vector_bank(model, tok, load_concept(trait), L)[L]["diffmean"]  # METHODOLOGY §1.3
+# rotate (METHODOLOGY §2): h' = R(theta) h via Gram-Schmidt e1,e2  ->  ||h'|| = ||h|| EXACTLY (orthogonal R)
+# add    (METHODOLOGY §2): h' = h + alpha*v  ->  ||h'|| != ||h|| (radial excursion)
+```
+
+### 2. Experiment procedure
+
+```text
+for model in {270M @L16, 1B @L18}:
+  for op,param in { (rotate, theta in {0.05,0.10,0.20}),
+                    (relative_add, alpha matched to rotate's behavior) }:
+    for seed in 1..3 (50 prompts each):
+      h'_L = hooks.apply_operation(h_L, v, op, param)
+      norm_dev   = (||h'_L|| - ||h_L||) / ||h_L||                 # ==0 for rotate (machine precision)
+      ln_var_dev = |Var[LN(h'_L)] - Var[LN(h_L)]| / Var[LN(h_L)]  # measured at L+1 and L+5
+      measure behavior, PPL, geometry.offshell_displacement, MMLU_delta
+correlate(ln_var_dev, MMLU_delta) across conditions   # the proposed capability pathway
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metric: post-LayerNorm variance deviation at L+1 for rotation vs addition,
+  at matched behavior + matched PPL.
+- Pre-registered FALSIFIER (§3): rotation LN-var deviation `> 8%` relative (no advantage
+  over addition) ⇒ LN-preservation pathway rejected; OR both `< 5%` ⇒ claim trivially
+  uninteresting / mechanism incomplete.
+- Predicted (§6): rotation LN-var dev `< 2%`, addition `5–15%`; ‖h'‖ dev exactly 0 for rotate.
+
+### 4. Where the code is / status
+
+The `rotate` op already logs off-shell Δ‖h‖ = 0 (PARTIALLY OBSERVED via C3b);
+`geometry.offshell_displacement` exists. MISSING: **LayerNorm-variance logging** in
+`geometry.py` (Var[LN(h_L)] before/after, at L, L+1, L+5) and the MMLU-delta correlation.
+Cheap add-on to existing C3b runs; LN-variance claim `UNTESTED`.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E31.md`.

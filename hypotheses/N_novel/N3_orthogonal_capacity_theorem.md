@@ -263,6 +263,47 @@ full protocol is worth the 4 hours.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N3 predicts the number of stackable behaviors equals the **participation ratio** of the layer, not d_model. **UNTESTED** — the probe exists, the stacking-knee sweep does not.
+
+### 1. Steering-vector recipe (capacity = participation ratio)
+
+The per-layer capacity quantity is computed directly from `geometry.participation_ratio`:
+
+```python
+# 1000 natural forward passes -> activation batch H_L  [n, dim]
+PR_L = participation_ratio(H_L)          # geometry.participation_ratio: (Σλ)²/Σλ²  (N3 at injection layer)
+
+# behavior vectors are ordinary DiffMean, stacked additively (METHODOLOGY §2 add):
+#   h' = h + Σ_{i=1..k} alpha_i v_i           v_i = bank[L][i]["diffmean"]
+```
+
+### 2. Experiment procedure
+
+```text
+1. For L in {8,12,16,20,24}: PR_L = participation_ratio(1000 natural activations at L).
+2. Extract 5 near-orthogonal DiffMean behavior vectors.
+3. For each L, stack k=1..5 vectors; measure joint behavior success (fraction of behaviors meeting goal).
+4. N_knee(L) = smallest k where joint success < 0.85 * mean solo success.
+5. rho = Spearman(PR_L, N_knee_L) across the 5 layers; ablate local-PR (kNN) vs global-PR.
+   CONTROL the §confound: hold total ‖Σ alpha_i v_i‖ fixed (N5 norm-budget) so interference ≠ magnitude.
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metric:** Spearman(PR(L), N_knee(L)) across layers.
+- **Pre-registered falsifier (§3):** Spearman < 0.50, OR N_knee tracks Fisher/depth instead of PR ⇒ FALSIFIED; 0.50–0.69 ⇒ INCONCLUSIVE.
+- **Verdict logic:** must survive the layer-depth partial correlation (PR, not depth, drives the result).
+
+### 4. Where the code is / status
+
+UNTESTED. `geometry.participation_ratio` is implemented and tested; the **multi-vector stacking-knee sweep** (joint-success evaluation over k stacked vectors with matched norm budget) is the missing driver — that is why N3 is UNTESTED.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N3.md`.

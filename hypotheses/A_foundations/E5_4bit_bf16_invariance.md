@@ -302,6 +302,62 @@ evaluation.
 
 ---
 
+## Pseudocode & Methodology
+
+This hypothesis tests **4-bit NF4 vs bf16 invariance** of the steering vector. The
+knob varied is the **quantization precision** of the model the vector is extracted
+from (and applied to). Source = DiffMean, layer L16, matched relative alpha.
+
+### 1. Steering-vector recipe
+
+```python
+# Extract the SAME DiffMean direction from each precision (METHODOLOGY §1.3).
+# The cache key includes model id + quantization (collect_activations_cached).
+for quant in {"nf4", "bf16"}:
+    model_q = load_model(model_id, quant=quant)          # model.py
+    H_q     = collect_activations(model_q, tok, load_concept(behavior), layer=16)
+    v_q     = diffmean_vector(H_q.pos, H_q.neg)           # mean(pos)-mean(neg)
+cos_q = cosine(v_nf4, v_bf16)                             # PRIMARY direction metric
+```
+
+### 2. Experiment procedure
+
+```text
+1. Extract v_nf4 (from 4-bit model) and v_bf16 (from bf16 model) at L16, same pairs.
+2. Record cos(v_nf4, v_bf16).
+3. Matched-precision steering (each vector in its own model), matched relative alpha:
+4.   h' = apply_operation(h, v_q/||v_q||, "relative_add", alpha_rel=0.10)
+5.   record behavior (judge), PPL (WikiText), MMLU (>=100 items).
+6. Compare behavior gap and PPL gap (nf4 vs bf16).
+7. SECONDARY ablation: cross-format transfer (4-bit vector injected into bf16 model).
+8. Re-fit the N5 law (log PPL = 5.40 + 2.87*offshell) on the 4-bit model.
+```
+
+### 3. Measurement & decision rule
+
+PRIMARY metric: `cos(v_4bit, v_bf16)` at L16. FALSIFIER (§3): fires if `cos < 0.95`,
+OR behavior gap `> 3%` relative, OR PPL gap `> 10%` relative. Pre-registered (§6):
+`cos >= 0.95`; behavior gap `< 3%`; PPL gap `< 10%`; cross-format transfer behavior
+`> 80%` of matched-format. Verdict: SUPPORTED iff all three thresholds hold (then 4090
+4-bit results are valid bf16 proxies); otherwise a per-concept correction factor is
+reported. Mechanism: NF4 noise is ~zero-mean over the trained weight distribution, so
+`v_4bit ≈ v_bf16 + (E[ε_pos]-E[ε_neg]) ≈ v_bf16` (noise cancels in the mean — the
+same logic as E4).
+
+### 4. Where the code is / status
+
+Driver: `scripts/campaign_sweep.py` with two model loads (4-bit + bf16 via `model.py`),
+reusing `extract.collect_activations_cached`, `eval.py`, and `geometry.py`. Status
+**UNTESTED** — and the specific blocker is **infrastructure**: bitsandbytes was not
+installed at screening time (Windows wheel failure), so all S-1…S-9 runs used
+unquantized fp16/bf16. The experiment needs (a) a working bitsandbytes NF4 install +
+UNIT-level load check, then (b) the paired-precision sweep. No algorithmic machinery is
+missing; only the quantized model backend.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E5.md`.

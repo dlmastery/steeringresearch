@@ -299,6 +299,69 @@ publishable finding.
 
 ---
 
+## Pseudocode & Methodology
+
+This hypothesis is a pure **extraction-side** experiment: it never injects, it
+only measures how the DiffMean *direction* converges as the pair count `n` grows.
+The single knob varied is **n (the number of contrast pairs)**.
+
+### 1. Steering-vector recipe
+
+```python
+# source = DiffMean, layer L = 16 (best from C1/E2), NO normalization for cosine.
+# extract.collect_activations -> extract.diffmean_vector  (METHODOLOGY §1.2-1.3)
+H = collect_activations(model, tok, pairs[:N_full], layer=16)   # mean-pooled, no grad
+h_pos, h_neg = H.pos, H.neg                                     # [N_full, dim] each
+
+def diffmean_at(n_idx):                                          # subsample n pairs
+    return diffmean_vector(h_pos[n_idx], h_neg[n_idx])          # mean(pos)-mean(neg)
+
+v_full = diffmean_vector(h_pos, h_neg)                           # the N=200 reference
+```
+
+The reference vector `v_full` is the N=200 DiffMean; each `v_DM(n)` is the DiffMean
+over a random `n`-subset (5 resamples per `n`). No SVD, no optimizer — `v_DM(n)` is
+one subtraction per the METHODOLOGY §1.3 formula.
+
+### 2. Experiment procedure
+
+```text
+1. Fix concept (one synthetic "ocean", one latent behavioral concept), layer L16.
+2. Collect activations once for the full 200-pair pool (extract.collect_activations_cached).
+3. for n in {1,2,3,5,8,10,15,25,50,100,200}:
+4.     for resample in 1..5:
+5.         idx = random_subsample(N_full, n)
+6.         v_n = diffmean_vector(h_pos[idx], h_neg[idx])
+7.         record cosine(v_n, v_full)                # extract.cosine
+8. Fit the 1 - C/n convergence curve; locate the knee (d cos/dn < 0.002).
+9. CONTROL: shuffle pos/neg labels -> v_shuffled (controls.shuffled_label_vector); cos~0.
+10. At n in {10,25,50,100,200}, also run a behavior-judge generation pass (judge.GeminiJudge).
+```
+
+### 3. Measurement & decision rule
+
+PRIMARY metric: `cos(v_DM(50), v_DM(200))`. FALSIFIER (§3): fires if
+`cos(50-pair, 200-pair) < 0.90` on a held-out real concept, OR if behavior success
+at n=50 is below 90% of the n=200 rate. Pre-registered prediction (§6):
+`cos(50, 200) >= 0.90`; knee in `n in [20,80]` for a rich concept. Verdict: SUPPORTED
+iff cos≥0.90 and the marginal cos-gain per pair is monotonically decreasing;
+otherwise the "~50 pairs" claim does not transfer and E4/E7 must be re-derived at
+the true per-concept knee.
+
+### 4. Where the code is / status
+
+Driver: `scripts/campaign_sweep.py` (multi-`n` extraction + cosine logging) reusing
+`extract.collect_activations_cached`; the behavior-judge pass uses `eval.evaluate_bundle`
++ `judge.GeminiJudge`. Status is **directional / underpowered (C5)**: prior screening
+used a synthetic "ocean" concept on a tiny model and only confirmed an *early* knee
+(~5 pairs). UNTESTED at the pre-registered 50-pair threshold because it needs a
+genuinely hard behavioral concept + generation judge + n≥7 seeds — the convergence
+*curve* machinery exists; the missing piece is the rich-concept contrast pool.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E1.md`.

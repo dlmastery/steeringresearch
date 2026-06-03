@@ -278,6 +278,62 @@ main technical care point.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to the multi-vector
+norm-budget master curve + the quantile cap (Rogue Scalpel Guard B). Status:
+`UNTESTED` — the cap is trivial; the master curve pools E17/E18/E21 data which must
+first exist.
+
+### 1. Steering-vector recipe (any stack + a norm cap)
+
+```python
+# Vectors are the usual closed-form DiffMean stack (METHODOLOGY §1.3); the novelty is the cap.
+v_stack = sum(alpha_i * normalize(v_i) for v_i in V)        # ||Δh|| = ||v_stack||
+
+def cap_delta(delta_h, h, quantile=0.75):                   # §5.2 — Guard Layer B clamp
+    budget     = norm(h, dim=-1, keepdim=True) * quantile   # B = q-quantile of ||h||
+    delta_norm = norm(delta_h, dim=-1, keepdim=True)
+    scale      = clamp(budget / (delta_norm + 1e-8), max=1.0)
+    return delta_h * scale                                  # rescale so ||Δh|| <= B
+```
+
+### 2. Experiment procedure
+
+```text
+# Pool offshell/PPL from prior stacks + a dedicated E22 sweep:
+data = collect_rows(E17, E18, E21)            # (offshell/||h||, logPPL) pairs
+for N in {2,3,4,5}:
+  for alpha in alpha_grid:
+    for cap in {uncapped, 0.3, 0.5, 0.75} * ||h||:
+      delta = v_stack;  if cap: delta = cap_delta(delta, h, cap)
+      inject via hooks.apply_operation (add/relative_add)
+      log: geometry.offshell_displacement, geometry.norm_budget,  # ||Δh||/||h||
+           PPL (logPPL), behavior_efficacy
+master_rho = spearman(offshell_over_h, logPPL)         # across ALL pooled rows
+fit slope,intercept = linreg(offshell_over_h, logPPL)  # compare to N5: 2.87 / 5.40
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metric: Spearman ρ(offshell/‖h‖, logPPL) across all E17–E22 rows (the
+  master collapse curve) AND the capped-logPPL collapse rate.
+- Pre-registered FALSIFIER (§3): ρ `< 0.75` (N5 does not extend to multi-vector) OR
+  capping at the 75th percentile fails to keep `logPPL < 6.5` in any tested config ⇒ FALSIFIED.
+- Targets (§6): fitted slope `[2.5,3.2]`, intercept `[5.0,5.8]` (within 10% of N5).
+
+### 4. Where the code is / status
+
+`cap_delta` is a few lines and `geometry.offshell_displacement` / `norm_budget`
+already exist. The blocker is **data availability**: the master curve needs E17/E18/E21
+rows (themselves blocked on multi-vector injection). Caveat (Addendum confound 1):
+the Conceptor-AND offshell must be measured as the actual post-projection
+displacement `||(C_AND−I)h||`, not `alpha*||v||`. `UNTESTED`.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E22.md`](../PROVENANCE/E22.md).

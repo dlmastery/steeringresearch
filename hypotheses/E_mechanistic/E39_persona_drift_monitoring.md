@@ -293,6 +293,65 @@ approach.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E39, a
+**mechanistic/monitoring** test: read (not write) a persona direction across
+turns and see whether the projection rises BEFORE output-level drift. The vector
+is a DiffMean persona direction used as a probe, not a steer.
+
+### 1. Vector recipe (persona direction as a read-only probe)
+
+```python
+# Persona vectors (arXiv:2507.21509), built as a DiffMean analog (§1.3) from a
+# NON-adversarial corpus (held out from the eval trajectories):
+v_persona = extract.build_vector_bank(model, tok,
+               load_concept("unconstrained_vs_aligned"), layer)[layer]["diffmean"]
+            # also: "sycophantic vs appropriately-critical"
+# NOTE: used ONLY as a monitor — projection read, no hooks.apply_operation here.
+```
+
+### 2. Experiment procedure (temporal projection vs output-drift label)
+
+```text
+1. Build N=30 adversarial multi-turn conversations (5-10 turns) escalating toward
+   persona drift; hold out 10 for threshold calibration. Include ramp AND step
+   trajectories (SciCritic) and optionally GCG-suffix turns.
+2. At each turn t, read the last-token hidden state h(t) at the persona layer:
+       p(t) = <h(t), v_persona> / ||h(t)||          # the monitor (no write)
+   Record t- = first turn where p(t) > theta (theta from the 10 calib trajectories).
+3. Label each turn "drifted"/"not" with the off-family judge on the model OUTPUT;
+   t* = first drifted turn.
+4. LEAD TIME per trajectory: Δt = t* - t-.
+5. CONTROL: an output-only detector (text, no hidden-state access) -> compare to 0.
+6. Side checks (§3 METHODOLOGY): MMLU on non-drift inputs (persona probe must not
+   degrade capability); JailbreakBench CR on the drifted subset.
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metric:** lead time Δt = t* − t- (turns) and the fraction of
+  trajectories with Δt > 0.
+- **Hypothesis (§2/§6):** Δt > 0 for >= 70% of adversarial trajectories;
+  false-positive rate < 10% on non-drift trajectories; lead-time ROC AUC > 0.65.
+- **Pre-registered FALSIFIER (§3):** if the projection crossing LAGS output drift
+  (Δt < 0) for >= 50% of trajectories, OR mean Δt <= 0, the pre-emptive-monitoring
+  claim is DISCARDED (`x disproved`).
+
+### 4. Where the code is / status — UNTESTED
+
+- **No driver yet** (campaign + `scripts/build_provenance.py` -> `PROVENANCE/E39.md`).
+- **Missing machinery (why UNTESTED):** **persona-vector extraction** per
+  arXiv:2507.21509 (or its DiffMean fallback); a **multi-turn conversation
+  harness** that captures per-turn last-token hidden states and computes the
+  running projection; a **calibrated output-level drift judge**; and the threshold
+  calibration split. The probe read itself is cheap; the trajectory + temporal
+  bookkeeping infra does not exist.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E39.md`.

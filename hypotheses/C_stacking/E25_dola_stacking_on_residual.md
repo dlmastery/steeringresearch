@@ -257,6 +257,55 @@ decision rule.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to stacking DoLa
+(a logit-level operation) on a residual steer — disjoint sites that should compose
+additively. Status: `UNTESTED` — needs a DoLa contrastive-decoding hook + TruthfulQA MC.
+
+### 1. Steering-vector recipe (one residual DiffMean; DoLa adds NO vector)
+
+```python
+# Residual arm: closed-form DiffMean refusal vector (METHODOLOGY §1.3), injected at L_b.
+v = normalize(extract.build_vector_bank(model,tok,load_concept("refusal"),L_b)[L_b]["diffmean"])
+# DoLa arm: NO steering vector at all — a decoding-time logit contrast between layers (§5.1):
+#   logits_DoLa = logits_late(h_T) - lambda * logits_early(h_k)
+# Sites are disjoint: residual edit at layers 1..L-1; DoLa reads final logits AFTER the pass.
+```
+
+### 2. Experiment procedure
+
+```text
+conditions = { no_steer,
+               dola_alone        : contrastive logit decode, no residual edit,
+               residual_alone    : hooks.apply_operation(h, v, "add", alpha) at L_b,
+               residual_plus_dola: residual edit THEN DoLa logit contrast }
+for cond in conditions:
+  for seed in 1..3:
+    measure: TruthfulQA MC accuracy (eval.mcq_accuracy-style ground truth),
+             PPL (eval.perplexity), refusal efficacy,
+             geometry.offshell_displacement   # DoLa adds ZERO offshell (logit-only; N5 domain excludes it)
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metric: TruthfulQA MC accuracy of [residual + DoLa] vs `max(residual-alone, DoLa-alone)`.
+- Pre-registered FALSIFIER (§3): [residual + DoLa] accuracy lower than DoLa-alone by
+  `> 2 pp` ⇒ not composable; OR PPL exceeds residual-alone by `> 0.3` logPPL ⇒ null-cost
+  claim FALSIFIED.
+- Secondary (§6): refusal behavior `>= 95%` of residual-alone (DoLa doesn't disrupt it).
+
+### 4. Where the code is / status
+
+The residual `add` path exists. MISSING: a **DoLa decoding hook** (replace standard
+sampling with the early/late logit contrast; arXiv:2309.03883 is a verified paper) and
+**TruthfulQA MC** evaluation. By METHODOLOGY §3, DoLa contributes no residual
+displacement, so the composite's geometry term is unaffected by the DoLa arm. `UNTESTED`.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E25.md`.

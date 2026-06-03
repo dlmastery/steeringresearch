@@ -358,6 +358,72 @@ harmful/harmless contrast; the smoke run on 1B is the diagnostic gate.
 
 ---
 
+## Pseudocode & Methodology
+
+This is the **CAST baseline** for Block B: a read-only **condition vector** at an early
+layer `L_c` gates a refusal **behavior write** at a later layer `L_b`. The knob varied is
+the **condition threshold theta_c** (with a secondary alpha grid). Two vectors are built;
+the gate adds zero norm budget (METHODOLOGY §2 — it is a read, not a write).
+
+### 1. Steering-vector recipe
+
+```python
+# CONDITION vector: DiffMean of EARLY-layer activations on harmful vs harmless prompts.
+# DiffMean (not PCA) is justified by E4 (cos 0.994-0.996). METHODOLOGY §1.3.
+Hc = collect_activations(model, tok, harmful_vs_harmless_pairs, layer=L_c)   # L_c in [6,12]
+v_condition = diffmean_vector(Hc.pos, Hc.neg)        # mean(harmful)-mean(harmless) @ L_c
+
+# BEHAVIOR vector: the refusal direction, DiffMean at a LATER write layer.
+Hb = collect_activations(model, tok, refuse_vs_comply_pairs, layer=L_b)      # L_b in [14,20]
+v_behavior  = diffmean_vector(Hb.pos, Hb.neg)        # refusal direction @ L_b
+assert L_c < L_b                                      # required ordering (E26 tests reverse)
+```
+
+### 2. Experiment procedure
+
+```text
+1. Extract v_condition @ L_c and v_behavior @ L_b (50 harmful / 50 harmless pairs; E1).
+2. For each eval prompt, read h_early @ L_c and compute the gate (CosineGate):
+3.     gate = ( cos(h_early, v_condition) > theta_c )           # read-only, zero budget
+4. Behavior write fires ONLY where the gate fired:
+5.     h_late' = h_late + alpha * gate * v_behavior             # apply_operation 'add', masked
+6. for theta_c in {0.1,0.2,0.3,0.4,0.5,0.6,0.7}:                # the ONE knob
+7.     for alpha in {5,10,15,20}:                               # relative alpha (E7)
+8.         measure harmful-refusal rate, harmless-refusal rate,
+                  MMLU (benign), PPL (harmless), gate PR-AUC.
+9. COMPARE against UNCONDITIONAL steering at the same alpha (gate always on).
+10. Eval set: 100 harmful (JailbreakBench) + 100 benign (AlpacaEval), fixed seed.
+```
+
+### 3. Measurement & decision rule
+
+PRIMARY metrics: harmless-input refusal rate and harmful-input refusal uplift at the
+best theta_c. FALSIFIER (§3): DISCARDED if, after the theta_c grid search, NO threshold
+simultaneously achieves harmless-refusal `< 3%` AND harmful-refusal delta `>= 50 pp`
+above the no-steer baseline (3-seed median); ALSO DISCARDED if the optimal CAST point
+does not Pareto-dominate unconditional steering on the (harmful-refusal, harmless-refusal)
+plane. Pre-registered (§6): harmless-refusal `< 3%`; harmful-refusal `>= 50 pp` uplift;
+gate AUC `[0.80, 0.92]`; composite improvement `[+0.05, +0.15]` vs unconditional.
+Verdict: SUPPORTED iff both core thresholds met at one operating point AND CAST
+Pareto-dominates unconditional. The smoke run on Gemma-3-1B is diagnostic: if gate
+AUC `< 0.70` there, move to 2B before reporting failure (E2's rho=0.14 separability
+caveat).
+
+### 4. Where the code is / status
+
+The gate primitive **exists**: `src/steering/gate.py` provides `CosineGate` (and
+`evaluate_gates` / `pr_auc` / `roc_auc`) plus `condition_features`. What is **missing**
+(why E9 is UNTESTED) is the full CAST *pipeline* that wires a read-only `L_c` condition
+into a masked `L_b` write inside one forward pass — i.e. a `cast_steer` dispatch around
+`hooks.SteeringContext`, the JailbreakBench-100 / AlpacaEval-100 eval subsets, and the
+Guard-D dual-forward verdict check. The condition-vector math reuses `extract.diffmean_vector`
+and the gate-quality math reuses `gate.pr_auc`; the dispatch glue and the safety eval
+bundle are the new machinery. UNTESTED, blocked on this CAST gating pipeline.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E9.md`.

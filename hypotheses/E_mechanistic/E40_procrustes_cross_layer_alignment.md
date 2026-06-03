@@ -303,6 +303,69 @@ informative about the non-flat nature of the residual stream.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E40, a
+**mechanistic** test of whether a behavior direction is parallel-transported
+across layers (one direction rotated, not re-learned per layer), and whether a
+Procrustes-transported multi-layer injection matches independent per-layer.
+
+### 1. Steering-vector recipe (per-layer DiffMean + Procrustes operator)
+
+```python
+# §1.3 METHODOLOGY: DiffMean at EVERY layer from the SAME >=50 contrast pairs.
+v = [extract.build_vector_bank(model, tok, load_concept("refusal"), l)[l]["diffmean"]
+     for l in range(L)]
+v = [vl / norm(vl) for vl in v]                  # unit BEFORE fitting (avoids scale confound)
+
+# Procrustes transport operator (Schonemann 1966): align V=[v_0..v_{L-2}] to V'=[v_1..v_{L-1}].
+U, S, Wt = svd(V.T @ Vprime)
+Q = Wt.T @ U.T                                   # Q* = W U^T, orthogonal
+v_transported[l] = matrix_power(Q, l - l0) @ v[l0]   # one base direction, transported
+```
+
+### 2. Experiment procedure (transported vs independent injection)
+
+```text
+1. Fit Q on adjacent (v_l, v_{l+1}); alignment error e_l = ||v_{l+1}-Q v_l||^2/||v_{l+1}||^2.
+2. NULL: random-rotation baseline (shuffle layer assignments) for significance.
+3. Multi-layer injection over the NON-fragile band (exclude Rogue-Scalpel fragile
+   layer, Guard C), via hooks.apply_operation operation="relative_add" (§2),
+   alpha=0.10 per layer:
+       (A) independent: h_l += alpha*||h||*unit(v_l)
+       (B) transported: h_l += alpha*||h||*unit(v_transported[l])
+   Sub-condition B2: layer-specific Q_l per adjacent pair.
+4. MEASURE (§3 METHODOLOGY): behavior efficacy (off-family judge on real text);
+   WikiText-103 PPL; MMLU-500.
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metrics:** (i) Procrustes alignment error vs the random-rotation null;
+  (ii) behavior-success and PPL of transported (B) vs independent (A).
+- **Hypothesis (§2/§6):** alignment error significantly below chance
+  (< 0.3 relative Frobenius); B within 5% of A on behavior and PPL — storing only
+  v_0 + Q suffices.
+- **Pre-registered FALSIFIER (§3):** if alignment error does NOT differ from
+  chance, OR transported injection is > 10% LOWER behavior-success than
+  independent, the parallel-transport hypothesis is DISCARDED (`x disproved`).
+
+### 4. Where the code is / status — UNTESTED (mostly existing primitives)
+
+- **Reproduce (cross-layer cosine screening shape):** `PYTHONPATH=src python
+  scripts/campaign_sweep.py --model models/google/gemma-3-270m-it --quant none
+  --hyp E40 --tag-prefix E40-transport --layers 6 9 12 14 16 --alphas 0.1 --ops
+  relative_add --behaviors anger`.
+- **Missing machinery (why UNTESTED):** per-layer DiffMean extraction is a trivial
+  extension and Procrustes is standard numpy/torch SVD, but the **multi-layer
+  transported-injection driver** (apply Q^(l−l0) v_0 across an injection band with
+  the fragile-layer exclusion) and the **random-rotation significance harness** are
+  not wired; generation-judge efficacy on Gemma-2-2B not yet run.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E40.md`](../PROVENANCE/E40.md).

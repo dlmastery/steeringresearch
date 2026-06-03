@@ -354,6 +354,65 @@ contribution.
 
 ---
 
+## Pseudocode & Methodology
+
+This hypothesis tests **IT→base transfer** of a steering vector. The knob varied is the
+**target model** (IT vs base) into which a fixed IT-extracted DiffMean vector is injected;
+source = DiffMean @ L16, matched relative alpha (so ‖h‖ differences between models are
+neutralized).
+
+### 1. Steering-vector recipe
+
+```python
+# Extract from the INSTRUCTION-TUNED model (METHODOLOGY §1.3); also extract a base-model
+# reference vector for the cosine comparison.
+H_it   = collect_activations(model_it,   tok, load_concept(behavior), layer=16)
+v_it   = diffmean_vector(H_it.pos, H_it.neg)       # mean(pos)-mean(neg), from gemma-2-2b-it
+H_base = collect_activations(model_base, tok, load_concept(behavior), layer=16)
+v_base = diffmean_vector(H_base.pos, H_base.neg)   # from gemma-2-2b (base)
+cos_it_base = cosine(v_it, v_base)                 # necessary-condition check (>=0.90)
+```
+
+### 2. Experiment procedure
+
+```text
+1. Extract v_it (IT model) and v_base (base model) at L16; record cos(v_it, v_base).
+2. for target_model in {it, base}:                         # the ONE knob: which model
+3.     h' = apply_operation(h, v_it/||v_it||, "relative_add", alpha_rel=0.10)
+            # inject the SAME IT-extracted vector into each target
+4.     beh = judge.GeminiJudge.score(generation)           # behavior efficacy
+5.     PPL, CR logged.
+6. efficacy_loss = 1 - beh(IT->base) / beh(IT->IT)         # baseline-subtracted per model
+7. SECONDARY: base->IT transfer (inject v_base into the IT model).
+8. Repeat across 3 concept types: safety/refusal, stylistic (French), behavioral (sycophancy).
+```
+
+Each model's behavior is measured as a CHANGE from its own no-steer baseline, so the
+comparison is fair even when base and IT have different baseline refusal rates.
+
+### 3. Measurement & decision rule
+
+PRIMARY metric: IT→base **efficacy loss** at matched relative alpha. FALSIFIER (§3):
+fires if IT→base efficacy loss `> 20%` on more than one concept (especially significant
+for a SAFETY concept, implying the refusal direction is IT-induced not pretraining-induced).
+Pre-registered (§6): loss `< 20%` (safety), `< 10%` (stylistic), `10–40%` (behavioral);
+`cos(v_it, v_base) >= 0.90`; base→IT `>= 70%` of IT→IT. Verdict: SUPPORTED iff IT→base
+loss `< 20%` (transfer holds ⇒ directions are pretraining-induced). Most likely outcome
+is a *conditional* result: transfer holds for pretraining-strong concepts (language,
+safety), fails for RLHF-shaped behaviors.
+
+### 4. Where the code is / status
+
+Driver: `scripts/campaign_sweep.py` loading two checkpoints (`google/gemma-2-2b` +
+`google/gemma-2-2b-it` via `model.py`), reusing `extract`, `hooks.apply_operation`
+(`relative_add`), and the off-family judge. Status **UNTESTED** — all screening used only
+IT variants (no base model loaded); the blocker is operational (load gated base Gemma-2-2B
+alongside IT, ~9 GB total in 16 GB). No new algorithmic machinery is required.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E8.md`.

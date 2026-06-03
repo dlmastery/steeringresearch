@@ -29,7 +29,8 @@ and to do so with publication-grade rigor so the winners are real, not noise.
 | 📄 **Paper** (honest ICML methods / harness / screening draft) | [paper/PAPER.md](paper/PAPER.md) |
 | 🔬 **FINDINGS** (rigor-gated; S-1…S-14 + rung-3) | [FINDINGS.md](FINDINGS.md) |
 | 🧪 **Hypothesis registry** (70 hypotheses E1–E50 + N1–N20 + verdicts) | [IDEA_TABLE.md](IDEA_TABLE.md) |
-| 📐 **70 hypothesis design docs** (12-section each) | [hypotheses/](hypotheses/) |
+| 📐 **70 hypothesis design docs** (each with a transparent Pseudocode & Methodology section) | [hypotheses/](hypotheses/) |
+| 🔧 **Methodology / recipe** — exactly how a steering vector is generated, injected, and measured (code-accurate pseudocode) | [hypotheses/METHODOLOGY.md](hypotheses/METHODOLOGY.md) |
 | 🏋️ **Is there training?** (no — steering is inference-time; what the per-hypothesis "fit" actually is) | [hypotheses/TRAINING-PROCESS.md](hypotheses/TRAINING-PROCESS.md) |
 | ✅ **Verification rubrics** (A–E) + the ICML sign-off | [audits/RUBRICS.md](audits/RUBRICS.md) · [audits/ICML_SIGNOFF_v2.md](audits/ICML_SIGNOFF_v2.md) |
 | ♻️ **Reusable meta-skill pack** (domain-agnostic autoresearch process) | [meta-skills/](meta-skills/) |

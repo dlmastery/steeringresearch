@@ -280,6 +280,65 @@ Jaccard of 0.20-0.35 (ambiguous zone) would be informative.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E37, a
+**mechanistic/interpretability** test: are the most INTERPRETABLE SAE features the
+same as the most CONTROLLABLE ones? It ranks GemmaScope features two ways and
+measures the overlap — no single steering vector is "the E37 vector".
+
+### 1. Scoring recipe (interpretability rank vs causal-control rank)
+
+```python
+# Feature pool: top-500 GemmaScope features (arXiv:2411.02193) by activation
+# frequency at the behavior layer (excludes rare-activation confound, §9).
+# (a) INTERPRETABILITY score per feature f_i:
+interp[i] = neuronpedia_label_confidence(f_i)        # standardised human annotation
+#           OR automated LLM-as-judge label-clarity (1-5); both reported.
+# (b) CONTROLLABILITY (causal) score per feature f_i — same micro-sweep as E36(D):
+for f_i in pool:
+    ctrl[i] = behavior_success(steer f_i via relative_add alpha=0.10)   # §2 operation
+            - behavior_success(unsteered)            # delta on real generated text
+top_interp = argsort(interp)[-50:]
+top_ctrl   = argsort(ctrl)[-50:]
+```
+
+### 2. Experiment procedure (two rankings, one overlap)
+
+```text
+1. Behaviors: refusal, sycophancy (CAA); behavior-specific feature pools at the
+   behavior layer (prior E2 sweep).
+2. Compute interp[] and ctrl[] for all 500 features.
+3. Single-feature steering uses hooks.apply_operation, operation="relative_add",
+   alpha=0.10 (§2 METHODOLOGY); behavior measured by off-family judge on real text.
+4. METRIC: Jaccard(top_interp, top_ctrl) at k=50; Spearman(interp, ctrl) over all.
+5. Side checks (§3 METHODOLOGY): JailbreakBench CR baseline 0% during micro-sweep;
+   MMLU/PPL for any steered condition; partial out feature norm (SciCritic confound).
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metric:** Jaccard overlap of top-50 interpretable vs top-50
+  controllable features (secondary: Spearman rank correlation).
+- **Hypothesis (§2):** Jaccard < 0.20 on both behaviors (the two sets are
+  near-disjoint quality axes).
+- **Pre-registered FALSIFIER (§3):** if Jaccard >= 0.35 on both tested behaviors,
+  interpretability-implies-controllability holds and the hypothesis is DISCARDED
+  (`x disproved`).
+
+### 4. Where the code is / status — UNTESTED
+
+- **No driver yet** (campaign + `scripts/build_provenance.py` -> `PROVENANCE/E37.md`).
+- **Missing machinery (why UNTESTED):** **GemmaScope SAE integration**;
+  **Neuronpedia annotation access** (or an automated LLM-as-judge interpretability
+  scorer); and the **single-feature causal micro-sweep** harness shared with
+  E36(D). None of these exist yet; E37 also depends on E36's selection
+  infrastructure.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E37.md`.

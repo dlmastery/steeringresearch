@@ -274,6 +274,62 @@ deployment argument.
 
 ---
 
+## Pseudocode & Methodology
+
+This hypothesis quantifies the **capability-tax reduction** of CAST gating vs always-on
+safety steering, on a benign-dominated distribution. The knob varied is the **steering
+condition**: no-steer vs always-on vs CAST-gated (at the E9 operating point).
+
+### 1. Steering-vector recipe
+
+```python
+# Same vectors as E9 (METHODOLOGY §1.3): a CONDITION vector at L_c and a refusal
+# BEHAVIOR vector at L_b; reuse E9's optimal (alpha_opt, theta_c_opt).
+v_condition = diffmean_vector(*collect_activations(model, tok, harmful_vs_harmless, L_c))
+v_behavior  = diffmean_vector(*collect_activations(model, tok, refuse_vs_comply,   L_b))
+```
+
+### 2. Experiment procedure
+
+```text
+1. mmlu_base     = eval.mcq_accuracy(model)                         # no steering
+2. mmlu_alwayson = eval.mcq_accuracy(model, steer = add(alpha_opt, v_behavior))   # gate always on
+3. mmlu_gated    = eval.mcq_accuracy(model, steer = cast(alpha_opt, v_behavior,
+                                                         v_condition, theta_c_opt))
+       # gated: behavior write fires ONLY where cos(h@L_c, v_condition) > theta_c_opt
+4. tax_alwayson  = mmlu_base - mmlu_alwayson
+5. tax_gated     = mmlu_base - mmlu_gated
+6. tax_reduction = 1 - tax_gated / tax_alwayson
+7. Also log PPL on benign (AlpacaEval), JailbreakBench CR, offshell Delta||h|| (N5 check),
+       and the full five-axis composite for all three conditions.
+8. Match harmful-refusal rate across always-on and gated (iso-efficacy, §confound), not just alpha.
+```
+
+Mechanism (N5, SUPPORTED): `log PPL ≈ 5.40 + 2.87·offshell`; the gate is read-only, so
+benign inputs incur `offshell = 0` (no write), giving `Δ_MMLU_gated ≈ FPR·Δ_MMLU_alwayson`.
+
+### 3. Measurement & decision rule
+
+PRIMARY metric: **tax_reduction** (gated vs always-on) at matched harmful-refusal rate.
+FALSIFIER (§3): FALSIFIED if MMLU-drop reduction is `< 80%` (relative); PARTIALLY SUPPORTED
+if FPR `< 3%` (per E9) yet the gated condition still incurs `> 20%` of the always-on MMLU
+drop (residual gate-firing cost). Pre-registered (§6): MMLU drop `[1.0,5.0] pp` (always-on)
+→ `[0.0,1.0] pp` (gated); tax reduction `>= 80%`; harmful-refusal `>= 50 pp` uplift; PPL on
+benign `[0,+0.1]`. With E9's <3% FPR the theoretical reduction is ~97%, so 80% is a
+conservative lower bound. Verdict: SUPPORTED iff tax_reduction `>= 80%` at iso harmful-refusal.
+
+### 4. Where the code is / status
+
+MMLU/PPL/geometry all exist (`eval.mcq_accuracy`, `eval.perplexity`,
+`geometry.offshell_displacement`); the always-on path is `hooks.apply_operation('add')`.
+**New machinery**: the gated `cast(...)` dispatch (the same read-at-`L_c` / masked-write-at-`L_b`
+pipeline E9 needs). Status **UNTESTED**, blocked on E9's CAST gate being operational and on
+`alpha_opt`/`theta_c_opt` coming from the E9 run.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E16.md`.

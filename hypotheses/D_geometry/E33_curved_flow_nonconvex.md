@@ -350,6 +350,64 @@ validate the proxy first before building the full FLAS infrastructure.**
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to curved flow-based
+transport (FLAS) vs the linear add chord, stratified by trait convexity. Status:
+`UNTESTED` — needs a normalizing-flow module + a convexity proxy. GEOMETRY/OPERATION
+hypothesis: replace the straight chord with a multi-step curved path along the manifold.
+
+### 1. Steering recipe (DiffMean chord baseline vs a learned curved transport)
+
+```python
+# Linear baseline = METHODOLOGY §1.3 DiffMean injected as the add chord (§2):
+v = extract.build_vector_bank(model, tok, load_concept(trait), L)[L]["diffmean"]
+# h' = h + alpha*v   (the chord; off-shell spikes at the chord midpoint for non-convex traits)
+
+# FLAS arm — a learned transport F: h_neg -> h_pos that FOLLOWS the manifold (§5.2):
+flow = train_mlp_flow(h_pos, h_neg, L)              # 2-layer MLP, ~100-200 steps (the ONLY trained part)
+def flas_steer(h, flow, steps=10):                  # 10-step Euler integration of the flow ODE
+    for _ in range(steps): h = h + (1/steps) * flow.vector_field(h)
+    return h                                         # stays in-manifold by construction
+```
+
+### 2. Experiment procedure
+
+```text
+Step 1 convexity proxy: per trait, mean_pairwise_dist(h_pos)/convex_hull_diameter,
+        AND a 2-component GMM cluster separation; convex if <0.5, non-convex if >0.7.
+Step 2 select 2 convex + 2 non-convex traits.
+Step 3 for each trait, model in {270M @L16, 1B @L18}:
+         linear: hooks.apply_operation(h, v, "add"/"relative_add", alpha)
+         FLAS:   h' = flas_steer(h, flow)
+         for seed in 1..3:
+           measure behavior, PPL, composite,
+                   geometry.offshell_displacement   # at the chord midpoint vs flow midpoint (N5 bridge)
+Step 4 spearman(convexity_proxy, flow_gain) across traits.
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metric: composite delta (FLAS − linear) stratified by trait convexity,
+  plus Spearman(convexity, flow gain).
+- Pre-registered FALSIFIER (§3): FLAS does NOT achieve `>= 15%` better composite on
+  ANY non-convex trait ⇒ conditionality REJECTED; OR Spearman(convexity, flow gain)
+  `< 0.5` ⇒ conditional framework itself rejected.
+- Predicted (§6): non-convex traits `>= +0.20` composite / `>= 20%` lower PPL; convex
+  traits `< +0.05` (chord already near-optimal).
+
+### 4. Where the code is / status
+
+The linear `add`/`relative_add` baseline and `geometry.offshell_displacement` exist.
+MISSING: the **normalizing-flow module** (train + 10-step Euler integration), the
+**convexity proxy** (hull-ratio + GMM), and held-out-prompt evaluation (avoid the
+in-sample flow-fitting confound). This is the only Block-D hypothesis needing a trained
+component beyond E20's SAE; `UNTESTED` and lowest priority in the block.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E33.md`.

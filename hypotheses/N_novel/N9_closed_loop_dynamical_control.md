@@ -264,6 +264,47 @@ the P-controller is motivated; if small, N9 is a solution to a non-problem.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N9 makes alpha a proportional-feedback controller over the generation, correcting behavioral drift. **UNTESTED** — needs a per-token closed-loop steering hook.
+
+### 1. Steering-vector recipe (P-controller over time)
+
+The vector `v` is ordinary DiffMean; the novelty is a time-varying, state-dependent alpha:
+
+```python
+v = bank[L]["diffmean"]
+# at each generated token t, read the behavior projection and adjust alpha:
+b_t       = cos(h_t, v)                                  # one dot product per token, per layer
+alpha_t   = K_p * max(0, b_target - b_t)                 # proportional feedback
+#   h_t' = h_t + alpha_t * v        (METHODOLOGY §2 add, but alpha recomputed each step)
+# geometry logged each step: offshell_displacement(h_t, h_t') must not exceed fixed-alpha peak
+```
+
+### 2. Experiment procedure
+
+```text
+1. Calibrate fixed-alpha so b(h_0) = b_target for each of 3 behaviors.
+2. Generate 512 tokens under: (a) fixed-alpha, (b) P-controller K_p in {0.25,0.5,1.0,2.0},
+   (c) no-steering drift baseline, (d) fixed-DECAY control (isolates feedback vs mere decay).
+3. Record b(h_t) trajectory, final drift |b(h_512)-b_target|, log-PPL, peak off-shell.
+4. 30 trajectories per condition (3 controller x 10 prompt seeds).
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metric:** behavioral-drift reduction at T=512, P-controller vs fixed-alpha.
+- **Pre-registered falsifier (§3):** P-controller drift ≥ fixed-alpha drift at any K_p, OR PPL@512 > 25% above T=1 ⇒ FALSIFIED; 10–29% drift reduction ⇒ INCONCLUSIVE.
+- **Verdict logic:** must beat the fixed-decay control to credit *feedback* (not decay) for the gain.
+
+### 4. Where the code is / status
+
+UNTESTED. Static-alpha injection (`SteeringContext`) and `geometry.offshell_displacement` exist, but the **per-token closed-loop hook** (read `cos(h_t,v)` and recompute alpha inside the decode loop, KV-cache-compatible) is the missing machinery — that is why N9 is UNTESTED.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N9.md`.

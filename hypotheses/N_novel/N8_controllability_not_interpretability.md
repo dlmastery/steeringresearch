@@ -282,6 +282,47 @@ practical value if confirmed — resolving the AxBench gap is a significant resu
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N8 claims reconstruction SAEs over-index on an interpretable-but-inert subspace; a causal-objective dictionary gives fewer, more causal atoms. **UNTESTED** — Stage 2 needs a causal SAE trainer.
+
+### 1. Steering-vector recipe (causal vs reconstruction atoms)
+
+```python
+# Stage-1 diagnostic uses EXISTING GemmaScope features f_i; rank by CAUSAL effect, not reconstruction:
+causal_score(f_i) = behavior_cosine(h + eps*f_i) - lambda * PPL(h + eps*f_i)   # small intervention
+interp_rank  = sort(features, key=interpretability_score)
+causal_rank  = sort(features, key=causal_score)
+overlap = jaccard(top20(interp_rank), top20(causal_rank))
+
+# steering edit uses a few causal atoms additively (METHODOLOGY §2):  h' = h + Σ alpha_i f_causal_i
+# null-space check: cos(span(F_causal), null_space_of_readouts) < 0.30
+```
+
+### 2. Experiment procedure
+
+```text
+Stage 1 (~2h): rank GemmaScope features by causal_score; compute overlap with interpretability rank.
+   If overlap < 30% -> the interpretable≠causal split is real -> trigger Stage 2.
+Stage 2 (~12h, NEW trainer): train a causal-objective SAE (mixed reconstruction + causal loss, mu=0.5);
+   compare |F_causal| vs |F_rec|, atoms-per-behavior, and AxBench steering efficacy.
+   Evaluate on HELD-OUT behaviors (3 train / 3 eval) to rule out behavior-specific overfit.
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metrics:** interpretable∩causal overlap; AxBench steering efficacy F_causal vs F_rec vs DiffMean.
+- **Pre-registered falsifier (§3):** F_causal ≤ F_rec efficacy on >2 of 5 behaviors, OR |F_causal| > 0.5·|F_rec|, OR Stage-1 overlap ≥ 30% ⇒ strong form FALSIFIED.
+- **Verdict logic:** Stage-1 overlap <30% is the go/no-go gate for the expensive Stage 2.
+
+### 4. Where the code is / status
+
+UNTESTED. Tangentially consistent with S-5 (Fisher ratio fails to predict efficacy). The five-axis bundle exists, but the **causal-objective SAE trainer** (and the GemmaScope causal-ranking pass) are not implemented — that missing infrastructure is why N8 is UNTESTED.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N8.md`.

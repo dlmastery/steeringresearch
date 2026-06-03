@@ -290,6 +290,65 @@ in the Block B sequence.
 
 ---
 
+## Pseudocode & Methodology
+
+This hypothesis measures **pairwise orthogonality of per-category condition vectors**.
+It is extraction-only (no injection): a DiffMean condition vector is built **per safety
+category** and the Gram (cosine) matrix is computed. The knob varied is the **category**
+(and the read layer `L_c`).
+
+### 1. Steering-vector recipe
+
+```python
+# One DiffMean CONDITION vector per category (METHODOLOGY §1.3), at early layer L_c.
+def condition_vector(category, L_c):
+    H = collect_activations(model, tok, pairs[category], layer=L_c)   # 50 pos / 50 neg
+    return diffmean_vector(H.pos, H.neg)        # mean(in-cat) - mean(out-of-cat)
+
+categories = ["hate_speech", "self_harm", "illegal_advice"]
+for L_c in [6, 8, 10, 12]:
+    V = { c: condition_vector(c, L_c) for c in categories }
+```
+
+### 2. Experiment procedure
+
+```text
+1. For each L_c in {6,8,10,12}: extract a DiffMean condition vector per category.
+2. Pairwise cross-category cosine matrix:
+3.     for (a,b) in combinations(categories, 2):
+4.         record |cosine(V[a], V[b])|              # extract.cosine
+5. Within-category consistency: re-extract per category over 3 seeds; record |cos| (>0.8 expected).
+6. CONTROL: cosine(random_direction, V[c]) as the "accidentally orthogonal" null
+       (controls.matched_norm_random).
+7. Decision node for E11: if worst |cos| < 0.3 -> OR-gating licensed; else add Gram-Schmidt (E19).
+```
+
+No generation and no steering — this is pure activation geometry, so it is cheap.
+
+### 3. Measurement & decision rule
+
+PRIMARY metric: worst-case cross-category `|cos(v_i, v_j)|` across the L_c grid (3-seed
+median). FALSIFIER (§3): any pair exceeds `|cos| = 0.3` ⇒ FALSIFIED for that pair (OR-gating
+unsafe without Gram-Schmidt, E19); a within-category `|cos| < 0.8` ⇒ UNCLEAR (extraction
+unreliable). Pre-registered (§6): `|cos(hate,self-harm)| < 0.20`, `|cos(hate,illegal)| < 0.25`,
+`|cos(self-harm,illegal)| < 0.25`; within-category `> 0.85`; worst-case `< 0.30`. Verdict:
+SUPPORTED iff all pairs `< 0.3` (LRH: distinct concepts ⇒ near-orthogonal directions),
+which licenses E11 to OR-compose without Gram-Schmidt.
+
+### 4. Where the code is / status
+
+The per-concept DiffMean banks come from `scripts/campaign_sweep.py` (the existing
+multi-behavior extraction over anger/formality/happiness/ocean is the analog; safety
+categories need a new harmful/harmless dataset), and the cosine-matrix / stacking analysis
+is the E10_E17 cosine analysis over the extracted banks. Status **UNTESTED**: it needs
+(a) the multi-category safety contrast dataset (hate/self-harm/illegal, 50+50 each), and
+(b) the E9 CAST condition-extraction pipeline. The Gram-matrix computation itself is
+trivial (`extract.cosine`); the blocker is the dataset + the upstream CAST pipeline.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E10.md`](../PROVENANCE/E10.md).

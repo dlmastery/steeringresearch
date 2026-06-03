@@ -297,6 +297,66 @@ graduated verdict (< 5pp = OV-primary confirmed; 5-20pp = partial; > 20pp
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E34, a
+**mechanistic** test: does residual-stream refusal steering act through the OV
+circuit (WHAT attention writes) rather than QK routing (WHERE it attends)? The
+vector is standard DiffMean; the novelty is a frozen-QK ablation hook.
+
+### 1. Steering-vector recipe (DiffMean refusal direction)
+
+```python
+# §1.3 METHODOLOGY: closed-form DiffMean, no training.
+bank = extract.build_vector_bank(model, tok, load_concept("refusal"), layer_inj)
+                                                  # >=50 harmful-vs-harmless pairs (Sorry-Bench/CAA)
+v_refusal = bank[layer_inj]["diffmean"]           # mean(h_harmful) - mean(h_harmless)
+# layer_inj is the prior E2/layer-sweep injection layer; relative_add normalises magnitude.
+```
+
+### 2. Experiment procedure (frozen-QK vs unrestricted)
+
+```text
+1. Capture the UNSTEERED forward pass; cache its attention-score tensors a_k
+   (post QK dot-product, pre-softmax) at the injection layer's heads.
+2. Condition A (unrestricted): hooks.apply_operation(h, v_refusal,
+      operation="relative_add", alpha)  -> h' = h + alpha*||h||*unit(v)  (§2).
+3. Condition B (frozen-QK): same relative_add, PLUS a freeze hook that overwrites
+   the steered pass's attention scores with the cached unsteered a_k, so only the
+   OV write of the injected direction can propagate. Sub-conditions:
+      B1 = freeze QK at ALL heads of the injection layer;
+      B2 = freeze QK only at activation-patching-identified refusal heads.
+4. Alpha grid: relative_add alpha in {0.05, 0.10, 0.20}.
+5. MEASURE (§3 METHODOLOGY): behavior efficacy (off-family judge.GeminiJudge on
+   real generated text); WikiText-103 PPL; MMLU-500; JailbreakBench CR (baseline
+   0%); geometry probes. Sanity: at alpha=0 both conditions must be byte-identical.
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metric:** behavior-success-rate delta of frozen-QK (B) vs
+  unrestricted (A) at matched alpha. (PPL is reported separately; the falsifier is
+  on behavior, not coherence — §9.)
+- **Hypothesis (§2/§6):** frozen-QK efficacy within 10 pp of unrestricted, PPL
+  within 10% — the OV circuit is load-bearing, QK is a spectator.
+- **Pre-registered FALSIFIER (§3):** if freezing QK reduces efficacy by MORE than
+  10 pp on behavior-success, DISCARD (`x disproved`) — QK routing is causally
+  load-bearing. (SciCritic suggests a graduated read: <5pp OV-primary; 5-20pp
+  partial; >20pp falsified — but the registered threshold is 10 pp.)
+
+### 4. Where the code is / status — UNTESTED
+
+- **No driver yet** (campaign + `scripts/build_provenance.py` -> `PROVENANCE/E34.md`).
+- **Missing machinery (why UNTESTED):** the **frozen-QK hook** — a hook that
+  intercepts Gemma's attention after the QK dot product and before softmax and
+  substitutes cached unsteered scores — does not exist in `hooks.py`; and an
+  **activation-patching sweep** to identify refusal-relevant heads (for sub-
+  condition B2). Generation-based behavior eval is also a prerequisite.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E34.md`.

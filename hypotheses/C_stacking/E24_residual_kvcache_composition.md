@@ -221,6 +221,56 @@ more than just a documentation of failure.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to disjoint-site
+composition (residual CAA + KV-cache steering) with a generation-length sweep and the
+SKOP mitigation. Status: `UNTESTED` — needs a KV-cache edit hook + SKOP projection.
+
+### 1. Steering-vector recipe (one residual DiffMean + a KV-cache edit)
+
+```python
+# Residual arm: standard closed-form DiffMean (METHODOLOGY §1.3), injected at layer L.
+v = normalize(extract.build_vector_bank(model,tok,load_concept(behavior),L)[L]["diffmean"])
+# KV-cache arm: a disjoint-site edit on the cached key/value tensors (separate hook).
+# SKOP mitigation (§5.2): project the residual edit out of the key direction before W_K:
+#   h_safe = h - (h · k_mean) * k_mean / ||k_mean||^2   ->  contamination-free key
+```
+
+### 2. Experiment procedure
+
+```text
+conditions = { residual_solo  : hooks.apply_operation(h, v, "add", alpha),
+               kvcache_solo    : edit cached (k,v) tensors,
+               joint_unmitigated: both,
+               joint_SKOP      : both, with key-orthogonal projection on residual h }
+for length in {20, 50, 100, 200, 400}:        # the discriminative axis
+  for cond in conditions:
+    for seed in 1..3:
+      generate(length tokens); measure behavior_success per method, PPL,
+      geometry.offshell_displacement   # KV contamination is a SECONDARY offshell source (N5)
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metric: joint behavior success (per method) vs solo, as a function of
+  generation length.
+- Pre-registered FALSIFIER (§3): at `<=50` tokens joint success `< 85%` for either
+  method ⇒ disjoint-site stacking FALSIFIED; at `>=200` tokens KV-cache success does
+  NOT drop below 80% ⇒ contamination mechanism FALSIFIED.
+- Remediation arm: joint+SKOP restores `>=85%` at `>=200` tokens (§6).
+
+### 4. Where the code is / status
+
+The residual `add` path exists. MISSING: a **KV-cache edit hook** (standard HF cache
+hook — a simplified direct (k,v)-tensor edit can stand in for the unverified
+arXiv:2507.08799 method), the **SKOP key-orthogonal projection**, and the
+generation-length sweep harness. `UNTESTED`.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E24.md`.

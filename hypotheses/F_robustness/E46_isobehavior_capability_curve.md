@@ -288,6 +288,59 @@ dimensional setting.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E46, a
+**robustness/geometry** test: are efficacy and capability tax separately tunable?
+A (layer x alpha x sparsity) sweep should produce iso-behavior settings with
+different MMLU costs, predicted by off-shell displacement.
+
+### 1. Steering-vector recipe (DiffMean + optional sparsity mask)
+
+```python
+# §1.3 METHODOLOGY: DiffMean refusal direction, unit-normalised.
+v = bank("refusal")["diffmean"]; v = v / norm(v)
+# sparsity level s in {1.00, 0.25, 0.10}: top-k coordinate mask (as in E35).
+v_s = topk_coordinate_mask(v, frac=s)            # zero all but the largest-|.| s*d_model coords
+```
+
+### 2. Experiment procedure (27-cell sweep, iso-behavior bins)
+
+```text
+1. 3 layers (early L8, middle L16, late L22) x 3 alphas (0.05,0.10,0.20
+   relative_add) x 3 sparsity (1.00,0.25,0.10) = 27 conditions per behavior.
+2. Inject each via hooks.apply_operation, operation="relative_add" (§2).
+3. MEASURE (§3 METHODOLOGY) per condition: behavior efficacy (off-family judge);
+   MMLU-500 delta; WikiText PPL; off-shell ||Δh||/||h|| (geometry probe).
+4. Group conditions into iso-behavior bins (behavior-success within ±5 pp);
+   within each bin, report the RANGE of MMLU drops and correlate MMLU drop with
+   off-shell displacement (the N17 check).
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metric:** within an iso-behavior bin (±5 pp), the spread of MMLU drop
+  across (layer, alpha, sparsity) settings, and whether off-shell predicts it.
+- **Hypothesis (§2):** >= two settings with same behavior (±5 pp) differ in MMLU
+  drop by >= 3 pp; the lower-cost setting has lower off-shell displacement (N17).
+- **Pre-registered FALSIFIER (§3):** if NO two settings match in behavior (±5 pp)
+  yet differ in MMLU drop by >= 2 pp, the iso-behavior surface is flat in
+  capability and separate tunability is DISCARDED (`x disproved`).
+
+### 4. Where the code is / status — UNTESTED (geometry screened)
+
+- **No driver yet** (campaign + `scripts/build_provenance.py` -> `PROVENANCE/E46.md`).
+- **Screening anchors:** FINDINGS.md S-6 (N17 R^2=0.81) and S-7 (N16 angular,
+  R^2=0.997) motivate the off-shell decoupling; S-9 sets the clean window.
+  **Missing machinery (why UNTESTED):** the **top-k coordinate mask** sweep (E35
+  dependency); the **27-cell layer x alpha x sparsity driver** with per-cell MMLU
+  + off-shell logging; generation-judge efficacy on Gemma-2-2B at n>=7 for the ±5 pp
+  bins to be reliable. The geometry probes exist; the full surface sweep does not.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E46.md`.

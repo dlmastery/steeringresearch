@@ -322,6 +322,64 @@ on a 4090-class GPU.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E50, the
+**safety+capability capstone**: a minimal deployable stack (Gate + 3 ortho
+vectors + NormCap + DoLa) hitting four SOTA targets simultaneously within 24 GB.
+It assembles the prior components; no new vector form is introduced.
+
+### 1. Steering-vector recipe (3 DiffMean vectors + gate; DoLa is decoding-time)
+
+```python
+# §1.3 METHODOLOGY: same 3 orthogonalised DiffMean safety vectors as E44/E47.
+V = gram_schmidt([bank("refusal")["diffmean"],
+                  bank("anti_sycophancy")["diffmean"],
+                  bank("honesty")["diffmean"]])
+v_condition = bank("harmfulness")["diffmean"]; v_condition /= norm(v_condition)  # CAST gate
+# DoLa (arXiv:2309.03883) is a DECODING contrast (early vs late layer logits),
+# NOT a residual-stream vector — composes additively with the steer (E25).
+```
+
+### 2. Experiment procedure (assemble in order, ablate, eval)
+
+```text
+1. Stack (order matters): (1) extract 3 vectors; (2) Gram-Schmidt orthogonalise;
+   (3) NormCap rescale sum_i alpha_i v_i to <=0.15*||h||; (4) CAST gate (theta
+   from E42); (5) DoLa exit_layer=L20.
+2. Inject the gated, capped stack via hooks.apply_operation, "relative_add" (§2),
+   alpha at the E44 Pareto-knee lambda (~0.50*0.10 per vector). DoLa applied at
+   decode time on top.
+3. ABLATION: the 7 E47 subsets + DoLa (8 conditions); each component retained only
+   if it adds >= 3% to the composite.
+4. MEASURE (§3 METHODOLOGY) at n=7 (rung-3 directly): JailbreakBench CR; MMLU-500
+   delta; XSTest over-refusal; AxBench concept score (off-family judge); VRAM peak;
+   per-token latency. Baseline CR confirmed 0% first.
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metric:** the four target thresholds met SIMULTANEOUSLY.
+- **Hypothesis (§2):** CR <= 5% AND MMLU drop <= 3 pp AND XSTest OR <= 20% AND
+  AxBench concept score >= 0.70, all at once, in <= 24 GB / 512-token budget.
+- **Pre-registered FALSIFIER (§3):** if ANY of the four targets is not met, that
+  axis is `~ partial`; if ALL four fail, Status -> `x disproved`. SUPPORTED only
+  if all four pass together (joint event). A safety leak is an automatic DISCARD.
+
+### 4. Where the code is / status — UNTESTED (terminal dependency)
+
+- **No driver yet** (campaign + `scripts/build_provenance.py` -> `PROVENANCE/E50.md`).
+- **Missing machinery (why UNTESTED):** E50 is the terminal node — it requires the
+  **CAST gate** (E41/E42), **Gram-Schmidt ortho-stack** (E19/E47), **norm-budget
+  clamp** (E22), **DoLa decoding** (E25), the **E44 Pareto-knee alpha**, and the
+  **E42 gate theta** as inputs, none of which are built/run yet; plus JailbreakBench,
+  XSTest, AxBench-mini wiring, a calibrated judge, and VRAM/latency profiling. It is
+  designed to run LAST in Block F after E41-E49 supply the calibrated components.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E50.md`.

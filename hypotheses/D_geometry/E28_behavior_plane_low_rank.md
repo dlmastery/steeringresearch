@@ -303,6 +303,60 @@ outcome.**
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to the
+PCA-spectrum / effective-rank analysis of the behavior plane. Status: `UNTESTED`.
+This is a GEOMETRY hypothesis about the dimensionality of the contrastive-difference
+space; it reuses the §1 activation-collection path directly.
+
+### 1. Steering-vector recipe (DiffMean, PCA-top1, and a top-3 subspace)
+
+```python
+# Collect per-pair pooled activations (METHODOLOGY §1.2), then form the difference matrix:
+h_pos, h_neg = extract.collect_activations_cached(model, tok, load_concept(trait), L)
+D = h_pos - h_neg                                   # [n_pairs, dim] contrastive differences
+v_diffmean = extract.diffmean_vector(h_pos, h_neg)  # mean(D)  (METHODOLOGY §1.3)
+v_pca1     = extract.pca_top1_vector(h_pos, h_neg)  # top right singular vector of D (ONE SVD)
+# cos(v_diffmean, v_pca1) ~ 0.994 in screening; PCA-1 ~ DiffMean.
+U, S, Vt = svd(D)                                   # eigen-spectrum lambda_i = S_i^2
+EVR = lambda EVRk: sum(S[:k]**2) / sum(S**2)        # explained-variance ratio at rank k
+eff_rank = geometry.participation_ratio(D)          # (Σλ)^2 / Σλ^2  -- N3 capacity proxy
+v_top3 = weighted_combo(Vt[0], Vt[1], Vt[2])        # the low-rank steering vector
+```
+
+### 2. Experiment procedure
+
+```text
+for trait in traits (>=3):           # simple (language/sentiment) AND complex (safety)
+  for model in {270M, 1B}:
+    spectrum, EVR(1..10), eff_rank = pca_of_D(trait, model, L)
+    for vtype in {top1, top3, full_rank}:
+      for alpha in {0.02,0.05,0.10,0.20} (relative_add):     # METHODOLOGY §2
+        h' = hooks.apply_operation(h, v[vtype], "relative_add", alpha)
+        measure behavior, PPL, geometry.effective_rank(h'), composite
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metrics: EVR(1), EVR(3), effective rank; and top-3-vs-full-rank behavior at matched PPL.
+- Pre-registered FALSIFIER (§3): on any trait EVR(3) `< 0.70` (effective rank >5), OR
+  full-rank behavior `> 10%` above top-3 at matched PPL, OR no scree elbow up to k=10 ⇒
+  low-rank claim rejected for that trait.
+- Predicted (§6): EVR(1) `>= 0.60`, EVR(3) `>= 0.90`, effective rank `1.5–4`.
+
+### 4. Where the code is / status
+
+`extract.diffmean_vector` / `pca_top1_vector` and `geometry.participation_ratio` /
+`effective_rank` already exist; SVD of `D` is one `torch.linalg.svd` call. MISSING:
+the EVR(k) scree computation and top-3-subspace steering-vector construction wired
+into the sweep. Cheap (existing cached activations); `UNTESTED` only because no row
+has been logged.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E28.md`](../PROVENANCE/E28.md).

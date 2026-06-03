@@ -226,6 +226,63 @@ comparison may be insufficient to distinguish the two gate designs.
 
 ---
 
+## Pseudocode & Methodology
+
+This hypothesis compares two **gate formulations** — CAST cosine vs FineSteer-SCS
+energy-ratio — on should-steer precision/recall. The knob varied is the **gate type**;
+both consume the same activations and one projection/dot-product per token.
+
+### 1. Steering-vector recipe
+
+```python
+# CAST gate: a single DiffMean CONDITION direction (METHODOLOGY §1.3), as in E9.
+v_condition = diffmean_vector(*collect_activations(model, tok, harmful_vs_harmless, L_c))
+
+# SCS gate: a condition SUBSPACE (top-k PCA of harmful activations) + a neutral
+# reference subspace (top-k PCA of benign activations).
+S_cond = pca_topk(harmful_activations @ L_c, k=3)     # condition subspace
+S_ref  = pca_topk(benign_activations  @ L_c, k=3)     # neutral reference subspace
+```
+
+### 2. Experiment procedure
+
+```text
+1. Build v_condition (CAST) and (S_cond, S_ref) (SCS) at L_c on the same training set.
+2. For each eval prompt read h @ L_c:
+3.     cos gate signal :  s_cos = cos(h, v_condition)                 # CAST (CosineGate)
+4.     scs gate signal :  s_scs = ||P_{S_cond} h||^2 / ||P_{S_ref} h||^2   # energy ratio
+5. Sweep each gate's threshold across its full range -> precision/recall curve.
+6. PR-AUC per gate via gate.pr_auc on:
+7.     (a) in-distribution eval (100 harmful JBB + 100 benign Alpaca, held out from E9)
+8.     (b) OOD eval (100 harmful + 100 benign from a DIFFERENT distribution, e.g. ToxiGen)
+9. Record compute overhead (latency / VRAM) of SCS vs CAST.
+```
+
+The energy ratio normalizes out global `‖h‖`, the hypothesized advantage on OOD inputs
+where prompt-level activation scale varies.
+
+### 3. Measurement & decision rule
+
+PRIMARY metric: **PR-AUC gap = SCS − CAST** at 3-seed median. FALSIFIER (§3): FALSIFIED
+if SCS PR-AUC is not strictly higher than CAST by `>= 0.05`; if within `0.03` (E3/E7 noise
+band) ⇒ NEAR-MISS and E15 (learned gate) is preferred over SCS. Pre-registered (§6): CAST
+in-dist PR-AUC `[0.80,0.90]`; SCS `[0.85,0.93]`; gap `[+0.03,+0.10]` in-dist and
+`[+0.05,+0.15]` OOD; SCS compute overhead `< 10%`. Verdict: SUPPORTED iff the OOD PR-AUC
+gap `>= 0.05` in SCS's favor; the OOD condition is the decisive one (in-dist may not
+separate the two designs).
+
+### 4. Where the code is / status
+
+CAST cosine scoring + `pr_auc`/`roc_auc` live in `src/steering/gate.py`
+(`CosineGate`, `evaluate_gates`). **New machinery** required: the SCS subspace-projection
+energy-ratio gate (PCA condition/reference subspaces + the `E_cond/E_ref` score) and the
+OOD evaluation set. Status **UNTESTED**, blocked on the E9 CAST pipeline and the SCS gate
+implementation.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E12.md`.

@@ -286,6 +286,46 @@ only if oracle cos > 0.55.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N10 tests whether behavior directions form a closed algebra, so a novel behavior can be synthesized from primitives with no contrast data. **UNTESTED** — needs least-squares + conceptor synthesis.
+
+### 1. Steering-vector recipe (algebraic synthesis from primitives)
+
+```python
+P = [diffmean_vector(b_i, baseline, L) for b_i in 10_primitives]   # extract.diffmean_vector
+v_B = diffmean_vector(held_out_behavior, baseline, L)              # ground-truth target
+
+# (a) oracle synthesis: least-squares coefficients onto the primitive span
+c = lstsq(stack(P), v_B)                ; v_syn = sum(c_i * P_i)
+# (b) zero-shot synthesis: c_i = cos(embed(description_B), embed(name_i))
+# (c) conceptor-AND of top-3 primitives (Jaeger 2014) for incompatible behaviors
+# steer with v_syn additively (METHODOLOGY §2 add) at matched off-shell vs supervised v_B
+```
+
+### 2. Experiment procedure
+
+```text
+1. Pick 10 primitives with |cos(p_i,p_j)| < 0.40; pick 5 held-out behaviors (different domain), pre-registered.
+2. Synthesize each held-out v_B by (a) oracle lstsq, (b) zero-shot embedding, (c) conceptor-AND.
+3. Measure cos(v_B, v_syn) and steering efficacy of v_syn at matched off-shell (geometry.offshell_displacement).
+4. RANDOM-coefficient baseline included (algebra must beat random).
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metric:** cos(v_B, v_syn) and synthesized efficacy as a fraction of supervised v_B.
+- **Pre-registered falsifier (§3):** max achievable cos < 0.40 for all combinations, OR synth efficacy < 40% supervised on all 5 behaviors, OR random matches the algebra ⇒ FALSIFIED.
+- **Verdict logic:** SUPPORTED needs cos ≥ 0.60 AND ≥ 60% efficacy on ≥3 of 5 behaviors, above the random baseline.
+
+### 4. Where the code is / status
+
+UNTESTED. DiffMean extraction and the efficacy/off-shell probes exist, but the **least-squares + semantic-embedding + conceptor-AND synthesis machinery** is not implemented — that missing code is why N10 is UNTESTED.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N10.md`.

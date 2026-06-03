@@ -309,6 +309,60 @@ prioritize over E29 (SLERP) or E31 (norm preservation).**
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to a per-token
+adaptive rotation gate. Status: `UNTESTED` — needs a token-level cosine gate on top
+of the rotate op. GEOMETRY hypothesis: the same DiffMean direction and rotate
+operation, applied only to a subset of token positions.
+
+### 1. Steering-vector recipe (DiffMean + a per-token alignment gate)
+
+```python
+v = extract.build_vector_bank(model, tok, load_concept(trait), L)[L]["diffmean"]  # METHODOLOGY §1.3
+# rotate op (METHODOLOGY §2): h_i' = ||h_i||*(cos(theta)*e1 + sin(theta)*e2), e1=unit(h_i),
+#                              e2 = unit(v - (v·e1)e1)
+# Adaptive gate (§5.1): rotate token i ONLY if its current alignment is in the window:
+def adaptive_rotate(H, v, theta, low, high):
+    for i, h_i in enumerate(H):                      # per token position
+        c_i = dot(unit(h_i), unit(v))                # cheap O(T*d) cosine
+        if low <= c_i <= high:                        # skip anti-aligned and already-aligned
+            H[i] = apply_operation(h_i, v, "rotate", theta)
+    return H
+```
+
+### 2. Experiment procedure
+
+```text
+for model in {270M @L16, 1B @L18}:
+  baseline = all-token rotate at theta=0.1 rad (C3b)            # rotate every position
+  for low in {-0.5,-0.2,0.0}, high in {0.5,0.7,0.9}:           # grid the alignment window
+    for seed in 1..3:
+      H' = adaptive_rotate(H, v, theta=0.1, low, high)
+      measure behavior, PPL, fraction_tokens_rotated,
+              geometry.angular_displacement(mean over rotated tokens)   # the coherence-cost predictor
+compare adaptive PPL vs all-token PPL at matched behavior
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metric: PPL ratio (adaptive / all-token) at matched behavior success.
+- Pre-registered FALSIFIER (§3): PPL ratio `> 0.90` at behavior within 5% ⇒ gating
+  unnecessary, E30 DISCARDED (apply all-token rotation).
+- Predicted (§6): `>= 15%` PPL reduction; 30–60% of positions rotated; behavior within
+  10% of all-token.
+
+### 4. Where the code is / status
+
+The `rotate` op and `geometry.angular_displacement` exist; the per-token cosine is
+one matrix-vector product (<1% overhead). MISSING: the **per-token gate wrapper**
+(`adaptive_rotate`) and a held-out window-calibration set (avoid the leakage confound).
+Depends on a rotation baseline; `UNTESTED`.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E30.md`.

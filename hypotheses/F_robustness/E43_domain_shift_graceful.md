@@ -284,6 +284,62 @@ early in the program.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E43, a
+**robustness/generalization** test: does a vector extracted on one domain degrade
+gracefully (smooth in distributional distance) or catastrophically across OOD
+domains? The vector is standard single-domain DiffMean.
+
+### 1. Steering-vector recipe (single-domain DiffMean + domain distance)
+
+```python
+# §1.3 METHODOLOGY: DiffMean extracted ONLY on the news/instruction domain.
+v = extract.build_vector_bank(model, tok,
+        load_concept("refusal"), layer)[layer]["diffmean"]   # also sycophancy
+# Distributional distance per domain = cosine distance of activation centroids
+# at the injection layer (the natural distance in the steering space, §9):
+centroid[d] = mean_over(test_set[d]) of probe_activations(model, x, [layer])[layer].mean(seq)
+dist[d]     = 1 - cos(centroid[d], centroid["news"])
+```
+
+### 2. Experiment procedure (one vector, five domains)
+
+```text
+1. Domains: news/instruction (in-domain), formal dialogue, creative writing,
+   medical, code. 50 prompts each.
+2. Inject the SAME v on every domain via hooks.apply_operation,
+   operation="relative_add" alpha=0.10 (§2) — fractional alpha controls for the
+   different ||h|| across domains.
+3. MEASURE (§3 METHODOLOGY): behavior efficacy (off-family judge with a
+   DOMAIN-ADAPTED refusal/sycophancy prompt, calibrated per domain); PPL relative
+   to the unsteered baseline ON THE SAME domain text; MMLU-500 (model-wide).
+4. Fit efficacy-retention vs dist[d]; test linear (gradual) vs step-function.
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metric:** efficacy retention (fraction of in-domain efficacy) as a
+  function of distributional distance; the shape of that curve.
+- **Hypothesis (§2):** smooth monotone decline; retention >= 50% at distance
+  <= 0.5; NO domain at zero efficacy.
+- **Pre-registered FALSIFIER (§3):** if any OOD domain shows complete failure
+  (< 20% retention) while others retain near-full, OR the relationship is
+  step-function, the gradual-degradation hypothesis is DISCARDED (`x disproved`).
+
+### 4. Where the code is / status — UNTESTED
+
+- **No driver yet** (campaign + `scripts/build_provenance.py` -> `PROVENANCE/E43.md`).
+- **Missing machinery (why UNTESTED):** **five domain-specific test sets** with
+  verified labels; **per-domain judge calibration** (a news-calibrated judge is
+  unreliable on code, §confounds); **multi-domain activation-centroid distance**
+  computation; and domain-relative PPL baselines. The extraction/injection path
+  reuses existing infra; the multi-domain eval scaffold does not exist.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E43.md`.

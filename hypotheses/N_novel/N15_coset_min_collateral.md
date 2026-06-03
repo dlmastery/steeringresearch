@@ -259,6 +259,46 @@ commit to full protocol if MMLU difference signal is detectable at 3 seeds.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N15 picks the behaviorally-equivalent coset representative with minimal projection onto fragile subspaces — a free convex post-processing step on any vector. **UNTESTED** — needs null-space + fragile-subspace estimation.
+
+### 1. Steering-vector recipe (min-collateral coset projection)
+
+```python
+v_raw = bank[L]["diffmean"]
+# active subspace = top-variance eigenvectors of activation covariance (2000 forward passes)
+N_null = complement(top_variance_eigvecs(cov_H, frac=0.80))     # inert null space (NEW)
+F      = fragile_directions(L)                                  # N20 curvature OR Rogue-Scalpel list (NEW)
+# project v_raw OFF the fragile part of the null space (convex; same family as METHODOLOGY §2 project_out):
+v_coset = v_raw - project_onto(N_null & F, v_raw)
+# behavior unchanged (coset theorem): efficacy(v_coset) within 3% of v_raw; collateral DOWN
+```
+
+### 2. Experiment procedure
+
+```text
+1. Estimate null space via SVD of the activation covariance (2000 diverse prompts).
+2. Identify fragile F (from N20 output, or the Rogue-Scalpel published harmful-feature set).
+3. Build v_coset; pre-check behavioral equivalence (efficacy within 3% of v_raw).
+4. Measure MMLU (100-q subset, eval.mcq_accuracy) and XSTest over-refusal for v_raw, v_coset,
+   and a RANDOM coset rep control (same ||v_coset||, different direction).
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metric:** alignment-damage = composite of MMLU drop + XSTest over-refusal, v_coset vs v_raw, at equal efficacy.
+- **Pre-registered falsifier (§3):** alignment_damage(v_coset) ≥ 0.9·alignment_damage(v_raw) (i.e. <10% reduction) ⇒ FALSIFIED.
+- **Verdict logic:** must beat the random-coset control; MMLU eval must be sensitive enough vs its noise floor.
+
+### 4. Where the code is / status
+
+UNTESTED. `eval.mcq_accuracy` (MMLU) exists; but the **null-space estimator (covariance SVD) and the fragile-subspace identifier** are not implemented (the latter depends on N20 or an imported Rogue-Scalpel list) — that missing machinery is why N15 is UNTESTED.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N15.md`.

@@ -339,6 +339,58 @@ goes.**
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to measuring whether
+the harmfulness-DETECTION direction and the refusal-BEHAVIOR direction are separable.
+Status: `UNTESTED`. GEOMETRY hypothesis: two independently-extracted DiffMean
+directions and their cross-layer cosine — no injection of a combined vector needed for
+the core test.
+
+### 1. Steering-vector recipe (two DiffMean directions from different contrasts)
+
+```python
+# Condition direction c — DiffMean of harmful vs harmless INPUT activations (METHODOLOGY §1.3):
+c_L = normalize(extract.diffmean_vector(h_harmful_prompts[L], h_harmless_prompts[L]))   # per layer L
+# Behavior direction b — DiffMean of refusal vs compliance OUTPUT activations (reuse Rogue-Scalpel):
+b_L = normalize(extract.build_vector_bank(model, tok, refusal_vs_compliance, L)[L]["diffmean"])
+# Separability probe: cosine across layers, plus orthogonalized behavior vector:
+cos_profile = { L: dot(c_L, b_L) for L in {8,10,12,14,16,18,20} }
+b_ortho = normalize(b_L - dot(b_L, c_L) * c_L)     # project the condition direction OUT of b
+```
+
+### 2. Experiment procedure
+
+```text
+Step 1: extract c_L at L in {8,10,12,14,16,18,20} (50+ harmful/harmless pairs), DiffMean + PCA-top1.
+Step 2: extract / reuse b_L (Rogue-Scalpel) at the same layers.
+Step 3: cos_profile = cos(c_L, b_L) across layers; plot.
+Step 4: at L=16 build b_ortho; inject via hooks.apply_operation(h, b_ortho, "add"/"relative_add", alpha);
+        compare behavior efficacy of b_ortho vs b.
+Step 5: validate c is meaningful: AUC of cos(h_i, c) separating harmful vs harmless prompts.
+report for models {270M, 1B}, n=3 seeds.
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metric: |cos(c, b)| at the primary steering layer (L=16 for 270M, L=18 for 1B).
+- Pre-registered FALSIFIER (§3): |cos(c,b)| `>= 0.5` at the primary layer ⇒ separability
+  REJECTED; if `>0.5` at more than half the tested layers ⇒ disproved. Partial rejection
+  if separability holds only at some layers.
+- Utility check (§6): b_ortho efficacy within 10% of b (>20% drop falsifies the utility);
+  condition-direction AUC `> 0.70` confirms c encodes harm.
+
+### 4. Where the code is / status
+
+`extract.diffmean_vector` / `pca_top1_vector` exist; the cosine profile, `b_ortho`
+projection, and AUC computation are a few lines. Behavior efficacy of `b_ortho` uses
+the standard `add`/`relative_add` path. MISSING only: the harmful/harmless prompt-pair
+set and the layerwise extraction loop. `UNTESTED`.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E32.md`.

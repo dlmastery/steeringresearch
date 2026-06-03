@@ -302,6 +302,67 @@ directly policy-relevant confirmation. Promote to rung-3 alongside E3.
 
 ---
 
+## Pseudocode & Methodology
+
+This hypothesis compares the two extraction **sources** (DiffMean vs PCA-top1). The
+knob varied is **source**; it is mostly an extraction-side cosine comparison, with an
+optional matched-displacement behavioral check using E7's `relative_add`.
+
+### 1. Steering-vector recipe
+
+```python
+# Both sources from the SAME contrast set at the SAME layer (METHODOLOGY §1.3)
+H = collect_activations(model, tok, load_concept(behavior), layer=16)
+v_diffmean = diffmean_vector(H.pos, H.neg)          # mean(pos)-mean(neg)
+D          = H.pos - H.neg                          # per-pair differences [n,dim]
+v_pca      = pca_top1_vector(H.pos, H.neg)          # top right singular vector of D,
+                                                    # sign-aligned to v_diffmean
+cos_dm_pca = cosine(v_diffmean, v_pca)              # the PRIMARY quantity
+# build_vector_bank returns {diffmean, pca, cosine_dm_pca, fisher} per layer.
+```
+
+### 2. Experiment procedure
+
+```text
+1. For each (concept, layer) extract v_diffmean and v_pca on the same pairs.
+2. Record cos(v_diffmean, v_pca).                      # cosine alignment
+3. Behavioral equivalence check (matched displacement, E7 parameterization):
+4.   for source in {diffmean, pca}:
+5.       v_hat = v/||v||
+6.       h' = apply_operation(h, v_hat, "relative_add", alpha_rel=0.10)
+                                                       # h' = h + 0.10*||h||*v_hat
+7.       record behavior (judge) and PPL.
+8. Compare behavior gap and PPL gap between the two sources.
+9. CONTROL: cos(random_direction, v_pca) as a null baseline (controls.matched_norm_random).
+```
+
+The matched-`relative_add` step is essential: raw norms of DiffMean and unit PCA differ
+~10x, so only at matched *fractional* displacement is the behavioral comparison fair.
+
+### 3. Measurement & decision rule
+
+PRIMARY metric: `cos(DiffMean, PCA-top1)` at the best layer; SECONDARY: behavior-gap and
+PPL-gap at matched `alpha_rel`. FALSIFIER (§3): fires if `cos < 0.95` at any tested
+layer-concept pair, OR if behavior success differs by `> 5%` relative at matched
+fractional alpha. Pre-registered (§6): `cos >= 0.95`; behavior gap `< 5%`; PPL gap
+`< 10%`; ≥3 model-layer confirmations. Observed: `cos = 0.994–0.996` on three models;
+matched-alpha behavior within ~0.02. Verdict: **SUPPORTED at screening** (Davis-Kahan:
+high alignment iff the concept is the dominant variance direction, λ1≫λ2). Promotion:
+≥3 concepts + n≥7 + generation judge on Gemma-2-2B, plus a multi-modal-concept
+falsifier probe.
+
+### 4. Where the code is / status
+
+The cosine comparison runs inside `extract.build_vector_bank` (the `cosine_dm_pca`
+field); the matched-displacement behavioral arm is the C9b/S-9 `relative_add` run via
+`scripts/campaign_sweep.py` (exp# 1, 55–59, 98–109). Status **SUPPORTED (screening,
+3 models)**; no new machinery needed for promotion — only more concepts/seeds and the
+off-family judge.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E4.md`](../PROVENANCE/E4.md).

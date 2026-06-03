@@ -229,6 +229,61 @@ practical consequence for deployment.
 
 ---
 
+## Pseudocode & Methodology
+
+This hypothesis sweeps the **condition-read layer `L_c`** (independent of the behavior
+write layer `L_b`) and checks whether the gate stays accurate at an *early* `L_c`, buying
+an early-exit latency win. The knob varied is **`L_c`**.
+
+### 1. Steering-vector recipe
+
+```python
+# A separate DiffMean CONDITION vector is RE-EXTRACTED at each candidate L_c
+# (the early-layer vector differs from the late-layer one). METHODOLOGY §1.3.
+def condition_vector(L_c):
+    H = collect_activations(model, tok, harmful_vs_harmless, layer=L_c)
+    return diffmean_vector(H.pos, H.neg)        # harm-relevance direction @ L_c
+```
+
+### 2. Experiment procedure
+
+```text
+1. for L_c in {4, 6, 8, 10, 12, 14, 18(=L_b)}:                 # the ONE knob
+2.     v_c = condition_vector(L_c)
+3.     gate signal = cos(h@L_c, v_c)                           # CosineGate
+4.     gate_AUC(L_c) = pr_auc( gate signal vs harmful/benign label )   # gate.pr_auc
+5.     latency(L_c)  = torch.cuda.Event timing per prompt (early-exit model)
+6. CONTROL: same-layer (L_c == L_b) baseline.
+7. Eval set: the same 200-prompt set as E9 (100 harmful, 100 benign).
+8. Report gate_AUC vs L_c and the benign-prompt latency saving of early L_c.
+```
+
+Latency model: with the condition at early `L_c`, a benign prompt whose gate is False can
+skip the `L_c+1 .. L_b` blocks of behavior dispatch — saving ~`(L_b - L_c)/L_total`.
+
+### 3. Measurement & decision rule
+
+PRIMARY metric: `gate_AUC(best early L_c) − gate_AUC(L_b)`. FALSIFIER (§3): FALSIFIED if
+the best early-layer gate AUC is more than `0.03` below the L_b gate AUC (3-seed median);
+NEAR-MISS if latency is not actually reduced (early-probe overhead == early-exit savings).
+Pre-registered (§6): gate AUC at `L_c=6` `[0.78,0.88]`, at `L_c=10` `[0.80,0.90]`, at
+`L_b=18` `[0.82,0.92]`; AUC gap `[0, 0.04]` (must be `< 0.03`); benign latency saving
+`[30%, 50%]`. Verdict: SUPPORTED iff the early-layer gate is within 0.03 AUC AND the
+latency saving is realized.
+
+### 4. Where the code is / status
+
+The per-layer gate-AUC machinery exists (`gate.CosineGate` + `gate.pr_auc`; condition
+vectors from `extract.diffmean_vector`). **New machinery**: a configurable-`L_c` CAST
+dispatch with an early-exit path and `torch.cuda.Event` latency profiling. Status
+**UNTESTED**, blocked on the E9 CAST pipeline. (Caveat noted in §9: in pure autoregressive
+decoding all layers run anyway, so the early-exit win is mainly a prefill / first-token
+effect.)
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E13.md`.

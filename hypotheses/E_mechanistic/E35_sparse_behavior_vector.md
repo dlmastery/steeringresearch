@@ -291,6 +291,68 @@ as the primary output.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E35, a
+**mechanistic** test of coordinate-sparsity: does a DiffMean behavior vector
+sparsified to its top-magnitude 10% of coordinates keep its efficacy? The vector
+is standard DiffMean; the manipulation is a coordinate mask.
+
+### 1. Steering-vector recipe (DiffMean + top-k coordinate mask)
+
+```python
+# §1.3/§1.4 METHODOLOGY: closed-form DiffMean, unit-normalised BEFORE masking
+# (per C7 lesson: never confound magnitude with direction).
+for behavior in ["refusal", "sycophancy", "formality"]:
+    bank = extract.build_vector_bank(model, tok, load_concept(behavior), layer)
+    v    = bank[layer]["diffmean"]
+    v    = v / norm(v)                            # unit
+    # top-k mask: keep the k largest-|coordinate| entries, zero the rest.
+    k        = int(frac * d_model)                # d_model=2304 for Gemma-2-2B; frac in the sweep
+    keep     = argsort(abs(v))[-k:]
+    v_topk         = zeros_like(v); v_topk[keep]   = v[keep]
+    # CONTROL (same displacement, only support differs): keep k RANDOM coords.
+    rand_keep      = rng(seed).choice(d_model, k, replace=False)
+    v_randk        = zeros_like(v); v_randk[rand_keep] = v[rand_keep]
+```
+
+### 2. Experiment procedure (sparsity sweep + random-k control)
+
+```text
+1. For frac in {0.01, 0.05, 0.10, 0.25, 0.50, 1.00}: build v_topk and v_randk.
+2. Inject via hooks.apply_operation, operation="relative_add" (alpha=fraction of
+   ||h||, §2) at alpha in {0.05, 0.10, 0.20}; alpha=0.10 is the PRIMARY point.
+3. MEASURE (§3 METHODOLOGY): behavior efficacy (off-family judge.GeminiJudge on
+   real text) for full-vector, each top-k, and each random-k; WikiText-103 PPL;
+   MMLU-500; geometry probes (effective-rank, off-shell ||Δh||).
+4. Report efficacy as a FRACTION of the full-vector (frac=1.00) efficacy.
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metric:** top-10% efficacy as a fraction of full-vector efficacy, at
+  matched fractional alpha; plus the top-k − random-k gap.
+- **Hypothesis (§2):** top-10% retains >= 85% efficacy; PPL within 15%; random-k
+  retains significantly less.
+- **Pre-registered FALSIFIER (§3):** if top-10% retains < 85% on two or more of
+  three behaviors, OR random-k retains >= 75% (no concentration), DISCARD
+  (`x disproved`). The top-k >> random-k gap is the load-bearing signature.
+
+### 4. Where the code is / status — UNTESTED (screening infra exists)
+
+- **Reproduce (screening shape):** `PYTHONPATH=src python scripts/campaign_sweep.py
+  --model models/google/gemma-3-270m-it --quant none --hyp E35 --tag-prefix
+  E35-sparse --layers 16 --alphas 0.1 --ops relative_add --behaviors anger`.
+- **Missing machinery (why UNTESTED):** the **coordinate top-k / random-k mask**
+  (binary, not soft-threshold) as a vector transform wired into `campaign_sweep`;
+  and generation-based judge efficacy on Gemma-2-2B across the three behaviors and
+  six sparsity levels. The campaign harness exists; the sparsity-mask sweep over
+  real behaviors has not been run.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E35.md`](../PROVENANCE/E35.md).

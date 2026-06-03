@@ -247,6 +247,55 @@ gate-first vs suppression comparison is genuinely informative.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to CAST injection
+order: gate-first (L_c < L_b) vs behavior-first (L_b < L_c) and its effect on
+selectivity. Status: `UNTESTED` — needs the E9 CAST gate + configurable layer order.
+
+### 1. Steering-vector recipe (a condition vector + a behavior vector)
+
+```python
+# Both are closed-form DiffMean (METHODOLOGY §1.3) at their respective layers.
+v_cond = normalize(extract.build_vector_bank(model,tok,harmful_vs_harmless, L_c)[L_c]["diffmean"])
+v_beh  = normalize(extract.build_vector_bank(model,tok,load_concept("refusal"), L_b)[L_b]["diffmean"])
+```
+
+### 2. Experiment procedure (the two architectures)
+
+```text
+# Gate-first (L_c < L_b), the standard CAST (§5.1):
+#   at L_c: gate = (cos(h_Lc, v_cond) > theta_c)   # reads UNSTEERED h -> causal integrity
+#   at L_b: if gate: hooks.apply_operation(h_Lb, v_beh, "add", alpha)
+# Behavior-first (L_b < L_c) with suppression (§5.2):
+#   at L_b: hooks.apply_operation(h_Lb, v_beh, "add", alpha)   # unconditional
+#   at L_c: gate reads STEERED h; if NOT harmful: subtract the write (suppress)
+conditions = { gate_first(L_c=6,L_b=18), behavior_first(L_b=6,L_c=18), unconditional, no_steer }
+for cond in conditions:
+  for seed in 1..3:
+    measure: harmful_refusal_rate, harmless_refusal_rate,
+             selectivity = harmful_refusal - harmless_refusal, MMLU on benign set
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metric: selectivity = (harmful-refusal − harmless-refusal) at EQUAL overall
+  refusal rate.
+- Pre-registered FALSIFIER (§3): selectivity not `>= 5 pp` higher for gate-first vs
+  behavior-first ⇒ injection order doesn't matter, claim FALSIFIED. If behavior-first
+  is HIGHER ⇒ reversed-and-FALSIFIED.
+- Targets (§6): gate-first harmless-refusal `< 3%`; behavior-first `> 20%`.
+
+### 4. Where the code is / status
+
+The `add` op exists. MISSING: the **CAST gate** (from E9 — a cosine threshold read at
+L_c), the **behavior-first-with-suppression** hook (a conditional negative write), and
+configurable L_c/L_b ordering. Selectivity is the §3 axis-5 metric. `UNTESTED`.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E26.md`.

@@ -269,6 +269,62 @@ stacking predictor.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to the N-vector
+interference-vs-Gram-mass regression. Status: `UNTESTED` — needs multi-vector
+orchestration + Gram-matrix tooling over N∈{2,3,4,5}.
+
+### 1. Steering-vector recipe (N vectors + the Gram matrix M)
+
+```python
+# Each v_i is a closed-form DiffMean (METHODOLOGY §1.3 extract.diffmean_vector); normalize.
+V = [ normalize(extract.build_vector_bank(model, tok, load_concept(b), L)[L]["diffmean"])
+      for b in behaviors ]                              # N vectors, N in {2,3,4,5}
+
+# Controlled Gram mass: blend a fresh behavior into a target cosine (per §5.3)
+# v3 = cos_target * v1 + sqrt(1 - cos_target^2) * v_C   ->  cos(v1, v3) = cos_target
+def gram_offdiagonal_mass(V):
+    return sum(abs(dot(V[i], V[j])) for i in range(N) for j in range(i+1, N))  # M = Σ_{i<j}|cos(vi,vj)|
+
+M = gram_offdiagonal_mass(V)            # the single scalar predictor under test
+v_stack = sum(alpha * v_i for v_i in V) # all alphas fixed equal for the M-sweep (confound control)
+# Exact identity (§5.2): ||v_stack||^2 = alpha^2 * (N + 2*Σ_{i<j} cos(vi,vj))
+```
+
+### 2. Experiment procedure
+
+```text
+for N in {2,3,4,5}:
+  for mass_level in {low M<0.5, medium 0.5..2.0, high M>2.0}:   # 12 conditions
+    V = construct_set(N, target_M=mass_level)
+    for seed in 1..3:
+      inject sum(V) via hooks.apply_operation(h, v_stack, "add"/"relative_add", alpha)
+      per behavior j: interference_j = 1 - efficacy_j(joint) / efficacy_j(solo)
+      log: I = mean_j(interference_j), M, PPL,
+           geometry.offshell_displacement, geometry.norm_budget   # N5 cross-check
+spearman_rho = spearman(I_values, M_values)        # across all (N, mass, seed) points
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metric: Spearman ρ between interference index `I` and Gram mass `M`.
+- Pre-registered FALSIFIER (§3): `ρ < 0.7` across the N-sweep ⇒ FALSIFIED (pairwise
+  cosines do not predict interference; higher-order Gram terms dominate). Also
+  FALSIFIED if ρ≥0.7 but non-monotone (a higher-M pair has lower interference).
+- Cross-check (§6): N5 norm growth vs M is monotone, R²>0.80 (exact algebra anchor).
+
+### 4. Where the code is / status
+
+DiffMean extraction and the operations exist; the Gram-mass blend, the
+`gram_offdiagonal_mass` reducer, the interference index, and **multi-vector
+injection across up to 5 vectors** are not yet built. E18 also consumes E17's
+N=2, M≈0 anchor point. `UNTESTED` until that orchestration exists.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E18.md`](../PROVENANCE/E18.md).

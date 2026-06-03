@@ -260,6 +260,68 @@ control is essential for the comparison to be meaningful. Low compute cost.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) (§1 vector recipe,
+§2 the four operations, §3 the five axes + geometry) to the TWO-vector near-orthogonal
+stacking test. Status: `UNTESTED` — blocked on multi-vector orchestration (the runner
+injects one vector today).
+
+### 1. Steering-vector recipe (build TWO vectors, then stack)
+
+```python
+# Per METHODOLOGY §1.3: each behavior vector is a closed-form DiffMean (NO optimizer).
+# extract.diffmean_vector(h_pos, h_neg)  ->  mean(h_pos) - mean(h_neg)
+bank_B1 = extract.build_vector_bank(model, tok, load_concept(B1), layer=L)
+bank_B2 = extract.build_vector_bank(model, tok, load_concept(B2), layer=L)
+v1 = normalize(bank_B1[L]["diffmean"])          # e.g. refusal
+v2 = normalize(bank_B2[L]["diffmean"])          # e.g. sentiment-positive
+
+cos12 = dot(v1, v2)                              # the Gram off-diagonal entry (logged for E18)
+assert abs(cos12) < 0.2          # near-orthogonal regime (the hypothesis precondition)
+
+# The STACK is a plain sum injected as one combined vector (METHODOLOGY §2 add op):
+v_stack = alpha1 * v1 + alpha2 * v2             # ||v_stack||^2 = a1^2 + 2 a1 a2 cos12 + a2^2
+# near-orthogonal: ||v_stack|| ~ sqrt(2)*alpha (Pythagorean);  anti-aligned: ~1.8*alpha
+```
+
+### 2. Experiment procedure
+
+```text
+conditions = { solo_B1(v1), solo_B2(v2),
+               joint_near_orth(v1+v2, |cos|<0.2),
+               joint_anti_aligned(v1+v2', |cos|>0.5) }   # v2' = sentiment-negative control
+for cond in conditions:
+  for seed in 1..3:                                       # screening n=3
+    # inject the COMBINED vector at layer L via hooks.apply_operation(h, v_stack, "add", alpha=1)
+    # (relative_add variant: hooks h' = h + ||h||*unit(v_stack) for scale-comparable displacement)
+    metrics = eval.evaluate_bundle(steered_vs_unsteered)  # METHODOLOGY §3 five axes
+    log: behavior_B1, behavior_B2, PPL,
+         geometry.offshell_displacement(h_base, h_steer),  # N5 radial excursion
+         geometry.norm_budget(deltas, h_base), cos12       # cumulative ||Δh||/||h||
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metric: joint efficacy retention = joint_efficacy / solo_efficacy, per behavior.
+- Pre-registered FALSIFIER (§3): joint retention `< 90%` for either B1 or B2 at
+  `|cos|<0.2` ⇒ FALSIFIED (independence violated). If the anti-aligned control also
+  reaches `>=90%`, the orthogonality advantage is absent (N5 not visible at these α).
+- Secondary: ΔPPL `[+0.1,+0.5]` near-orth vs `[+0.5,+2.0]` anti-aligned (§6 — the N5
+  norm-budget tax of Pythagorean vs near-additive growth).
+
+### 4. Where the code is / status
+
+The DiffMean recipe, `add`/`relative_add` operations, and the geometry probes all
+exist (`extract.py`, `hooks.py`, `geometry.py`). What is MISSING is **multi-vector
+orchestration**: building two banks, summing into `v_stack`, and injecting the
+combined vector — the standard runner varies one knob over a single vector. Until
+that orchestration lands, E17 is `UNTESTED`.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E17.md`](../PROVENANCE/E17.md).

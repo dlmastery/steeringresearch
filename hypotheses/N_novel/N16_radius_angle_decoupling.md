@@ -260,6 +260,48 @@ for selective 2D-plane rotation is implemented.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N16 is the CRH **radius/angle decoupling**: selective 2D-plane rotation (zero radial excursion) beats additive at matched behavior; coherence = radial × angular. **SUPPORTED at screening (S-7), not yet replicated at rung-3.**
+
+### 1. Steering-vector recipe (separate the two geometry components)
+
+The two components are read directly off `geometry.offshell_displacement` (radial) and `geometry.angular_displacement` (angular):
+
+```python
+v = bank[L]["diffmean"]
+# additive (radial-changing):  h_add = h + alpha*v                  (METHODOLOGY §2 add)
+# selective 2D-plane rotation (zero radial): Givens rotation in span{h, v_perp}  (METHODOLOGY §2 rotate)
+#   h_rot = ||h|| * (cos(theta)*unit(h) + sin(theta)*unit(v_perp))  -> ||h_rot|| == ||h|| exactly
+radial  = offshell_displacement(h, h_steer)     # geometry.offshell_displacement (RADIAL excursion)
+angular = angular_displacement(h, h_steer)      # geometry.angular_displacement  (1 - cos)
+```
+
+`geometry.angular_displacement`'s own docstring records campaign C3: rotate gave Δ‖h‖≈0 yet full-vector rotation blew up PPL — N16 claim (C) is about *selective 2D-plane* rotation, NOT full-vector.
+
+### 2. Experiment procedure
+
+```text
+1. For 3 behaviors at L16: find (alpha, theta) pairs giving the SAME behavior cosine shift.
+2. Measure log-PPL, radial (offshell), angular (1-cos) for additive and selective rotation.
+3. Regress log-PPL ~ radial (for add) and log-PPL ~ angular (for rot); compare R^2 to S-7 (0.81 / 0.997).
+4. 9 cells per (behavior, operation); held-out on Gemma-3-1B (S-7 used 270m/Qwen).
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metric:** PPL advantage of selective rotation vs additive at matched behavior; radial→addPPL and angular→rotPPL R².
+- **Pre-registered falsifier (§3):** selective rotation PPL ≥ additive for all alpha/behaviors ⇒ (A) FALSIFIED; radial-excursion correlation < 0.50 ⇒ (B) fails.
+- **Screening result (S-7/C3b, 270m):** angular→rotation-PPL R²=0.997, radial→addition-PPL R²=0.81. Held-out replication on Gemma-3-1B is the next required (rung-3) step.
+
+### 4. Where the code is / status
+
+SUPPORTED (screening); rung-3 **not yet run**. Both probes (`geometry.offshell_displacement`, `geometry.angular_displacement`) and the `rotate` operation (`hooks.apply_operation`) exist; the remaining work is the **matched-behavior selective-rotation sweep on Gemma-3-1B** with the radial/angular regressions — the held-out replication of S-7.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N16.md`.

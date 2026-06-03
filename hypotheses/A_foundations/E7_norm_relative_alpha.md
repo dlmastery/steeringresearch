@@ -319,6 +319,66 @@ cross-prompt variance claim is the hardest to verify but the most publishable.
 
 ---
 
+## Pseudocode & Methodology
+
+This hypothesis is **TESTED (screening)**. It replaces the absolute-alpha `add`
+operation with the norm-relative `relative_add` operation, so the knob varied is the
+**alpha parameterization** (and the swept value `alpha_rel`). It is E3's cliff re-expressed
+in scale-invariant coordinates.
+
+### 1. Steering-vector recipe
+
+```python
+# source = DiffMean (or PCA — E4 shows they're equivalent here), layer L16.
+# The vector is UNIT-NORMALIZED so alpha_rel is a pure fraction of ||h|| (METHODOLOGY §1.4).
+bank  = extract_bank(model, tok, load_concept(behavior), layer=16)
+v     = bank[16]["diffmean"]
+v_hat = v / ||v||                                   # normalize -> displacement is source-comparable
+```
+
+### 2. Experiment procedure
+
+```text
+1. Fix v_hat (unit DiffMean @ L16).
+2. for alpha_rel in {0.01, 0.02, 0.05, 0.10, 0.15, 0.20, 0.30, 0.50}:   # the ONE knob
+3.     h' = apply_operation(h, v_hat, "relative_add", alpha_rel)
+            #  h' = h + alpha_rel * ||h|| * v_hat        (METHODOLOGY §2; ||h||-independent displacement)
+4.     beh  = judge.GeminiJudge.score(generation)        # behavior efficacy (generation-based)
+5.     PPL  = eval.perplexity(steered); MMLU = eval.mcq_accuracy; CR = JailbreakBench
+6.     dH   = geometry.offshell_displacement(h, h')      # == alpha_rel for unit v_hat
+7. CROSS-PROMPT VARIANCE: for >=20 prompts, record behavior at alpha_rel=0.10 (relative)
+       AND at the matched ABSOLUTE alpha (mean(alpha_abs/||h||)=0.10); compare variances.
+8. CONTROL: absolute-alpha sweep at matched mean fractional displacement (isolates the
+       variance — not the mean — as the E7 effect).
+9. CROSS-MODEL: repeat peak-finding on 270m / 1B / 2B to test scale-invariance.
+```
+
+### 3. Measurement & decision rule
+
+PRIMARY metric: the behavior-vs-`alpha_rel` curve (peak location + unimodality) and the
+**cross-prompt variance reduction** of relative vs absolute alpha. FALSIFIER (§3): fires
+if the curve is not unimodal, OR the peak `alpha_rel` is outside `[0.05, 0.30]`, OR the
+variance reduction is `< 10%`, OR the peak location differs by `>50%` across models
+(not scale-invariant). Pre-registered (§6): peak in `[0.05, 0.20]`; cross-model peak
+within 30%; variance reduction `>= 20%`; DiffMean≈PCA at matched `alpha_rel` (<5%).
+Observed (C9b/S-9): behavior peaks at `alpha_rel ≈ 0.10` on both 270m and 1B (knee
+scale-invariant at ~5–10% ‖h‖); DiffMean=PCA within 0.02; baseline 0.532 → 0.614 at
+0.10. Verdict: **SUPPORTED (screening)**. The 0.10 knee is consistent with the N17 law
+(log PPL = 5.40 + 2.87·Δ‖h‖ → 34% PPL rise at Δ‖h‖=0.10, matching the E3 cliff).
+
+### 4. Where the code is / status
+
+`relative_add` is implemented in `hooks.apply_operation` (METHODOLOGY §2). The
+controlled confirmation driver is **`scripts/confirm_e7.py`** (and the C9b sweep via
+`scripts/campaign_sweep.py --ops relative_add`, exp# 74–97, 114–117); see **FINDINGS S-15**
+for the worked four-part-contract example. Status **SUPPORTED (screening)**; remaining
+work is the Gemma-2-2B n≥7 generation-judge confirmation plus the formal cross-prompt
+variance comparison — the operation and driver already exist.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E7.md`](../PROVENANCE/E7.md).

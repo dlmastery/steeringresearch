@@ -246,6 +246,62 @@ important design choice — the protocol should be clarified before running.
 
 ---
 
+## Pseudocode & Methodology
+
+This hypothesis restricts the behavior write to **discriminative layers** (where the
+class-mean sign opposes the steering direction) and asks whether that preserves MMLU at
+matched behavior efficacy. The knob varied is the **set of injection layers** (D_B subset
+vs all layers) — an AXIS-1 (site) gate, not an AXIS-5 (condition) gate.
+
+### 1. Steering-vector recipe
+
+```python
+# Per-layer DiffMean behavior vector (refusal), used both to steer and to select layers.
+for L in range(n_layers):
+    H_L  = collect_activations(model, tok, harmful_vs_harmless, layer=L)
+    v_B[L] = diffmean_vector(H_L.pos, H_L.neg)       # mean(harmful)-mean(harmless) @ L
+    mean_harmless[L] = H_L.neg.mean(0)
+# Discriminative iff the steer direction points AWAY from the harmless cluster:
+D_B = [ L for L in range(n_layers) if cosine(v_B[L], mean_harmless[L]) < 0 ]
+```
+
+### 2. Experiment procedure
+
+```text
+1. Identify D_B (opposite-sign layers); report |D_B|/n_layers.
+2. ALL-LAYER baseline:   inject alpha*v_B[L] at every L (apply_operation 'add').
+3. DISCRIMINATIVE:       inject alpha*v_B[L] only for L in D_B.
+4. Match on behavior efficacy (find iso-efficacy alpha per condition — see §confound), then:
+5.     measure MMLU delta (eval.mcq_accuracy), PPL (eval.perplexity),
+              offshell Delta||h|| (geometry.offshell_displacement), JailbreakBench CR.
+6. for alpha in {10,15,20} (relative); seeds = 3 (screening).
+```
+
+### 3. Measurement & decision rule
+
+PRIMARY metrics: behavior efficacy ratio (discriminative / all-layer) and MMLU-drop
+reduction. FALSIFIER (§3): FALSIFIED if discriminative-layer steering achieves `< 95%`
+of all-layer behavior efficacy at matched alpha, OR if MMLU drop is not reduced by
+`>= 30%` (relative); NEAR-MISS if D_B is `> 60%` of all layers (little practical benefit).
+Pre-registered (§6): behavior `>= 95%` of all-layer; MMLU-drop reduction `>= 30%`;
+`|D_B|` = 25–40% of layers; PPL and Δ‖h‖ both lower for the discriminative subset.
+Verdict: SUPPORTED iff efficacy is preserved AND MMLU tax drops ≥30%. The §9 caveat: the
+comparison must be **iso-efficacy** (equal behavior, then compare MMLU), not iso-alpha.
+
+### 4. Where the code is / status
+
+Per-layer class-mean / DiffMean computation reuses `extract.collect_activations` +
+`extract.diffmean_vector`; injection uses `hooks.apply_operation('add', ...)` over a
+layer mask; metrics use `eval.py` + `geometry.py`. **New machinery**: the multi-layer
+masked-injection dispatch (inject at a *subset* of layers in one forward pass) plus the
+five-axis eval bundle wired for harmful/benign. Status **UNTESTED**, blocked on the E9
+pipeline + eval bundle. (Distinct from the FALSIFIED E2: E14 selects a *subset* by
+class-mean *sign*, not a single layer by Fisher *magnitude*.)
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E14.md`.

@@ -268,6 +268,47 @@ minimum experiment confirms positive correlation.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N11 sets per-prompt alpha from a local-curvature estimate (kNN PCA spectrum), aiming to beat E7's norm-relative scheme. **UNTESTED** — needs a kNN index + local-PR estimator.
+
+### 1. Steering-vector recipe (curvature-adaptive alpha)
+
+The local curvature uses the same participation-ratio quantity as `geometry.participation_ratio`, but on the **kNN neighborhood** of h:
+
+```python
+neighbors = knn_natural_activations(h, L, k=50)         # MISSING: kNN cache over WikiText activations
+PR_h  = participation_ratio(neighbors)                  # geometry.participation_ratio on the local patch
+kappa = 1.0 / (h.norm() * PR_h)                         # per-prompt curvature proxy = ||h||^-1 / PR(h)
+
+alpha_adaptive = C / sqrt(kappa)                        # vs E7's norm-relative C / ||h||
+# inject DiffMean v with relative_add at alpha_adaptive (METHODOLOGY §2)
+```
+
+### 2. Experiment procedure
+
+```text
+1. Build kNN index over 5000 WikiText activations at L16.
+2. For 30 diverse prompts: compute kappa(h); sweep alpha to find alpha_cliff (smallest alpha with PPL>1.5*base).
+3. rho = Spearman(kappa, alpha_cliff) over 30 prompts.
+4. Calibrate C on 10 prompts; on 20 held-out compare cross-prompt PPL variance:
+   kappa-adaptive vs E7 norm-relative vs fixed. Report partial corr of kappa controlling for ||h||.
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metric:** Spearman(kappa, alpha_cliff) and cross-prompt PPL-variance reduction vs E7.
+- **Pre-registered falsifier (§3):** Spearman < 0.30, OR variance reduction < 10% ⇒ FALSIFIED/INCONCLUSIVE.
+- **Verdict logic:** kappa must add R² above ||h|| alone (otherwise it reduces to E7).
+
+### 4. Where the code is / status
+
+UNTESTED. `geometry.participation_ratio` exists, but the **kNN index over natural activations + per-prompt local-PR/curvature estimator** is not built — that missing machinery is why N11 is UNTESTED. (The critique also flags a possible sign-inversion in the curvature interpretation to resolve before launch.)
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N11.md`.

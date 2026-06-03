@@ -259,6 +259,72 @@ prediction chain. Main risk: SAE coverage quality on Gemma-2-2B.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to the SAE-TS vs
+DiffMean 3-stack orthogonality test. **Status: TESTED (screening n=1) — FALSIFIED.**
+This is the FIRST hypothesis in the program that OPTIMIZES the steering vector itself
+(everything else estimates it in closed form). The infrastructure is implemented and
+self-contained in `src/steering/sae.py` (+ `scripts/run_e20.py`), not blocked.
+
+### 1. Steering-vector recipe (DiffMean baseline vs SAE-TS optimized)
+
+```python
+# DiffMean arm (METHODOLOGY §1.3, closed form) — the 3-stack baseline:
+V_dm = [ normalize(extract.build_vector_bank(model, tok, load_concept(b), L)[L]["diffmean"])
+         for b in three_behaviors ]
+
+# SAE-TS arm (IMPLEMENTED in src/steering/sae.py — the ONLY gradient-using path here):
+#   1. fit/load a sparse autoencoder on layer-L activations (SparseAutoencoder)
+#   2. for each behavior, gradient-ASCEND a vector that activates target SAE features
+#      while suppressing side-effect features (§5.1):
+#        v_saets = argmax_v [ score(F_target) - lambda * score(F_side_effect) ]
+V_saets = [ sae_ts_optimize(sae, target_features(b), lam) for b in three_behaviors ]
+
+def gram_mass(V):  # the 3-stack orthogonality scalar (lower = more orthogonal)
+    return sum(abs(dot(V[i], V[j])) for i in range(3) for j in range(i+1, 3))  # Σ_{i<j}|cos|
+```
+
+### 2. Experiment procedure
+
+```text
+# scripts/run_e20.py drives two logged rows on real Gemma-3-270m-it:
+exp#112  E20-diffmean-3stack:  build V_dm,    M_dm    = gram_mass(V_dm)
+exp#113  E20-saets-3stack:     build V_saets, M_saets = gram_mass(V_saets)
+for each arm:
+  inject the 3-stack sum via hooks.apply_operation(h, sum(V), "add", alpha)
+  measure: solo efficacy per behavior, 3-stack coherence = 1 - interference_index,
+           PPL, geometry.offshell_displacement / norm_budget   # METHODOLOGY §3
+coherence_gap = coherence(SAE-TS) - coherence(DiffMean)
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metric: 3-stack coherence gap `coherence(SAE-TS) − coherence(DiffMean)`.
+- Pre-registered FALSIFIER (§3): gap not `>= 0.10` ⇒ FALSIFIED.
+- **Actual result (n=1):** M_DiffMean = 2.13 vs **M_SAE-TS = 3.00** (the MAX possible
+  for 3 vectors — the SAE-TS vectors COLLAPSED to ~one direction); Gram reduction
+  = −0.87 (LESS orthogonal, the OPPOSITE of the §2/§3 claim); coherence gap +0.0014
+  (negligible). **Verdict: FALSIFIED.** Cause: the SciCritic-C SAE-coverage confound —
+  a small on-the-fly SAE on tiny 270m activations cannot separate the three behaviors'
+  features, so the optimized vectors collapse onto the few features it does represent.
+  The mechanism IS confirmed on clean synthetic features in the offline unit test
+  (SAE-TS cross-cosine 0.011 vs raw 0.184), so the falsification is a tiny-real-SAE
+  artifact, not a code bug.
+
+### 4. Where the code is / status
+
+**Self-contained and TESTED.** `src/steering/sae.py` implements the sparse autoencoder
+plus the SAE-TS gradient-ascent vector optimizer; `scripts/run_e20.py` is the driver
+(exp#112/#113). No GemmaScope dependency was required for the screening — the SAE is
+trained on-the-fly. The pre-registered next step (does NOT alter the hypothesis or
+falsifier): a properly pretrained GemmaScope SAE at 2-2B scale before any verdict
+beyond screening.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E20.md`](../PROVENANCE/E20.md).

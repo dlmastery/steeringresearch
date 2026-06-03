@@ -311,6 +311,71 @@ SAE-specific claim is UNTESTED.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E36, a
+**mechanistic** test of whether the AxBench SAE-vs-DiffMean gap is a SELECTION
+problem (wrong features picked) rather than a REPRESENTATION problem. DiffMean is
+the reference source; SAE features are the cross-family comparison.
+
+### 1. Steering-vector recipe (DiffMean reference + 3 SAE selection rules)
+
+```python
+# (A) DiffMean reference (§1.3 METHODOLOGY): mean(h_pos)-mean(h_neg).
+v_dm = extract.build_vector_bank(model, tok, load_concept(behavior), layer)[layer]["diffmean"]
+
+# SAE feature dictionary (GemmaScope, arXiv:2411.02193): f_i = decoder columns.
+# (B) naive: top-k features by activation FREQUENCY on behavior-positive text.
+# (C) cosine: top-k features by cosine to v_dm.
+# (D) causal OUTPUT-SCORE selection (the E36 fix), on a held-out contrast split:
+for f_i in candidate_features:                       # pre-filter to top-100 by cos to v_dm
+    delta_i = behavior_score(steer with f_i) - behavior_score(unsteered)   # one-feature micro-sweep
+v_sae_D = sum(top_k features ranked by |delta_i|)    # causal, not reconstruction-prevalence
+```
+
+### 2. Experiment procedure (4 selection conditions, matched displacement)
+
+```text
+1. Behaviors: refusal, sycophancy (CAA), optionally formality.
+2. Build v_dm (A) and the three SAE directions (B,C,D) at k in {1, 5, 20}.
+3. Inject EVERY condition via hooks.apply_operation, operation="relative_add"
+   at alpha=0.10 primary (sweep {0.05,0.10,0.20}) — matched ||Δh||, NOT raw
+   alpha (the C7 norm-artifact lesson; §3.1 verification).
+4. MEASURE (§3 METHODOLOGY): behavior efficacy (off-family judge.GeminiJudge on
+   real text); WikiText-103 PPL; MMLU-500; JailbreakBench CR (baseline 0%).
+5. Output-score selection uses a HELD-OUT split (select on half, eval on half).
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metric:** causal-selected SAE (D) behavior-success as a fraction of
+  DiffMean (A), at matched fractional alpha.
+- **Hypothesis (§2):** output-score SAE (D) matches DiffMean within 10 pp, while
+  naive SAE (B) underperforms by >= 20 pp (reproducing the AxBench gap).
+- **Pre-registered FALSIFIER (§3):** if output-score-selected SAE STILL
+  underperforms DiffMean by >= 20 pp on >= 2 behaviors, the representation account
+  wins and the selection account is DISCARDED (`x disproved`).
+
+### 4. Where the code is / status — SCREENING-SUPPORTED (DiffMean/PCA only); SAE UNTESTED
+
+- **Screening (exp# 60-83, FINDINGS.md S-9, C9b):** at matched fractional alpha,
+  DiffMean and PCA-top1 steer near-identically (behavior ±0.02, PPL ±8%; cos=0.99,
+  E4) — supports the "norm control resolves apparent source gaps" narrative in the
+  **DiffMean-vs-PCA (same-family)** sense only.
+- **Reproduce (the screening source comparison):** `PYTHONPATH=src python
+  scripts/campaign_sweep.py --model models/google/gemma-3-270m-it --quant none
+  --hyp E36 --tag-prefix C7-source --behavior ocean --layers 16 --alphas 0.5 1.0
+  2.0 --ops add --sources diffmean pca`.
+- **Missing machinery (why the SAE claim is UNTESTED):** **GemmaScope SAE
+  integration** (load decoder dictionary, hook SAE features into the residual
+  stream); the **output-score micro-sweep** selector (N>=50 single-feature steers
+  ranked by |Δ behavior|); and real AxBench-eval generation on Gemma-2-2B. The
+  cross-family DiffMean-vs-SAE comparison has not been run.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E36.md`](../PROVENANCE/E36.md).

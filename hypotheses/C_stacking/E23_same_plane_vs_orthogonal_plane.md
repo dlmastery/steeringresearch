@@ -229,6 +229,62 @@ claim. If confirmed, this validates the entire competition/stacking decision mat
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to the plane-specific
+composition test: add+rotate on the SAME plane (compete) vs on ORTHOGONAL planes
+(stack). Status: `UNTESTED` — needs the `rotate` op wired into a multi-site injection
+plus plane identification.
+
+### 1. Steering-vector recipe (two planes from DiffMean)
+
+```python
+# Behavior directions are closed-form DiffMean (METHODOLOGY §1.3).
+v1 = normalize(extract.build_vector_bank(model,tok,load_concept("refusal"),L)[L]["diffmean"])
+v2 = normalize(extract.build_vector_bank(model,tok,load_concept("sentiment"),L)[L]["diffmean"])
+assert abs(dot(v1, v2)) < 0.1                       # P1 ⊥ P2 confirmed before running
+# P1 = span{v1, ...}  (refusal plane);  P2 = span{v2, ...} (sentiment plane)
+```
+
+### 2. Experiment procedure (the four conditions)
+
+```text
+# add op (METHODOLOGY §2): h' = h + alpha*v1
+# rotate op (METHODOLOGY §2, norm-preserving Gram-Schmidt in the (h,v) plane):
+#   e1 = unit(h); e2 = unit(v - (v·e1)e1);  h' = ||h||*(cos(alpha)*e1 + sin(alpha)*e2)
+conditions = {
+  add_solo_P1   : apply_operation(h, v1, "add",    alpha),
+  rot_solo_P1   : apply_operation(h, v1, "rotate", theta),
+  same_plane    : apply_operation( apply_operation(h, v1,"add",alpha), v1, "rotate", theta),  # both on P1
+  ortho_plane   : apply_operation( apply_operation(h, v1,"add",alpha), v2, "rotate", theta),  # add P1 + rot P2
+}
+for cond in conditions:
+  for seed in 1..3:
+    measure: efficacy_refusal(P1), efficacy_sentiment(P2), PPL,
+             geometry.offshell_displacement, geometry.angular_displacement   # METHODOLOGY §3
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metric: joint success as a fraction of the better solo method, per plane.
+- Pre-registered FALSIFIER (§3): (a) same-plane achieves `>= 90%` of solo (no
+  competition) ⇒ decision rule FALSIFIED; (b) orthogonal-plane achieves `< 90%`
+  (no stacking) ⇒ FALSIFIED. Either invalidates the 7-axis plane rule.
+- Secondary (§6): same-plane PPL overhead `[+0.5,+2.0]` (off-manifold double-count)
+  vs orthogonal-plane `[0,+0.5]` (N16 radial/angular decoupling).
+
+### 4. Where the code is / status
+
+`add` and `rotate` both exist in `hooks.apply_operation`. MISSING: composing two
+operations in one forward pass on configurable planes, plane identification from
+DiffMean, and confirming rotation stays within P1. `UNTESTED`. (Note: full-vector
+rotation was screened FALSIFIED for solo efficacy/PPL in E27/S-7 — here rotation is
+used only as a same-plane competitor, not as the primary method.)
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E23.md`.

@@ -255,6 +255,46 @@ is warranted only after the single-step test passes.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N7 claims the behavior direction at layer L+1 is the Jacobian-transport of the layer-L direction, so multi-layer steering needs one vector, not N. **UNTESTED** — needs a Jacobian-vector-product transport operator.
+
+### 1. Steering-vector recipe (parallel transport via block Jacobian)
+
+```python
+v_start = bank[L_start]["diffmean"]                     # extract.diffmean_vector at first injection layer
+
+# transported vector at the next layer (NEW): J_L * v  via torch.autograd.functional.jvp
+#   J_L = d h_{L+1} / d h_L   evaluated at the natural mean activation
+v_T[L+1] = normalize(jvp(block_L, h_L_natural, v_T[L]))
+
+# inject v_T[L] at each layer L additively (METHODOLOGY §2 add), one shared origin vector
+```
+
+### 2. Experiment procedure
+
+```text
+1. Extract independent DiffMean v_L at L in {14,16,18,20,22} (reference).
+2. Transport: v_T[14]=v_14; v_T[L+1]=normalize(J_L * v_T[L]) via jvp.
+3. Measure cos(v_L_independent, v_T[L]) at each layer.
+4. Three-way multi-layer steering at matched total norm: (a) independent per-layer,
+   (b) transport-aligned from v_14, (c) CAA (same vector, J=I). Measure behavior + log-PPL.
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metric:** cos(v_L, v_L^T) across the 5-layer range, and efficacy-per-parameter of transport vs independent.
+- **Pre-registered falsifier (§3):** cos < 0.50 at any layer in range, OR transport efficacy < independent at matched parameters ⇒ FALSIFIED for that range.
+- **Verdict logic:** SUPPORTED needs cos ≥ 0.70 over [L_start, L_start+4] AND ≥ parity efficacy at 50% fewer DOF.
+
+### 4. Where the code is / status
+
+UNTESTED. The injection (`SteeringContext` over multiple layers) and `geometry` probes exist; the **Jacobian-vector-product transport operator** (`jvp` of each residual block at the natural operating point, with finite-difference validation) is the missing machinery — that is why N7 is UNTESTED.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N7.md`.

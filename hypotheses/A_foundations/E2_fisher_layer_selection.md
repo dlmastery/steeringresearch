@@ -302,6 +302,62 @@ replicated at full n with a real judge.
 
 ---
 
+## Pseudocode & Methodology
+
+This hypothesis tests whether **Fisher ratio chooses the steering layer**. The knob
+varied is **layer L**; the source is DiffMean (used both to steer and, via
+`fisher_ratio`, to rank layers). Fisher is an extraction-side scalar, not an
+injection operation (METHODOLOGY §1.3).
+
+### 1. Steering-vector recipe
+
+```python
+# extract.build_vector_bank gives, per layer, {diffmean, pca, fisher} (METHODOLOGY §1.3)
+bank = build_vector_bank(model, tok, load_concept(behavior), layers=range(n_layers))
+for L in layers:
+    v_L      = bank[L]["diffmean"]                       # diffmean_vector(pos,neg)
+    fisher_L = bank[L]["fisher"]                         # fisher_ratio(pos,neg):
+              # (mean(pos·w)-mean(neg·w))^2 / (var(pos·w)+var(neg·w)), w=unit(v_L)
+L_maxfisher = best_layer(bank)                           # argmax_L fisher[L]
+```
+
+### 2. Experiment procedure
+
+```text
+1. For each layer L in the full sweep: extract v_L (DiffMean) and fisher[L].
+2. For each L: steer with `add` at fixed alpha and measure behavior efficacy
+       (hooks.apply_operation add: h' = h + alpha*v_L; SteeringContext).
+3. Generation-judge behavior score per layer (judge.GeminiJudge; rung>=3).
+4. Compute Spearman( fisher[L] , behavior_efficacy[L] ) across layers.
+5. Compare behavior at L_maxfisher vs best-found layer.
+6. CONTROL: random-layer baseline + fixed late-layer (L20) baseline.
+```
+
+The ONE varied knob is the layer; alpha, source, and operation are held fixed so the
+layer-ranking is the only signal.
+
+### 3. Measurement & decision rule
+
+PRIMARY metric: `Spearman(fisher, behavior_efficacy)` across layers. FALSIFIER (§3,
+already fired at screening): Spearman `< 0.70` ⇒ FALSIFIED. Observed C1:
+`Spearman = +0.14 (p=0.74)`; max-Fisher L12 was NOT the best steering layer (L16 was;
+58% behavior gap). Pre-registered prediction (§6) was `Spearman >= 0.70` and
+max-Fisher-layer = best-layer with ≤5% gap. Verdict: **FALSIFIED** — Fisher measures
+read-out separability, not causal write-in strength (consistent with N8/E37). Formal
+closure needs the same sweep on Gemma-2-2B with a generation judge at n≥7.
+
+### 4. Where the code is / status
+
+Driver: `scripts/campaign_sweep.py` (the C1 layer sweep, exp# 20–27) — Fisher and
+DiffMean both come from `extract.build_vector_bank`; injection via
+`hooks.apply_operation('add', ...)`. Status **FALSIFIED at screening**; the only
+missing infra is the Gemma-2-2B replication with a real judge (no new machinery
+needed — the sweep already runs).
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E2.md`](../PROVENANCE/E2.md).

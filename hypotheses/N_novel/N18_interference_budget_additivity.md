@@ -254,6 +254,44 @@ aspirational target. Recommend the sensitivity-weighted IB variant as a secondar
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N18 predicts stacking degradation from the **interference budget** IB = Σ_{i≠j} |α_i|·|cos(v_i,v_j)|, not from k alone. **UNTESTED** — the IB formula is trivial; the stacking sweep is the missing driver.
+
+### 1. Steering-vector recipe (interference budget)
+
+```python
+V = [bank[L][i]["diffmean"] for i in subset]            # k DiffMean vectors
+# aggregate edit, equal budget: alpha_i = 1.0 * ||h|| / k, injected additively (METHODOLOGY §2):
+#   h' = h + Σ_i alpha_i v_i
+IB = sum(abs(alpha[i]) * abs(cos(V[i], V[j])) for i != j)   # the N18 predictor (first-order superposition)
+# cross-check: total aggregate offshell via geometry.offshell_displacement(h, h') and geometry.norm_budget
+```
+
+### 2. Experiment procedure
+
+```text
+1. Sample ~200 random vector subsets (k in {2,3,4,5}) with varying pairwise cosines from a 10-behavior pool.
+2. Compute IB(V) and the joint-behavior degradation (joint success vs solo) for each subset.
+3. rho_IB = Spearman(IB, degradation); rho_k = Spearman(k, degradation).
+4. CONTROL: iso-individual-alpha (not iso-total) to remove the "weaker per-vector alpha" confound;
+   optionally repeat with SAE-feature vectors to test the DiffMean-as-feature-proxy assumption.
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metric:** Spearman(IB, degradation), and its margin over Spearman(k, degradation).
+- **Pre-registered falsifier (§3):** Spearman(IB, deg) < 0.50, OR k predicts as well as IB (margin < 0.05) ⇒ FALSIFIED.
+- **Verdict logic:** SUPPORTED needs Spearman(IB) ≥ 0.70 AND ≥ 0.10 margin over k.
+
+### 4. Where the code is / status
+
+UNTESTED. The IB sum and `geometry.offshell_displacement`/`norm_budget` exist, but the **random-subset stacking-degradation sweep** (and the SAE-proxy variant) is the missing driver — that is why N18 is UNTESTED. Closely tied to N3 (capacity = PR).
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N18.md`.

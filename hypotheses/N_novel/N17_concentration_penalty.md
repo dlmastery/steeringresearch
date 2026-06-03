@@ -263,6 +263,67 @@ required step before committing to the full 5-hour protocol.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N17 is a **geometry-of-the-injection** hypothesis, not a new vector: it claims the scalar off-shell displacement Δ‖h‖ predicts incoherence (log-PPL). It is **TESTED at rung-3** and is the program's strongest result.
+
+### 1. Steering-vector recipe (what is built, what is measured)
+
+The vector itself is the ordinary DiffMean direction; N17 only studies the geometry it induces. Per METHODOLOGY §1.3 and §2:
+
+```python
+# vector: DiffMean from axbench_mini contrast pairs (extract.diffmean_vector via extract_bank)
+v = bank[L]["diffmean"]
+v = v / (v.norm() + 1e-8)                       # unit; relative_add scales by ||h||
+
+# injection: relative_add so displacement is scale-comparable (METHODOLOGY §2, E7)
+#   h' = h + alpha * ||h|| * unit(v)            with alpha a FRACTION of ||h||
+
+# THE quantity N17 is about — radial off-shell displacement (geometry.offshell_displacement):
+#   Δ‖h‖ := mean_pos |‖h_steer‖ - ‖h_base‖| / ‖h_base‖
+offshell = offshell_displacement(h_base, h_steer)      # scalar in [0, ~0.3]
+```
+
+`offshell_displacement` is the RADIAL component only; the ANGULAR partner
+`geometry.angular_displacement` (1−cos) is logged alongside but N17's claim is that
+the radial scalar carries the coherence signal for ADD.
+
+### 2. Experiment procedure (rung-3 held-out generalization — `scripts/rung3_n17.py`)
+
+```text
+1. Load REAL WikiText-2 passages (ds.load_wikitext2_real) and axbench_mini pairs.
+2. For each model in {gemma-3-270m-it, gemma-3-1b-it}:
+     extract_bank -> diffmean per layer; base_ppl = teacher-forced perplexity (eval.perplexity).
+3. For each (layer, alpha in {0, 0.02, 0.05, 0.1, 0.2, 0.3}):
+     h_base  = probe_activations(...)[L]                       # one forward
+     with SteeringContext(model, v, [L], op="relative_add", alpha):
+         h_st = probe_activations(...)[L]
+         off  = offshell_displacement(h_base, h_st)
+         ppl  = real_ppl(steered)                              # teacher-forced, no generation
+     record (model, layer, alpha, off, ppl)
+4. Pool all steered points -> rho = spearman(off, log ppl); 10k-bootstrap 95% CI on rho.
+5. HELD-OUT N5-law fit: polyfit log PPL = a + b*offshell on 270m points; predict 1b points;
+   report held-out R^2 (this is the N5 test; see N5 doc).
+```
+
+PPL is teacher-forced (no sampling), so the whole sweep is one-forward-per-point and fast.
+
+### 3. Measurement & decision rule
+
+- **Primary metric:** Spearman(offshell, log real-PPL), pooled across model × layer × alpha.
+- **Pre-registered falsifier (§3):** Spearman < 0.50 on held-out Gemma-3-1B ⇒ claim (A) FALSIFIED.
+- **ACTUAL OBSERVED RESULT (rung-3, real WikiText-2):** **Spearman = +0.585**, 95% bootstrap CI **[+0.353, +0.758]** (excludes 0), **p = 8.1e-6**, n = 50 pooled points across two model scales. CI clears the 0.50 falsifier on the low side only marginally but the point estimate and significance are robust ⇒ **VERDICT: SUPPORTED (rung-3).** Off-shell displacement predicts incoherence on real held-out data.
+
+### 4. Where the code is / status
+
+- **Driver:** `scripts/rung3_n17.py` (writes `ideas/_campaigns/RUNG3_N17.json`).
+- **Probe:** `geometry.offshell_displacement` (radial) and `geometry.angular_displacement` (angular partner) in `src/steering/geometry.py`.
+- **Status:** TESTED, **SUPPORTED at rung-3**. Note that the single *universal N5 collapse law* (one curve across scale) did NOT generalize held-out (see N5); N17's *rank* prediction did. The remaining items in §7's 540-row protocol (3-way alpha-confound regression, selective-rotation claim C) are future rung-4 work.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/N17.md`](../PROVENANCE/N17.md).

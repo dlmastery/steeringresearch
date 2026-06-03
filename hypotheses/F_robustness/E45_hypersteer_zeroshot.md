@@ -309,6 +309,96 @@ to determine whether this shortcut is viable.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E45. The
+shared recipe builds a vector in CLOSED FORM (`extract.diffmean_vector`); E45 is
+the one exception in this block where a vector is *predicted by a trained
+hypernetwork* (`src/steering/hypersteer.py`). DiffMean here is not the steer —
+it is the regression TARGET.
+
+### 1. Steering-vector recipe (description -> vector, GRADIENT-trained)
+
+```python
+# §1.3 METHODOLOGY: supervised DiffMean is the TARGET, not the steer.
+# For each training behavior b: extract its supervised direction in closed form.
+for b in train_behaviors:                       # ocean, happiness, anger, ... (AxBench+CAA)
+    bank   = extract.build_vector_bank(model, tok, load_concept(b), layer)
+    v_b    = bank[layer]["diffmean"]             # extract.diffmean_vector: mean(h_pos)-mean(h_neg)
+    emb_b  = hypersteer.encode_descriptions(model, tok, [desc_b], layer)[0]
+                                                 # Gemma's OWN mean-pooled residual at `layer`
+                                                 # (NOT all-MiniLM — keeps the module dep-free)
+
+# Train the hypernetwork H: emb -> vector by MSE regression (spec §5 objective)
+#   L = sum_i || H(embed(description_i)) - v_i ||^2   (+ Adam weight_decay=l2)
+net = hypersteer.train_hypernet(
+        embeddings=E_train, target_vectors=V_train,   # [n, embed_dim] -> [n, dim]
+        epochs=300, lr=1e-3, l2=1e-4, hidden=256, depth=2, seed=seed)
+
+# ZERO-SHOT: predict a held-out behavior's vector from its DESCRIPTION ALONE.
+v_hat = hypersteer.predict_vector(net, hypersteer.encode_descriptions(
+            model, tok, [desc_holdout], layer)[0])    # no contrast set was curated for it
+```
+
+`HyperNet` is a 2-layer ReLU MLP (`embed_dim -> 256 -> dim`, final linear
+unactivated). Everything is float32, deterministic by `seed`, runs identically
+on `FakeResidualLM` (offline tests) and real Gemma.
+
+### 2. Experiment procedure (leave-one-behavior-out)
+
+```text
+1. Pick `layer` (the injection/extraction layer) and the behavior pool.
+2. For each fold = each held-out behavior b*:
+   a. TARGETS: DiffMean v_b for every b != b*  (extract.diffmean_vector).
+   b. INPUTS : encode_descriptions(...) for every b != b*.
+   c. Train net on the (n-1) others; PREDICT v_hat(b*) from desc(b*).
+3. Inject v_hat at `layer` for b*'s test prompts via hooks.apply_operation,
+   operation = relative_add  (h' = h + alpha*||h||*unit(v); §2 METHODOLOGY) —
+   alpha a FRACTION of ||h|| so the magnitude is source-comparable.
+4. Compare to the supervised DiffMean steer for b* at matched fractional alpha.
+5. MEASURE (§3 METHODOLOGY): behavior efficacy via the off-family judge
+   judge.GeminiJudge on real generated text (PRIMARY, per §2/§10); PPL; MMLU;
+   JailbreakBench CR (baseline 0%); geometry probes.
+   SECONDARY geometric check: cosine(v_hat, v_supervised) via
+   hypersteer.evaluate_holdout (NOT a substitute for real-generation efficacy).
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metric:** held-out behavior-success rate (LLM-judge on real text) as
+  a fraction of the supervised DiffMean rate for the same behavior.
+- **Hypothesis (§2):** held-out efficacy >= 70% of supervised; gap <= 30 pp.
+- **Pre-registered FALSIFIER (§3):** if the predicted vector achieves < 50% of
+  supervised efficacy on ALL tested held-out behaviors, DISCARD (`x disproved`).
+- **Secondary check (§6):** cosine(v_hat, v_supervised) — high cosine + low
+  efficacy ⇒ direction right, magnitude wrong (alpha-fixable); low cosine + low
+  efficacy ⇒ direction fundamentally wrong.
+
+### 4. Where the code is / status — TESTED, INCONCLUSIVE
+
+- **Driver:** `scripts/run_e45.py` (exp#111, tag `E45-hypersteer-loo`);
+  hypernetwork in `src/steering/hypersteer.py`.
+- **Reproduce:** `PYTHONPATH=src python scripts/run_e45.py --model
+  models/google/gemma-3-270m-it --quant none`.
+- **Verdict: `SCREENED (n=1) — INCONCLUSIVE`.** At the 4-behavior leave-one-out
+  smoke scale, **mean held-out cosine(predicted, supervised) = -0.0202, std
+  0.6147** (folds: ocean -0.10, happiness +0.85, anger +0.05, formality -0.88):
+  ~0 mean direction agreement with enormous fold-to-fold variance. The mean
+  projection-efficacy ratio (1.308) is a **non-causal proxy and must NOT be read
+  as success** — the formality fold has cosine -0.88 (nearly OPPOSITE the
+  supervised vector) yet still scores efficacy ratio 1.07, direct evidence the
+  projection proxy cannot validate the hypernetwork. Neither the 70% (§2) nor the
+  50%-all-folds (§3) criteria can be evaluated at n=4. The implementation IS
+  sound (offline unit test: held-out cosine 0.93 vs shuffled-control -0.01); the
+  result is INCONCLUSIVE purely at this smoke scale. **Missing machinery for a
+  verdict:** more behaviors (20+, per §7) AND a real-generation `judge.GeminiJudge`
+  efficacy harness in place of the projection proxy. This does NOT alter the
+  pre-registered hypothesis or falsifier.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E45.md`](../PROVENANCE/E45.md).

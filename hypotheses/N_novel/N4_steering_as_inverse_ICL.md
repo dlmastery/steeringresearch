@@ -260,6 +260,49 @@ protocol only after seeing the minimum result.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N4 tests whether a DiffMean vector aligns with the activation shift produced by an in-context demonstration of the same behavior. **UNTESTED** — needs an ICL-shift extractor.
+
+### 1. Steering-vector recipe (DiffMean vs ICL shift)
+
+Two independently derived directions are compared by cosine:
+
+```python
+v_DM  = diffmean_vector(behavior, baseline, L)          # extract.diffmean_vector, 50 contrast pairs
+
+# ICL shift (NEW): activation delta from prepending k=5 demos (no gradients)
+h_demo = forward(model, [demo_1..demo_5, query]).hidden_state[L][query_pos]
+h_none = forward(model, [query]).hidden_state[L][query_pos]
+v_ICL  = h_demo - h_none
+
+alignment = cos(v_DM, v_ICL)                            # the N4 quantity
+v_blend   = (1-w) * v_DM + w * v_ICL                    # inject via add (METHODOLOGY §2) to test efficacy gain
+```
+
+### 2. Experiment procedure
+
+```text
+1. For 5 behaviors, extract v_DM (50 pairs) and v_ICL (5 demos, averaged over 3 demo-selection seeds).
+2. Measure cos(v_DM, v_ICL) at layers {8,12,16,20,24}; record the layer of max alignment.
+3. Sweep blend w in {0,0.25,0.5,0.75,1.0}; measure behavior efficacy at 5% off-shell (E7 displacement).
+4. Stability check: cos(v_ICL_seed_i, v_ICL_seed_j) > 0.70 required for a valid comparison.
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metric:** cos(v_DM, v_ICL) at the optimal layer (for ≥3 of 5 behaviors).
+- **Pre-registered falsifier (§3):** cos < 0.40 across all behaviors/layers ⇒ FALSIFIED; 0.40–0.59 ⇒ INCONCLUSIVE; <2% efficacy gain ⇒ practical implication fails.
+- **Verdict logic:** SUPPORTED needs cos ≥ 0.60 AND ICL-blend efficacy gain ≥ 5%.
+
+### 4. Where the code is / status
+
+UNTESTED. DiffMean extraction (`extract_bank`) and the efficacy bundle exist; the **ICL-shift extractor** (demo-prepended forward at the query token, with seed-averaging) is the missing machinery — that is why N4 is UNTESTED.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N4.md`.

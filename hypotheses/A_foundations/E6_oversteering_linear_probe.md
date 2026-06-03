@@ -329,6 +329,63 @@ AUC >= 0.80, report it as the simpler and more interpretable solution.
 
 ---
 
+## Pseudocode & Methodology
+
+This hypothesis trains a **pre-generation linear probe** that predicts incoherence
+(over-steering) from the prefill hidden state. The compared object is the probe vs the
+N5 geometric law; the source vector is DiffMean @ L16, swept over alpha to *generate
+labels*.
+
+### 1. Steering-vector recipe
+
+```python
+# The steering vector itself is the standard DiffMean (METHODOLOGY §1.3); the
+# experiment's novelty is a PROBE on the steered hidden state, not a new vector.
+v = diffmean_vector(*collect_activations(model, tok, load_concept(behavior), 16))
+```
+
+### 2. Experiment procedure
+
+```text
+1. Build a labeled dataset by sweeping alpha (reusing the E3 sweep):
+2.   for prompt in 200_prompts:
+3.     for alpha in {0,1,2,3,4,6,8}:
+4.        h        = prefill hidden state @ L16 (last input token)   # geometry.probe / ProbeHook
+5.        h_steer  = apply_operation(h, v, "add", alpha)             # h + alpha*v
+6.        dH       = geometry.offshell_displacement(h, h_steer)      # = |alpha|*||v||/||h||
+7.        rel      = alpha/||h||
+8.        PPL_gen  = eval.perplexity(generate under steering)
+9.        label    = (PPL_gen > 1.3*baseline_PPL)  ? "incoherent" : "coherent"
+10.       features = concat(h_steer, dH, rel, ||h||)
+11. Train logistic regression (L2, CV over lambda) on 80% / hold out 20%.
+12. BASELINE: logistic on dH alone (single feature).
+13. Generalization: evaluate AUC on a held-out UNSEEN behavior.
+```
+
+### 3. Measurement & decision rule
+
+PRIMARY metric: held-out **AUC** of the linear probe. FALSIFIER (§3): fires if probe
+AUC `< 0.80` AND the `Δ‖h‖`-only baseline AUC `< 0.75` (this rules out the trivial
+threshold-rule case; if `Δ‖h‖`-only already hits ≥0.80, E6 is satisfied by the simpler
+rule). Pre-registered (§6): probe AUC `>= 0.80`; `Δ‖h‖`-only `>= 0.75`; held-out-behavior
+AUC `>= 0.70`. Verdict: SUPPORTED iff probe (or the `Δ‖h‖` rule) reaches 0.80 on held-out
+data. Mechanism: the N5 law `log PPL ≈ 5.40 + 2.87·Δ‖h‖` (R²=0.81) already explains most
+incoherence variance from a prefill-computable quantity, so `Δ‖h‖` is a strong feature.
+
+### 4. Where the code is / status
+
+This needs **new machinery**: a probe-training script (logistic regression on prefill
+features) that does not yet exist as a dedicated driver. The label-generating alpha sweep
+is `scripts/campaign_sweep.py` (the E3 data); prefill states come from
+`hooks.ProbeHook` / `hooks.probe_activations` and `geometry.offshell_displacement`. The
+probe trainer itself (sklearn-style logistic + AUC/PR-curve) is the missing piece — this
+is why E6 is **UNTESTED**. Fastest path: run the `Δ‖h‖`-only logistic on existing E3 sweep
+data first.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E6.md`.

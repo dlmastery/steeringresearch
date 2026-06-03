@@ -246,6 +246,61 @@ The independence assumption is falsifiable and the cost is low.
 
 ---
 
+## Pseudocode & Methodology
+
+This hypothesis composes **N category condition vectors into an OR-gate** and measures how
+coverage and false-refusal scale with N. The knob varied is **N (number of OR-composed
+condition vectors)**. It builds directly on E10's per-category condition vectors and E9's
+gate.
+
+### 1. Steering-vector recipe
+
+```python
+# One DiffMean CONDITION vector per category at L_c (METHODOLOGY §1.3, as in E9/E10).
+V = { c: diffmean_vector(*collect_activations(model, tok, pairs[c], L_c))
+      for c in categories }              # categories ordered by decreasing solo coverage
+# Control: a single MEGA-condition = normalized mean of all category vectors.
+v_mega = normalize(sum(V[c] for c in categories))
+```
+
+### 2. Experiment procedure
+
+```text
+1. Order categories by decreasing solo coverage; build V[c] per E10.
+2. for N in {1,2,3,4,5,6,7}:                                  # the ONE knob
+3.     gate_OR(h) = max_i [ cos(h, V[c_i]) > theta_i ]        # fires if ANY condition met
+4.     Coverage(N)    = P(gate_OR fires | harmful from any of the N categories)
+5.     FalseRefusal(N)= P(gate_OR fires | benign input)       # CosineGate per component
+6. CONTROL: mega-condition gate  cos(h, v_mega) > theta  (coverage + false-refusal).
+7. Eval: 100 harmful per category + 200 benign (AlpacaEval), fixed seed.
+8. Fit coverage slope (linear regression for N=1..5 and N=5..7); locate leakage onset N*.
+```
+
+Under near-orthogonality (E10), `FalseRefusal(N) = 1 - Π(1-FR_i) ≈ N·FR_single`.
+
+### 3. Measurement & decision rule
+
+PRIMARY metrics: `Coverage(N)` slope and `FalseRefusal(N)` leakage onset `N*`. FALSIFIER
+(§3): FALSIFIED if (a) coverage grows sub-linearly for N≤5 (slope `< 0.6` per unit),
+OR (b) harmless-refusal exceeds `5%` already at `N=3` (early leakage); also FALSIFIED if
+the mega-condition control outperforms OR-gating at all N (orthogonality assumption
+unjustified). Pre-registered (§6): coverage slope ~0.85 (N=1–5); FalseRefusal ~2%/6%/10%
+at N=1/3/5; harmless-refusal `< 5%` for N≤5 then `> 5%` at N≥6. Verdict: SUPPORTED iff
+linear coverage and bounded false-refusal up to N~5; the mechanism itself predicts
+leakage may appear earlier (N~3–4), which would be PARTIALLY SUPPORTED.
+
+### 4. Where the code is / status
+
+Reuses `gate.CosineGate` for each component and `gate.pr_auc` for coverage curves; the
+OR-composition wrapper (`max_i` over component gates) and the multi-category harm dataset
+(7 categories × 100 prompts) are **new machinery**. Hard-blocked on E9 (CAST pipeline)
+and E10 (the cosine matrix that decides whether Gram-Schmidt, E19, is needed first).
+Status **UNTESTED**.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E11.md`.

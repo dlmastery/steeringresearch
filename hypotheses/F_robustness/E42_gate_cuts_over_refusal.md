@@ -281,6 +281,64 @@ selectivity. Recommend reporting the full ROC curve as the primary output.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E42, a
+**safety/selectivity** test: does a CAST condition gate cut over-refusal on
+benign-look-alike (XSTest) prompts while keeping true harmful refusal? It is the
+specificity dual of E41's sensitivity test.
+
+### 1. Steering-vector recipe (condition gate + refusal behavior, both DiffMean)
+
+```python
+# §1.3 METHODOLOGY: two closed-form DiffMean directions.
+v_condition = extract.build_vector_bank(model, tok,
+                 load_concept("harmfulness"), layer_k)[layer_k]["diffmean"]  # Sorry-Bench
+v_condition = v_condition / norm(v_condition)        # unit (gate reads a normalised projection)
+v_refusal   = extract.build_vector_bank(model, tok,
+                 load_concept("refusal"), layer_m)[layer_m]["diffmean"]      # CAA/Sorry-Bench
+```
+
+### 2. Experiment procedure (gated vs unconditional, two test sets)
+
+```text
+1. Conditions: (A) unsteered; (B) UNCONDITIONAL refusal steer (always-on);
+   (C) CAST gate + refusal; (D) CAST gate + refusal + Guard D (verdict check).
+2. (B) always applies hooks.apply_operation(h_m, v_refusal, "add", alpha=0.10).
+   (C)/(D) apply the §5 gate per forward pass:
+       s = <h_k, v_condition> / ||h_k||
+       if s > theta: hooks.apply_operation(h_m, v_refusal, "add", alpha)
+       else:         pass through
+   theta calibrated on a held-out 25-harmful/25-benign set (NOT the eval sets).
+3. Run ALL conditions on BOTH XSTest (250 safe prompts -> over-refusal) and
+   JailbreakBench (100 harmful -> true refusal), same sweep.
+4. MEASURE (§3 METHODOLOGY): refusal rate per set (off-family judge, calibrated
+   >=90% human agreement); MMLU-500; WikiText PPL; JailbreakBench CR baseline 0%.
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metric:** over-refusal reduction =
+  (ungated_XSTest_refusal − gated_XSTest_refusal) / ungated_XSTest_refusal
+  (pre-registered formula, §10), jointly with JailbreakBench true-refusal change.
+- **Hypothesis (§2):** over-refusal cut >= 70% AND harmful-refusal drop <= 15 pp.
+- **Pre-registered FALSIFIER (§3):** if the gate cuts over-refusal by < 50% on
+  XSTest, OR causes > 25 pp reduction in JailbreakBench true-refusal, DISCARD
+  (`x disproved`). The gate must improve BOTH axes. Report the full ROC curve as
+  the gate threshold theta varies.
+
+### 4. Where the code is / status — UNTESTED
+
+- **No driver yet** (campaign + `scripts/build_provenance.py` -> `PROVENANCE/E42.md`).
+- **Missing machinery (why UNTESTED):** the **CAST conditional gate hook** (shared
+  with E41 — reads `<h_k, v_condition>`, conditionally writes `v_refusal`); **XSTest
+  and JailbreakBench dataset wiring**; a **calibrated refusal judge**; and Guard D
+  (dual-forward verdict) for condition D. None exist yet.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E42.md`.

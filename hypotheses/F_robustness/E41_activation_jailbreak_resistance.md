@@ -302,6 +302,81 @@ axes (behavior, capability, coherence, safety, selectivity).
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E41. E41 is
+a **safety/robustness** test: a CAST-style activation condition gate vs a
+system-prompt baseline under GCG adversarial suffixes, measured by JailbreakBench
+compliance.
+
+### 1. Steering-vector recipe (two DiffMean directions: condition + refusal)
+
+```python
+# §1.3 METHODOLOGY: both directions are closed-form DiffMean (NO training).
+# (a) The CONDITION direction (the gate's "this is a harmful request" reader):
+bank_c = extract.build_vector_bank(model, tok,
+            load_concept("harmfulness"), layer_k)        # Sorry-Bench harmful vs harmless
+v_condition = bank_c[layer_k]["diffmean"]                # mean(h_harmful) - mean(h_harmless)
+v_condition = v_condition / norm(v_condition)            # unit (gate reads a normalised projection)
+
+# (b) The REFUSAL behavior direction (what the gate applies when it fires):
+bank_r = extract.build_vector_bank(model, tok, load_concept("refusal"), layer_m)
+v_refusal = bank_r[layer_m]["diffmean"]                  # layer_m > layer_k (read early, write later)
+
+# extract.best_layer (fisher_ratio) chooses layer_k where harmful/harmless separate cleanly.
+```
+
+### 2. Experiment procedure (4 conditions x clean/suffixed prompts)
+
+```text
+1. CONFIRM baseline: JailbreakBench CR = 0% on the unsteered model (§10).
+2. Build attacks: GCG suffixes (Zou 2023) for 20 held-out prompts; eval on 80.
+   Verify Gemma-2-2B suffix transfer; if < 20% CR rise, regenerate Gemma-specific.
+3. Conditions: (A) no defense; (B) system-prompt refusal only;
+   (C) CAST gate; (D) CAST gate + Guard D (dual-forward verdict check).
+4. CAST gate logic (the §5 mechanism) applied per forward pass:
+       s = <h_k, v_condition> / ||h_k||                  # read at layer_k
+       if s > theta:  hooks.apply_operation(h_m, v_refusal,
+                          operation="add", alpha)         # h' = h + alpha*v_refusal
+       else:          pass through unchanged              # gate does NOT fire
+   (theta calibrated on a held-out 25-harmful/25-benign set, not the eval set.)
+5. MEASURE (§3 METHODOLOGY): refusal rate under suffix attack (off-family judge);
+   JailbreakBench CR; condition-probe precision under attack; MMLU-500 + XSTest
+   (over-refusal dual, vs E42); PPL; geometry probes.
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metrics:** harmful-request refusal rate under GCG suffixes for the
+  CAST gate (condition C) and the condition-probe precision.
+- **Hypothesis (§2):** CAST refusal rate >= 80% under attack (vs system-prompt
+  baseline degrading to < 50%); condition-probe precision >= 0.70 under suffix.
+- **Pre-registered FALSIFIER (§3):** if CAST-conditioned refusal achieves < 70%
+  refusal rate under adversarial suffixes (the suffix corrupts the activation
+  condition as well as the refusal ridge), DISCARD (`x disproved`).
+- **Verdict logic:** a safety leak (CR rise on harmful prompts) under steering is
+  an automatic DISCARD regardless of behavior score (§10 mandate); report all five
+  axes including XSTest over-refusal so a refusal gain is never bought with
+  over-refusal.
+
+### 4. Where the code is / status — UNTESTED
+
+- **No driver yet.** A campaign would log rows; then `scripts/build_provenance.py`
+  generates `hypotheses/PROVENANCE/E41.md`.
+- **Missing machinery (why UNTESTED):** (a) a **CAST gate** that reads
+  `<h_k, v_condition>` and conditionally applies `v_refusal` at `layer_m` (Block B
+  tooling — the per-position conditional hook does not yet exist in `hooks.py`);
+  (b) a **GCG suffix generator / loader** plus Gemma-2-2B transfer verification;
+  (c) a **calibrated safety judge** at >= 90% human agreement for refusal
+  detection; (d) JailbreakBench + XSTest dataset wiring; (e) Guard D (dual-forward
+  verdict check) for condition D. Screening context: FINDINGS.md S-4/S-8 show ANY
+  Gemma steering raises CR 0.80->1.00 (the RISK); E41 tests the gate as the
+  MITIGATION — a distinct question.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E41.md`.

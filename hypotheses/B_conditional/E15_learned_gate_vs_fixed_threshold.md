@@ -252,6 +252,65 @@ specific and defensible.
 
 ---
 
+## Pseudocode & Methodology
+
+This is the **one IMPLEMENTED Block-B hypothesis**. It compares a **learned multi-layer
+logistic gate** against the **fixed cosine threshold** (E9) under distribution shift. The
+knob varied is the **gate source** (learned logistic vs fixed cosine); the decisive axis
+is in-distribution vs OOD.
+
+### 1. Steering-vector recipe
+
+```python
+# Per-layer DiffMean CONDITION vectors at a set of feature layers (METHODOLOGY §1.3).
+feature_layers = [6, 10, 14, 18]
+v_c = { L: diffmean_vector(*collect_activations(model, tok, harmful_vs_harmless, L))
+        for L in feature_layers }
+# gate.condition_features builds the multi-layer feature vector:
+features(h) = [ h@L · v_c[L]  for L in feature_layers ]      # k dot products
+```
+
+### 2. Experiment procedure
+
+```text
+1. Build the k-layer feature vector per prompt (gate.condition_features).
+2. FIXED gate (CosineGate): score = cos(h@L_best, v_c[L_best]); threshold = E9 optimal theta_c.
+3. LEARNED gate (LogisticGate): g(h) = sigmoid(W·features(h) + b) > 0.5,
+       trained by BCE with L2 (lambda CV'd) on 200 harmful + 200 benign (in-dist).
+4. Evaluate BOTH gates' PR-AUC (gate.pr_auc) on:
+5.     (a) in-distribution eval set, and
+6.     (b) OOD eval set (harm categories / phrasings NOT in training).
+7. AUC gap = PR-AUC(learned, OOD) - PR-AUC(best fixed cosine, OOD).
+```
+
+### 3. Measurement & decision rule
+
+PRIMARY metric: **OOD PR-AUC gap (learned − fixed cosine)**. FALSIFIER (§3): FALSIFIED if
+the learned gate does not exceed the best fixed cosine threshold by `>= 0.06` OOD AUC; if
+in-dist AUC is high but OOD AUC low ⇒ FALSIFIED_OOD (overfitting). Pre-registered (§6):
+fixed-cosine OOD `[0.65,0.80]`, learned OOD `[0.75,0.88]`, gap `>= 0.06`. **Observed
+(exp#110, n=1, Gemma-3-270m)**: in-dist PR-AUC = 1.000 for BOTH gates (perfect
+resubstitution on 10 harmful / 8 benign — a textbook overfit signature); OOD PR-AUC
+cosine 0.7177 vs logistic 0.5498, so the gap = **−0.1679**, NEGATIVE and far below the
++0.06 threshold. Verdict: **FALSIFIED_OOD (screening, n=1)** — the multi-layer logistic
+overfits the tiny set and generalizes worse than the simple cosine threshold (exactly the
+§3 overfit failure mode). The mechanism is sound on clean data (offline unit test: logistic
+AUC 0.998 vs single-layer cosine 0.70 when no single feature separates the classes); the
+falsification is driven by tiny 270m-scale training data, not a code bug.
+
+### 4. Where the code is / status
+
+**Implemented and offline unit-tested.** `src/steering/gate.py` provides both
+`CosineGate` and `LogisticGate` (plus `condition_features`, `pr_auc`, `roc_auc`,
+`evaluate_gates`); the driver is **`scripts/run_e15.py`** (exp#110, tag
+`E15-learned-gate`). This is the existing learned-gate machinery the rest of Block B
+lacks. Status **SCREENED (n=1) — FALSIFIED_OOD**; next step (not a hypothesis change) is
+to re-screen with a larger, genuinely-OOD training set.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E15.md`](../PROVENANCE/E15.md).

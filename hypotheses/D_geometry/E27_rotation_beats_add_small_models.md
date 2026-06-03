@@ -341,6 +341,65 @@ selective-plane rotation for E27-A; extend scale comparison to n>=7 for E27-B.**
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to the rotation-vs-
+addition operation comparison on small models. **Status: SCREENED (n=1) — E27-A
+FALSIFIED for full-vector rotation (S-7); E27-B scale-fragility SUPPORTED (S-4/S-8);
+selective-plane rotation UNTESTED.** This is a GEOMETRY/OPERATION hypothesis: the
+vector is the usual DiffMean — what changes is the injection operation.
+
+### 1. Steering-vector recipe (one DiffMean direction, three operations)
+
+```python
+# METHODOLOGY §1.3 — closed-form DiffMean, the SAME vector for add and rotate:
+v = extract.build_vector_bank(model, tok, load_concept("ocean"), L)[L]["diffmean"]
+# Operations (METHODOLOGY §2):
+#   add     : h' = h + alpha * v
+#   rotate  : e1 = unit(h); e2 = unit(v - (v·e1)e1)                 # full-vector (TESTED, FALSIFIED)
+#             h' = ||h|| * (cos(alpha)*e1 + sin(alpha)*e2)          # norm-preserving
+#   selective-plane rotate: apply the 2D Givens rotation only to the span{h,v}
+#             component, leave the d-2 orthogonal dims untouched     # UNTESTED variant
+```
+
+### 2. Experiment procedure
+
+```text
+# scripts/campaign_sweep.py --ops add rotate project_out --sources diffmean (C3/C3b)
+for op in {add, rotate, project_out}:
+  for alpha/theta in sweep_grid:
+    for seed in seeds:
+      h' = hooks.apply_operation(h, v, op, alpha)
+      measure: behavior, PPL,
+               geometry.offshell_displacement   # ~0 for rotate (norm-preserving), >0 for add
+               geometry.angular_displacement    # 1-cos theta; the rotate damage predictor
+# E27-B: repeat add sweeps across model sizes {270M, 1B, >1B}; map coherence-window width
+```
+
+### 3. Measurement & decision rule
+
+- PRIMARY metric: PPL at matched behavior (E27-A); coherence-window width vs scale (E27-B).
+- Pre-registered FALSIFIER (§3): selective-plane rotation PPL `>110` at behavior `>=0.55`
+  while matched-displacement add PPL `<100` ⇒ rotation advantage rejected. E27-B: window
+  as wide on 270M as 1B at matched fractional α ⇒ scale-fragility rejected.
+- **Actual (n=1):** at matched behavior ≈0.57, add PPL 92.8 beats **full-vector rotate
+  PPL 131.4 (+42%)** on Gemma-3-270M @L16 ⇒ **E27-A FALSIFIED for full-vector rotation.**
+  Angular predictor R²=0.997, radial R²=0.81 (C3b) confirmed. E27-B SUPPORTED (270M no
+  window < 1B narrow window). Selective-plane variant remains the open re-test.
+
+### 4. Where the code is / status
+
+`add`, `rotate`, `project_out` all exist in `hooks.apply_operation`; driven by
+`scripts/campaign_sweep.py` (exp#28–46). `geometry.angular_displacement` /
+`offshell_displacement` are the operation-specific damage predictors. MISSING for the
+open re-test: a **selective-plane (2D Givens) rotation operator** and an `n>=7` cross-
+scale sweep. E27-A (full-vector) is TESTED+FALSIFIED; E27-A (selective) and the n>=7
+E27-B confirmation are UNTESTED.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E27.md`](../PROVENANCE/E27.md).

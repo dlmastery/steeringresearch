@@ -291,6 +291,64 @@ detect the 3% composite improvement.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md) to E47, a
+**safety capstone** ablation: is Gate + OrthoStack + NormCap strictly better than
+any subset? Three guard components over a fixed 3-vector DiffMean safety stack.
+
+### 1. Steering-vector recipe (3 DiffMean vectors + three guard transforms)
+
+```python
+# §1.3 METHODOLOGY: the same 3 orthogonalised DiffMean vectors as E44.
+V = gram_schmidt([bank("refusal")["diffmean"],
+                  bank("anti_sycophancy")["diffmean"],
+                  bank("honesty")["diffmean"]])        # OrthoStack (Guard A analog)
+v_condition = bank("harmfulness")["diffmean"]; v_condition /= norm(v_condition)  # Gate (Guard E)
+```
+
+### 2. Experiment procedure (7-subset + full-stack ablation)
+
+```text
+1. Operating point: the E44-identified Pareto-knee lambda (alpha_i ~ lambda*0.10).
+2. Three composable guard transforms applied to the stacked edit:
+   - Gate (E): per forward pass, s=<h_k,v_condition>/||h_k||; apply stack iff s>theta
+               (theta from E42 calibration); else pass through.
+   - OrthoStack (A analog): Gram-Schmidt the 3 vectors in pre-specified order
+                            (refusal -> anti-syco -> honesty).
+   - NormCap (B): if ||sum_i alpha_i v_i|| > 0.15*||h||, rescale to the budget.
+   Injection itself is hooks.apply_operation, operation="relative_add" (§2).
+3. Run all 7 proper subsets of {Gate, OrthoStack, NormCap} + the full stack.
+4. MEASURE (§3 METHODOLOGY): JailbreakBench CR (baseline 0%); MMLU-500; XSTest
+   over-refusal; WikiText PPL — off-family judge, calibrated >=90%.
+5. COMPOSITE (pre-registered, §6): (1 - JBB_CR)*(MMLU/base)*(1 - XSTest_OR).
+```
+
+### 3. Measurement & decision rule
+
+- **PRIMARY metric:** the pre-registered multiplicative composite
+  (1 − CR)*(MMLU/base)*(1 − OR) for the full stack vs each subset.
+- **Hypothesis (§2):** the full 3-component stack's composite is STRICTLY higher
+  than every proper subset.
+- **Pre-registered FALSIFIER (§3):** if any single component or 2-component subset
+  reaches within 3% of the full stack, "all three needed" is DISCARDED
+  (`~ partial`); the dominating component is named (gate-dominated / cap-dominated).
+
+### 4. Where the code is / status — UNTESTED
+
+- **No driver yet** (campaign + `scripts/build_provenance.py` -> `PROVENANCE/E47.md`).
+- **Missing machinery (why UNTESTED):** the **CAST gate hook** (E41/E42),
+  **Gram-Schmidt ortho-stack** (E19/E44), and the **norm-budget clamp** (E22) — and
+  the E44 Pareto-knee alpha and E42 theta as INPUTS, so E47 cannot run until those
+  prior experiments supply its components/operating point. JailbreakBench + XSTest
+  wiring and a calibrated judge are also prerequisites. NOTE: this implements only a
+  3-component subset of the Rogue-Scalpel Guard A-E; full Guard A (local
+  refusal-formation subspace projection lock) is NOT implemented (§9 limitation).
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/E47.md`.

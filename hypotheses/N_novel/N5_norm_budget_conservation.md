@@ -276,6 +276,57 @@ formulation.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N5 is the **multi-vector norm-budget** law: it claims `log PPL = a + b·offshell` is a *universal master curve* collapsing across vectors, layers, and models. It is **TESTED at rung-3 and FALSIFIED across scale** (the within-pool fit was an artifact).
+
+### 1. Steering-vector recipe (the aggregate displacement)
+
+N5 is a geometry-of-the-injection hypothesis. The vector is DiffMean (METHODOLOGY §1.3); the quantity of interest is the **aggregate** off-shell displacement of the (possibly stacked) edit `δh = Σ_i alpha_i v_i`:
+
+```python
+# single- or multi-vector edit, injected via relative_add (METHODOLOGY §2):
+#   h' = h + Σ_i alpha_i * ||h|| * unit(v_i)
+
+# RADIAL off-shell of the AGGREGATE edit (geometry.offshell_displacement):
+offshell = offshell_displacement(h_base, h_steer)          # |‖h'‖-‖h‖| / ‖h‖
+
+# cumulative norm budget over stacked steps (geometry.norm_budget, the N5 budget):
+budget = norm_budget(deltas, h_base)                       # Σ_steps ‖Δh_step‖ / ‖h‖
+```
+
+`geometry.norm_budget` accumulates `Σ ‖Δh_step‖ / ‖h_base‖` over a leading step axis (reduces to `‖Δh‖/‖h‖` for one vector) — this is the conserved "budget B" N5 hypothesizes.
+
+### 2. Experiment procedure (rung-3 held-out master-curve test — `scripts/rung3_n17.py`)
+
+N5 shares the driver with N17 (same pooled points). The N5-specific step is the **held-out law fit**:
+
+```text
+1..4.  Identical to N17: collect (model, layer, alpha, offshell, real_ppl) points on REAL WikiText-2,
+       two model scales (gemma-3-270m-it, gemma-3-1b-it).
+5. FIT the N5 law on the SMALL model only:   b, a = polyfit(offshell_270m, log ppl_270m, deg=1)
+6. PREDICT the large model:                  log_ppl_pred_1b = a + b * offshell_1b
+7. HELD-OUT R^2 = 1 - SS_res/SS_tot on the 1b points (does the 270m-fit law transfer?).
+```
+
+The decision is on **held-out** R² (predict-across-scale), not the in-pool R² — exactly to avoid the HARKing trap the §9 Q&A warns about.
+
+### 3. Measurement & decision rule
+
+- **Primary metric:** held-out R² of `log PPL = a + b·offshell` (fit on 270m, predict 1b).
+- **Pre-registered falsifier (§3):** R² < 0.60 on a held-out dataset ⇒ claim (A)/(C) FALSIFIED.
+- **ACTUAL OBSERVED RESULT (rung-3):** held-out **R² = −1.60** (worse than predicting the mean) ⇒ **VERDICT: FALSIFIED across scale.** The intercept and slope do NOT transfer between model scales; there is no single universal collapse curve. The previously reported within-pool **R² = 0.81 was an artifact** of fitting and evaluating on the same pool. Note the *rank* relationship still holds (N17 Spearman +0.585 SUPPORTED) — off-shell predicts the ORDER of incoherence, but not a scale-invariant linear LAW.
+
+### 4. Where the code is / status
+
+- **Driver:** `scripts/rung3_n17.py` (the `n5_law_fit_270m` + `heldout_R2_on_1b` keys in `ideas/_campaigns/RUNG3_N17.json`).
+- **Probes:** `geometry.offshell_displacement`, `geometry.norm_budget` in `src/steering/geometry.py`.
+- **Status:** TESTED, **FALSIFIED** (the universal-law claim). The norm-budget *cap* as a practical safety heuristic (claim B) and the scalar-sufficiency claim (C) were not separately confirmed; they remain to revisit with per-model (not pooled) coefficients.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/N5.md`](../PROVENANCE/N5.md).

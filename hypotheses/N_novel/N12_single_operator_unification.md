@@ -295,6 +295,49 @@ must be planned for: commit to n=7 runs for the final claim.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N12 is the **capstone**: one operator `h ← h + g(h)·Proj_T(Φ_t(v))` capped at budget B subsumes CAA/CAST/Angular/etc.; ablating components recovers each. **UNTESTED** — it composes N1/N2/N5 machinery, which does not exist yet.
+
+### 1. Steering-vector recipe (the four-component unified operator)
+
+```python
+# v = bank[L]["diffmean"]; four independently-switchable components:
+g   = g_star(h)              if gating   else alpha        # N2 gate  (off = constant alpha)
+v_T = Proj_T(v)              if tangent  else v             # N1 tangent (off = identity)
+v_F = Phi_t(v_T)             if flow     else v_T           # N13 geodesic flow (off = t=0 = additive)
+delta = g * v_F
+delta = delta * (B / delta.norm())   if delta.norm() > B   # N5 budget cap (off = B=inf)
+#   h_new = h + delta        (METHODOLOGY §2 add as the base operation)
+```
+
+Named-method recovery: `(0,0,0,0)=CAA`, `(1,0,0,0)=CAST`, `(0,1,0,0)=Angular`, `(0,0,1,0)=Curveball`, `(0,0,0,1)=norm-capped CAA`, `(1,1,1,1)=unified`.
+
+### 2. Experiment procedure
+
+```text
+1. Implement & unit-test each component vs a synthetic linear case (CAA within 1%, CAST, Angular).
+2. Run the 2^4 = 16 binary ablation grid; for each, log behavior, log-PPL, off-shell, XSTest over-refusal,
+   JailbreakBench true-positive (eval.evaluate_bundle, METHODOLOGY §3).
+3. Named-method recovery: compare each ablated config to the corpus number within 5%.
+4. Pareto test: is (1,1,1,1) on the behavior x PPL frontier vs all 16? Cross-scale subset on 270m.
+   Minimal version first: 4 configs (CAA / CAST / Angular / all-on) x 9 cells.
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metrics:** named-method recovery accuracy; Pareto position of the all-on config.
+- **Pre-registered falsifier (§3):** any named method NOT recovered within 5% on both efficacy and PPL, OR all-on fails to Pareto-dominate component-ablated versions ⇒ FALSIFIED.
+- **Verdict logic:** both claims (A recovery, B dominance) must hold; final claim needs n≥7 (CLAUDE.md §7).
+
+### 4. Where the code is / status
+
+UNTESTED — and **last in execution order**. The five-axis bundle exists, but every advanced component (`g*(h)` N2, `Proj_T` N1, `Φ_t` geodesic N13, budget cap N5) is missing or unconfirmed; the operator cannot be assembled until those prerequisites land. That is why N12 is UNTESTED.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N12.md`.

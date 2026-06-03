@@ -228,6 +228,46 @@ behavior measurement before committing to the full 4-hour protocol.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N13 claims a geodesic (manifold-following) step has lower off-shell displacement and lower rogue-compliance than the additive chord at matched behavior. **UNTESTED** — needs a geodesic integrator.
+
+### 1. Steering-vector recipe (geodesic vs chord)
+
+```python
+v = bank[L]["diffmean"]
+# chord (baseline): additive  h_add = h + alpha*v        (METHODOLOGY §2 add)
+# geodesic (NEW): Curveball 2nd-order Riemannian exp-map
+#   h_geo = h + alpha*v + (alpha**2 / 2) * curv_correction   # curv_correction from Hessian-vec or kNN-PCA
+# match behavior so both reach delta_cos = 0.10, then compare:
+off_add = offshell_displacement(h, h_add)               # geometry.offshell_displacement
+off_geo = offshell_displacement(h, h_geo)               # expected strictly lower
+```
+
+### 2. Experiment procedure
+
+```text
+1. Validate the geodesic approximation on a synthetic sphere: <5% path-length error vs analytic geodesic at alpha=0.15.
+2. Fix the rogue probe (reuse the S-4 harmful-content classifier) BEFORE steering.
+3. For 3 behaviors: sweep alpha (add) and t (geo) to matched delta_cos=0.10.
+4. Measure offshell, rogue-compliance rate CR, log-PPL for both ops (9 cells each).
+5. Report ratios offshell(geo)/offshell(add) and CR(geo)/CR(add) with CIs.
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metrics:** off-shell ratio and rogue-compliance ratio (geodesic / additive).
+- **Pre-registered falsifier (§3):** offshell(geo) ≥ 0.8·offshell(add) ⇒ (A) FALSIFIED; CR(geo) ≥ 0.9·CR(add) ⇒ (B) fails; geodesic indistinguishable from chord ⇒ approximation too coarse.
+- **Verdict logic:** the synthetic validation must pass first, else the test is "Curveball vs additive", not "geodesic vs chord".
+
+### 4. Where the code is / status
+
+UNTESTED. `geometry.offshell_displacement` exists and the safety/PPL probes exist, but the **geodesic integrator** (Curveball second-order exp-map via Hessian-vector product or kNN-PCA curvature) and the rogue-compliance probe are not implemented — that missing machinery is why N13 is UNTESTED.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N13.md`.

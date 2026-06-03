@@ -278,6 +278,53 @@ is the primary threat to interpretation and must be controlled explicitly.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N1 modifies the **direction** of an additive edit: it projects v onto the local manifold tangent before adding. **UNTESTED** — it needs a local-tangent estimator that does not yet exist.
+
+### 1. Steering-vector recipe (tangent-projected additive)
+
+Start from the ordinary DiffMean vector (METHODOLOGY §1.3), then trim its off-manifold component:
+
+```python
+v = bank[L]["diffmean"]                                  # extract.diffmean_vector
+
+# local tangent T(h): PCA of the k=50 nearest natural activations to h (NEW machinery)
+neighbors = knn_natural_activations(h, L, k=50)          # MISSING: kNN cache
+T = pca_basis(neighbors, var=0.99)                       # d_int top components span T(h)
+v_T = T @ (T.T @ v)                                      # Proj_T(v): keep manifold-parallel part
+
+# inject v_T additively (METHODOLOGY §2, add):  h' = h + alpha * v_T
+# geometry logged: offshell_displacement(h, h') should DROP vs naive add; angular_displacement preserved
+```
+
+### 2. Experiment procedure
+
+```text
+1. Extract DiffMean v at L16 for 3 behaviors; build the kNN tangent cache from WikiText activations.
+2. For each alpha/||h|| in {0.01,0.02,0.05,0.10,0.15,0.20}, run THREE matched conditions:
+     (a) naive additive  h+alpha*v
+     (b) tangent-proj     h+alpha*v_T
+     (c) 2D-plane angular rotation (METHODOLOGY §2 rotate) at matched behavior cosine
+   plus a CONFOUND control: norm-normalized v at ||v_T|| (isolates projection vs magnitude).
+3. Measure log-PPL, behavior cosine, offshell_displacement for each.
+4. Gap-closure = (PPL_naive - PPL_proj) / (PPL_naive - PPL_rot).
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metric:** PPL gap-closure of tangent-projection toward angular rotation.
+- **Pre-registered falsifier (§3):** PPL(proj) > PPL(naive) at matched behavior across 3 behaviors/3 seeds ⇒ DISCARDED; gap-closure < 20% ⇒ INCONCLUSIVE (claim is ≥80%).
+- **Verdict logic:** KEEP only if proj beats the norm-normalized control (geometry claim ≠ magnitude reduction).
+
+### 4. Where the code is / status
+
+UNTESTED. Reuses `geometry.offshell_displacement` / `angular_displacement`, but the **local-manifold tangent estimator** (kNN cache + per-point PCA + `Proj_T`) is not implemented — that missing machinery is why N1 cannot run.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N1.md`.

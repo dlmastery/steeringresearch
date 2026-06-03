@@ -265,6 +265,48 @@ is a cheap and potentially high-value intervention.
 
 ---
 
+## Pseudocode & Methodology
+
+This section specializes [`../METHODOLOGY.md`](../METHODOLOGY.md). N6 orthogonalizes the behavior vector against the condition vector (`cos(c,b)=0`) to cut over-refusal. **UNTESTED** — the projection is trivial; the safety eval infra (JailbreakBench + XSTest) is the blocker.
+
+### 1. Steering-vector recipe (Gram-Schmidt separation of read and write)
+
+```python
+c = diffmean_vector(harmful, harmless, L)               # condition / "read" direction
+b = diffmean_vector(refuse, comply, L)                  # behavior / "write" direction
+
+# Gram-Schmidt: remove the c-parallel component of b (same form as METHODOLOGY §2 project_out)
+b_orth = b - (b.dot(c) / c.dot(c)) * c                  # verify cos(b_orth, c) < 0.01
+
+# gate fires on cos(h, c); the residual edit uses b_orth, injected via add (METHODOLOGY §2)
+#   h' = h + alpha * b_orth   when gate(cos(h,c)) is open
+```
+
+### 2. Experiment procedure
+
+```text
+1. Pre-run E32: measure natural cos(c,b). If |cos| < 0.10, N6 is VACUOUSLY satisfied (stop).
+2. Build b_orth; verify cos(b_orth, c) < 0.01.
+3. Re-calibrate alpha so b_orth matches b_raw efficacy on CLEARLY harmful prompts.
+4. Evaluate on 100 XSTest benign look-alikes (over-refusal) + 100 JailbreakBench harmful (true-positive).
+5. CONTROLS: magnitude-matched (scale b_raw to ||b_orth||) AND random-orthogonalization
+   (project off a random vector of ||c||) — isolates the c-specific geometric effect.
+```
+
+### 3. Measurement & decision rule
+
+- **Primary metrics:** XSTest over-refusal reduction and JailbreakBench true-positive retention.
+- **Pre-registered falsifier (§3):** over-refusal reduction < 15% (claim ≥30%), OR true-positive loss > 10% (claim <5%) ⇒ FALSIFIED for this implementation.
+- **Verdict logic:** KEEP only if b_orth beats the magnitude-matched AND random-projection controls.
+
+### 4. Where the code is / status
+
+UNTESTED. The Gram-Schmidt projection is one line and `geometry`/`eval` probes exist, but the **JailbreakBench compliance + XSTest over-refusal evaluation infrastructure** (CLAUDE.md §10) is not yet deployed (FINDINGS notes it "in progress") — that is why N6 is UNTESTED.
+
+See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
+
+---
+
 ## Provenance & Tracing
 
 No experiments run yet — see this design doc's protocol (§7) for what would be run. Once a campaign logs rows for this hypothesis, re-run `scripts/build_provenance.py` to generate `hypotheses/PROVENANCE/N6.md`.
