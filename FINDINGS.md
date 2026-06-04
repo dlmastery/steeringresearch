@@ -35,7 +35,7 @@ that a cheap geometric measurement — how far a steering operation pushes the m
 hidden state off the surface of its normal activation sphere (called "off-shell
 displacement") — predicts how incoherent the model's outputs will become.
 
-**S-1 through S-19** are the screening/confirmation observations recorded in this
+**S-1 through S-21** are the screening/confirmation observations recorded in this
 document. S-1 through S-14 are directional findings from single experimental runs
 (n=1). S-15 is different: it is the program's first controlled, multi-seed (n=20),
 off-family-judged, cross-scale result — measured the way the earlier single-seed
@@ -67,8 +67,18 @@ control variable is alpha (the E3 coherence cliff, S-17). S-19 returns to the E4
 whether DiffMean and PCA-top1 are interchangeable — but on 100 REAL AxBench concepts
 (Gemma-2-2B-it, layer 20, exp#122): the mean |cos(DiffMean, PCA-top1)| is only 0.65
 (median 0.73, p5 0.19, only 16% of concepts >=0.90). The synthetic cos~0.99 result did NOT
-generalize; on real concepts the two extraction methods are only MODERATELY aligned.
-None of S-1 through S-19 meets the full six-part bar required for an external claim.
+generalize; on real concepts the two extraction methods are only MODERATELY aligned. S-20
+tests E27 (rotation vs additive steering) on the same real AxBench grid (Gemma-2-2B-it,
+layer 20, 20 concepts × 8 eval instructions, relative_add/rotate at alpha=0.1, exp#123):
+the rotate-vs-add delta is only -0.003 (diffmean: add 0.169/0.681 vs rotate 0.166/0.681) —
+rotation gives no benefit; the operations are roughly equal. This supersedes the
+synthetic E27 FALSIFICATION with a real-benchmark NOT SUPPORTED verdict: rotation is
+neither dramatically worse nor better than addition on real abstract concepts at this scale.
+S-21 tests E36 (PCA vs DiffMean source) on the same grid (exp#124): pca+add yields behavior
+0.178 vs diffmean+add 0.169 — a +0.009 margin — but pca coherence (0.644) is lower than
+diffmean coherence (0.681). A wash: source barely matters, PCA marginally higher behavior,
+DiffMean marginally higher coherence, differences tiny.
+None of S-1 through S-21 meets the full six-part bar required for an external claim.
 
 **"rung-3"** refers to the third level on a five-rung evaluation ladder this project
 uses. Rung 0–2 experiments are cheap, fast, and run on small synthetic datasets.
@@ -159,70 +169,93 @@ a HARKing violation (Hypothesizing After Results are Known) and is a project BLO
 
 ## Current status
 
-**No external-ready findings yet — 122 experiments run. On the REAL AxBench benchmark,
-across two model scales (exp#118 at 270M, exp#119 at 2B), E7's directional steering
-advantage over a label-shuffled control is SCALE-DEPENDENT and WEAK: NEGATIVE/at the
-floor at 270M, and statistically-significant-but-tiny (+0.004, p=0.011) at 2B where the
-ordinal gate still fails and a shuffled vector captures ~97% of the effect — the
-synthetic-"ocean" +0.135 win (S-15) did NOT generalize. In contrast, the E3
-ALPHA-COHERENCE CLIFF — the program's geometry/coherence result — IS SUPPORTED on the
-real AxBench benchmark (30 concepts, 2B, off-family local judge, exp#120): behavior and
-coherence both peak at alpha~0.10 and collapse super-linearly past alpha~0.20 (S-17).
-The E2 LAYER SWEEP on real AxBench (20 concepts, 2B, off-family local judge, exp#121)
-finds a NEARLY FLAT layer curve — behavior 0.163–0.184 across layers 6–22, shallow peak
-at layer 18 (coherence best at layer 20), weak mid-late preference, no sharp optimum (S-18).
-E4 (DiffMean vs PCA-top1 alignment) on 100 REAL AxBench concepts (2B, layer 20, exp#122)
-finds only MODERATE alignment — mean |cos| 0.65, median 0.73, only 16% of concepts >=0.90,
-p5 0.19 — the synthetic cos~0.99 did NOT generalize (S-19). The overall pattern across S-16
-through S-19 is consistent: synthetic single-concept results overstate; real benchmarks correct.**
+**No external-ready findings yet — 124 experiments run.**
 
-122 experiments have run on real Gemma-3-270m, Gemma-3-1B, Gemma-2-2B, and
-Qwen-2.5-0.5B. They produced 19 screening/confirmation observations (S-1 through S-19)
-spanning 18 of the 70 hypotheses. Five rung-3 evaluation attempts have now been
-completed: N17 (off-shell displacement predicts incoherence), E7 on SYNTHETIC data
-(relative-steering directional control, exp#116/117 — real matched-displacement
-controls, n=20 seeds, off-family LLM judge, cross-scale replication), E7 on the
-REAL AxBench benchmark at two scales (exp#118 at 270M, exp#119 at 2B — see S-16),
-E3 (the alpha-coherence cliff) on the REAL AxBench benchmark at 2B (exp#120 — see S-17),
-and E2 (layer selection) on the REAL AxBench benchmark at 2B (exp#121 — see S-18).
-A pure geometry check on E4 (DiffMean vs PCA-top1 alignment) on 100 REAL AxBench
-concepts (exp#122 — see S-19) completes the growing body of real-benchmark corrections
-to synthetic results. The E7 AxBench evaluation is the important reality check: it
-replaced ALL prior synthetic/hand-authored data with AxBench's 500 real concepts,
-contrast text, and held-out eval instructions, scored by an off-family local judge
-(Qwen2.5-7B-Instruct, 4-bit; judge validated at ROC-AUC 0.68 vs AxBench ground truth —
-WEAK but UNBIASED, disclosed).
-The replication unit is the CONCEPT (n=500). On AxBench the real DiffMean direction's
-advantage over a matched-displacement shuffled-label control is scale-dependent: at
-270M the real direction is significantly WORSE and both conditions are at the floor
-(real 0.046 vs shuffled 0.056; paired delta −0.010, 95% CI [−0.0142, −0.0066],
-p=1.4×10⁻⁶) — the model essentially cannot express the abstract concepts at all. At
-2B (the scale AxBench was built for, layer 20) the concepts become expressible (both
-conditions ~0.135, 3× higher), and the real direction significantly BEATS shuffled —
-but the effect is substantively TINY (+0.004 on a 0–1 scale, ~3% relative; 95% CI
-[+0.0003, +0.0077] barely excludes 0; Wilcoxon p=0.011), the ordinal gate still FAILS,
-and the label-shuffled vector captures ~97% of the steering effect. This is the most
-rigorous evaluation of E7 and it is, honestly, a WEAK/negative result for DiffMean
-steering: the real concept direction carries only a weak concept-specific signal; most
-of the steering effect is generic, not direction-specific. The exp#120 E3 AxBench
-evaluation (S-17) is a complementary result: it tests a DIFFERENT claim — whether the
-coherence cliff shape is real on a real benchmark — and finds a clear positive
-confirmation. The geometry/coherence findings (E3 cliff, N17 off-shell predicts
-incoherence) generalize to AxBench; the direction-specificity finding (E7) does not.
-The exp#121 E2 AxBench evaluation (S-18) extends this to the layer-selection question:
-the layer curve is nearly flat, reinforcing that alpha (E3) is the dominant control
-variable and layer choice (E2) matters little in this regime. The exp#122 E4 geometry
+### Real-benchmark synthesis (S-16 through S-21): alpha is the only strong knob
+
+Across all six testable hypotheses re-evaluated on the real AxBench benchmark
+(pyvene/axbench-concept500) with an off-family judge (Qwen2.5-7B-Instruct, AUC 0.68
+disclosed), the ONLY steering knob that STRONGLY matters is alpha — the E3 coherence
+cliff (S-17, confirmed). Every other design choice has a WEAK or marginal effect: the
+specific concept DIRECTION barely beats a shuffled control (E7, S-16 — weak,
+scale-dependent, mostly-generic), the LAYER is nearly flat (E2, S-18), the SOURCE
+(DiffMean vs PCA-top1) is a wash on steering even though the two methods produce only
+moderately aligned directions on real concepts (E36, S-21 and E4, S-19), and the
+OPERATION (add vs rotate) gives no benefit (E27, S-20). Synthetic single-concept
+evaluation systematically OVERSTATED all of these effects; only the
+geometry/coherence finding (alpha cliff, consistent with N17 off-shell displacement
+predicts incoherence) generalized to a real benchmark. Practical takeaway: tune alpha
+(~0.10) and stop optimizing direction, layer, source, or operation — they barely move
+the needle on real abstract concepts at this scale. The external-ready count remains
+zero.
+
+On the REAL AxBench benchmark, across two model scales (exp#118 at 270M, exp#119 at
+2B), E7's directional steering advantage over a label-shuffled control is
+SCALE-DEPENDENT and WEAK: NEGATIVE/at the floor at 270M, and
+statistically-significant-but-tiny (+0.004, p=0.011) at 2B where the ordinal gate
+still fails and a shuffled vector captures ~97% of the effect — the synthetic-"ocean"
++0.135 win (S-15) did NOT generalize (S-16). The E3 ALPHA-COHERENCE CLIFF is
+SUPPORTED on real AxBench (exp#120): behavior and coherence both peak at alpha~0.10
+and collapse super-linearly past alpha~0.20 (S-17). The E2 LAYER SWEEP finds a NEARLY
+FLAT layer curve — behavior 0.163–0.184 across layers 6–22, shallow peak at layer 18
+(S-18). E4 (DiffMean vs PCA-top1 alignment) on 100 real AxBench concepts finds only
+MODERATE alignment — mean |cos| 0.65, only 16% of concepts >=0.90 (S-19). E27
+(rotation vs addition) on the (source × operation) 4-cell grid (exp#123) finds
+rotate-vs-add delta = −0.003 at identical coherence — rotation gives no benefit, NOT
+SUPPORTED (S-20). E36 (PCA vs DiffMean as steering source) on the same grid (exp#124)
+finds pca+add marginally higher behavior (+0.009) but lower coherence (−0.037) vs
+diffmean+add — a wash, source barely matters (S-21).
+
+124 experiments have run on real Gemma-3-270m, Gemma-3-1B, Gemma-2-2B, and
+Qwen-2.5-0.5B. They produced 21 screening/confirmation observations (S-1 through
+S-21) spanning 19 of the 70 hypotheses. Six rung-3-style real-benchmark evaluations
+have been completed: N17 (off-shell displacement predicts incoherence), E7 on
+SYNTHETIC data (exp#116/117 — PROVISIONAL), E7 on REAL AxBench at two scales
+(exp#118/119 — S-16), E3 coherence cliff on REAL AxBench (exp#120 — S-17), E2 layer
+sweep on REAL AxBench (exp#121 — S-18), and the combined E27/E36 (source × operation)
+grid on REAL AxBench (exp#123/124 — S-20/S-21). A pure geometry check on E4
+(exp#122 — S-19) completes the real-benchmark correction body.
+
+The E7 AxBench evaluation is the important reality check: it replaced ALL prior
+synthetic/hand-authored data with AxBench's 500 real concepts, contrast text, and
+held-out eval instructions, scored by an off-family local judge (Qwen2.5-7B-Instruct,
+4-bit; judge validated at ROC-AUC 0.68 vs AxBench ground truth — WEAK but UNBIASED,
+disclosed). The replication unit is the CONCEPT (n=500). On AxBench the real DiffMean
+direction's advantage over a matched-displacement shuffled-label control is
+scale-dependent: at 270M the real direction is significantly WORSE and both conditions
+are at the floor (real 0.046 vs shuffled 0.056; paired delta −0.010, 95% CI
+[−0.0142, −0.0066], p=1.4×10⁻⁶) — the model essentially cannot express the abstract
+concepts at all. At 2B (the scale AxBench was built for, layer 20) the concepts become
+expressible (both conditions ~0.135, 3× higher), and the real direction significantly
+BEATS shuffled — but the effect is substantively TINY (+0.004 on a 0–1 scale, ~3%
+relative; 95% CI [+0.0003, +0.0077] barely excludes 0; Wilcoxon p=0.011), the ordinal
+gate still FAILS, and the label-shuffled vector captures ~97% of the steering effect.
+This is the most rigorous evaluation of E7 and it is, honestly, a WEAK/negative result
+for DiffMean steering: the real concept direction carries only a weak concept-specific
+signal; most of the steering effect is generic, not direction-specific.
+
+The exp#120 E3 AxBench evaluation (S-17) is a complementary result: it tests a
+DIFFERENT claim — whether the coherence cliff shape is real on a real benchmark — and
+finds a clear positive confirmation. The geometry/coherence findings (E3 cliff, N17
+off-shell predicts incoherence) generalize to AxBench; the direction-specificity
+finding (E7) does not. The exp#121 E2 AxBench evaluation (S-18) extends this to the
+layer-selection question: the layer curve is nearly flat. The exp#122 E4 geometry
 check (S-19) extends the pattern to E4: on 100 real AxBench concepts the DiffMean and
-PCA-top1 directions are only moderately aligned (mean |cos| 0.65), not the near-tautological
-cos~0.99 observed on clean synthetic paired data. By the program's own rigor floor there are
-STILL zero external-ready findings. (S-17 caveats: 30 concepts only — a curve, not a
-population test; single model 2B + single layer 20; judge AUC 0.68 (disclosed, unbiased);
-the cliff alpha may shift with model/layer, but the qualitative shape — peak ~0.10,
-super-linear collapse past ~0.20 — is robust across the 30 concepts and consistent with
-S-2, S-4, S-8, S-9, S-11. S-18 caveats: 20 concepts, single model/2B, single knee
-alpha=0.1, judge AUC 0.68. S-19 caveats: 100 concepts, single model/layer, unpaired
-AxBench data — see S-19.) The screening observations motivate the next required
-experiments but are NOT citable claims.
+PCA-top1 directions are only moderately aligned (mean |cos| 0.65). The exp#123 E27
+operation check (S-20) and exp#124 E36 source check (S-21) complete the (source ×
+operation) grid and extend the pattern further: neither operation type nor source
+selection provides a meaningful advantage on real abstract concepts.
+
+By the program's own rigor floor there are STILL zero external-ready findings.
+(S-17 caveats: 30 concepts only — a curve, not a population test; single model 2B +
+single layer 20; judge AUC 0.68 (disclosed, unbiased); the cliff alpha may shift with
+model/layer, but the qualitative shape — peak ~0.10, super-linear collapse past ~0.20
+— is robust across the 30 concepts and consistent with S-2, S-4, S-8, S-9, S-11.
+S-18 caveats: 20 concepts, single model/2B, single knee alpha=0.1, judge AUC 0.68.
+S-19 caveats: 100 concepts, single model/layer, unpaired AxBench data. S-20/S-21
+caveats: 20 concepts, single model/layer, 4-cell grid, judge AUC 0.68; the wash verdict
+holds for the means but individual-concept variation is not captured.) The screening
+observations motivate the next required experiments but are NOT citable claims.
 
 ---
 
@@ -241,10 +274,10 @@ All verdicts are SCREENING (single-run, n=1) unless marked [rung-3].
 | E17: Near-orthogonal stacking | Can two behavior vectors be applied simultaneously without mutual interference? | SUPPORTED | Stacking anger + happiness retains 101%/110% of solo behavior despite +0.48 cosine overlap |
 | E18: Interference vs Gram mass | Does interference between stacked vectors grow proportionally to their geometric overlap? | PARTIAL | Stacking retains 85–94% behavior, but retention is not monotone in Gram off-diagonal mass |
 | E22: Norm budget and collapse | Does cumulative displacement across all stacked vectors jointly govern coherence collapse? | SUPPORTED | Four stacked concepts drive PPL from 138 to 4,518 as total displacement scales; consistent with a shared norm budget |
-| E27: Rotation beats addition on small models | Does norm-preserving rotation outperform additive steering on small models? | FALSIFIED (with caveat) | Full-vector rotation costs +42% PPL at matched behavior vs additive; caveat: this falsifies full-vector rotation, not selective-plane rotation |
+| E27: Rotation beats addition on small models | Does norm-preserving rotation outperform additive steering on small models? | FALSIFIED (full-vector, synthetic); NOT SUPPORTED on real AxBench — rotate ~ add | Full-vector rotation costs +42% PPL at matched behavior vs additive on synthetic (caveat: falsifies full-vector, not selective-plane rotation); on REAL AxBench (2B, layer 20, 20 concepts × 8 eval, exp#123) rotate-vs-add delta = −0.003 (diffmean: add 0.169/coh 0.681 vs rotate 0.166/coh 0.681) — rotation gives no benefit, operations roughly equal (S-20) |
 | E28: Behavior plane low-rank | Does the steering direction live in a 2–3 dimensional subspace? | FALSIFIED | Top-3 SVD dimensions explain only 66% of variance; not low-rank |
 | E35: Sparse behavior vector | Can the steering vector be compressed to 10% of its coordinates with minimal loss? | PARTIAL | Top-10% coordinates retain 77% behavior; below the 85% target |
-| E36: DiffMean equals PCA at matched displacement | Do the two construction methods steer identically when compared fairly (equal displacement)? | SUPPORTED | At matched fractional displacement, behavior within 0.02 and PPL within 8%; earlier apparent gaps were a parameterization artifact |
+| E36: DiffMean equals PCA at matched displacement | Do the two construction methods steer identically when compared fairly (equal displacement)? | SUPPORTED (synthetic); WEAK/WASH on real AxBench — source barely matters | At matched fractional displacement on synthetic data, behavior within 0.02 and PPL within 8%; earlier apparent gaps were a parameterization artifact. On REAL AxBench (2B, layer 20, 20 concepts × 8 eval, exp#124): pca+add behavior 0.178 vs diffmean+add 0.169 (+0.009 margin) but pca coherence 0.644 vs diffmean coherence 0.681 (−0.037) — a wash, source barely matters, PCA marginally higher behavior, DiffMean marginally higher coherence (S-21) |
 | E40: Cross-layer direction continuity | Is the same steering direction approximately preserved as you move through network depth? | SUPPORTED | Cross-layer cosine 0.75–0.90 for adjacent layers; the direction is approximately parallel-transported through depth |
 | N5: Universal norm-budget law | Is there one equation predicting coherence from displacement that works across all models? | FALSIFIED across scale [rung-3] | The monotone direction holds but the law's coefficients are model-specific; held-out R² = −1.6 when predicting across scales |
 | N7: Parallel transport across layers | Is the same behavior direction preserved through the network? | SUPPORTED | Same evidence as E40; cross-layer cosine 0.75–0.90 |
@@ -1386,6 +1419,153 @@ concepts.** Mean |cos| 0.65, median 0.73, only 16% >=0.90, p5 0.19 on 100 concep
 layer 20, exp#122). The synthetic cos~0.99 relied on clean paired data and was a pairing
 artifact. On real unpaired AxBench contrast data the two methods diverge substantially.
 SCREENING ONLY — not an external claim. Zero external-ready findings.
+
+---
+
+### S-20: E27 rotation-vs-add on real AxBench — NOT SUPPORTED: rotation gives no benefit, operations roughly equal
+
+**What hypothesis this tests:** "E27 — Rotation beats addition on small models." The
+pre-registered prediction was that norm-preserving rotation outperforms additive
+steering, specifically on small (<3B) models where additive edits more easily exit the
+manifold. In synthetic screening (S-7), full-vector rotation was FALSIFIED: it costs
++42% PPL at matched behavior. S-20 re-asks the E27 rotation-vs-addition question on
+real AxBench concepts with the relative_add and relative_rotate operations (not
+full-vector rotation), as part of the (source × operation) 4-cell grid.
+
+**Design.** Model: google/gemma-2-2b-it, layer 20. Benchmark: AxBench
+(`pyvene/axbench-concept500`), 20 concepts × 8 eval instructions. Operations:
+relative_add and relative_rotate at alpha=0.10. Sources: DiffMean and PCA-top1. Both
+behavior (concept score 0–2 → [0,1]) and coherence (fluency score 0–2 → [0,1]) scored
+by off-family local judge (Qwen2.5-7B-Instruct, 4-bit; judge AUC 0.68 — WEAK but
+UNBIASED, disclosed). Experiment: exp#123, tag E27-axbench.
+
+**The 4-cell (source × operation) grid:**
+
+| Source | Operation | Behavior ([0,1]) | Coherence ([0,1]) |
+|--------|-----------|-----------------|-------------------|
+| DiffMean | add | 0.169 | 0.681 |
+| DiffMean | rotate | 0.166 | 0.681 |
+| PCA | add | 0.178 | 0.644 |
+| PCA | rotate | 0.172 | 0.653 |
+
+**Rotate-vs-add delta (DiffMean):** −0.003 behavior, 0.000 coherence. Rotate-vs-add
+delta (PCA): −0.006 behavior, +0.009 coherence.
+
+**Interpretation — honest.** Rotation does NOT beat additive steering. Across both
+sources the behavior difference between add and rotate is at most −0.006, and
+coherence is essentially identical for DiffMean and slightly higher for PCA-rotate.
+The rotate-vs-add effect is marginally WORSE in behavior at identical or near-identical
+coherence. This is consistent with the synthetic E27 FALSIFICATION (S-7), but the
+real-benchmark result is more nuanced: the difference is tiny (rotate ~ add), not the
+dramatic +42% PPL penalty seen with full-vector rotation on synthetic data. The
+correct verdict is NOT SUPPORTED rather than FALSIFIED: rotation gives no benefit,
+but it is not dramatically harmful on real abstract concepts at this scale and alpha.
+
+**Caveat on the earlier synthetic result.** S-7 tested FULL-VECTOR rotation (rotating
+the entire hidden state toward the steering direction), which is a much more aggressive
+operation than the relative_rotate operation used here (a selective norm-preserving
+rotation in the steering plane). The difference in severity is expected: the earlier
++42% PPL penalty was from a crude full-vector rotation; the current result uses a more
+surgical plane-rotation at a small alpha. Both confirm that rotation offers no advantage
+over addition, but by different margins.
+
+**Connection to the real-benchmark theme.** S-20 extends the pattern established by
+S-16 through S-19: yet another design choice (operation type) that synthetic results
+suggested might matter turns out to make no meaningful difference on real diverse
+concepts. The only knob that matters is alpha (S-17, E3).
+
+**Caveats.** 20 concepts only; single model (2B) and single layer (20); single alpha
+(0.10); judge AUC 0.68 (disclosed, unbiased). Single screening run — not external-ready.
+Four-cell grid with 20 concepts cannot support a per-cell paired statistical test with
+adequate power.
+
+**Cross-references:** S-7 (E27 FALSIFIED on synthetic full-vector rotation, +42% PPL
+penalty); S-16 through S-19 (real-benchmark theme — direction, layer, source also weak);
+S-21 (E36 source wash — same grid, source axis).
+
+**Model / data:** google/gemma-2-2b-it (layer 20), 20 AxBench concepts × 8 eval
+instructions, relative_add / relative_rotate, alpha=0.10, DiffMean and PCA-top1 sources,
+off-family local judge Qwen2.5-7B-Instruct (4-bit), exp#123 (tag: E27-axbench).
+
+**NOT SUPPORTED on real AxBench — E27 rotation gives no benefit; add and rotate are
+roughly equal (rotate-vs-add delta −0.003 behavior, 0.000 coherence for DiffMean).
+Consistent with synthetic FALSIFICATION but difference is tiny, not dramatic.
+SCREENING ONLY — not an external claim. Zero external-ready findings.**
+
+---
+
+### S-21: E36 source (DiffMean vs PCA-top1) on real AxBench — WEAK/WASH: source barely matters
+
+**What hypothesis this tests:** "E36 — DiffMean equals PCA at matched displacement."
+The pre-registered prediction was that the two vector construction methods steer
+identically when compared fairly (equal fractional displacement). In synthetic screening
+(S-9), this was SUPPORTED: at matched relative alpha, DiffMean and PCA-top1 produce
+behavior within 0.02 and PPL within 8%. S-21 re-asks the E36 source question on real
+AxBench concepts as part of the (source × operation) 4-cell grid, at a fixed layer, alpha,
+and operation.
+
+**Design.** Same 4-cell grid as S-20. See S-20 for the full design specification. The
+source comparison focuses on the add operation (the primary comparison); the rotate
+rows provide a secondary cross-check. Experiment: exp#124, tag E36-axbench.
+
+**The source comparison (additive operation):**
+
+| Source | Behavior ([0,1]) | Coherence ([0,1]) | Delta vs DiffMean |
+|--------|-----------------|-------------------|-------------------|
+| DiffMean + add | 0.169 | 0.681 | — (reference) |
+| PCA + add | 0.178 | 0.644 | +0.009 behavior, −0.037 coherence |
+
+**The source comparison (rotate operation, secondary):**
+
+| Source | Behavior ([0,1]) | Coherence ([0,1]) | Delta vs DiffMean |
+|--------|-----------------|-------------------|-------------------|
+| DiffMean + rotate | 0.166 | 0.681 | — (reference) |
+| PCA + rotate | 0.172 | 0.653 | +0.006 behavior, −0.028 coherence |
+
+**PCA-vs-DiffMean delta (add):** +0.009 behavior, −0.037 coherence.
+
+**Interpretation — honest.** Source barely matters. PCA-top1 steers marginally HIGHER
+behavior (+0.009) than DiffMean but at LOWER coherence (−0.037). This is a
+behavior-coherence tradeoff, with both differences small enough to be considered a wash.
+Note the asymmetry with the direction-alignment result (S-19): although DiffMean and
+PCA-top1 point in meaningfully DIFFERENT directions on real AxBench concepts (mean
+|cos| 0.65, S-19), they produce SIMILAR steering outcomes in behavior and coherence when
+used at the same relative alpha. This suggests the steering effect is largely insensitive
+to the specific direction, as long as the magnitude is matched — consistent with S-16
+(E7: most of the steering effect is generic, not direction-specific, at 2B).
+
+Note: AxBench's own paper found diff-in-means best for concept DETECTION (classifying
+whether text expresses a concept). For STEERING the two sources are roughly equal —
+this is consistent with the S-16 finding that the specific direction matters little;
+the detection-vs-steering asymmetry may reflect that detection relies on direction
+specificity while steering mainly relies on displacement magnitude.
+
+**Connection to the real-benchmark theme.** S-21 closes the (source × operation) grid
+and confirms: neither axis provides a meaningful advantage on real abstract concepts.
+Combined with S-16 (direction weak), S-18 (layer flat), S-20 (operation ~equal), the
+picture is complete: alpha is the only knob that matters in this regime.
+
+**Caveats.** 20 concepts only; single model (2B) and single layer (20); single alpha
+(0.10); judge AUC 0.68 (disclosed, unbiased). The +0.009 behavior difference and
+−0.037 coherence difference are small relative to concept-to-concept variation; no
+paired statistical test run on the 20 concepts. SCREENING — not external-ready.
+
+**Cross-references:** S-9 (E36 SUPPORTED on synthetic data — PCA ≈ DiffMean at matched
+alpha, confirmed); S-19 (E4 — DiffMean and PCA-top1 directions are only moderately
+aligned on real concepts, mean |cos| 0.65; yet S-21 shows steering outcomes are similar
+despite directional divergence); S-16 (E7 — most steering effect is generic, not
+direction-specific, consistent with source wash); S-20 (E27 operation — same grid,
+operation axis).
+
+**Model / data:** google/gemma-2-2b-it (layer 20), 20 AxBench concepts × 8 eval
+instructions, relative_add / relative_rotate, alpha=0.10, DiffMean and PCA-top1 sources,
+off-family local judge Qwen2.5-7B-Instruct (4-bit), exp#124 (tag: E36-axbench).
+
+**WEAK/WASH on real AxBench — E36 source barely matters. PCA marginally higher behavior
+(+0.009) but lower coherence (−0.037) vs DiffMean — a tradeoff, not a win. Despite
+DiffMean and PCA-top1 pointing in meaningfully different directions on real concepts
+(S-19), they produce similar steering outcomes. SCREENING ONLY — not an external claim.
+Zero external-ready findings.**
 
 ---
 

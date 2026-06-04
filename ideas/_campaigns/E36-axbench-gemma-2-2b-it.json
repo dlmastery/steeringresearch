@@ -1,0 +1,41 @@
+{
+  "hyp": "E36",
+  "model": "google/gemma-2-2b-it",
+  "layer": 20,
+  "dataset": "concept500",
+  "n_concepts": 20,
+  "instrument": "local_judge:Qwen2.5-7B-Instruct",
+  "grid": [
+    {
+      "source": "diffmean",
+      "operation": "add",
+      "behavior": 0.1688,
+      "coherence": 0.6813
+    },
+    {
+      "source": "diffmean",
+      "operation": "rotate",
+      "behavior": 0.1656,
+      "coherence": 0.6813
+    },
+    {
+      "source": "pca",
+      "operation": "add",
+      "behavior": 0.1781,
+      "coherence": 0.6438
+    },
+    {
+      "source": "pca",
+      "operation": "rotate",
+      "behavior": 0.1719,
+      "coherence": 0.6531
+    }
+  ],
+  "best": {
+    "source": "pca",
+    "operation": "add",
+    "behavior": 0.1781,
+    "coherence": 0.6438
+  },
+  "timestamp": "2026-06-04T16:11:41"
+}

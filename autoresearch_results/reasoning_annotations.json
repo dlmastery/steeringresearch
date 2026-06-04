@@ -1098,5 +1098,23 @@
     "prediction": "mean |cos(DiffMean, PCA-top1)| is high (>0.9) across AxBench concepts; report mean/median/p5 + fraction>=0.9. fingerprint a9001e87087e.",
     "verdict": "DISCARD \u2014 composite +0.6529, behavior +0.6529, CR 0.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
     "learning": "Behavior +0.6529 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0000 | CR 0.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 20 | Fisher 0.0000"
+  },
+  "123": {
+    "_manual": true,
+    "diagnosis": "E27 (norm-preserving rotation vs additive steering) on real AxBench: does rotate beat add at the same source/layer/alpha on judged behavior+coherence? Synthetic E27 was FALSIFIED (rotate worse).",
+    "citations": "Wu/Zhong et al., 2025 ICML 'AxBench' (arXiv:2501.17148); rotation/operation geometry from the project's first-principles corpus.",
+    "hypothesis": "Rotation hugs the activation sphere (preserves ||h||) so it may keep coherence higher; but if it under-moves the concept it loses behavior. Tests whether rotate's coherence edge beats add on a real benchmark.",
+    "prediction": "report the (source x operation) grid; rotate_vs_add delta sign + magnitude. fingerprint a9001e87087e.",
+    "verdict": "DISCARD \u2014 composite +0.1781, behavior +0.1781, CR 0.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.1781 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0000 | CR 0.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 20 | Fisher 0.0000"
+  },
+  "124": {
+    "_manual": true,
+    "diagnosis": "E36 (which extraction source steers better: DiffMean vs PCA-top1) on real AxBench. E4 (exp#122) showed they are only moderately aligned on real concepts, so they may steer differently.",
+    "citations": "Wu/Zhong et al., 2025 ICML 'AxBench' (arXiv:2501.17148); rotation/operation geometry from the project's first-principles corpus.",
+    "hypothesis": "If DiffMean is the better concept axis (AxBench's own finding that diff-in-means is the strongest concept method), DiffMean should steer at least as well as PCA-top1 on judged behavior.",
+    "prediction": "report the (source x operation) grid; pca_vs_diffmean delta sign + magnitude. fingerprint a9001e87087e.",
+    "verdict": "DISCARD \u2014 composite +0.1781, behavior +0.1781, CR 0.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.1781 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0000 | CR 0.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 20 | Fisher 0.0000"
   }
 }

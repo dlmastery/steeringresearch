@@ -83,6 +83,8 @@ TAG_RULES: list[tuple[str, list[str]]] = [
     ("E3-axbench", ["E3"]),                # E3 alpha-coherence cliff on AxBench (off-family judge behavior+fluency)
     ("E2-axbench", ["E2"]),                # E2 layer sweep on AxBench (off-family judge behavior per layer)
     ("E4-axbench", ["E4"]),                # E4 DiffMean-vs-PCA cosine on AxBench (geometry, no judge)
+    ("E27-axbench", ["E27"]),              # E27 rotate-vs-add operation on AxBench
+    ("E36-axbench", ["E36"]),              # E36 diffmean-vs-pca source on AxBench
 ]
 
 # Hypotheses whose evidence comes from a gradient-trained auxiliary component
@@ -262,6 +264,8 @@ PREFIX_CAMPAIGN: dict[str, str] = {
     "E3-axbench": "E3-axbench-gemma-2-2b-it.json",
     "E2-axbench": "E2-axbench-gemma-2-2b-it.json",
     "E4-axbench": "E4-axbench-gemma-2-2b-it.json",
+    "E27-axbench": "E27-axbench-gemma-2-2b-it.json",
+    "E36-axbench": "E36-axbench-gemma-2-2b-it.json",
 }
 
 # Reproduce command(s) for each tag-prefix (the real invocation that produced it).
@@ -325,6 +329,8 @@ PREFIX_REPRODUCE: dict[str, str] = {
     "--model models/google/gemma-3-270m-it --quant none --layer 6 "
     "# trains a sparse autoencoder + optimizes SAE-TS vectors; Gram mass + 3-stack coherence",
     "E2-axbench": "PYTHONPATH=src python scripts/run_axbench_e2.py --model google/gemma-2-2b-it --quant none --layers 6 10 14 18 20 22 --dataset concept500 --concepts 20 --prompts 8",
+    "E27-axbench": "PYTHONPATH=src python scripts/run_axbench_ops.py --model google/gemma-2-2b-it --quant none --layer 20 --dataset concept500 --concepts 20 --prompts 8   # source x op grid (E27+E36)",
+    "E36-axbench": "PYTHONPATH=src python scripts/run_axbench_ops.py --model google/gemma-2-2b-it --quant none --layer 20 --dataset concept500 --concepts 20 --prompts 8   # source x op grid (E27+E36)",
     "E4-axbench": "PYTHONPATH=src python scripts/run_axbench_e4.py --model google/gemma-2-2b-it --quant none --layer 20 --dataset concept500 --concepts 100   # geometry only, no judge",
     "E3-axbench": "PYTHONPATH=src python scripts/run_axbench_e3.py --model google/gemma-2-2b-it --quant none --layer 20 --dataset concept500 --concepts 30 --prompts 8 --alphas 0.02 0.05 0.1 0.2 0.4 0.8   # off-family judge scores behavior+fluency vs alpha",
     "E7-axbench": "PYTHONPATH=src python scripts/run_axbench_e7.py --model models/google/gemma-3-270m-it --quant none --dataset concept500 --concepts 0 --prompts 10 --knee 0.1 --judge local   # real AxBench benchmark + off-family Qwen judge",
@@ -359,6 +365,8 @@ PREFIX_SCRIPT: dict[str, str] = {
     "E3-axbench": "scripts/run_axbench_e3.py  (steering.axbench + steering.local_judge)",
     "E2-axbench": "scripts/run_axbench_e2.py  (steering.axbench + steering.local_judge)",
     "E4-axbench": "scripts/run_axbench_e4.py  (steering.axbench + steering.extract)",
+    "E27-axbench": "scripts/run_axbench_ops.py  (source x operation grid)",
+    "E36-axbench": "scripts/run_axbench_ops.py  (source x operation grid)",
 }
 
 
