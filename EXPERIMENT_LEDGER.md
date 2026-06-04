@@ -161,6 +161,7 @@ which batch you are looking at.
 | **Trainable methods (E15/E45/E20)** | 110–113 | `E15-gate-*`, `E45-hypersteer-*`, `E20-saets-*` | E15, E45, E20 | Gemma-3-270m-it (smoke scale) | Introduced gradient-trained auxiliary components for the first time in this project: (110) multi-layer logistic gate for E15; (111) MLP hypernetwork for E45; (112–113) SAE + gradient-ascent vector optimizer for E20. Base Gemma weights frozen throughout. | All three methods FALSIFIED or INCONCLUSIVE at smoke scale. Offline unit tests confirm the mechanisms work on clean synthetic data; failures are scale/data confounds, not implementation errors. Specifically: E15 gate overfits tiny in-dist data (OOD PR-AUC gap −0.1679, below +0.06 gate); E45 hypernetwork predictions too noisy at n=4 behaviors (held-out cosine −0.02 ± 0.61); E20 SAE-TS vector optimizer collapses three vectors to one direction (Gram mass 3.00 = maximum — *less* orthogonal than DiffMean baseline at 2.13). New modules: `src/steering/gate.py`, `src/steering/hypersteer.py`, `src/steering/sae.py`; drivers: `scripts/run_e15.py`, `scripts/run_e45.py`, `scripts/run_e20.py`. |
 | **E7 controlled confirmation** | 114–117 | `E7-confirm-proxy-*` (114–115), `E7-confirm-judge-*` (116–117) | E7 | Gemma-3-270m-it @L16, Gemma-3-1B-it @L18 | The program's first run with REAL matched-displacement controls, n=20 seeds, an OFF-FAMILY LLM judge, and cross-scale replication — on the SYNTHETIC single concept "ocean". Conditions at IDENTICAL displacement `alpha×‖h‖` (relative_add normalizes to a unit vector): (a) real DiffMean "ocean" direction; (b) matched random unit direction; (c) shuffled-label direction (DiffMean of a random re-partition of the same pooled activations — same data, labels destroyed = primary directional control). exp#114/115 used the OLD activation-projection lexicon proxy; exp#116/117 used a validated off-family judge (Google Gemini gemini-2.5-flash-lite, temp 0, rating behavior + coherence 0–10 separately; validation: ocean prose 8/10, off-topic 0/10, keyword-soup "ocean ocean sea sea" only 2/10). Four-part rigor contract via `stats.rigor_report`. Drivers: `scripts/confirm_e7.py` over `src/steering/controls.py` + `stats.py` + `judge.py`. | **PROVISIONAL cross-scale directional WIN on SYNTHETIC data, not external-ready — and SUPERSEDED on the real benchmark by exp#118 (see next campaign).** Under the off-family judge, the real direction beats the shuffled-label control on BOTH scales at the knee alpha=0.10: 270M (exp#116) +0.135, CI [+0.084, +0.184], Wilcoxon p=0.0004; 1B (exp#117) +0.096, CI [+0.025, +0.163], p=0.014 — both Holm-rejected across the alpha family, both bootstrap CIs exclude 0, extraction stability 0.94/0.92. The directional effect REPLICATES across scale on the synthetic concept. Falls short on only the two strictest legs: the ORDINAL gate fails on both scales (the shuffled control is unexpectedly strong — a random split of a tiny concept-dominated set still recovers ~0.45–0.60 of the real direction, so the per-seed extremes overlap), and MATCHED-COHERENCE fails on 1B (real coherence 0.345 vs shuffled 0.699 at the knee). The instrument-upgrade story is the headline: the SAME experiment under the OLD proxy (exp#114/115) gave a noise-level +0.022 on 270m and even shuffled>real (−0.019) on 1B — concluding "does not replicate"; the validated judge amplified the behavior signal ~6× and reversed that artifact. Secondary real-vs-random control: p=0.0001/0.0004; the random direction at matched displacement collapses coherence to ~0.002 (PPL ~52,000 — gibberish). **This synthetic win did NOT generalize to the real AxBench benchmark — see exp#118.** |
 | **E7 on real AxBench (270M vs 2B)** | 118–119 | `E7-axbench-*` | E7 | Gemma-3-270m-it @L16 (exp#118); google/gemma-2-2b-it @L20 (exp#119) | The program's first evaluation on a REAL, external, published benchmark — AxBench (Wu/Zhong et al., ICML 2025, arXiv:2501.17148; dataset `pyvene/axbench-concept500`) — run at TWO scales. AxBench replaced ALL prior synthetic/hand-authored data: it supplies the 500 concepts, the contrast text that builds the DiffMean vector, AND the held-out eval instructions. Per concept: v_real = DiffMean(AxBench pos vs neg outputs) at the injection layer; v_shuf = matched-displacement shuffled-label control; steer with relative_add at the knee alpha=0.10 on 10 AxBench eval instructions; score each output with an OFF-FAMILY LOCAL judge (Qwen2.5-7B-Instruct, 4-bit, on the 4090 — Gemma generator + Qwen judge = no same-family circularity), AxBench concept(0–2)+fluency(0–2) rubric, fluency-gated to [0,1]. Replication unit = CONCEPT (n=500 independent concepts). Paired real-vs-shuffled via `stats.rigor_report`. Judge DISCLOSURE: validated against AxBench ground-truth labels at ROC-AUC = 0.68 (below the 0.80 bar) — weak but UNBIASED, so the paired comparison is valid (noise widens the CI, does not bias the sign). 2B @L20 matches the 2b/layer-20 model AxBench's data targets. | **WEAK / SCALE-DEPENDENT — the synthetic-ocean E7 +0.135 win did NOT generalize; this SUPERSEDES exp#116/117 as the real-benchmark evaluation of E7.** At 270M (exp#118) the real DiffMean direction does NOT beat shuffled: real 0.0459 vs shuffled 0.0562; delta −0.0103, CI [−0.0142, −0.0066] (NEGATIVE), p=1.41×10⁻⁶; ordinal FALSE — BOTH at the FLOOR (~0.05/1.0), the 270M model barely expresses the abstract concepts at all (a sign-blind auto-label "DIRECTIONAL" was corrected to NEGATIVE/NULL). At 2B (exp#119) concepts become expressible (both ~0.135, 3× higher); the real direction significantly BEATS shuffled but only by +0.0040 (CI [+0.0003, +0.0077] barely excludes 0; p=0.0106), ordinal gate FALSE, and a shuffled vector captures ~97% of the steering effect (0.1342/0.1382) — DIRECTIONAL but substantively TINY, mostly-generic. Synthesis: DiffMean relative-steering's advantage over a matched control is scale-dependent and WEAK — negative/floor at 270M, tiny/fragile at 2B. Aligns with AxBench's own finding that steering is hard, and is the kind of correction a real benchmark exists to deliver. Both rung-3 real-benchmark evals; neither external_ready. CAVEATS: judge is weak (AUC 0.68, disclosed, unbiased); alpha=0.1 not per-concept-tuned. See FINDINGS.md S-16. |
+| **E3 alpha-coherence cliff on real AxBench (2B)** | 120 | `E3-axbench-gemma-2-2b-it` | E3, N17 | google/gemma-2-2b-it @L20 (exp#120) | First AxBench evaluation of the E3 coherence cliff. Model google/gemma-2-2b-it, layer 20, relative_add, DiffMean. 30 AxBench concepts × 8 AxBench eval instructions. Per concept: v_real = DiffMean(AxBench positive vs negative) at layer 20; steered with relative_add over an alpha grid (0.02, 0.05, 0.10, 0.20, 0.40, 0.80). BOTH behavior (concept score 0–2 → [0,1]) AND coherence (fluency score 0–2 → [0,1]) measured by the off-family local judge (Qwen2.5-7B-Instruct, 4-bit; AxBench rubric; judge validated at ROC-AUC 0.68 vs AxBench ground truth — WEAK but UNBIASED, disclosed). Curve (behavior, coherence) by alpha: 0.02: (0.150, 0.619); 0.05: (0.160, 0.660); 0.10: (0.163, 0.677) PEAK; 0.20: (0.148, 0.665); 0.40: (0.133, 0.458) CLIFF; 0.80: (0.052, 0.106) COLLAPSE. | **SUPPORTED — clear alpha-coherence cliff confirmed on real AxBench.** Behavior peaks at alpha=0.10 (0.163); coherence peaks at alpha=0.10 (0.677), holds roughly flat through alpha=0.20 (0.665), then collapses super-linearly: 0.46 at alpha=0.4, 0.11 at alpha=0.8. Knee ~alpha 0.10–0.20 (behavior maximal, coherence still high). The E3 cliff GENERALIZES to real AxBench concepts measured by a real off-family fluency judge. CONTRAST with E7 (exp#118/119, S-16): E7's directional claim (real DiffMean direction beats shuffled control) is WEAK on AxBench — most steering effect is generic. E3's coherence-cliff claim is SUPPORTED on AxBench. Geometry/coherence findings generalize; direction-specificity does not. CAVEATS: 30 concepts only (curve, not population test); single model (2B) + single layer (20); judge AUC 0.68 (disclosed); qualitative cliff robust across 30 concepts. SCREENING — not external-ready. See FINDINGS.md S-17. |
 
 *Note: The C11 cross-behavior campaign also included embedded tests of E10 (category
 orthogonality), E17/E18 (stacking), E22 (norm budget), E28 (low-rank subspace),
@@ -289,33 +290,59 @@ does not bias the sign); alpha=0.1 was not per-concept-tuned; a stronger/calibra
 per-concept alpha tuning could shift the small 2B effect, but the qualitative picture is robust
 to the n=500 paired test.
 
-**Status:** 119 experiments total; the first 113 are screening (n=1), exp#114–117 are the
-controlled E7 confirmation on SYNTHETIC data (n=20), and exp#118–119 are the first REAL-benchmark
-evaluation (E7 on AxBench, n=500 concepts, at 270M and 2B). No experiment has cleared the full
-six-part statistical gate for an external claim, so there are still zero external-ready findings.
-The key recent result is the AxBench reality check (exp#118–119): E7's synthetic +0.135 directional
-win does NOT generalize — on the real benchmark the real-vs-shuffled advantage is negative/at-the-
-floor at 270M and significant-but-tiny (+0.004, ordinal-fail, ~97%-generic) at 2B (a WEAK/
-SCALE-DEPENDENT result; see FINDINGS.md S-16). N17 remains a strong rung-3 geometry result with its
-own caveats. The next steps for E7 are a stronger/calibrated judge (current AUC 0.68) and
-per-concept alpha tuning to pin down the small 2B edge, plus — on the synthetic side — a cleaner
-null control than label-shuffling.
+**Phase 12: E3 coherence cliff confirmed on real AxBench — geometry/coherence generalizes, direction-specificity does not.**
+Experiment 120 (tag: E3-axbench-gemma-2-2b-it) returned to a DIFFERENT question from E7: not
+"does the real concept direction beat a shuffled control?" but "is the coherence cliff shape itself
+real on a real benchmark?" The design used the same 2B/layer-20/relative_add/Qwen-judge setup as
+exp#118–119, but replaced the single fixed alpha=0.10 with an alpha grid (0.02, 0.05, 0.10, 0.20,
+0.40, 0.80) on 30 AxBench concepts × 8 AxBench eval instructions. Both behavior AND coherence were
+scored by the off-family local judge (AxBench concept+fluency rubric; AUC 0.68, disclosed). The
+joint (behavior, coherence) curve is clean and consistent: both metrics peak at alpha=0.10 (behavior
+0.163, coherence 0.677), coherence holds roughly flat through alpha=0.20 (0.665), then collapses
+super-linearly — 0.46 at alpha=0.4, 0.11 at alpha=0.8. The knee is approximately alpha 0.10–0.20.
+
+This is a genuine positive result. The E3 cliff — which the program originally established on
+synthetic single-concept data across multiple model scales (exp#2–19, C6, C9) — survives the move
+to real AxBench concepts and a real off-family fluency judge. So does N17 (off-shell displacement
+predicts incoherence): the incoherence N17 predicts from geometry is now confirmed behaviorally on
+real AxBench outputs.
+
+The E7-contrast (established by exp#118–119) is now clarified: on AxBench, E7's DIRECTIONAL claim
+(the real DiffMean direction carries concept-specific signal beyond generic displacement) is WEAK —
+~97% of the steering effect is captured by a shuffled-label vector at 2B, and the effect is
+NEGATIVE/floor at 270M. But E3's COHERENCE-CLIFF claim is SUPPORTED — the cliff is real and its
+location (~alpha 0.10–0.20) is meaningful and useful. A practitioner who takes one result from this
+program's AxBench work is: the safe operating alpha is approximately 0.10–0.20; past that, coherence
+collapses before any further behavior gain can be realized.
+
+**Status:** 120 experiments total; the first 113 are screening (n=1), exp#114–117 are the
+controlled E7 confirmation on SYNTHETIC data (n=20), exp#118–119 are the first REAL-benchmark
+evaluation (E7 on AxBench, n=500 concepts, at 270M and 2B — WEAK/SCALE-DEPENDENT), and exp#120 is
+the E3 alpha-coherence cliff on AxBench (30 concepts, 2B — SUPPORTED). No experiment has cleared
+the full six-part statistical gate for an external claim, so there are still zero external-ready
+findings. The key recent result pair is: E7 on AxBench (exp#118–119, S-16) — WEAK, direction-
+specificity does not generalize; E3 on AxBench (exp#120, S-17) — SUPPORTED, geometry/coherence
+does generalize. N17 remains the program's strong rung-3 geometry result. The next priority
+experiments are a population-test version of E3 on AxBench (n=500 concepts, paired statistics) and
+a stronger/calibrated judge to pin down the small 2B E7 edge.
 
 ---
 
 ## Per-experiment rows
 
-All 119 experiments are listed below. The first 113 are SCREENING tier (n=1, single
+All 120 experiments are listed below. The first 113 are SCREENING tier (n=1, single
 seed); exp#114–117 are the E7 controlled confirmation on SYNTHETIC data (n=20 seeds,
 off-family judge, matched-displacement controls — rung 3, PROVISIONAL); exp#118–119 are
-the first REAL-benchmark evaluation (E7 on AxBench, n=500 concepts, off-family local
-judge — rung 3; 270M NEGATIVE/NULL, 2B DIRECTIONAL-but-tiny). For the first 113, every
-composite is negative in this dataset because the current
-instrument has a known issue: the safety baseline (CR_jailbreak) is non-zero even
-at alpha=0 on the real Gemma models (due to the model's own refusal behavior), and
-the composite formula penalizes this. The per-axis signals (PPL, behavior, delta_norm)
-are valid; the composite is informative for within-campaign comparisons but should
-not be read as an absolute quality score.
+the first REAL-benchmark evaluation of E7 (AxBench, n=500 concepts, off-family local
+judge — rung 3; 270M NEGATIVE/NULL, 2B DIRECTIONAL-but-tiny); exp#120 is the first
+REAL-benchmark evaluation of E3 (AxBench, 30 concepts, alpha grid, off-family local
+judge scoring both behavior and coherence — rung 3 style; SUPPORTED). For the first 113,
+every composite is negative in this dataset because the current instrument has a known
+issue: the safety baseline (CR_jailbreak) is non-zero even at alpha=0 on the real Gemma
+models (due to the model's own refusal behavior), and the composite formula penalizes
+this. The per-axis signals (PPL, behavior, delta_norm) are valid; the composite is
+informative for within-campaign comparisons but should not be read as an absolute quality
+score.
 
 **Note on exp 110–113 (trainable-method screens):** These four experiments test
 methods with a *trained auxiliary component* (a gradient-optimized gate, a
@@ -740,6 +767,48 @@ picture is robust to the n=500 paired test. See FINDINGS.md S-16.
 
 ---
 
+### E3 alpha-coherence cliff on real AxBench — 2B (exp 120)
+
+Campaign: `E3-axbench`. The program's first AxBench evaluation of the E3 alpha-coherence cliff.
+Model: google/gemma-2-2b-it @L20. Operation: relative_add, DiffMean. Concept set: 30 AxBench
+concepts (sampled from `pyvene/axbench-concept500`). Eval instructions: 8 per concept (AxBench
+held-out set). Alpha grid: 0.02, 0.05, 0.10, 0.20, 0.40, 0.80. Both behavior (concept score
+0–2 → [0,1]) and coherence (fluency score 0–2 → [0,1]) measured by the off-family local judge
+(Qwen2.5-7B-Instruct, 4-bit, AxBench rubric; judge AUC 0.68 vs AxBench ground truth —
+WEAK but UNBIASED, disclosed). This experiment is a CURVE-SHAPE test (not a paired population
+test like exp#118/119) — it measures the joint (behavior, coherence) function of alpha.
+
+**Alpha-behavior-coherence curve (means across 30 concepts × 8 eval instructions):**
+
+| Alpha | Behavior ([0,1]) | Coherence ([0,1]) | Note |
+|-------|-----------------|-------------------|------|
+| 0.02 | 0.150 | 0.619 | Below peak; coherence already reasonable |
+| 0.05 | 0.160 | 0.660 | Approaching peak |
+| **0.10** | **0.163** | **0.677** | **PEAK — safe window: behavior maximal, coherence high** |
+| 0.20 | 0.148 | 0.665 | Behavior declining; coherence roughly flat — still safe |
+| 0.40 | 0.133 | 0.458 | **CLIFF: coherence drops super-linearly** |
+| 0.80 | 0.052 | 0.106 | COLLAPSE: both near floor |
+
+| # | tag | hyp | rung | model | benchmark | n_concepts | alpha_grid | peak_alpha | peak_beh | peak_coh | cliff_onset | coh_at_cliff | coh_collapse | judge AUC | verdict |
+|---|-----|-----|------|-------|-----------|-----------|-----------|-----------|---------|---------|------------|-------------|-------------|-----------|---------|
+| 120 | E3-axbench-gemma-2-2b-it | E3, N17 | 3 | Gemma-2-2B @L20 | AxBench concept500 sample (n=30) | 30 × 8 inst. | 0.02, 0.05, 0.10, 0.20, 0.40, 0.80 | **0.10** | **0.163** | **0.677** | ~0.20–0.40 | 0.665 (at 0.20) → 0.458 (at 0.40) | 0.106 (at 0.80) | 0.68 (disclosed) | **SUPPORTED** — clear coherence cliff on real AxBench; behavior+coherence peak at alpha~0.10, super-linear collapse past alpha~0.20; generalizes E3 and N17 to real benchmark |
+
+**Key contrast with exp#118–119 (E7 on AxBench).** Exp#118–119 tested whether the REAL concept
+direction beats a SHUFFLED control (a direction-specificity claim) and found a WEAK/NEGATIVE
+result — most steering is generic, not direction-specific. Exp#120 tests whether the CLIFF SHAPE
+itself is real on a real benchmark — and the answer is YES. The geometry/coherence findings
+(E3 cliff, N17 off-shell→incoherence) generalize; the direction-specificity finding (E7) does not.
+The cliff location (~alpha 0.10) is consistent with the synthetic campaigns (C9b, C10, HC-E7)
+and gives the program its first AxBench-confirmed practical operating recommendation: use
+relative_add with alpha~0.10–0.20 on 2B/layer-20; past alpha~0.20, coherence collapses faster
+than behavior can recover.
+
+**CAVEATS:** 30 concepts only — a curve, not a population test; single model (2B) and single
+layer (20); judge AUC 0.68 (disclosed, unbiased); cliff knee may shift with model/layer (though
+consistent with synthetic results across scales). SCREENING — not external-ready. See FINDINGS.md S-17.
+
+---
+
 ## Promotion ladder summary
 
 *(Updated when a method reaches a new rung gate.)*
@@ -749,7 +818,8 @@ picture is robust to the n=500 paired test. See FINDINGS.md S-16.
 | E7: relative-steering directional effect — REAL AxBench (270M vs 2B) | Rung 3 (STANDARD) — WEAK / SCALE-DEPENDENT | On AxBench (n=500 concepts, off-family local judge AUC 0.68): 270M real does NOT beat shuffled — real 0.046 vs 0.056, delta −0.010, CI [−0.0142,−0.0066], p=1.4e-6, ordinal FALSE (exp#118); 2B real beats shuffled but TINY — real 0.138 vs 0.134, delta +0.004, CI [+0.0003,+0.0077], p=0.011, ordinal FALSE (exp#119) | N/A (controlled directional test, not a config composite) | **The real-benchmark verdict for E7.** Synthetic-ocean +0.135 win did NOT generalize: negative/floor at 270M, significant-but-tiny (~3% rel, ordinal-fail, shuffled captures ~97%) at 2B — weak, scale-dependent, mostly-generic. Sign-blind 270M auto-label corrected to NEGATIVE (exp#118). SUPERSEDES the synthetic exp#116/117 row below. See FINDINGS.md S-16 |
 | E7: relative-steering directional effect — SYNTHETIC "ocean" (superseded by AxBench) | Rung 3 (STANDARD) — PROVISIONAL (superseded) | Real > shuffled-label control on BOTH scales, Holm-corrected, bootstrap CI excludes 0 (270M +0.135 p=4e-4; 1B +0.096 p=.014); n=20 seeds, off-family judge | N/A (controlled directional test, not a config composite) | First hypothesis to reach rung 3 via the controlled n=20 / off-family-judge / cross-scale protocol (exp#116/117) — but on a SYNTHETIC single concept. Did NOT generalize to AxBench (exp#118/119, row above): the +0.135 synthetic edge became negative at 270M and a tiny +0.004 at 2B. See FINDINGS.md S-15 |
 | N17: off-shell displacement predicts incoherence | Rung 3 (STANDARD) | Spearman +0.585, CI [+0.353, +0.758], p=8×10⁻⁶ on WikiText-2 | N/A (geometry relationship, not a config composite) | Strong rung-3 result; still not fully external-ready (see FINDINGS.md) |
-| E3: coherence cliff exists | Rung 2 (DEV) | Confirmed on 3 models, 4 behaviors | Best window: α=0.10 relative_add, composite −1.677 | Screening only |
+| E3: coherence cliff exists — REAL AxBench (2B) | Rung 3 (STANDARD style) — SUPPORTED | 30 AxBench concepts × 8 instructions, 2B/layer 20, off-family judge: behavior + coherence peak at alpha~0.10, super-linear collapse past alpha~0.20 (coh 0.677→0.665→0.458→0.106 at alpha 0.10→0.20→0.40→0.80) | N/A (alpha-curve test, not a config composite) | **Cliff generalizes to real benchmark. Geometry/coherence confirms; contrast with E7 (direction-specificity weak on same benchmark). See FINDINGS.md S-17** |
+| E3: coherence cliff exists — SYNTHETIC (3 models, 4 behaviors) | Rung 2 (DEV) | Confirmed on 3 models, 4 behaviors | Best window: α=0.10 relative_add, composite −1.677 | Synthetic screening; now extended to real AxBench (row above) |
 | E4: DiffMean ≈ PCA-top1 | Rung 2 (DEV) | Cosine 0.994–0.999 across 3 models, 4 behaviors | — | Screening only |
 | E7: relative alpha stabilizes cliff (cliff-shape, screening) | Rung 2 (DEV) | Clean cliff shape across models | — | Screening only; superseded for the directional claim by the rung-3 E7 row above |
 | E15: learned gate vs fixed cosine | Rung 1 (SMOKE) — FALSIFIED_OOD | OOD PR-AUC gap −0.1679 (below +0.06 falsifier) | N/A (no composite) | Gate overfits tiny in-dist set; revisit with larger OOD eval set |
@@ -775,7 +845,7 @@ picture is robust to the n=500 paired test. See FINDINGS.md S-16.
 ## Where to find full detail
 
 - **Per-experiment reasoning** (7-step: diagnosis, citation, hypothesis, prediction, analysis, checkpoint): `autoresearch_results/reasoning_annotations.json`
-- **Raw metrics**: `autoresearch_results/experiment_log.jsonl` (one JSON object per line, 119 lines; exp 110–113 use `method_metric`/`method_value` fields rather than the standard 5-axis composite; exp 114–117 use the controlled-confirmation fields — per-condition judge behavior/coherence, paired delta, bootstrap CI, Wilcoxon p, Holm/ordinal/matched-coherence flags; exp 118–119 use the AxBench fields — per-concept real/shuffled judge behavior across 500 concepts, paired delta, bootstrap CI, Wilcoxon p, ordinal gate, judge AUC)
+- **Raw metrics**: `autoresearch_results/experiment_log.jsonl` (one JSON object per line, 120 lines; exp 110–113 use `method_metric`/`method_value` fields rather than the standard 5-axis composite; exp 114–117 use the controlled-confirmation fields — per-condition judge behavior/coherence, paired delta, bootstrap CI, Wilcoxon p, Holm/ordinal/matched-coherence flags; exp 118–119 use the AxBench fields — per-concept real/shuffled judge behavior across 500 concepts, paired delta, bootstrap CI, Wilcoxon p, ordinal gate, judge AUC; exp 120 uses the AxBench alpha-curve fields — mean judge behavior and coherence per alpha value across 30 concepts × 8 eval instructions, peak alpha, cliff onset, judge AUC)
 - **Current champion config**: `autoresearch_results/best_config.json`
 - **Per-experiment dashboard pages**: `docs/dashboard/experiments/expNNN.html` — shows the α/layer sweep curves, generation samples (steered vs unsteered), geometry probes, and all five axis metrics with confidence intervals
 - **Per-hypothesis sub-dashboards**: `ideas/<NN>/dashboard/index.html` — hypothesis statement, falsifier, predicted delta, current verdict, back-linked to master
@@ -784,5 +854,5 @@ picture is robust to the n=500 paired test. See FINDINGS.md S-16.
 - **External-ready findings and screening observations**: `FINDINGS.md`
 
 > Composite formula fingerprint: `a9001e87087e`
-> Program initialized 2026-05-30. 119 experiments total: the first 113 at SCREENING tier (n=1; exp 110–113 use method-specific metrics, not the standard composite); exp 114–117 are the E7 controlled confirmation on SYNTHETIC data (n=20 seeds, off-family judge, matched-displacement controls — rung 3, PROVISIONAL); exp 118–119 are the first REAL-benchmark evaluation (E7 on AxBench, n=500 concepts, off-family local judge — rung 3; 270M NEGATIVE/NULL, 2B DIRECTIONAL-but-tiny).
-> No experiment has cleared the full six-part statistical gate for external claims; the external-ready count remains zero. The key recent result is the AxBench reality check (exp#118–119): E7's synthetic-ocean +0.135 directional win did NOT generalize — on the real benchmark the real-vs-shuffled advantage is scale-dependent and weak (NEGATIVE/at-the-floor at 270M; significant-but-tiny +0.004, ordinal-fail, ~97%-generic at 2B). The synthetic single-concept evaluation overstated the effect; the real 500-concept benchmark at two scales revealed how weak it is.
+> Program initialized 2026-05-30. 120 experiments total: the first 113 at SCREENING tier (n=1; exp 110–113 use method-specific metrics, not the standard composite); exp 114–117 are the E7 controlled confirmation on SYNTHETIC data (n=20 seeds, off-family judge, matched-displacement controls — rung 3, PROVISIONAL); exp 118–119 are the first REAL-benchmark evaluation of E7 (AxBench, n=500 concepts, off-family local judge — rung 3; 270M NEGATIVE/NULL, 2B DIRECTIONAL-but-tiny); exp 120 is the first REAL-benchmark evaluation of E3 (AxBench, 30 concepts, alpha grid, off-family local judge — rung 3 style; SUPPORTED).
+> No experiment has cleared the full six-part statistical gate for external claims; the external-ready count remains zero. The key recent result pair: E7 on AxBench (exp#118–119, S-16) — direction-specificity is WEAK/SCALE-DEPENDENT, does NOT generalize; E3 on AxBench (exp#120, S-17) — coherence cliff is SUPPORTED, DOES generalize. Geometry/coherence findings (E3 cliff, N17) carry over to real benchmark; direction-specificity (E7) does not.

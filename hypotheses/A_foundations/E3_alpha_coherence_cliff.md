@@ -369,7 +369,7 @@ See [`../METHODOLOGY.md`](../METHODOLOGY.md) for the shared recipe.
 
 Full per-hypothesis provenance (exact experiments, reproduce commands, artifact links, reasoning trace): [`PROVENANCE/E3.md`](../PROVENANCE/E3.md).
 
-- **Experiments:** exp# 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 55, 56, 57, 58, 59, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109 (`autoresearch_results/experiment_log.jsonl`).
+- **Experiments:** exp# 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 55, 56, 57, 58, 59, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 120 (`autoresearch_results/experiment_log.jsonl`).
 - **Reproduce:**
 
 ```bash

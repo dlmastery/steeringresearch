@@ -1071,5 +1071,14 @@
     "prediction": "mean real-minus-shuffled delta > 0 with bootstrap CI excluding 0; EXTERNAL-READY only if the strict ordinal gate also passes. fingerprint a9001e87087e.",
     "verdict": "DISCARD \u2014 composite +0.0040, behavior +0.1382, CR 0.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
     "learning": "Behavior +0.1382 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0000 | CR 0.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 20 | Fisher 0.0000"
+  },
+  "120": {
+    "_manual": true,
+    "diagnosis": "E3 (the alpha-coherence cliff) on the REAL AxBench benchmark with the off-family local judge scoring BOTH behavior (concept) and fluency (coherence). Sweep relative_add alpha over 30 AxBench concepts; does coherence collapse past a knee while behavior saturates? Replaces the synthetic single-concept cliff.",
+    "citations": "Wu/Zhong et al., 2025 ICML 'AxBench' (arXiv:2501.17148); the coherence cliff is the program's N17/N5 geometry story (off-shell displacement predicts incoherence) tested on real concepts + a real fluency judge.",
+    "hypothesis": "Per the manifold first-principles, larger alpha pushes h further off the data shell; fluency (coherence) should fall super-linearly past a knee while behavior saturates \u2014 a Pareto cliff in (behavior, fluency).",
+    "prediction": "behavior(alpha) rises then plateaus/declines; fluency(alpha) collapses past a knee alpha; the steepest-fluency-drop alpha marks the cliff. fingerprint a9001e87087e.",
+    "verdict": "DISCARD \u2014 composite +0.1625, behavior +0.1625, CR 0.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.1625 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0000 | CR 0.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 20 | Fisher 0.0000"
   }
 }

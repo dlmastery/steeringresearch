@@ -1,0 +1,43 @@
+{
+  "hyp": "E3",
+  "model": "google/gemma-2-2b-it",
+  "layer": 20,
+  "dataset": "concept500",
+  "n_concepts": 30,
+  "instrument": "local_judge:Qwen2.5-7B-Instruct",
+  "curve": [
+    {
+      "alpha": 0.02,
+      "behavior": 0.15,
+      "fluency": 0.6188
+    },
+    {
+      "alpha": 0.05,
+      "behavior": 0.1604,
+      "fluency": 0.6604
+    },
+    {
+      "alpha": 0.1,
+      "behavior": 0.1625,
+      "fluency": 0.6771
+    },
+    {
+      "alpha": 0.2,
+      "behavior": 0.1479,
+      "fluency": 0.6646
+    },
+    {
+      "alpha": 0.4,
+      "behavior": 0.1333,
+      "fluency": 0.4583
+    },
+    {
+      "alpha": 0.8,
+      "behavior": 0.0521,
+      "fluency": 0.1062
+    }
+  ],
+  "peak_alpha": 0.1,
+  "cliff_alpha": 0.8,
+  "timestamp": "2026-06-04T15:10:22"
+}
