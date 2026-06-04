@@ -85,6 +85,9 @@ def main() -> None:
     ap.add_argument("--max-new-tokens", type=int, default=32)
     ap.add_argument("--max-pos", type=int, default=48, help="positive examples per concept for extraction")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--judge", default="local", choices=["local", "gemini"],
+                    help="behavior judge: local off-family LLM (Qwen, free) or the Gemini API")
+    ap.add_argument("--judge-model", default="Qwen/Qwen2.5-7B-Instruct")
     ap.add_argument("--quick", action="store_true", help="tiny plumbing (4 concepts, proxy, no-log)")
     ap.add_argument("--allow-proxy", action="store_true",
                     help="permit the lexicon proxy on a real run (default: ABORT if the judge is unavailable)")
@@ -110,13 +113,21 @@ def main() -> None:
     print(f"[axbench] dataset={args.dataset} concepts={len(concepts)} "
           f"eval_instructions={len(instructions)} | model={args.model} layer={layer}")
 
-    judge = make_judge_or_none()
-    if judge is not None:
-        try:
-            judge.score_axbench("The sea was calm and blue.", "the ocean", instructions[0])
-        except JudgeUnavailable:
-            judge = None
-    instrument = "gemini_judge_axbench" if judge is not None else "lexicon_proxy"
+    judge = None
+    instrument = "lexicon_proxy"
+    try:
+        if args.judge == "local":
+            from steering.local_judge import LocalJudge
+            judge = LocalJudge(model_id=args.judge_model)
+            instrument = f"local_judge:{args.judge_model.split('/')[-1]}"
+        else:
+            judge = make_judge_or_none()
+            instrument = "gemini_judge_axbench"
+        if judge is not None:
+            judge.score_axbench("The deep blue ocean rolled with salty waves.", "the ocean", instructions[0])
+    except JudgeUnavailable as exc:
+        print(f"[judge] unavailable: {str(exc)[:120]}")
+        judge, instrument = None, "lexicon_proxy"
     print(f"[instrument] {instrument}")
     if judge is None and not args.quick and not args.allow_proxy:
         raise SystemExit(

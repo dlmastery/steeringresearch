@@ -86,6 +86,38 @@ def load_axbench_concepts(name: str = "concept500",
     return out
 
 
+class AxLabeled(TypedDict):
+    concept: str
+    instruction: str
+    output: str
+    label: int  # 1 = positive (exhibits concept), 0 = negative (neutral)
+
+
+def load_axbench_labeled(name: str = "concept10", n_concepts: int = 10,
+                         per_class: int = 10) -> list[AxLabeled]:
+    """Labeled (output, concept) examples for JUDGE VALIDATION against ground truth.
+
+    From the test split: per concept, ``per_class`` rows whose ``output`` is a
+    positive (exhibits the concept) and ``per_class`` whose ``output`` is a
+    negative (neutral). A trustworthy judge must score positives' concept higher
+    than negatives' — measured as ROC-AUC, with NO external judge in the loop.
+    """
+    _, test = _frames(name)
+    ids = sorted(i for i in test["concept_id"].unique() if i >= 0)[:n_concepts]
+    out: list[AxLabeled] = []
+    for cid in ids:
+        sub = test[test["concept_id"] == cid]
+        if sub.empty:
+            continue
+        concept = str(sub["output_concept"].iloc[0])
+        for cat, label in (("positive", 1), ("negative", 0)):
+            rows = sub[sub["category"] == cat].head(per_class)
+            for _, r in rows.iterrows():
+                out.append(AxLabeled(concept=concept, instruction=str(r["input"]),
+                                     output=str(r["output"]), label=label))
+    return out
+
+
 def load_axbench_eval_instructions(name: str = "concept500", k: int = 10) -> list[str]:
     """A fixed set of k held-out, concept-agnostic steering-eval instructions.
 
