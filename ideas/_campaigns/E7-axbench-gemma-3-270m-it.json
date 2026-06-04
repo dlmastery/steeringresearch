@@ -1,0 +1,3554 @@
+{
+ "hyp": "E7",
+ "model": "models/google/gemma-3-270m-it",
+ "dataset": "concept500",
+ "layer": 16,
+ "instrument": "local_judge:Qwen2.5-7B-Instruct",
+ "n_concepts": 500,
+ "eval_instructions": [
+  "What ancient organization invented the concept of Democracy?",
+  "What are some of the causes for the 1929 US stock market crash?",
+  "What are teeth?",
+  "Where was the first season of The X-Files filmed?",
+  "Is Pluto a planet ?",
+  "What are microservices?",
+  "What is one of the main trigger for autism in current generation?",
+  "What are the most common languages in the world?",
+  "At what age are children considered adults?",
+  "Which Philip K. Dick novel was the basis for the movie \"Blade Runner\"?"
+ ],
+ "knee": 0.1,
+ "mean_real": 0.045899999999999996,
+ "mean_shuffled": 0.0562,
+ "delta": -0.010300000000000004,
+ "rigor": {
+  "wilcoxon": {
+   "statistic": 7429.5,
+   "p_value": 1.4105721009937927e-06,
+   "n": 216
+  },
+  "bootstrap_ci": {
+   "mean": -0.0103,
+   "lo": -0.014199999999999999,
+   "hi": -0.0066
+  },
+  "ordinal_gate": {
+   "passes": false,
+   "worst_eval": 0.0,
+   "best_baseline": 0.45
+  },
+  "holm": null,
+  "legs": {
+   "wilcoxon_significant": true,
+   "ci_excludes_zero": true,
+   "ordinal_gate_passes": false,
+   "holm_rejected": true
+  },
+  "external_ready": false
+ },
+ "verdict": "NEGATIVE (shuffled control beats real; both at floor)",
+ "per_concept": [
+  {
+   "concept_id": 0,
+   "description": "references to rental services and associated equipment",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 1,
+   "description": "scientific terms related to research findings and their implications",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 2,
+   "description": "C/C++ programming syntax elements such as data types, function definitions, and ",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 3,
+   "description": "references to academic papers and their formatting",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 4,
+   "description": "layout attributes in a UI design context",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 5,
+   "description": "terms related to root in mathematical contexts",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 6,
+   "description": "statements or phrases involving the act of saying or expressing something",
+   "real": 0.2,
+   "shuffled": 0.15,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 7,
+   "description": "statements about the nature and condition of entities",
+   "real": 0.15,
+   "shuffled": 0.2,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 8,
+   "description": "biographical information about a person.",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 9,
+   "description": "references to different worlds, realities, or fantastical settings within narrat",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 10,
+   "description": "technical vocabulary related to chemical processes and materials synthesis",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 11,
+   "description": "references to debugging processes and tools",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 12,
+   "description": "qualifiers and intensifiers that modify the degree of an adjective or adverb",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 13,
+   "description": "scientific concepts and terminology related to uncertainty and measurement",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 14,
+   "description": "structures related to mathematical expressions and programming syntax",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 15,
+   "description": "phrases related to possession or experiences over time",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 16,
+   "description": "verbs that indicate ease or improvement in processes or experiences",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 17,
+   "description": "code comments or documentation sections in programming files",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 18,
+   "description": "technical code snippets and programming languages.",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 19,
+   "description": "structured data elements and their attributes, particularly in an XML or HTML fo",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 20,
+   "description": "references to legal terms and actions",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 21,
+   "description": "references to audio and translation services in media contexts",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 22,
+   "description": "terms related to connections in electrical circuits and network structures",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 23,
+   "description": "special markers or tags that indicate the beginning of a new section or document",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 24,
+   "description": "references to numerical values, specifically related to counts or measurements",
+   "real": 0.1,
+   "shuffled": 0.2,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 25,
+   "description": "transformations in societal attitudes and behaviors over time",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 26,
+   "description": "programming-related code snippets or structures",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 27,
+   "description": "code-related syntax and components used in programming or web development",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 28,
+   "description": "structures related to mathematical arrays or matrices",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 29,
+   "description": "references to South or Southern geographical locations",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 30,
+   "description": "syntax elements and structure in code snippets",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 31,
+   "description": "terms related to ecological interactions and dynamics",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 32,
+   "description": "elements related to database operations in programming contexts",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 33,
+   "description": "structured data formats and data types in programming contexts",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 34,
+   "description": "proper nouns, particularly names and locations",
+   "real": 0.15,
+   "shuffled": 0.05,
+   "delta": 0.1
+  },
+  {
+   "concept_id": 35,
+   "description": "phrases that describe essential components or elements related to care, sustenan",
+   "real": 0.1,
+   "shuffled": 0.15,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 36,
+   "description": "terms related to business phone usage and etiquette.",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 37,
+   "description": "references to locations, particularly the United States and the Dominican Republ",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 38,
+   "description": "terms related to skin conditions and treatments",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 39,
+   "description": "keywords related to encoding and data processing in programming",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 40,
+   "description": "lines of code or programming-related constructs",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 41,
+   "description": "words with a double letter 'o'",
+   "real": 0.0,
+   "shuffled": 0.1,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 42,
+   "description": "HTML elements and script tags in a document",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 43,
+   "description": "references to health-related professionals and various stakeholders involved in ",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 44,
+   "description": "measures of distance and location",
+   "real": 0.15,
+   "shuffled": 0.1,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 45,
+   "description": "numerical data and statistical measures related to research studies",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 46,
+   "description": "references to the color grey and its variations in different contexts",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 47,
+   "description": "concepts related to struggle and self-control, particularly regarding desires an",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 48,
+   "description": "quantitative data and numerical representations within the text",
+   "real": 0.2,
+   "shuffled": 0.25,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 49,
+   "description": "code structures and elements related to generic repositories in programming cont",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 50,
+   "description": "legal case information and citations.",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 51,
+   "description": "references to programming concepts and data structures",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 52,
+   "description": "technical terms and phrases related to legal and procedural contexts",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 53,
+   "description": "measurements and dimensions",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 54,
+   "description": "the beginning of a document",
+   "real": 0.1,
+   "shuffled": 0.2,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 55,
+   "description": "discussions around potential development and growth factors in a community conte",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 56,
+   "description": "technical jargon related to telecommunications and network technologies",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 57,
+   "description": "elements related to data structure management",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 58,
+   "description": "references to the Fox network and related entities",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 59,
+   "description": "references to political events and figures",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 60,
+   "description": "names or references to specific individuals or characters",
+   "real": 0.1,
+   "shuffled": 0.0,
+   "delta": 0.1
+  },
+  {
+   "concept_id": 61,
+   "description": "phrases related to improving relationships and business collaboration",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 62,
+   "description": "phrases related to measurements or characteristics of products and experiences",
+   "real": 0.15,
+   "shuffled": 0.1,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 63,
+   "description": "references to psychological conditions and related symptoms",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 64,
+   "description": "HTML character entities and formatting symbols",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 65,
+   "description": "code structures involving function definitions and closures",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 66,
+   "description": "financial terms and concepts related to loans and mortgages",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 67,
+   "description": "references to career milestones and achievements in sports",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 68,
+   "description": "terms associated with measurements of mass or quantity, particularly those invol",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 69,
+   "description": "references to streams and streaming processes",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 70,
+   "description": "terms related to forward-looking statements and projections in business contexts",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 71,
+   "description": "the presence of single quotation marks",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 72,
+   "description": "references to Google and its associated services",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 73,
+   "description": "references to specific teams and player statistics in sports",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 74,
+   "description": "references, citations, and external documents in a scientific context",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 75,
+   "description": "diagrams and schematic representations related to workflows, communication syste",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 76,
+   "description": "phrases indicating conditions or classifications regarding employment practices",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 77,
+   "description": "references to individuals or groups, particularly in legal or official contexts",
+   "real": 0.0,
+   "shuffled": 0.1,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 78,
+   "description": "proper nouns, particularly names of individuals",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 79,
+   "description": "references to children and pediatric contexts",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 80,
+   "description": "French words and phrases related to months and days",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 81,
+   "description": "citations and references within academic texts",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 82,
+   "description": "place names and geographical references in Minnesota",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 83,
+   "description": "HTML and CSS-related properties and attributes",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 84,
+   "description": "definitions and descriptions related to terms and concepts",
+   "real": 0.25,
+   "shuffled": 0.25,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 85,
+   "description": "elements related to API functionality, particularly regarding operations on virt",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 86,
+   "description": "references to legal case proceedings",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 87,
+   "description": "closing tags in HTML-like structures",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 88,
+   "description": "conditional phrases indicating necessity or circumstances",
+   "real": 0.05,
+   "shuffled": 0.15,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 89,
+   "description": "phrases related to health communication and discussion",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 90,
+   "description": "phrases related to carpet and flooring maintenance",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 91,
+   "description": "references to readers and their understanding or acknowledgment of content",
+   "real": 0.1,
+   "shuffled": 0.15,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 92,
+   "description": "the beginning of a document or section",
+   "real": 0.05,
+   "shuffled": 0.2,
+   "delta": -0.15
+  },
+  {
+   "concept_id": 93,
+   "description": "terms related to trade negotiations and governmental decisions",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 94,
+   "description": "contextual details concerning costs and pricing",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 95,
+   "description": "references to principal component analysis and related statistical concepts",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 96,
+   "description": "phrases related to relationships and connections between entities",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 97,
+   "description": "terms related to modification and management of digital content and data",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 98,
+   "description": "instances of failure or inadequacy",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 99,
+   "description": "phrases that express skepticism or critical viewpoints",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 100,
+   "description": "punctuation marks and structural elements in code or text",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 101,
+   "description": "technical terms and components related to software structure and functionality",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 102,
+   "description": "programming-related keywords and functions",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 103,
+   "description": "symbols and mathematical elements used in scientific or technical contexts",
+   "real": 0.1,
+   "shuffled": 0.15,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 104,
+   "description": "mathematical expressions and equations involving functions and their properties",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 105,
+   "description": "questions related to data processing and integration in Hive environments",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 106,
+   "description": "references to art-related organizations and their activities",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 107,
+   "description": "statements of existence or presence",
+   "real": 0.2,
+   "shuffled": 0.15,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 108,
+   "description": "elements related to scientific data and results",
+   "real": 0.15,
+   "shuffled": 0.15,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 109,
+   "description": "financial-related terms and phrases emphasizing legal disclosures and investment",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 110,
+   "description": "contractions indicating negation",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 111,
+   "description": "technical annotations and framework-specific syntax in programming code",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 112,
+   "description": "phrases related to awareness and realization",
+   "real": 0.1,
+   "shuffled": 0.15,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 113,
+   "description": "phrases related to navigating directions and movement",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 114,
+   "description": "personal pronouns and their usage in relation to self-reference",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 115,
+   "description": "statements, commands, or instructions related to user interactions and comments",
+   "real": 0.15,
+   "shuffled": 0.1,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 116,
+   "description": "transitional words and phrases that indicate specific relationships or timeframe",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 117,
+   "description": "structured data formats and serialization functions in programming contexts",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 118,
+   "description": "terms related to experimental procedures and measurements",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 119,
+   "description": "descriptive elements related to architecture and physical spaces",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 120,
+   "description": "mentions of significant market factors or trends",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 121,
+   "description": "numerical values and alphanumeric codes",
+   "real": 0.2,
+   "shuffled": 0.2,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 122,
+   "description": "elements related to coding syntax and structure",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 123,
+   "description": "phrases related to ownership or possession",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 124,
+   "description": "statements about medical and scientific findings involving treatments or conditi",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 125,
+   "description": "terms related to programming and error handling processes",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 126,
+   "description": "SQL query structures and associated syntax elements",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 127,
+   "description": "instances of the word \"inspire\" or its variations, indicating a focus on motivat",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 128,
+   "description": "elements related to programming logic and functions",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 129,
+   "description": "the word \"such\" in various contexts, often indicating conditions or examples",
+   "real": 0.15,
+   "shuffled": 0.1,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 130,
+   "description": "structured data or numerical information",
+   "real": 0.2,
+   "shuffled": 0.4,
+   "delta": -0.2
+  },
+  {
+   "concept_id": 131,
+   "description": "terms related to privacy policies and data protection",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 132,
+   "description": "statements about opinions, assertions, and disclaimers regarding information and",
+   "real": 0.15,
+   "shuffled": 0.15,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 133,
+   "description": "scientific measurements and concentrations",
+   "real": 0.05,
+   "shuffled": 0.15,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 134,
+   "description": "expressions related to mathematical notation or variables in a technical context",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 135,
+   "description": "technical terms related to systems and functionalities",
+   "real": 0.15,
+   "shuffled": 0.1,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 136,
+   "description": "references to debt and financial obligations",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 137,
+   "description": "references to food and drink options",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 138,
+   "description": "terms related to revenue and financial regulations",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 139,
+   "description": "HTML elements and attributes indicative of user interfaces",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 140,
+   "description": "patterns related to warnings or alerts in a procedural context",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 141,
+   "description": "technical or operational terms related to project management and documentation",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 142,
+   "description": "mathematical expressions involving mappings and variable constraints",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 143,
+   "description": "special formatting or metadata in the text",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 144,
+   "description": "terms related to public statements and social media announcements",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 145,
+   "description": "mentions of logarithmic or related mathematical concepts",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 146,
+   "description": "phrases or concepts related to fundamental principles, core ideas, or essential ",
+   "real": 0.2,
+   "shuffled": 0.25,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 147,
+   "description": "references to individuals and their experiences or identities",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 148,
+   "description": "phrases related to self-sufficiency and independence",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 149,
+   "description": "phrases related to parental involvement and the impact of family dynamics on chi",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 150,
+   "description": "language elements related to programming conditions and assignments",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 151,
+   "description": "coding syntax elements, particularly related to output operations",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 152,
+   "description": "the presence of the word \"public.\"",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 153,
+   "description": "references to relationships and social dynamics",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 154,
+   "description": "terms related to vehicular accidents and traffic safety",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 155,
+   "description": "the word \"much\" in various forms and contexts",
+   "real": 0.15,
+   "shuffled": 0.1,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 156,
+   "description": "block comments in code",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 157,
+   "description": "phrases expressing uncertainty or opinion",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 158,
+   "description": "references to numerical values and their relationships",
+   "real": 0.2,
+   "shuffled": 0.35,
+   "delta": -0.15
+  },
+  {
+   "concept_id": 159,
+   "description": "comment syntax and function documentation markers in code",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 160,
+   "description": "references to farms and agricultural concepts",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 161,
+   "description": "symbols or notations characteristic of mathematical or scientific expressions",
+   "real": 0.15,
+   "shuffled": 0.05,
+   "delta": 0.1
+  },
+  {
+   "concept_id": 162,
+   "description": "connections and associations in text regarding media influence or misinformation",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 163,
+   "description": "elements related to variable assignments and conditional statements in code",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 164,
+   "description": "mathematical expressions typically formatted with specific LaTeX commands",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 165,
+   "description": "references to candy and confectionery products",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 166,
+   "description": "references to companies or entities involved in auctions, particularly in the co",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 167,
+   "description": "references to areas of focus or organizations related to healthcare or disease c",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 168,
+   "description": "statements about individuals' life events or statuses",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 169,
+   "description": "frequently mentioned common conditions or species in veterinary practices",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 170,
+   "description": "commands and definitions related to graphical user interface dimensions and layo",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 171,
+   "description": "data attributes and their corresponding values",
+   "real": 0.1,
+   "shuffled": 0.15,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 172,
+   "description": "annotations related to database entities in programming code",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 173,
+   "description": "references to vitamins and their specific measurements or deficiencies",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 174,
+   "description": "terms related to medical or scientific classifications and broad-spectrum substa",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 175,
+   "description": "references to the name \"Paul.\"",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 176,
+   "description": "the presence of the word \"Tro\" in various forms, likely related to medical or sc",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 177,
+   "description": "references to the term \"Bel\" or related variations in content",
+   "real": 0.0,
+   "shuffled": 0.1,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 178,
+   "description": "keywords related to important concepts or entities",
+   "real": 0.2,
+   "shuffled": 0.45,
+   "delta": -0.25
+  },
+  {
+   "concept_id": 179,
+   "description": "text elements related to legal or technical discussions",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 180,
+   "description": "terms related to \"bad faith\" in a legal context",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 181,
+   "description": "programming-related events and their handlers",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 182,
+   "description": "titles and keywords related to economic analysis and market dynamics",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 183,
+   "description": "concepts related to legal obligations and consequences",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 184,
+   "description": "terms related to racing and speed",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 185,
+   "description": "occurrences of punctuation marks in the text",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 186,
+   "description": "mentions and variations of the word \"distance.\"",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 187,
+   "description": "phrases that indicate references or attributions in the text",
+   "real": 0.15,
+   "shuffled": 0.25,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 188,
+   "description": "instructional verbs related to cooking and data manipulation processes",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 189,
+   "description": "references to arXiv and assembly-related information",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 190,
+   "description": "numerical citations or references within the text",
+   "real": 0.1,
+   "shuffled": 0.2,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 191,
+   "description": "information related to structural characteristics in materials science",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 192,
+   "description": "markers indicating the beginning of a section or new content",
+   "real": 0.15,
+   "shuffled": 0.15,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 193,
+   "description": "references to counting or enumerating",
+   "real": 0.2,
+   "shuffled": 0.25,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 194,
+   "description": "references to influential artists and creative inspirations in the context of wr",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 195,
+   "description": "references to online posts and interactions regarding digital content",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 196,
+   "description": "phrases related to improving health and well-being",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 197,
+   "description": "terms related to neurobiology, particularly involving the entorhinal cortex and ",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 198,
+   "description": "terms related to trading and financial instruments",
+   "real": 0.0,
+   "shuffled": 0.1,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 199,
+   "description": "specific identifiers and attributes related to individuals or items, such as nam",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 200,
+   "description": "items and features related to garage doors and their mechanisms",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 201,
+   "description": "statements related to legal or financial issues",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 202,
+   "description": "entities and locations associated with community development and social initiati",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 203,
+   "description": "specific terminology related to automotive parts and services",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 204,
+   "description": "mathematical expressions and notation involving limits, functions, and variables",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 205,
+   "description": "numerical data and mathematical expressions",
+   "real": 0.1,
+   "shuffled": 0.15,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 206,
+   "description": "code-related terms and definitions in programming contexts",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 207,
+   "description": "programming code snippets or components related to forms and user input",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 208,
+   "description": "playful and whimsical themes related to character traits and designs from popula",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 209,
+   "description": "elements and keywords related to health, medical conditions, and societal discus",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 210,
+   "description": "references to GitHub URLs and their specific components",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 211,
+   "description": "numerical values and financial figures",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 212,
+   "description": "references to academic publications",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 213,
+   "description": "phrases related to criticism and disapproval towards actions or policies",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 214,
+   "description": "commands and actions related to software installation and configuration",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 215,
+   "description": "phrases that convey necessity or importance",
+   "real": 0.15,
+   "shuffled": 0.2,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 216,
+   "description": "programming-related syntax and structure elements",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 217,
+   "description": "specific geographic locations and legal references within a formal context",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 218,
+   "description": "terms related to copyrights, licenses, and permissions in software documentation",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 219,
+   "description": "specifications and options related to computer hardware and accessories",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 220,
+   "description": "ingredients and preparation steps in cooking recipes",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 221,
+   "description": "references to the state and lifecycle methods of a React component",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 222,
+   "description": "keywords related to programming and class declarations, particularly in Java",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 223,
+   "description": "function-related code snippets and object property manipulations",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 224,
+   "description": "terms related to density and population dynamics",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 225,
+   "description": "formatting and layout commands in document typesetting",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 226,
+   "description": "instructions related to mechanical assembly and maintenance",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 227,
+   "description": "references to personal pronouns and possessive adjectives",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 228,
+   "description": "locations and their associated news entities",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 229,
+   "description": "keywords and parameters commonly associated with programming and configuration f",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 230,
+   "description": "elements related to programming and module management in code",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 231,
+   "description": "key terms and phrases related to turmoil, crises, and significant conflicts in v",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 232,
+   "description": "specific formatting or markers in the text structure",
+   "real": 0.2,
+   "shuffled": 0.15,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 233,
+   "description": "medical terms and references related to thyroid conditions and diagnostics",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 234,
+   "description": "titles and roles within academic or professional contexts",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 235,
+   "description": "legal terms and references related to court cases",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 236,
+   "description": "print statements in programming code",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 237,
+   "description": "words and phrases indicating comparison or qualification",
+   "real": 0.1,
+   "shuffled": 0.15,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 238,
+   "description": "phrases indicating agreements, provisions, and clauses related to contracts and ",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 239,
+   "description": "terms related to wetland habitats and their characteristics",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 240,
+   "description": "specific syntax and structure related to coding and programming statements",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 241,
+   "description": "expressions of gratitude",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 242,
+   "description": "references to seasons, episodes, and milestones in a television series",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 243,
+   "description": "words and phrases related to legal terms and processes",
+   "real": 0.05,
+   "shuffled": 0.15,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 244,
+   "description": "terms associated with randomization in clinical trials",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 245,
+   "description": "references to notable musicians and composers in various contexts",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 246,
+   "description": "programming syntax and structure",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 247,
+   "description": "layout attributes in Android XML files.",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 248,
+   "description": "the word \"fore\" in various forms and contexts",
+   "real": 0.0,
+   "shuffled": 0.1,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 249,
+   "description": "references to societal perceptions and personal expressions regarding political ",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 250,
+   "description": "religious or spiritual text related to the Hindu deity Lord Narasimha.",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 251,
+   "description": "technical references and examples related to code and guidelines",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 252,
+   "description": "references to figures within a document",
+   "real": 0.0,
+   "shuffled": 0.1,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 253,
+   "description": "academic affiliations and institutional citations",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 254,
+   "description": "occurrences of asynchronous programming terms, particularly related to `await` a",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 255,
+   "description": "phrases related to significant achievements or impactful moments",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 256,
+   "description": "keywords related to access modifiers (such as \"public\" and \"protected\")",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 257,
+   "description": "details about kitchen appliances and their functions",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 258,
+   "description": "package and library references in computer code",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 259,
+   "description": "references to standardized testing",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 260,
+   "description": "keywords related to access modifiers in programming",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 261,
+   "description": "quantum-related concepts or terms",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 262,
+   "description": "phrases that indicate significant announcements or events and their implications",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 263,
+   "description": "the occurrence of the term \"sm\" in various contexts",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 264,
+   "description": "phrases related to scientific advancements and their implications",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 265,
+   "description": "abbreviations and codes, likely related to technical or scientific contexts",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 266,
+   "description": "references to communication systems and protocols",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 267,
+   "description": "references to family relationships and dynamics",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 268,
+   "description": "keywords related to security systems and surveillance technologies",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 269,
+   "description": "expressions related to logical comparisons",
+   "real": 0.15,
+   "shuffled": 0.2,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 270,
+   "description": "structured programming elements, such as classes and functions in code snippets",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 271,
+   "description": "references to plants and plant-related terminology",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 272,
+   "description": "references to political figures and administrations",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 273,
+   "description": "terms related to theoretical physics concepts and equations",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 274,
+   "description": "phrases indicating belief, assertion, or opinion about subjects",
+   "real": 0.1,
+   "shuffled": 0.15,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 275,
+   "description": "terms associated with the evaluation and classification of various conditions an",
+   "real": 0.1,
+   "shuffled": 0.15,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 276,
+   "description": "variations of the prefix \"Su\"",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 277,
+   "description": "specific patterns related to digital communication and media formats",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 278,
+   "description": "personal details and professional backgrounds of individuals",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 279,
+   "description": "URLs and paths related to web elements and debugging tools",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 280,
+   "description": "technical details related to web mapping services and capabilities",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 281,
+   "description": "sections of text with no relevant content or activations",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 282,
+   "description": "table-related content in the document",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 283,
+   "description": "technical terms and error messages related to Python and Django programming",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 284,
+   "description": "phrases related to programming logic and code structure",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 285,
+   "description": "code structures and functions related to email protocols and authentication",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 286,
+   "description": "place names and geographic locations, particularly in the UK.",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 287,
+   "description": "references to birthday celebrations",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 288,
+   "description": "instances of comparisons and contrasts in statements",
+   "real": 0.15,
+   "shuffled": 0.2,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 289,
+   "description": "statements that express personal beliefs or experiences",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 290,
+   "description": "references to authorities and their interactions in a political context",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 291,
+   "description": "alphanumeric strings and specific identifiers related to programming or document",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 292,
+   "description": "references to navigation and location tracking",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 293,
+   "description": "elements related to procedural guidelines and recommendations",
+   "real": 0.15,
+   "shuffled": 0.1,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 294,
+   "description": "expressions of enjoyment and fun",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 295,
+   "description": "content related to spirituality and personal development",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 296,
+   "description": "references to ancient rulers and their historical context",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 297,
+   "description": "references to time frames and chronological events",
+   "real": 0.2,
+   "shuffled": 0.1,
+   "delta": 0.1
+  },
+  {
+   "concept_id": 298,
+   "description": "questions about how to perform tasks or actions",
+   "real": 0.05,
+   "shuffled": 0.15,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 299,
+   "description": "mentions of cognitive performance metrics and event rates",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 300,
+   "description": "technical terms and parameters related to chemical kinetics and catalysis",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 301,
+   "description": "elements related to document structure and formatting",
+   "real": 0.15,
+   "shuffled": 0.1,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 302,
+   "description": "chemical compounds and their structural characteristics",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 303,
+   "description": "terms related to the destruction or defeat of characters and entities",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 304,
+   "description": "concepts and terms related to medications for addiction treatment",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 305,
+   "description": "proper names and their pronunciations",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 306,
+   "description": "information related to medical conditions and demographics, especially focusing ",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 307,
+   "description": "negative language and themes related to distrust and conflict",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 308,
+   "description": "references to authority figures or personal experiences related to persuasive na",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 309,
+   "description": "data related to online promotions and codes",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 310,
+   "description": "event-related and timing information in applicable contexts",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 311,
+   "description": "technical keywords and indicators related to programming functions and data stru",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 312,
+   "description": "technical details related to metal casting processes",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 313,
+   "description": "references to the term \"Tam\" and its variations",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 314,
+   "description": "discussions related to educational preparation and career readiness",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 315,
+   "description": "mentions of the name \"William\"",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 316,
+   "description": "terms related to electrical charge and currents",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 317,
+   "description": "HTML and CSS class attributes related to layout and styling for visual component",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 318,
+   "description": "references, citations, and numerical data in a text",
+   "real": 0.15,
+   "shuffled": 0.15,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 319,
+   "description": "quantitative data related to energy specifications and machinery performance",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 320,
+   "description": "occurrences of the term \"pi\" in various contexts, likely related to mathematical",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 321,
+   "description": "code snippets related to a specific programming language.",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 322,
+   "description": "details related to accidents and legal proceedings",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 323,
+   "description": "programming or code-related syntax elements",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 324,
+   "description": "technical programming elements and data types",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 325,
+   "description": "sentences that emphasize personal reflections or opinions",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 326,
+   "description": "code related to the Laravel framework",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 327,
+   "description": "code-related terminology and function definitions",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 328,
+   "description": "details related to handwritten content and legibility in written communication",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 329,
+   "description": "phrases related to musical performances and events involving artists",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 330,
+   "description": "references to legal documents or official communications",
+   "real": 0.0,
+   "shuffled": 0.1,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 331,
+   "description": "factors related to communication system performance and scientific research need",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 332,
+   "description": "content related to locations and activities in Indonesia, especially those assoc",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 333,
+   "description": "concepts and terms related to similarity and equality",
+   "real": 0.05,
+   "shuffled": 0.15,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 334,
+   "description": "occurrences of specific codes or functions in programming context",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 335,
+   "description": "phrases and references to data and reporting",
+   "real": 0.15,
+   "shuffled": 0.2,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 336,
+   "description": "code structure and function definitions in programming contexts",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 337,
+   "description": "instances of the word \"who.\"",
+   "real": 0.1,
+   "shuffled": 0.15,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 338,
+   "description": "attributes and values in a data structure, particularly in a JSON format",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 339,
+   "description": "code constructs related to interface definitions and implementations",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 340,
+   "description": "occurrences of the term \"Mar\" followed by relevant numerical and descriptive mod",
+   "real": 0.1,
+   "shuffled": 0.3,
+   "delta": -0.2
+  },
+  {
+   "concept_id": 341,
+   "description": "concepts related to hidden or concealed elements",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 342,
+   "description": "HTML and formatting tags in a document",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 343,
+   "description": "terms related to various types of \"saccharomyces\" and \"vacuum\" in a scientific c",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 344,
+   "description": "instances of the word \"next.\"",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 345,
+   "description": "words and phrases related to service offerings and product availability",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 346,
+   "description": "contexts related to rewards and point systems in games or competitions",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 347,
+   "description": "phrases related to the methodology of experiments, particularly emphasizing rand",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 348,
+   "description": "discussions around laws and regulations, particularly those relevant to women's ",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 349,
+   "description": "the appearance of the speaker's perspective and opinions",
+   "real": 0.0,
+   "shuffled": 0.1,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 350,
+   "description": "terms related to maintaining or preserving a state or condition",
+   "real": 0.1,
+   "shuffled": 0.2,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 351,
+   "description": "HTML elements and tags within the document structure",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 352,
+   "description": "conditional statements in programming code, specifically 'else' keywords",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 353,
+   "description": "elements related to PDF manipulation and processing",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 354,
+   "description": "phrases relating to performance expectations and potential improvements in a com",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 355,
+   "description": "instances of sports-related injuries",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 356,
+   "description": "detailed references and citations in academic writing",
+   "real": 0.15,
+   "shuffled": 0.1,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 357,
+   "description": "terms related to skincare products and routines",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 358,
+   "description": "references to snow and related terms",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 359,
+   "description": "words and phrases associated with winning and competition",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 360,
+   "description": "phrases related to careful planning or organization in various contexts",
+   "real": 0.05,
+   "shuffled": 0.15,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 361,
+   "description": "function definitions and calls",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 362,
+   "description": "phrases related to organizational furniture and its functionality",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 363,
+   "description": "phrases indicating comparisons or relationships between two entities or elements",
+   "real": 0.05,
+   "shuffled": 0.15,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 364,
+   "description": "references to universities and academic institutions",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 365,
+   "description": "questions beginning with \"how.\"",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 366,
+   "description": "coding-related elements and structures within a programming context",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 367,
+   "description": "memorabilia related to personal experiences and interactions in community discus",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 368,
+   "description": "references to media, technology, and medical terminology",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 369,
+   "description": "references to health-related terms, particularly in the context of potential med",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 370,
+   "description": "references to panels or discussions in various contexts",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 371,
+   "description": "terms related to decision-making processes and medical evaluations",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 372,
+   "description": "descriptive elements related to terrain and inclines in a hiking or driving cont",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 373,
+   "description": "elements and attributes related to graphical formatting and layout in a structur",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 374,
+   "description": "technical terms and paths related to system and application configurations",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 375,
+   "description": "references to \"corner\" and \"exam\" in various contexts",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 376,
+   "description": "references to species or medical terms related to cancer treatments or condition",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 377,
+   "description": "sequences relating to programming or code execution",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 378,
+   "description": "phrasal connections between tolerance, adaptation, and resistance in response to",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 379,
+   "description": "names of people or entities associated with specific contexts or citations",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 380,
+   "description": "operations related to dynamic data structures and their manipulations",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 381,
+   "description": "chemical compounds and their properties related to nanoparticle synthesis and an",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 382,
+   "description": "citations or references in scientific texts",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 383,
+   "description": "upper-case letters and the beginning of paragraphs",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 384,
+   "description": "phrases that express comparisons or similarities",
+   "real": 0.2,
+   "shuffled": 0.1,
+   "delta": 0.1
+  },
+  {
+   "concept_id": 385,
+   "description": "phrases or constructions involving the verb \"be\" in various contexts",
+   "real": 0.1,
+   "shuffled": 0.25,
+   "delta": -0.15
+  },
+  {
+   "concept_id": 386,
+   "description": "geographic and research-related terms, particularly those associated with Halifa",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 387,
+   "description": "elements related to Java and programming structures",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 388,
+   "description": "terms related to medical evaluation and treatment processes",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 389,
+   "description": "details related to sports events, particularly playoff games and their outcomes",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 390,
+   "description": "the repetitive phrase \"Board of\" and other institutional references",
+   "real": 0.1,
+   "shuffled": 0.15,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 391,
+   "description": "specific HTML tags and their attributes typically associated with web developmen",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 392,
+   "description": "phrases indicating suggestion or implication",
+   "real": 0.15,
+   "shuffled": 0.2,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 393,
+   "description": "punctuation marks, particularly semicolons and parentheses",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 394,
+   "description": "references to sources and reporting in news",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 395,
+   "description": "terms and concepts related to caching mechanisms in programming",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 396,
+   "description": "references to legal procedures and rights",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 397,
+   "description": "declarations and function calls related to object-oriented programming",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 398,
+   "description": "legal terms and phrases related to court cases",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 399,
+   "description": "references to websites and web-related services",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 400,
+   "description": "legal terms and phrases related to court proceedings and rulings",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 401,
+   "description": "phrases relating to constraints and limitations in various contexts",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 402,
+   "description": "terms related to adaptability and adjusting to changing conditions",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 403,
+   "description": "terms and phrases related to servers and server errors",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 404,
+   "description": "information related to motorcycles, specifically specifications and pricing deta",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 405,
+   "description": "terms related to personal relationships and social dynamics",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 406,
+   "description": "terms related to governance, citizenship, and roles in societal structures",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 407,
+   "description": "specific references to murder and related criminal activities",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 408,
+   "description": "references to authors or contributors in a scientific context",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 409,
+   "description": "numerical identifiers or sequences",
+   "real": 0.25,
+   "shuffled": 0.3,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 410,
+   "description": "expressions related to legal or financial obligations",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 411,
+   "description": "technical terms related to tools and fasteners.",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 412,
+   "description": "technical specifications and features related to cameras and multimedia devices",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 413,
+   "description": "numerical values or statistics related to medical data or patient information",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 414,
+   "description": "loop constructs in programming code",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 415,
+   "description": "instances of the letter 'g' in various contexts, especially in conjunction with ",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 416,
+   "description": "references to menus and related menu items within content",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 417,
+   "description": "Java System output statements",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 418,
+   "description": "actions related to selection and manipulation",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 419,
+   "description": "phrases indicating conditional or preceding circumstances",
+   "real": 0.0,
+   "shuffled": 0.1,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 420,
+   "description": "function declarations and definitions in programming code",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 421,
+   "description": "terms related to procedures and techniques",
+   "real": 0.15,
+   "shuffled": 0.2,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 422,
+   "description": "references to the word \"home\" and related concepts",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 423,
+   "description": "references to kitchen appliances, specifically dishwashers and their brands",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 424,
+   "description": "references to brands, products, or specific entities in various contexts",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 425,
+   "description": "terms related to types, categories, and classification",
+   "real": 0.3,
+   "shuffled": 0.2,
+   "delta": 0.1
+  },
+  {
+   "concept_id": 426,
+   "description": "actions related to movement or directives, particularly in tense contexts",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 427,
+   "description": "phrases related to repetitive actions or follow-up events",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 428,
+   "description": "phrases conveying medical conditions and the presence of pain",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 429,
+   "description": "the beginning of new sections or changes in content format within the text",
+   "real": 0.1,
+   "shuffled": 0.15,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 430,
+   "description": "various types of items or features, often describing characteristics or attribut",
+   "real": 0.2,
+   "shuffled": 0.15,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 431,
+   "description": "references to team performance and ranking in sports",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 432,
+   "description": "references to religious leaders and titles",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 433,
+   "description": "references to folder revisions and their management",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 434,
+   "description": "references to trips or journeys",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 435,
+   "description": "terms related to clinical trials and research results",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 436,
+   "description": "financial statistics and player performance metrics in sports contexts",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 437,
+   "description": "terms related to news and its various formats",
+   "real": 0.0,
+   "shuffled": 0.15,
+   "delta": -0.15
+  },
+  {
+   "concept_id": 438,
+   "description": "instances of supportive actions and emotional responses",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 439,
+   "description": "key concepts and guidelines related to risk communication in public health resea",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 440,
+   "description": "references to the word \"Red\" and its various contexts",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 441,
+   "description": "financial and economic terms, including income, taxes, investments, interest rat",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 442,
+   "description": "elements related to immersive reading experiences and emotional engagement with ",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 443,
+   "description": "sentences and punctuation",
+   "real": 0.2,
+   "shuffled": 0.3,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 444,
+   "description": "notes or signals relating to metrics, stats, and data entries",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 445,
+   "description": "references to files and file-related operations",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 446,
+   "description": "mentions of specific authors and their works",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 447,
+   "description": "phrases related to providing information or guidance about procedures",
+   "real": 0.25,
+   "shuffled": 0.3,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 448,
+   "description": "terms related to environmental policies and factors",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 449,
+   "description": "commands related to clearing data or cache in programming contexts",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 450,
+   "description": "terms related to differentiation, separation, and distinction",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 451,
+   "description": "words related to signals and identifiers in various contexts",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 452,
+   "description": "information about events and activities in a community, including announcements,",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 453,
+   "description": "conjunctions and linking words that facilitate the connection between ideas",
+   "real": 0.1,
+   "shuffled": 0.15,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 454,
+   "description": "technical terms and specifications related to computer hardware and architecture",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 455,
+   "description": "greetings and informal salutations",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 456,
+   "description": "terms related to environmental management and pollution reduction",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 457,
+   "description": "words related to identity and familial relationships",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 458,
+   "description": "assertive or judgmental statements related to decisions and opinions",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 459,
+   "description": "terms related to technical programming or markup syntax",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 460,
+   "description": "references to the React library and its components",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 461,
+   "description": "mathematical parameters and notations",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 462,
+   "description": "programmatic syntax elements and structures in code",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 463,
+   "description": "calls to action for clicking links or buttons",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 464,
+   "description": "terms related to establishing or confirming a state of being",
+   "real": 0.3,
+   "shuffled": 0.3,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 465,
+   "description": "references to advocacy and support services",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 466,
+   "description": "references to significant political events or figures",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 467,
+   "description": "phrases related to problem-solving and decision-making challenges",
+   "real": 0.05,
+   "shuffled": 0.15,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 468,
+   "description": "present tense singular verbs",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 469,
+   "description": "concepts related to integration and centralization",
+   "real": 0.1,
+   "shuffled": 0.05,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 470,
+   "description": "phrases that describe significant or notable subjects or events",
+   "real": 0.3,
+   "shuffled": 0.2,
+   "delta": 0.1
+  },
+  {
+   "concept_id": 471,
+   "description": "elements related to narrative and storytelling",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 472,
+   "description": "technical programming-related terminology",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 473,
+   "description": "content related to weekends and Sunday activities",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 474,
+   "description": "punctuation and formatting marks, signaling the structure of written text",
+   "real": 0.05,
+   "shuffled": 0.15,
+   "delta": -0.1
+  },
+  {
+   "concept_id": 475,
+   "description": "language related to controversies and criticism in political contexts",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 476,
+   "description": "the opening of a text or a new section",
+   "real": 0.1,
+   "shuffled": 0.15,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 477,
+   "description": "code elements related to the properties and methods of UI sliders",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 478,
+   "description": "terms related to VPNs and proxy services",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 479,
+   "description": "statements regarding the effectiveness of interventions or treatments",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 480,
+   "description": "conditional phrases starting with \"if.\"",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 481,
+   "description": "thematic elements related to legal or contractual obligations",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 482,
+   "description": "concepts related to decision-making and management outcomes",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 483,
+   "description": "terms related to accumulation and buildup processes",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 484,
+   "description": "references to temperature measurements and conditions in scientific contexts",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 485,
+   "description": "CSS properties related to transformations and layout adjustments",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 486,
+   "description": "references to user data management and privacy practices",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 487,
+   "description": "references to historical or significant events related to change or progress",
+   "real": 0.1,
+   "shuffled": 0.1,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 488,
+   "description": "phrases that indicate the beginning of actions or events",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 489,
+   "description": "references to mountains or mountainous terrain",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 490,
+   "description": "terms related to fear and anxiety",
+   "real": 0.05,
+   "shuffled": 0.0,
+   "delta": 0.05
+  },
+  {
+   "concept_id": 491,
+   "description": "references to \"bo\" as a prefix, particularly in relation to various uses and men",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 492,
+   "description": "references to genes and gene-related terms",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 493,
+   "description": "programming-related terms and function calls",
+   "real": 0.05,
+   "shuffled": 0.05,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 494,
+   "description": "historical places or contexts that are significant to specific events or landmar",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 495,
+   "description": "punctuations and special characters in the text",
+   "real": 0.0,
+   "shuffled": 0.05,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 496,
+   "description": "questions formatted in a specific style, particularly those starting with \"Q\"",
+   "real": 0.25,
+   "shuffled": 0.1,
+   "delta": 0.15
+  },
+  {
+   "concept_id": 497,
+   "description": "monetary values and price indicators",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 498,
+   "description": "instances of experiences that are novel or unfamiliar",
+   "real": 0.05,
+   "shuffled": 0.1,
+   "delta": -0.05
+  },
+  {
+   "concept_id": 499,
+   "description": "structure and details related to sports tournaments",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  }
+ ],
+ "timestamp": "2026-06-04T12:18:17",
+ "verdict_note": "auto-label was 'DIRECTIONAL' from a sign-blind check; corrected: real 0.046 < shuffled 0.056 (delta -0.010), so the real direction does NOT beat the control."
+}

@@ -191,9 +191,15 @@ def main() -> None:
 
     rr = rigor_report(real_scores, shuf_scores)
     mean_delta = float(np.mean(real_scores) - np.mean(shuf_scores))
-    verdict = "EXTERNAL-READY(this-scale)" if rr["external_ready"] else (
-        "DIRECTIONAL" if rr["legs"]["wilcoxon_significant"] and rr["legs"]["ci_excludes_zero"]
-        else "NULL")
+    sig = rr["legs"]["wilcoxon_significant"] and rr["legs"]["ci_excludes_zero"]
+    if rr["external_ready"]:
+        verdict = "EXTERNAL-READY(this-scale)"          # real significantly > shuffled, all gates
+    elif sig and mean_delta > 0:
+        verdict = "DIRECTIONAL"                          # real significantly > shuffled (not ordinal)
+    elif sig and mean_delta < 0:
+        verdict = "NEGATIVE (shuffled control beats real)"   # sign matters — NOT a win
+    else:
+        verdict = "NULL (real == shuffled)"
     print(f"\n=== AxBench E7 ({args.model}, {args.dataset}, n_concepts={len(concepts)}, "
           f"instrument={instrument}) ===")
     print(f"  mean real {np.mean(real_scores):.4f} vs shuffled {np.mean(shuf_scores):.4f} "
