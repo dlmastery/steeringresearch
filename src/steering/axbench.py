@@ -40,6 +40,17 @@ class AxConcept(TypedDict):
     neg_texts: list[str]
 
 
+def clean_concept(desc: str) -> str:
+    """AxBench concept descriptions use a ``word//gloss`` format; render it as
+    ``word: gloss`` so the judge reads a clean concept, not a literal ``//``."""
+    desc = str(desc).strip()
+    if "//" in desc:
+        word, gloss = desc.split("//", 1)
+        word, gloss = word.strip(), gloss.strip()
+        return f"{word}: {gloss}" if word and gloss else (word or gloss)
+    return desc
+
+
 def _download(name: str, split: str, model_dir: str = "2b/l20"):
     """Fetch + cache one AxBench parquet, return a DataFrame. Robust to flaky SSL."""
     import pandas as pd
@@ -79,7 +90,7 @@ def load_axbench_concepts(name: str = "concept500",
             continue
         out.append(AxConcept(
             concept_id=int(cid),
-            description=str(rows["output_concept"].iloc[0]),
+            description=clean_concept(rows["output_concept"].iloc[0]),
             pos_texts=rows["output"].astype(str).tolist(),
             neg_texts=neg_texts,
         ))
@@ -109,7 +120,7 @@ def load_axbench_labeled(name: str = "concept10", n_concepts: int = 10,
         sub = test[test["concept_id"] == cid]
         if sub.empty:
             continue
-        concept = str(sub["output_concept"].iloc[0])
+        concept = clean_concept(sub["output_concept"].iloc[0])
         for cat, label in (("positive", 1), ("negative", 0)):
             rows = sub[sub["category"] == cat].head(per_class)
             for _, r in rows.iterrows():

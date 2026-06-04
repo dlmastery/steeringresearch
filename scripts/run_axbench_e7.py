@@ -165,10 +165,20 @@ def main() -> None:
         shuf_scores.append(sb)
         rows.append({"concept_id": c["concept_id"], "description": c["description"][:80],
                      "real": round(rb, 4), "shuffled": round(sb, 4), "delta": round(rb - sb, 4)})
-        if (ci + 1) % max(1, len(concepts) // 10) == 0:
+        if (ci + 1) % max(1, len(concepts) // 25) == 0:
             print(f"  {ci+1}/{len(concepts)}  mean real {np.mean(real_scores):.3f} "
                   f"shuf {np.mean(shuf_scores):.3f}  (this: {c['description'][:45]!r} "
                   f"r={rb:.2f} s={sb:.2f})", flush=True)
+            # incremental checkpoint so a mid-run crash on a multi-hour run is recoverable
+            try:
+                (ROOT / "ideas" / "_campaigns" / f"E7-axbench-{Path(args.model).name}.partial.json"
+                 ).write_text(__import__("json").dumps(
+                    {"done": ci + 1, "of": len(concepts), "instrument": instrument,
+                     "mean_real": float(np.mean(real_scores)),
+                     "mean_shuffled": float(np.mean(shuf_scores)), "rows": rows}, indent=1),
+                    encoding="utf-8")
+            except Exception:  # pragma: no cover - checkpoint must never crash the run
+                pass
 
     rr = rigor_report(real_scores, shuf_scores)
     mean_delta = float(np.mean(real_scores) - np.mean(shuf_scores))

@@ -44,7 +44,7 @@ class LocalJudge:
         model_id: str = _DEFAULT_MODEL,
         quant: str = "4bit",
         cache_dir: Optional[str | Path] = None,
-        max_new_tokens: int = 48,
+        max_new_tokens: int = 16,
     ) -> None:
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
