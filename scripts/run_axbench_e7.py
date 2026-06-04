@@ -25,7 +25,7 @@ import argparse
 import sys
 import time
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Callable, cast
 
 import numpy as np
 import torch
@@ -59,18 +59,25 @@ def _pool_acts(model, tok, texts: list[str], layer: int) -> np.ndarray:
     return np.stack(out).astype(np.float32)
 
 
-def _greedy_gen(model, tok, prompt: str, *, layer: int, vector: torch.Tensor,
-                alpha: float, max_new_tokens: int = 32) -> str:
-    ids = _ids(tok, prompt, model)
-    gk: dict[str, Any] = dict(max_new_tokens=max_new_tokens, do_sample=False, num_beams=1)
-    eos = getattr(tok, "eos_token_id", None)
-    if getattr(tok, "pad_token_id", None) is None and eos is not None:
-        gk["pad_token_id"] = eos
+def _greedy_gen_batch(model, tok, prompts: list[str], *, layer: int, vector: torch.Tensor,
+                      alpha: float, max_new_tokens: int = 32) -> list[str]:
+    """Batched steered greedy generation — all prompts in ONE generate() call.
+
+    Gemma-3 eager generation on Windows is ~2s/call; batching the eval prompts
+    amortizes that. Left-padded (decoder generation); the SteeringContext hook
+    steers every real position (pad positions are attention-masked, so steering
+    them is harmless to the real outputs)."""
+    if getattr(tok, "pad_token_id", None) is None:
+        tok.pad_token = tok.eos_token
+    tok.padding_side = "left"
+    enc = tok(prompts, return_tensors="pt", padding=True).to(next(model.parameters()).device)
     gen = cast(Callable[..., torch.Tensor], model.generate)
     with SteeringContext(model, vector, [layer], operation="relative_add", alpha=alpha):
         with torch.no_grad():
-            out = gen(ids, **gk)
-    return tok.decode(out[0][ids.shape[1]:], skip_special_tokens=True)
+            out = gen(**enc, max_new_tokens=max_new_tokens, do_sample=False, num_beams=1,
+                      pad_token_id=tok.eos_token_id)
+    new = out[:, enc["input_ids"].shape[1]:]
+    return [tok.decode(new[i], skip_special_tokens=True) for i in range(len(prompts))]
 
 
 def main() -> None:
@@ -83,7 +90,7 @@ def main() -> None:
     ap.add_argument("--prompts", type=int, default=10, help="held-out AxBench eval instructions")
     ap.add_argument("--knee", type=float, default=0.1)
     ap.add_argument("--max-new-tokens", type=int, default=32)
-    ap.add_argument("--max-pos", type=int, default=48, help="positive examples per concept for extraction")
+    ap.add_argument("--max-pos", type=int, default=24, help="positive examples per concept for extraction")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--judge", default="local", choices=["local", "gemini"],
                     help="behavior judge: local off-family LLM (Qwen, free) or the Gemini API")
@@ -150,8 +157,8 @@ def main() -> None:
                               dtype=torch.float32)
 
         def beh(vec: torch.Tensor, desc: str = c["description"]) -> float:
-            gens = [_greedy_gen(model, tok, instr, layer=layer, vector=vec, alpha=args.knee,
-                                max_new_tokens=args.max_new_tokens) for instr in instructions]
+            gens = _greedy_gen_batch(model, tok, instructions, layer=layer, vector=vec,
+                                     alpha=args.knee, max_new_tokens=args.max_new_tokens)
             if judge is None:
                 lex = desc.replace("//", " ").split()
                 return float(np.mean([concept_rate(g, lex) for g in gens]))
