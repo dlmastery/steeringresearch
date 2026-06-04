@@ -86,6 +86,8 @@ def main() -> None:
     ap.add_argument("--max-pos", type=int, default=48, help="positive examples per concept for extraction")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--quick", action="store_true", help="tiny plumbing (4 concepts, proxy, no-log)")
+    ap.add_argument("--allow-proxy", action="store_true",
+                    help="permit the lexicon proxy on a real run (default: ABORT if the judge is unavailable)")
     ap.add_argument("--no-log", action="store_true")
     args = ap.parse_args()
 
@@ -116,6 +118,13 @@ def main() -> None:
             judge = None
     instrument = "gemini_judge_axbench" if judge is not None else "lexicon_proxy"
     print(f"[instrument] {instrument}")
+    if judge is None and not args.quick and not args.allow_proxy:
+        raise SystemExit(
+            "ABORT: the off-family judge is unavailable (no key, or Gemini credits "
+            "depleted). The AxBench evaluation REQUIRES the judge — the lexicon proxy "
+            "is invalid here and would produce a meaningless (all-zero) result. Top up "
+            "the Gemini project credits, or pass --allow-proxy to override for plumbing."
+        )
 
     # Shared negatives: pool ONCE (concept_id == -1).
     neg_acts = _pool_acts(model, tok, concepts[0]["neg_texts"][: args.max_pos * 2], layer)
