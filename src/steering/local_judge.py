@@ -144,3 +144,55 @@ class LocalJudge:
             "axbench": (concept_s / 2.0) if fluency_s >= 1.0 else 0.0,
             "cached": cached, "model": self.model_id, "raw": raw,
         }
+
+    def _result(self, concept_s: float, fluency_s: float, raw: str, cached: bool) -> dict:
+        return {
+            "concept": concept_s, "fluency": fluency_s, "behavior": concept_s / 2.0,
+            "axbench": (concept_s / 2.0) if fluency_s >= 1.0 else 0.0,
+            "cached": cached, "model": self.model_id, "raw": raw,
+        }
+
+    def score_axbench_batch(self, items: list[tuple[str, str, str]],
+                            batch_size: int = 16) -> list[dict]:
+        """Batched ``score_axbench`` — many (text, concept, instruction) tuples in
+        one GPU generate() call. Cache hits are served free; only misses are
+        batched. ~10x faster than per-call for bnb-4bit (amortizes dequant
+        overhead). A per-item parse failure degrades that ONE item to concept 0
+        (it never aborts the batch)."""
+        import torch
+
+        out: list[Optional[dict]] = [None] * len(items)
+        misses: list[tuple[int, str, str]] = []   # (index, key, prompt)
+        for i, (text, concept, instruction) in enumerate(items):
+            key = self._key(text, concept, instruction)
+            hit = self._read(key)
+            if hit is not None and "concept" in hit and "fluency" in hit:
+                out[i] = self._result(float(hit["concept"]), float(hit["fluency"]),
+                                      hit.get("raw", ""), True)
+            else:
+                prompt = self.tok.apply_chat_template(
+                    [{"role": "user", "content": build_axbench_prompt(text, concept, instruction)}],
+                    add_generation_prompt=True, tokenize=False)
+                misses.append((i, key, prompt))
+
+        if self.tok.pad_token_id is None:
+            self.tok.pad_token = self.tok.eos_token
+        self.tok.padding_side = "left"  # decoder-only generation needs left padding
+        for s in range(0, len(misses), batch_size):
+            chunk = misses[s:s + batch_size]
+            enc = self.tok([p for _, _, p in chunk], return_tensors="pt",
+                           padding=True, add_special_tokens=False).to(self.device)
+            with torch.no_grad():
+                gen = self.model.generate(
+                    **enc, max_new_tokens=self.max_new_tokens, do_sample=False,
+                    num_beams=1, pad_token_id=self.tok.eos_token_id)
+            new = gen[:, enc["input_ids"].shape[1]:]
+            for k, (i, key, _) in enumerate(chunk):
+                raw = self.tok.decode(new[k], skip_special_tokens=True)
+                try:
+                    concept_s, fluency_s = self._parse(raw)
+                except JudgeUnavailable:
+                    concept_s, fluency_s = 0.0, 0.0   # degrade this one item, don't abort
+                self._write(key, {"concept": concept_s, "fluency": fluency_s, "raw": raw})
+                out[i] = self._result(concept_s, fluency_s, raw, False)
+        return [r for r in out if r is not None]

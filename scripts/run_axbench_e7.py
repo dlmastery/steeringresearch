@@ -150,15 +150,17 @@ def main() -> None:
                               dtype=torch.float32)
 
         def beh(vec: torch.Tensor, desc: str = c["description"]) -> float:
-            vals = []
-            for instr in instructions:
-                g = _greedy_gen(model, tok, instr, layer=layer, vector=vec, alpha=args.knee,
-                                max_new_tokens=args.max_new_tokens)
-                if judge is not None:
-                    vals.append(judge.score_axbench(g, desc, instr)["axbench"])
-                else:
-                    vals.append(concept_rate(g, desc.replace("//", " ").split()))
-            return float(np.mean(vals))
+            gens = [_greedy_gen(model, tok, instr, layer=layer, vector=vec, alpha=args.knee,
+                                max_new_tokens=args.max_new_tokens) for instr in instructions]
+            if judge is None:
+                lex = desc.replace("//", " ").split()
+                return float(np.mean([concept_rate(g, lex) for g in gens]))
+            triples = [(g, desc, instr) for g, instr in zip(gens, instructions)]
+            if hasattr(judge, "score_axbench_batch"):
+                rs = judge.score_axbench_batch(triples)          # one batched GPU call
+            else:
+                rs = [judge.score_axbench(*t) for t in triples]   # Gemini: sequential API
+            return float(np.mean([r["axbench"] for r in rs]))
 
         rb, sb = beh(v_real), beh(v_shuf)
         real_scores.append(rb)
