@@ -41,11 +41,17 @@ document. S-1 through S-14 are directional findings from single experimental run
 off-family-judged, cross-scale result — measured the way the earlier single-seed
 screens were not. It was the strongest and most rigorous observation in the program
 on a SYNTHETIC single concept ("ocean"). S-16 is the program's first evaluation on a
-REAL external benchmark (AxBench, 500 concepts): it tests the very same E7 directional
-effect that looked supported in S-15, and finds that the effect does NOT generalize —
-on AxBench the real DiffMean direction does not beat a label-shuffled control, and
-both are at the floor. S-16 therefore corrects and contextualizes S-15. None of S-1
-through S-16 meets the full six-part bar required for an external claim.
+REAL external benchmark (AxBench, 500 concepts), run at TWO model scales: it tests
+the very same E7 directional effect that looked supported in S-15. At 270M the effect
+is NEGATIVE/at the floor (the model cannot express the concepts at all); at 2B the
+concepts become expressible (~0.135, 3× higher) and a SMALL, statistically-significant
+real-direction advantage appears (+0.004, p=0.011) — but it is tiny, fragile (CI barely
+excludes 0), fails the strict ordinal gate, and a label-shuffled vector still captures
+~97% of the steering effect. So the +0.135 directional effect the synthetic "ocean"
+concept suggested (S-15) does NOT generalize: on a real population of concepts the
+advantage is weak, scale-dependent, and mostly generic. S-16 therefore corrects and
+contextualizes S-15. None of S-1 through S-16 meets the full six-part bar required for
+an external claim.
 
 **"rung-3"** refers to the third level on a five-rung evaluation ladder this project
 uses. Rung 0–2 experiments are cheap, fast, and run on small synthetic datasets.
@@ -136,28 +142,45 @@ a HARKing violation (Hypothesizing After Results are Known) and is a project BLO
 
 ## Current status
 
-**No external-ready findings yet — 118 experiments run. On the REAL AxBench benchmark
-(exp#118) E7's directional steering does NOT beat a label-shuffled control at 270M and
-both conditions are at the floor — the synthetic-"ocean" win (S-15) did NOT generalize.**
+**No external-ready findings yet — 119 experiments run. On the REAL AxBench benchmark,
+across two model scales (exp#118 at 270M, exp#119 at 2B), E7's directional steering
+advantage over a label-shuffled control is SCALE-DEPENDENT and WEAK: NEGATIVE/at the
+floor at 270M, and statistically-significant-but-tiny (+0.004, p=0.011) at 2B where the
+ordinal gate still fails and a shuffled vector captures ~97% of the effect — the
+synthetic-"ocean" +0.135 win (S-15) did NOT generalize.**
 
-118 experiments have run on real Gemma-3-270m, Gemma-3-1B, and Qwen-2.5-0.5B. They
-produced 16 screening/confirmation observations (S-1 through S-16) spanning 18 of
-the 70 hypotheses. Three rung-3 evaluation attempts have now been completed: N17
-(off-shell displacement predicts incoherence), E7 on SYNTHETIC data (relative-steering
-directional control, exp#116/117 — real matched-displacement controls, n=20 seeds,
-off-family LLM judge, cross-scale replication), and E7 on the REAL AxBench benchmark
-(exp#118 — see S-16). The AxBench evaluation is the important reality check: it replaced
-ALL prior synthetic/hand-authored data with AxBench's 500 real concepts, contrast text,
-and held-out eval instructions, scored by an off-family local judge. On AxBench at 270M
-the real DiffMean direction does NOT beat a matched-displacement shuffled-label control
-(real 0.046 vs shuffled 0.056; paired delta −0.010, bootstrap 95% CI [−0.0142, −0.0066],
-paired Wilcoxon p=1.4×10⁻⁶), and BOTH conditions sit at the floor (~0.05 on a 0–1 scale).
-This is a NEGATIVE/NULL result and a methodology win: moving from a synthetic single
-concept to a real 500-concept benchmark caught a non-generalizing claim. By the program's
-own rigor floor there are STILL zero external-ready findings. (Caveat: 270M is tiny and
-AxBench concepts derive from Gemma-2-2B SAE features; the faithful Gemma-2-2B rerun is
-pending and is essential before any verdict on "DiffMean steering on AxBench.") The
-screening observations motivate the next required experiments but are NOT citable claims.
+119 experiments have run on real Gemma-3-270m, Gemma-3-1B, Gemma-2-2B, and
+Qwen-2.5-0.5B. They produced 16 screening/confirmation observations (S-1 through S-16)
+spanning 18 of the 70 hypotheses. Four rung-3 evaluation attempts have now been
+completed: N17 (off-shell displacement predicts incoherence), E7 on SYNTHETIC data
+(relative-steering directional control, exp#116/117 — real matched-displacement
+controls, n=20 seeds, off-family LLM judge, cross-scale replication), and E7 on the
+REAL AxBench benchmark at two scales (exp#118 at 270M, exp#119 at 2B — see S-16). The
+AxBench evaluation is the important reality check: it replaced ALL prior synthetic/
+hand-authored data with AxBench's 500 real concepts, contrast text, and held-out eval
+instructions, scored by an off-family local judge (Qwen2.5-7B-Instruct, 4-bit; judge
+validated at ROC-AUC 0.68 vs AxBench ground truth — WEAK but UNBIASED, disclosed).
+The replication unit is the CONCEPT (n=500). On AxBench the real DiffMean direction's
+advantage over a matched-displacement shuffled-label control is scale-dependent: at
+270M the real direction is significantly WORSE and both conditions are at the floor
+(real 0.046 vs shuffled 0.056; paired delta −0.010, 95% CI [−0.0142, −0.0066],
+p=1.4×10⁻⁶) — the model essentially cannot express the abstract concepts at all. At
+2B (the scale AxBench was built for, layer 20) the concepts become expressible (both
+conditions ~0.135, 3× higher), and the real direction significantly BEATS shuffled —
+but the effect is substantively TINY (+0.004 on a 0–1 scale, ~3% relative; 95% CI
+[+0.0003, +0.0077] barely excludes 0; Wilcoxon p=0.011), the ordinal gate still FAILS,
+and the label-shuffled vector captures ~97% of the steering effect. This is the most
+rigorous evaluation in the program and it is, honestly, a WEAK/negative result for
+DiffMean steering: the real concept direction carries only a weak concept-specific
+signal; most of the steering effect is generic, not direction-specific. It is also a
+methodology win — moving from a synthetic single concept to a real 500-concept
+benchmark at two scales caught a non-generalizing claim. By the program's own rigor
+floor there are STILL zero external-ready findings. (Caveats: the judge is weak
+(AUC 0.68, disclosed, unbiased — noise widens the CI, does not bias the sign); alpha=0.1
+was not per-concept-tuned; a stronger/calibrated judge or per-concept alpha tuning could
+shift the small 2B effect, though the qualitative picture — weak, scale-dependent,
+mostly-generic — is robust to the n=500 paired test.) The screening observations motivate
+the next required experiments but are NOT citable claims.
 
 ---
 
@@ -171,7 +194,7 @@ All verdicts are SCREENING (single-run, n=1) unless marked [rung-3].
 | E2: Fisher layer selection | Is the most linearly separable layer the best one to inject the steering vector? | FALSIFIED | Spearman(Fisher ratio, efficacy) = +0.14, p=0.74; the most separable layer on Gemma-270m (layer 12) is not the best steering layer |
 | E3: Alpha coherence cliff | Does output quality collapse super-linearly once steering strength exceeds a threshold? | SUPPORTED | Confirmed on all three models across a wide range of steering strengths; the safe window emerges with model scale |
 | E4: DiffMean vs PCA-top1 alignment | Do the cheap and expensive vector construction methods produce the same direction? | SUPPORTED | Cosine alignment 0.994–0.999 across 3 models and 4 behaviors; the two methods are effectively equivalent |
-| E7: Norm-relative alpha | Does expressing steering strength as a fraction of activation magnitude reduce variability — and does the real concept direction beat a matched-displacement control? | NEGATIVE/NULL on REAL AxBench (270M) [rung-3]; the earlier synthetic-only directional win did NOT generalize | On the synthetic single concept "ocean" the real direction beat the shuffled control on both scales (S-15, PROVISIONAL). On the REAL AxBench benchmark (500 concepts, off-family local judge AUC 0.68, exp#118) the real DiffMean direction does NOT beat the shuffled control: real 0.046 vs shuffled 0.056, delta −0.010, bootstrap CI [−0.0142, −0.0066], p=1.4e-6 — significant but NEGATIVE, with both conditions at the floor (~0.05/1.0) at 270M. Gemma-2-2B rerun pending — see S-16 |
+| E7: Norm-relative alpha | Does expressing steering strength as a fraction of activation magnitude reduce variability — and does the real concept direction beat a matched-displacement control? | WEAK / SCALE-DEPENDENT on REAL AxBench [rung-3]; the synthetic-only +0.135 win did NOT generalize | On the synthetic single concept "ocean" the real direction beat the shuffled control on both scales (S-15, PROVISIONAL, +0.135). On the REAL AxBench benchmark (500 concepts, off-family local judge AUC 0.68) the advantage is weak and scale-dependent: at 270M (exp#118) real 0.046 vs shuffled 0.056, delta −0.010, CI [−0.0142, −0.0066], p=1.4e-6 — significant but NEGATIVE, both at the floor (~0.05/1.0); at 2B (exp#119) concepts become expressible (both ~0.135) and real BEATS shuffled but only by +0.004 (CI [+0.0003, +0.0077] barely excludes 0, p=0.011), ordinal gate FAILS, shuffled captures ~97% of the effect. Weak, scale-dependent, mostly-generic — see S-16 |
 | E10: Category orthogonality | Do steering vectors for distinct concepts point in different directions? | PARTIAL | Mostly orthogonal (|cosine| < 0.3) except anger and happiness share a component (cosine = +0.48) |
 | E17: Near-orthogonal stacking | Can two behavior vectors be applied simultaneously without mutual interference? | SUPPORTED | Stacking anger + happiness retains 101%/110% of solo behavior despite +0.48 cosine overlap |
 | E18: Interference vs Gram mass | Does interference between stacked vectors grow proportionally to their geometric overlap? | PARTIAL | Stacking retains 85–94% behavior, but retention is not monotone in Gram off-diagonal mass |
@@ -276,10 +299,11 @@ n=20 seeds, real matched-displacement directional controls, an off-family LLM
 judge, and cross-scale replication — but on a SYNTHETIC single concept ("ocean").
 It is nonetheless PROVISIONAL (not external-ready), so it cannot be cited as a
 finding. S-16 then takes the same E7 directional question to a REAL external
-benchmark (AxBench, 500 concepts) and finds the effect does NOT generalize — on
-AxBench the real direction does not beat the shuffled control and both are at the
-floor at 270M. S-16 corrects and contextualizes S-15. Both are documented in full
-below, after S-14.
+benchmark (AxBench, 500 concepts) at TWO model scales and finds the effect is weak
+and scale-dependent: NEGATIVE/at the floor at 270M, and significant-but-tiny (+0.004,
+ordinal-gate-fail, ~97% of the effect captured by a shuffled vector) at 2B. The
+synthetic +0.135 directional win does NOT generalize. S-16 corrects and contextualizes
+S-15. Both are documented in full below, after S-14.
 
 ---
 
@@ -838,31 +862,40 @@ scientific conclusions under the two instruments, and only the validated instrum
 
 **PROVISIONAL — E7 SUPPORTED (directional, scale-replicated) at rung-3, NOT external-ready.**
 This is the closest the program had come to an external-ready finding on synthetic data;
-the external-ready count remains zero. S-16 below shows this synthetic win does NOT
-generalize to the real AxBench benchmark.
+the external-ready count remains zero. S-16 below shows this synthetic +0.135 win does NOT
+generalize to the real AxBench benchmark: across two scales the real-vs-shuffled advantage
+is at best +0.004 (at 2B), and NEGATIVE at 270M.
 
 ---
 
-### S-16: E7 DiffMean steering does NOT beat a shuffled control on the real AxBench benchmark (270M) — the synthetic-ocean win did not generalize
+### S-16: On the real AxBench benchmark, E7 DiffMean steering's advantage over a shuffled control is SCALE-DEPENDENT and WEAK — NEGATIVE/at-the-floor at 270M, significant-but-tiny (+0.004) at 2B — and the synthetic-ocean +0.135 win did not generalize
 
 **This is the program's first evaluation on a REAL, external, published benchmark,
-and it delivers a NEGATIVE result that corrects S-15.** Every prior observation —
-including the strongest one (S-15) — used data this project authored itself: a single
-synthetic concept ("ocean") with hand-built contrast sentences. S-16 replaces ALL of
-that with AxBench, an external benchmark built by independent authors, and asks the
-exact same question S-15 asked — does the real DiffMean concept direction beat a
-matched-displacement label-shuffled control? On the real benchmark, at 270M, the answer
-is NO. This is exactly the kind of correction a real benchmark exists to deliver, and
-it is a SUCCESS of the process: moving off self-authored data caught a claim that did
-not generalize.
+run at TWO model scales, and it delivers a WEAK/negative result that corrects S-15.**
+Every prior observation — including the strongest one (S-15) — used data this project
+authored itself: a single synthetic concept ("ocean") with hand-built contrast
+sentences. S-16 replaces ALL of that with AxBench, an external benchmark built by
+independent authors, and asks the exact same question S-15 asked — does the real
+DiffMean concept direction beat a matched-displacement label-shuffled control? The same
+experiment was run on two model scales: gemma-3-270m-it (layer 16, exp#118) and
+google/gemma-2-2b-it (layer 20, the scale and layer AxBench's data targets, exp#119).
+On the real benchmark the answer is informative and unflattering: at 270M the real
+direction is significantly WORSE and both conditions are at the floor (the model cannot
+express the concepts at all); at 2B the concepts become expressible and the real
+direction significantly beats shuffled, but only by a SUBSTANTIVELY TINY margin (+0.004
+on a 0–1 scale) that fails the strict ordinal gate and is dwarfed by the generic
+(direction-agnostic) displacement effect. This is exactly the kind of correction a real
+benchmark exists to deliver, and it is a SUCCESS of the process: moving off self-authored
+data caught a claim that did not generalize.
 
 ---
 
 **What hypothesis this tests:** "E7 — Norm-relative alpha," and specifically the sharp
 directional question carried over from S-15: at a fixed displacement magnitude, does the
 real concept direction steer behavior better than a content-free (label-shuffled) direction
-of the same length? S-15 answered YES on the synthetic "ocean" concept (provisionally).
-S-16 re-asks it on 500 real, abstract AxBench concepts at 270M.
+of the same length? S-15 answered YES on the synthetic "ocean" concept (provisionally,
++0.135). S-16 re-asks it on 500 real, abstract AxBench concepts at two model scales (270M
+and 2B).
 
 **Every term defined inline (assume the reader cross-references nothing):**
 
@@ -877,11 +910,11 @@ S-16 re-asks it on 500 real, abstract AxBench concepts at 270M.
   builds the vector, AND the eval instructions are all AxBench's, not ours.
 
 - **The off-family LOCAL judge (the behavior instrument).** Behavior was scored by
-  Qwen2.5-7B-Instruct (4-bit, run locally on the 4090). The generator is Gemma; the
-  judge is Qwen — a DIFFERENT model family, so there is no same-family circularity (the
-  audit-disclosed risk that a judge rewards family-typical text rather than genuine
-  on-concept behavior). The judge applies AxBench's own rubric — a concept score (0–2)
-  and a fluency score (0–2) — fluency-gated and rescaled to [0,1].
+  Qwen2.5-7B-Instruct (4-bit, run locally on the 4090) at BOTH scales. The generator is
+  Gemma; the judge is Qwen — a DIFFERENT model family, so there is no same-family
+  circularity (the audit-disclosed risk that a judge rewards family-typical text rather
+  than genuine on-concept behavior). The judge applies AxBench's own rubric — a concept
+  score (0–2) and a fluency score (0–2) — fluency-gated and rescaled to [0,1].
 
 - **The judge AUC-0.68 disclosure (a weak but unbiased instrument).** The judge was
   validated against AxBench's own ground-truth labels: does its concept score separate
@@ -896,92 +929,119 @@ S-16 re-asks it on 500 real, abstract AxBench concepts at 270M.
   of the instrument is transparent.
 
 - **The shuffled-label control (the matched-displacement directional control).** For
-  each concept, v_real = DiffMean(AxBench positive outputs vs negative outputs) at layer
-  16; v_shuf = DiffMean of a matched-displacement, shuffled-label control (the same
-  activations re-partitioned by random labels, then displacement-matched). Steering uses
-  relative_add at the knee (alpha=0.1), so v_real and v_shuf push the activation by the
-  identical magnitude — only the DIRECTION differs. If the real direction beats the
-  shuffled one, the effect is attributable to the concept's meaning, not the mechanics
-  of pushing the activation around.
+  each concept, v_real = DiffMean(AxBench positive outputs vs negative outputs) at the
+  injection layer (layer 16 on 270M, layer 20 on 2B); v_shuf = DiffMean of a
+  matched-displacement, shuffled-label control (the same activations re-partitioned by
+  random labels, then displacement-matched). Steering uses relative_add at the knee
+  (alpha=0.1), so v_real and v_shuf push the activation by the identical magnitude — only
+  the DIRECTION differs. If the real direction beats the shuffled one, the effect is
+  attributable to the concept's meaning, not the mechanics of pushing the activation
+  around. The fraction of the steering effect that v_shuf already captures is the measure
+  of how much of steering is GENERIC (direction-agnostic) rather than concept-specific.
 
 - **The concept as the replication unit (n=500).** The independent replication unit here
   is the CONCEPT, not a bootstrap resample and not a generation seed. There are 500
-  independent concepts. Per concept: build v_real and v_shuf, steer gemma-3-270m-it with
+  independent concepts. Per concept: build v_real and v_shuf, steer the model with
   relative_add at alpha=0.1 on 10 AxBench eval instructions, and judge each steered output.
   The real-vs-shuffled comparison is then paired across the 500 concepts (paired Wilcoxon
   + bootstrap CI + ordinal gate via `stats.rigor_report`).
 
-- **The floor effect.** "At the floor" means both the real and the shuffled conditions
-  score near the bottom of the 0–1 behavior scale (~0.05). The 270M model barely expresses
-  AxBench's abstract concepts under steering AT ALL — neither the real direction nor the
-  control produces meaningful concept expression.
+- **The floor effect (270M only).** "At the floor" means both the real and the shuffled
+  conditions score near the bottom of the 0–1 behavior scale (~0.05). The 270M model barely
+  expresses AxBench's abstract concepts under steering AT ALL — neither the real direction
+  nor the control produces meaningful concept expression. At 2B this floor is escaped: both
+  conditions score ~0.135 (3× higher), so the concepts ARE expressible and the real-vs-
+  shuffled question becomes meaningful.
 
-**Design specifics.** Model: gemma-3-270m-it, injection layer 16, operation relative_add,
-alpha=0.10 (the knee). Concepts: all 500 from `pyvene/axbench-concept500`. Eval: 10
-AxBench held-out instructions per concept. Judge: Qwen2.5-7B-Instruct (4-bit, local,
-off-family), AxBench concept(0–2)+fluency(0–2) rubric, fluency-gated to [0,1]. Primary
-comparison: real DiffMean direction vs matched-displacement shuffled-label control, paired
-across the 500 concepts.
+**Design specifics.** Same experiment at two scales. (270M, exp#118) model gemma-3-270m-it,
+injection layer 16. (2B, exp#119) model google/gemma-2-2b-it, injection layer 20 — matching
+the 2b/layer-20 model AxBench's data was built from. Both: operation relative_add, alpha=0.10
+(the knee); all 500 concepts from `pyvene/axbench-concept500`; 10 AxBench held-out eval
+instructions per concept; judge Qwen2.5-7B-Instruct (4-bit, local, off-family), AxBench
+concept(0–2)+fluency(0–2) rubric, fluency-gated to [0,1]; primary comparison = real DiffMean
+direction vs matched-displacement shuffled-label control, paired across the 500 concepts.
 
-**Results (exp#118, tag E7-axbench-gemma-3-270m-it):**
+**Results — 270M (exp#118) vs 2B (exp#119), side by side:**
 
-| Quantity | Value |
-|---|---|
-| Mean behavior, REAL direction | 0.0459 |
-| Mean behavior, SHUFFLED control | 0.0562 |
-| Paired delta (real − shuffled) | **−0.0103** |
-| Bootstrap 95% CI on the delta | **[−0.0142, −0.0066]** (excludes 0, NEGATIVE) |
-| Paired Wilcoxon p | **1.41 × 10⁻⁶** |
-| Replication unit | concept (n=500 independent concepts) |
-| Ordinal gate | FALSE |
-| external_ready | FALSE |
-| Both conditions | at the FLOOR (~0.05 on a 0–1 scale) |
-| Judge validation (AxBench ground truth) | ROC-AUC = 0.68 (below the 0.80 bar — disclosed) |
+| Quantity | 270M (exp#118, layer 16) | 2B (exp#119, layer 20) |
+|---|---|---|
+| Mean behavior, REAL direction | 0.0459 | 0.1382 |
+| Mean behavior, SHUFFLED control | 0.0562 | 0.1342 |
+| Paired delta (real − shuffled) | **−0.0103** | **+0.0040** |
+| Bootstrap 95% CI on the delta | **[−0.0142, −0.0066]** (excludes 0, NEGATIVE) | **[+0.0003, +0.0077]** (barely excludes 0, POSITIVE) |
+| Paired Wilcoxon p | **1.41 × 10⁻⁶** | **0.0106** |
+| Replication unit | concept (n=500) | concept (n=500) |
+| Ordinal gate | FALSE | FALSE |
+| external_ready | FALSE | FALSE |
+| Absolute concept-expression | at the FLOOR (~0.05/1.0) | expressible (~0.135/1.0, 3× higher) |
+| Shuffled control's share of the steering effect | — (both at floor) | ~97% (0.1342 / 0.1382) |
+| Judge validation (AxBench ground truth) | ROC-AUC = 0.68 (below the 0.80 bar — disclosed) | same judge, AUC 0.68 (disclosed) |
 
-**The sign-bug correction.** The driver's auto-label initially read "DIRECTIONAL" — that
-was a SIGN-BLIND bug: it checked statistical significance and that the CI excluded zero,
-but it did NOT check the SIGN of the delta. The CORRECTED verdict is NEGATIVE / NULL. The
-real DiffMean direction does NOT beat the shuffled control; it is in fact slightly — but,
-given n=500, significantly — WORSE, with both conditions at the floor. The significant
-negative delta is statistically real but substantively tiny (0.01 on a 0–1 scale), and
-both conditions essentially fail to express the concept.
+**The sign-bug correction (270M).** On the 270M run the driver's auto-label initially read
+"DIRECTIONAL" — that was a SIGN-BLIND bug: it checked statistical significance and that the
+CI excluded zero, but it did NOT check the SIGN of the delta. The CORRECTED 270M verdict is
+NEGATIVE / NULL. The real DiffMean direction does NOT beat the shuffled control; it is in
+fact slightly — but, given n=500, significantly — WORSE, with both conditions at the floor.
+The significant negative delta is statistically real but substantively tiny (0.01 on a 0–1
+scale), and both conditions essentially fail to express the concept.
 
-**Honest headline.** E7's directional steering effect — which looked SUPPORTED on the
-EASY synthetic "ocean" concept (+0.135, S-15) and PROVISIONAL on the controlled judge run
-— does NOT generalize to AxBench's 500 abstract concepts at 270M. On the real benchmark,
-with an off-family judge, DiffMean relative-steering provides NO advantage over a
-label-shuffled control, and absolute concept-expression is at the floor. This aligns with
-AxBench's own published finding that steering is hard. It is the kind of correction the
-real benchmark exists to deliver, and catching it is a methodology win.
+**The 2B reading — DIRECTIONAL but substantively TINY.** At 2B the concepts become
+expressible (both conditions ~0.135) and the real direction significantly BEATS shuffled.
+But every quantitative qualifier says the effect is weak: the delta is +0.004 on a 0–1 scale
+(~3% relative edge); the 95% CI [+0.0003, +0.0077] BARELY clears zero; the ordinal gate FAILS
+(the worst real concept does not beat the best shuffled concept); and a label-shuffled vector
+already captures ~97% of the steering effect (0.1342 of 0.1382). The honest reading is
+therefore: at 2B the real concept direction carries a real but WEAK concept-specific signal,
+and the overwhelming majority of the steering effect is GENERIC — produced by the
+displacement itself, not by its direction.
+
+**Honest headline — the cross-scale synthesis.** On the real AxBench benchmark, DiffMean
+relative-steering's advantage over a matched-displacement shuffled-label control is
+SCALE-DEPENDENT and WEAK. At 270M it is NEGATIVE / at the floor (the model can't express the
+concepts at all). At 2B concepts become expressible and a SMALL, statistically-significant
+real-direction advantage appears (+0.004, p=0.011) — but it is tiny, fragile (CI barely
+excludes 0), fails the strict ordinal gate, and is dwarfed by the generic-displacement effect
+(shuffled gets ~97% of it). This is a FAR cry from the +0.135 directional effect the EASY
+synthetic "ocean" concept suggested (S-15). The real benchmark shows that on 500 abstract
+concepts, the real concept direction carries only a WEAK concept-specific signal; most of the
+steering effect is generic, not direction-specific. This aligns with AxBench's own published
+finding that steering is hard.
+
+**Methodology lesson (stated plainly).** The synthetic single-concept "ocean" evaluation
+massively OVERSTATED the effect (+0.135). Only a real benchmark + a matched control + a
+population of 500 concepts, run at two scales, revealed how weak and scale-dependent the true
+effect is. A controlled directional win on a single, self-authored, concept-dominated contrast
+set is NOT evidence that the method works on real, abstract, diverse concepts — internal
+statistics can be clean and still mislead. This is the most rigorous evaluation in the program,
+and it is, honestly, a WEAK/negative result for DiffMean steering. There are STILL zero
+external-ready results.
 
 **Caveats / next steps (stated prominently):**
 
-1. **270M is TINY and AxBench is built for Gemma-2-2B.** AxBench's concepts derive from
-   Gemma-2-2B SAE features. The floor result is most likely a model-capacity effect — a
-   270M model may simply be unable to render these abstract concepts on command. The
-   FAITHFUL test is Gemma-2-2B (download in progress); that rerun is ESSENTIAL before any
-   verdict on "DiffMean steering on AxBench." Until then S-16 is a verdict about 270M, not
-   about the method in general.
-2. **The judge is weak (AUC 0.68).** Disclosed and unbiased: n=500 keeps the paired
-   comparison valid (noise widens the CI, does not bias the sign), but a stronger or
-   calibrated judge would tighten the estimate.
+1. **The judge is weak (AUC 0.68).** Disclosed and unbiased: n=500 keeps the paired
+   comparison valid (label noise WIDENS the CI, does not bias the SIGN), but a stronger or
+   human-calibrated judge would tighten the estimate and could shift the small 2B effect.
+2. **Alpha=0.1 was not per-concept-tuned.** A single global knee was used for all 500
+   concepts at both scales; per-concept alpha tuning could shift the small 2B effect (in
+   either direction). The qualitative picture — weak, scale-dependent, mostly-generic — is
+   robust to the n=500 paired test, but the precise size of the 2B edge is not pinned down.
 3. **The synthetic "ocean" win (S-15) is now contextualized as an EASY-concept artifact
-   that did not generalize.** This is the lesson: a controlled directional win on a single,
-   self-authored, concept-dominated contrast set is NOT evidence that the method works on
-   real, abstract, diverse concepts. Synthetic single-concept evaluation can mislead even
-   when its internal statistics are clean.
+   that did not generalize.** S-16 across two scales is the real-benchmark verdict on E7 and
+   SUPERSEDES the synthetic S-15.
 
 **Cross-reference:** S-16 corrects and contextualizes **S-15** (the synthetic "ocean"
-relative-steering directional win). S-15's effect was real within its synthetic setting
-but did not survive the move to a real benchmark.
+relative-steering directional win, +0.135). S-15's effect was real within its synthetic
+setting but did not survive the move to a real benchmark at either scale.
 
-**Model / data:** gemma-3-270m-it (layer 16, relative_add, alpha=0.10); AxBench
-`pyvene/axbench-concept500`, all 500 concepts, 10 eval instructions each; off-family local
-judge Qwen2.5-7B-Instruct (4-bit), AxBench concept+fluency rubric (judge AUC 0.68); exp#118.
+**Model / data:** gemma-3-270m-it (layer 16, exp#118) and google/gemma-2-2b-it (layer 20,
+exp#119); both relative_add, alpha=0.10; AxBench `pyvene/axbench-concept500`, all 500 concepts,
+10 eval instructions each; off-family local judge Qwen2.5-7B-Instruct (4-bit), AxBench
+concept+fluency rubric (judge AUC 0.68).
 
-**NEGATIVE / NULL — E7 directional effect FALSIFIED on real AxBench at 270M.** The
-synthetic-ocean win did not generalize. The external-ready count remains zero. The
-faithful Gemma-2-2B rerun is pending and required before any general verdict.
+**WEAK / SCALE-DEPENDENT — E7's directional effect on real AxBench is NEGATIVE/at-the-floor at
+270M and significant-but-tiny (+0.004, ordinal-fail, ~97%-generic) at 2B.** The synthetic-ocean
++0.135 win did not generalize. This supersedes the synthetic S-15 as the real-benchmark verdict
+on E7. The external-ready count remains zero.
 
 ---
 

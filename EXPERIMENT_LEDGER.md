@@ -20,9 +20,10 @@ happens across five dimensions simultaneously.
 **The models are small.** The primary model is Gemma-3-270m-it (270 million
 parameters, Google), run on a single RTX 4090 laptop with 16 GB of video RAM.
 Experiments also ran on Qwen-2.5-0.5B-Instruct (Alibaba, 500M parameters) and
-Gemma-3-1B-it (1 billion parameters). None of these are large models; they are
-used because fast iteration on a single GPU is possible. The standard evaluation
-model (Gemma-2-2B-it) has not yet been used.
+Gemma-3-1B-it (1 billion parameters). The standard evaluation model, Gemma-2-2B-it
+(2 billion parameters), was first used in exp#119 (the 2B AxBench evaluation). None
+of these are large models; they are used because fast iteration on a single GPU is
+possible.
 
 **The first 113 experiments are SCREENING (n=1, single seed).** A result is
 SCREENING when it is run once. It can point you in the right direction but cannot
@@ -113,7 +114,8 @@ DISCARD is about whether this particular config beat the champion.
 The first 113 experiments in this ledger ran at rung 1 or rung 2, except for one
 rung-3 evaluation of N17 (off-shell displacement predicts incoherence). The E7
 controlled-confirmation campaign (exp#114–117) and the E7-on-AxBench real-benchmark
-evaluation (exp#118) also run at rung 3. No experiment has reached rung 4 yet.
+evaluations (exp#118 at 270M, exp#119 at 2B) also run at rung 3. No experiment has
+reached rung 4 yet.
 
 ---
 
@@ -138,7 +140,7 @@ is effectively broken.
 
 ## Campaign arc — the story behind the rows
 
-The 118 experiments ran in twelve distinct campaigns. Each campaign asked one
+The 119 experiments ran in twelve distinct campaigns. Each campaign asked one
 focused question. Reading the tags in the ledger, the campaign prefix tells you
 which batch you are looking at.
 
@@ -158,7 +160,7 @@ which batch you are looking at.
 | **C11 — cross-behavior sweep** | 98–109 | `C11-xbeh-*` | E3 cross-behavior, E10, E17, E18, E22, E35, E40 | Gemma-270m @L16 | Behavior: ocean, anger, happiness, formality at α=0, 0.1, 0.2 | Cliff confirmed for all four behaviors. Anger steers most strongly (behavior 0.77 at α=0.1), formality least (0.53). Consistent PPL rise across all concepts. Also tested: 2-vector stacking (anger+happiness retains 101%/110% of solo), 4-vector cumulative budget (PPL 138→4518 as total α rises). Cross-layer cosine 0.75–0.90 (E40 SUPPORTED). |
 | **Trainable methods (E15/E45/E20)** | 110–113 | `E15-gate-*`, `E45-hypersteer-*`, `E20-saets-*` | E15, E45, E20 | Gemma-3-270m-it (smoke scale) | Introduced gradient-trained auxiliary components for the first time in this project: (110) multi-layer logistic gate for E15; (111) MLP hypernetwork for E45; (112–113) SAE + gradient-ascent vector optimizer for E20. Base Gemma weights frozen throughout. | All three methods FALSIFIED or INCONCLUSIVE at smoke scale. Offline unit tests confirm the mechanisms work on clean synthetic data; failures are scale/data confounds, not implementation errors. Specifically: E15 gate overfits tiny in-dist data (OOD PR-AUC gap −0.1679, below +0.06 gate); E45 hypernetwork predictions too noisy at n=4 behaviors (held-out cosine −0.02 ± 0.61); E20 SAE-TS vector optimizer collapses three vectors to one direction (Gram mass 3.00 = maximum — *less* orthogonal than DiffMean baseline at 2.13). New modules: `src/steering/gate.py`, `src/steering/hypersteer.py`, `src/steering/sae.py`; drivers: `scripts/run_e15.py`, `scripts/run_e45.py`, `scripts/run_e20.py`. |
 | **E7 controlled confirmation** | 114–117 | `E7-confirm-proxy-*` (114–115), `E7-confirm-judge-*` (116–117) | E7 | Gemma-3-270m-it @L16, Gemma-3-1B-it @L18 | The program's first run with REAL matched-displacement controls, n=20 seeds, an OFF-FAMILY LLM judge, and cross-scale replication — on the SYNTHETIC single concept "ocean". Conditions at IDENTICAL displacement `alpha×‖h‖` (relative_add normalizes to a unit vector): (a) real DiffMean "ocean" direction; (b) matched random unit direction; (c) shuffled-label direction (DiffMean of a random re-partition of the same pooled activations — same data, labels destroyed = primary directional control). exp#114/115 used the OLD activation-projection lexicon proxy; exp#116/117 used a validated off-family judge (Google Gemini gemini-2.5-flash-lite, temp 0, rating behavior + coherence 0–10 separately; validation: ocean prose 8/10, off-topic 0/10, keyword-soup "ocean ocean sea sea" only 2/10). Four-part rigor contract via `stats.rigor_report`. Drivers: `scripts/confirm_e7.py` over `src/steering/controls.py` + `stats.py` + `judge.py`. | **PROVISIONAL cross-scale directional WIN on SYNTHETIC data, not external-ready — and SUPERSEDED on the real benchmark by exp#118 (see next campaign).** Under the off-family judge, the real direction beats the shuffled-label control on BOTH scales at the knee alpha=0.10: 270M (exp#116) +0.135, CI [+0.084, +0.184], Wilcoxon p=0.0004; 1B (exp#117) +0.096, CI [+0.025, +0.163], p=0.014 — both Holm-rejected across the alpha family, both bootstrap CIs exclude 0, extraction stability 0.94/0.92. The directional effect REPLICATES across scale on the synthetic concept. Falls short on only the two strictest legs: the ORDINAL gate fails on both scales (the shuffled control is unexpectedly strong — a random split of a tiny concept-dominated set still recovers ~0.45–0.60 of the real direction, so the per-seed extremes overlap), and MATCHED-COHERENCE fails on 1B (real coherence 0.345 vs shuffled 0.699 at the knee). The instrument-upgrade story is the headline: the SAME experiment under the OLD proxy (exp#114/115) gave a noise-level +0.022 on 270m and even shuffled>real (−0.019) on 1B — concluding "does not replicate"; the validated judge amplified the behavior signal ~6× and reversed that artifact. Secondary real-vs-random control: p=0.0001/0.0004; the random direction at matched displacement collapses coherence to ~0.002 (PPL ~52,000 — gibberish). **This synthetic win did NOT generalize to the real AxBench benchmark — see exp#118.** |
-| **E7 on real AxBench** | 118 | `E7-axbench-gemma-3-270m-it` | E7 | Gemma-3-270m-it @L16 | The program's first evaluation on a REAL, external, published benchmark — AxBench (Wu/Zhong et al., ICML 2025, arXiv:2501.17148; dataset `pyvene/axbench-concept500`). AxBench replaced ALL prior synthetic/hand-authored data: it supplies the 500 concepts, the contrast text that builds the DiffMean vector, AND the held-out eval instructions. Per concept: v_real = DiffMean(AxBench pos vs neg outputs) @L16; v_shuf = matched-displacement shuffled-label control; steer with relative_add at the knee alpha=0.10 on 10 AxBench eval instructions; score each output with an OFF-FAMILY LOCAL judge (Qwen2.5-7B-Instruct, 4-bit, on the 4090 — Gemma generator + Qwen judge = no same-family circularity), AxBench concept(0–2)+fluency(0–2) rubric, fluency-gated to [0,1]. Replication unit = CONCEPT (n=500 independent concepts). Paired real-vs-shuffled via `stats.rigor_report`. Judge DISCLOSURE: validated against AxBench ground-truth labels at ROC-AUC = 0.68 (below the 0.80 bar) — weak but UNBIASED, so the paired comparison is valid (noise widens the CI, does not bias the sign). | **NEGATIVE / NULL — the synthetic-ocean E7 win did NOT generalize, and this SUPERSEDES exp#116/117 as the real-benchmark evaluation of E7.** On AxBench at 270M the real DiffMean direction does NOT beat the shuffled control: mean behavior real 0.0459 vs shuffled 0.0562; paired delta −0.0103, bootstrap 95% CI [−0.0142, −0.0066] (excludes 0, NEGATIVE), paired Wilcoxon p=1.41×10⁻⁶; ordinal gate FALSE; external_ready FALSE. BOTH conditions are at the FLOOR (~0.05 on 0–1): the 270M model barely expresses AxBench's abstract concepts under steering at all. The driver's auto-label initially said "DIRECTIONAL" — a SIGN-BLIND bug (checked significance + CI-excludes-0 but not the SIGN); CORRECTED to NEGATIVE/NULL (the real direction is significantly but tiny-ly WORSE, both at floor). Aligns with AxBench's own finding that steering is hard, and is the kind of correction a real benchmark exists to deliver. CAVEAT: 270M is tiny and AxBench concepts derive from Gemma-2-2B SAE features — the floor is likely a model-capacity effect; the FAITHFUL Gemma-2-2B rerun (download in progress) is essential before any general verdict on "DiffMean steering on AxBench." See FINDINGS.md S-16. |
+| **E7 on real AxBench (270M vs 2B)** | 118–119 | `E7-axbench-*` | E7 | Gemma-3-270m-it @L16 (exp#118); google/gemma-2-2b-it @L20 (exp#119) | The program's first evaluation on a REAL, external, published benchmark — AxBench (Wu/Zhong et al., ICML 2025, arXiv:2501.17148; dataset `pyvene/axbench-concept500`) — run at TWO scales. AxBench replaced ALL prior synthetic/hand-authored data: it supplies the 500 concepts, the contrast text that builds the DiffMean vector, AND the held-out eval instructions. Per concept: v_real = DiffMean(AxBench pos vs neg outputs) at the injection layer; v_shuf = matched-displacement shuffled-label control; steer with relative_add at the knee alpha=0.10 on 10 AxBench eval instructions; score each output with an OFF-FAMILY LOCAL judge (Qwen2.5-7B-Instruct, 4-bit, on the 4090 — Gemma generator + Qwen judge = no same-family circularity), AxBench concept(0–2)+fluency(0–2) rubric, fluency-gated to [0,1]. Replication unit = CONCEPT (n=500 independent concepts). Paired real-vs-shuffled via `stats.rigor_report`. Judge DISCLOSURE: validated against AxBench ground-truth labels at ROC-AUC = 0.68 (below the 0.80 bar) — weak but UNBIASED, so the paired comparison is valid (noise widens the CI, does not bias the sign). 2B @L20 matches the 2b/layer-20 model AxBench's data targets. | **WEAK / SCALE-DEPENDENT — the synthetic-ocean E7 +0.135 win did NOT generalize; this SUPERSEDES exp#116/117 as the real-benchmark evaluation of E7.** At 270M (exp#118) the real DiffMean direction does NOT beat shuffled: real 0.0459 vs shuffled 0.0562; delta −0.0103, CI [−0.0142, −0.0066] (NEGATIVE), p=1.41×10⁻⁶; ordinal FALSE — BOTH at the FLOOR (~0.05/1.0), the 270M model barely expresses the abstract concepts at all (a sign-blind auto-label "DIRECTIONAL" was corrected to NEGATIVE/NULL). At 2B (exp#119) concepts become expressible (both ~0.135, 3× higher); the real direction significantly BEATS shuffled but only by +0.0040 (CI [+0.0003, +0.0077] barely excludes 0; p=0.0106), ordinal gate FALSE, and a shuffled vector captures ~97% of the steering effect (0.1342/0.1382) — DIRECTIONAL but substantively TINY, mostly-generic. Synthesis: DiffMean relative-steering's advantage over a matched control is scale-dependent and WEAK — negative/floor at 270M, tiny/fragile at 2B. Aligns with AxBench's own finding that steering is hard, and is the kind of correction a real benchmark exists to deliver. Both rung-3 real-benchmark evals; neither external_ready. CAVEATS: judge is weak (AUC 0.68, disclosed, unbiased); alpha=0.1 not per-concept-tuned. See FINDINGS.md S-16. |
 
 *Note: The C11 cross-behavior campaign also included embedded tests of E10 (category
 orthogonality), E17/E18 (stacking), E22 (norm budget), E28 (low-rank subspace),
@@ -245,53 +247,69 @@ scales (the shuffled control is unexpectedly strong, so per-seed extremes overla
 and fails matched-coherence on 1B at the knee. This is E7's promotion to rung 3 — the
 first hypothesis to reach rung 3 via this controlled protocol.
 
-**Phase 11: First evaluation on a REAL external benchmark — E7 on AxBench (NEGATIVE).**
-Experiment 118 took the E7 directional question off self-authored synthetic data and onto
+**Phase 11: First evaluation on a REAL external benchmark — E7 on AxBench at two scales (WEAK / SCALE-DEPENDENT).**
+Experiments 118–119 took the E7 directional question off self-authored synthetic data and onto
 AxBench (Wu/Zhong et al., ICML 2025, arXiv:2501.17148; `pyvene/axbench-concept500`) — the
-first time this program evaluated against an external, published benchmark. AxBench supplied
-EVERYTHING: the 500 concepts, the contrast text that builds each DiffMean vector, and the
-held-out eval instructions. Behavior was scored by an off-family LOCAL judge (Qwen2.5-7B-
-Instruct, 4-bit, on the 4090 — Gemma generator + Qwen judge = no same-family circularity)
-using AxBench's concept+fluency rubric. The replication unit was the CONCEPT (n=500
-independent concepts), and the primary comparison was paired real-vs-shuffled at the knee
-(alpha=0.10) on 270M. The result is NEGATIVE/NULL: the real DiffMean direction does NOT beat
-the matched-displacement shuffled-label control (real 0.0459 vs shuffled 0.0562; paired delta
-−0.0103, bootstrap 95% CI [−0.0142, −0.0066], paired Wilcoxon p=1.41×10⁻⁶), and BOTH
-conditions sit at the FLOOR (~0.05/1.0). A sign-blind auto-label bug initially read
-"DIRECTIONAL" (it checked significance + CI-excludes-0 but not the SIGN); corrected to
-NEGATIVE. The judge was disclosed as weak (validated at ROC-AUC = 0.68 against AxBench
-ground truth, below the 0.80 bar) but UNBIASED — n=500 keeps the paired test valid, label
-noise widens the CI without biasing the sign. This is the headline reality check: the
-synthetic "ocean" win of exp#116/117 (S-15) did NOT generalize to AxBench's 500 abstract
-concepts at 270M, and exp#118 SUPERSEDES exp#116/117 as the real-benchmark evaluation of E7.
-A negative result rigorously obtained on a real benchmark is a SUCCESS of the process — it
-is exactly the correction the benchmark exists to deliver, and it aligns with AxBench's own
-finding that steering is hard. CAVEAT: 270M is tiny and AxBench's concepts derive from
-Gemma-2-2B SAE features, so the floor is likely a model-capacity effect; the faithful
-Gemma-2-2B rerun (download in progress) is essential before any general verdict.
+first time this program evaluated against an external, published benchmark — and ran the
+identical experiment at two model scales. AxBench supplied EVERYTHING: the 500 concepts, the
+contrast text that builds each DiffMean vector, and the held-out eval instructions. Behavior
+was scored by an off-family LOCAL judge (Qwen2.5-7B-Instruct, 4-bit, on the 4090 — Gemma
+generator + Qwen judge = no same-family circularity) using AxBench's concept+fluency rubric.
+The replication unit was the CONCEPT (n=500 independent concepts), and the primary comparison
+was paired real-vs-shuffled at the knee (alpha=0.10).
 
-**Status:** 118 experiments total; the first 113 are screening (n=1), exp#114–117 are the
-controlled E7 confirmation on SYNTHETIC data (n=20), and exp#118 is the first REAL-benchmark
-evaluation (E7 on AxBench, n=500 concepts). No experiment has cleared the full six-part
-statistical gate for an external claim, so there are still zero external-ready findings. The
-key recent result is the AxBench reality check (exp#118): E7's synthetic directional win does
-NOT generalize — on the real benchmark the real direction does not beat the shuffled control
-and both are at the floor at 270M (a NEGATIVE/NULL result; see FINDINGS.md S-16). N17 remains
-a strong rung-3 geometry result with its own caveats. The next required step for E7 is the
-FAITHFUL Gemma-2-2B rerun (download in progress) — AxBench is built for Gemma-2-2B, so the
-270M floor is likely a capacity effect and a 2B result is essential before any verdict on
-"DiffMean steering on AxBench." Beyond that: a stronger/calibrated judge (current AUC 0.68),
-and on the synthetic side a cleaner null control than label-shuffling.
+At **270M (exp#118, layer 16)** the result is NEGATIVE/NULL: the real DiffMean direction does
+NOT beat the matched-displacement shuffled-label control (real 0.0459 vs shuffled 0.0562;
+paired delta −0.0103, bootstrap 95% CI [−0.0142, −0.0066], paired Wilcoxon p=1.41×10⁻⁶), and
+BOTH conditions sit at the FLOOR (~0.05/1.0) — the 270M model essentially cannot express
+AxBench's abstract concepts under steering. A sign-blind auto-label bug initially read
+"DIRECTIONAL" (it checked significance + CI-excludes-0 but not the SIGN); corrected to NEGATIVE.
+
+At **2B (exp#119, google/gemma-2-2b-it, layer 20 — matching the 2b/layer-20 model AxBench's
+data targets)** concepts become expressible: both conditions score ~0.135, 3× higher than at
+270M. The real direction significantly BEATS shuffled — but only by +0.0040 (bootstrap 95% CI
+[+0.0003, +0.0077], which BARELY excludes 0; paired Wilcoxon p=0.0106), the ordinal gate still
+FAILS, and a label-shuffled vector already captures ~97% of the steering effect (0.1342 of
+0.1382). So at 2B the effect is DIRECTIONAL but substantively TINY and mostly GENERIC: the real
+concept direction carries only a weak concept-specific signal on top of a large
+direction-agnostic displacement effect.
+
+**Cross-scale synthesis.** On the real AxBench benchmark, DiffMean relative-steering's advantage
+over a matched-displacement shuffled-label control is SCALE-DEPENDENT and WEAK — NEGATIVE/at the
+floor at 270M, and significant-but-tiny (+0.004, fragile CI, ordinal-fail, ~97%-generic) at 2B.
+This is a FAR cry from the +0.135 directional effect the EASY synthetic "ocean" concept suggested
+(exp#116/117, S-15), which did NOT generalize. exp#118–119 SUPERSEDE exp#116/117 as the
+real-benchmark evaluation of E7. A weak/negative result rigorously obtained on a real benchmark
+is a SUCCESS of the process — the synthetic single-concept evaluation massively overstated the
+effect, and only a real benchmark + matched control + a population of 500 concepts at two scales
+revealed how weak and scale-dependent the true effect is. This aligns with AxBench's own finding
+that steering is hard. Both 118 and 119 are rung-3-style real-benchmark evals; neither is
+external_ready. CAVEATS: the judge is weak (AUC 0.68, disclosed, unbiased — noise widens the CI,
+does not bias the sign); alpha=0.1 was not per-concept-tuned; a stronger/calibrated judge or
+per-concept alpha tuning could shift the small 2B effect, but the qualitative picture is robust
+to the n=500 paired test.
+
+**Status:** 119 experiments total; the first 113 are screening (n=1), exp#114–117 are the
+controlled E7 confirmation on SYNTHETIC data (n=20), and exp#118–119 are the first REAL-benchmark
+evaluation (E7 on AxBench, n=500 concepts, at 270M and 2B). No experiment has cleared the full
+six-part statistical gate for an external claim, so there are still zero external-ready findings.
+The key recent result is the AxBench reality check (exp#118–119): E7's synthetic +0.135 directional
+win does NOT generalize — on the real benchmark the real-vs-shuffled advantage is negative/at-the-
+floor at 270M and significant-but-tiny (+0.004, ordinal-fail, ~97%-generic) at 2B (a WEAK/
+SCALE-DEPENDENT result; see FINDINGS.md S-16). N17 remains a strong rung-3 geometry result with its
+own caveats. The next steps for E7 are a stronger/calibrated judge (current AUC 0.68) and
+per-concept alpha tuning to pin down the small 2B edge, plus — on the synthetic side — a cleaner
+null control than label-shuffling.
 
 ---
 
 ## Per-experiment rows
 
-All 118 experiments are listed below. The first 113 are SCREENING tier (n=1, single
+All 119 experiments are listed below. The first 113 are SCREENING tier (n=1, single
 seed); exp#114–117 are the E7 controlled confirmation on SYNTHETIC data (n=20 seeds,
-off-family judge, matched-displacement controls — rung 3, PROVISIONAL); exp#118 is the
-first REAL-benchmark evaluation (E7 on AxBench, n=500 concepts, off-family local judge —
-rung 3, NEGATIVE/NULL). For the first 113, every
+off-family judge, matched-displacement controls — rung 3, PROVISIONAL); exp#118–119 are
+the first REAL-benchmark evaluation (E7 on AxBench, n=500 concepts, off-family local
+judge — rung 3; 270M NEGATIVE/NULL, 2B DIRECTIONAL-but-tiny). For the first 113, every
 composite is negative in this dataset because the current
 instrument has a known issue: the safety baseline (CR_jailbreak) is non-zero even
 at alpha=0 on the real Gemma models (due to the model's own refusal behavior), and
@@ -648,20 +666,22 @@ evaluation of E7.**
 
 ---
 
-### E7 on the real AxBench benchmark (exp 118)
+### E7 on the real AxBench benchmark — 270M vs 2B (exp 118–119)
 
 Campaign: `E7-axbench`. The program's FIRST evaluation on a real, external, published
-benchmark. Concept set: all 500 concepts from AxBench (Wu/Zhong et al., ICML 2025,
-arXiv:2501.17148; dataset `pyvene/axbench-concept500`). Model: gemma-3-270m-it @L16,
-operation relative_add, alpha=0.10 (the knee). **AxBench replaced ALL prior synthetic/
-hand-authored data** — it supplies the 500 concepts, the contrast text that builds each
-DiffMean vector, AND the held-out eval instructions (10 per concept).
+benchmark, run at TWO model scales. Concept set: all 500 concepts from AxBench (Wu/Zhong
+et al., ICML 2025, arXiv:2501.17148; dataset `pyvene/axbench-concept500`). Models:
+gemma-3-270m-it @L16 (exp#118) and google/gemma-2-2b-it @L20 (exp#119 — layer 20 matches
+the 2b/layer-20 model AxBench's data was built from). Both: operation relative_add,
+alpha=0.10 (the knee). **AxBench replaced ALL prior synthetic/hand-authored data** — it
+supplies the 500 concepts, the contrast text that builds each DiffMean vector, AND the
+held-out eval instructions (10 per concept).
 
-**Design.** Per concept: v_real = DiffMean(AxBench positive vs negative outputs) @L16;
-v_shuf = matched-displacement shuffled-label control (same activations, random labels,
-displacement-matched). Steer with relative_add at alpha=0.10 on the 10 AxBench eval
-instructions; score each steered output. **Replication unit = the CONCEPT (n=500
-independent concepts — not bootstraps, not generation seeds).** Primary comparison:
+**Design.** Per concept: v_real = DiffMean(AxBench positive vs negative outputs) at the
+injection layer; v_shuf = matched-displacement shuffled-label control (same activations,
+random labels, displacement-matched). Steer with relative_add at alpha=0.10 on the 10
+AxBench eval instructions; score each steered output. **Replication unit = the CONCEPT
+(n=500 independent concepts — not bootstraps, not generation seeds).** Primary comparison:
 paired real-vs-shuffled across the 500 concepts via `stats.rigor_report` (paired Wilcoxon
 + bootstrap CI + ordinal gate).
 
@@ -678,25 +698,45 @@ the AUC is disclosed so readers can weigh the instrument.
 
 | # | tag | hyp | rung | model | benchmark | repl. unit | real beh | shuffled beh | Δ (real−shuf) | bootstrap 95% CI | Wilcoxon p | ordinal gate | external_ready | judge AUC | verdict |
 |---|-----|-----|------|-------|-----------|-----------|----------|--------------|---------------|------------------|-----------|--------------|----------------|-----------|---------|
-| 118 | E7-axbench-gemma-3-270m-it | E7 | 3 | Gemma-270m @L16 | AxBench concept500 (n=500) | concept | 0.0459 | 0.0562 | **−0.0103** | **[−0.0142, −0.0066]** | **1.41×10⁻⁶** | **FALSE** | FALSE | 0.68 (disclosed) | **NEGATIVE / NULL** — real does NOT beat shuffled (significant but NEGATIVE delta, both at the floor ~0.05); synthetic-ocean win did not generalize; supersedes exp#116/117 as the real-benchmark E7 eval |
+| 118 | E7-axbench-gemma-3-270m-it | E7 | 3 | Gemma-270m @L16 | AxBench concept500 (n=500) | concept | 0.0459 | 0.0562 | **−0.0103** | **[−0.0142, −0.0066]** | **1.41×10⁻⁶** | **FALSE** | FALSE | 0.68 (disclosed) | **NEGATIVE / NULL** — real does NOT beat shuffled (significant but NEGATIVE delta, both at the floor ~0.05); synthetic-ocean win did not generalize |
+| 119 | E7-axbench-gemma-2-2b-it | E7 | 3 | Gemma-2-2B @L20 | AxBench concept500 (n=500) | concept | 0.1382 | 0.1342 | **+0.0040** | **[+0.0003, +0.0077]** | **0.0106** | **FALSE** | FALSE | 0.68 (disclosed) | **DIRECTIONAL but TINY** — real significantly beats shuffled, but +0.004 on 0–1 (~3% rel), CI barely excludes 0, ordinal-fail, shuffled captures ~97% of the effect (both ~0.135, expressible); mostly-generic |
 
-**Sign-bug correction.** The driver's auto-label initially read "DIRECTIONAL" — a SIGN-BLIND
-bug: it checked statistical significance and that the CI excluded zero, but NOT the SIGN of
-the delta. CORRECTED verdict: NEGATIVE / NULL. The real DiffMean direction does NOT beat the
-shuffled control; it is in fact slightly — but, given n=500, significantly — WORSE, with both
-conditions at the floor. The significant negative delta is statistically real but
-substantively tiny (0.01 on 0–1), and both conditions essentially fail to express the concept.
+**Sign-bug correction (270M).** On the 270M run the driver's auto-label initially read
+"DIRECTIONAL" — a SIGN-BLIND bug: it checked statistical significance and that the CI excluded
+zero, but NOT the SIGN of the delta. CORRECTED verdict: NEGATIVE / NULL. The real DiffMean
+direction does NOT beat the shuffled control; it is in fact slightly — but, given n=500,
+significantly — WORSE, with both conditions at the floor. The significant negative delta is
+statistically real but substantively tiny (0.01 on 0–1), and both conditions essentially fail
+to express the concept.
 
-**Campaign result.** On the real AxBench benchmark at 270M, DiffMean relative-steering
-provides NO advantage over a label-shuffled control, and absolute concept-expression is at
-the floor (~0.05/1.0). This is a NEGATIVE result and a methodology win: moving from a
-synthetic single concept to a real 500-concept benchmark caught a non-generalizing claim. It
+**The 2B reading.** At 2B the concepts become expressible (both conditions ~0.135, 3× higher
+than 270M) and the real direction significantly BEATS shuffled — but every qualifier says the
+effect is weak: +0.0040 on a 0–1 scale (~3% relative edge), the 95% CI [+0.0003, +0.0077]
+BARELY clears zero, the ordinal gate FAILS, and a label-shuffled vector already captures ~97%
+of the steering effect (0.1342 of 0.1382). The real concept direction carries a real but WEAK
+concept-specific signal; the overwhelming majority of the steering effect is GENERIC — produced
+by the displacement itself, not by its direction.
+
+**Campaign result — the 270M-vs-2B synthesis.** On the real AxBench benchmark, DiffMean
+relative-steering's advantage over a matched-displacement shuffled-label control is
+SCALE-DEPENDENT and WEAK. At 270M (exp#118) it is NEGATIVE / at the floor (the model can't
+express the concepts at all). At 2B (exp#119) concepts become expressible and a SMALL,
+statistically-significant real-direction advantage appears (+0.004, p=0.011) — but it is tiny,
+fragile (CI barely excludes 0), fails the strict ordinal gate, and is dwarfed by the
+generic-displacement effect (shuffled gets ~97% of it). This is a FAR cry from the +0.135
+directional effect the EASY synthetic "ocean" concept suggested (exp#116/117, S-15). The real
+benchmark shows that on 500 abstract concepts the real concept direction carries only a WEAK
+concept-specific signal; most of the steering effect is generic, not direction-specific. Both
+exp#118 and exp#119 are rung-3-style real-benchmark evals; neither is external_ready. This
 SUPERSEDES the synthetic E7 confirmation (exp#116/117, S-15) as the real-benchmark evaluation
-of E7 and aligns with AxBench's own finding that steering is hard. **CAVEAT:** 270M is tiny
-and AxBench's concepts derive from Gemma-2-2B SAE features, so the floor is most likely a
-model-capacity effect — the FAITHFUL test is Gemma-2-2B (download in progress), and that
-rerun is essential before any general verdict on "DiffMean steering on AxBench." See
-FINDINGS.md S-16.
+of E7 and aligns with AxBench's own finding that steering is hard. A weak/negative result
+rigorously obtained on a real benchmark is a SUCCESS of the process: the synthetic
+single-concept evaluation massively overstated the effect, and only a real benchmark + matched
+control + a population of 500 concepts at two scales revealed how weak and scale-dependent the
+true effect is. **CAVEATS:** the judge is weak (AUC 0.68, disclosed, unbiased — noise widens
+the CI, does not bias the sign); alpha=0.1 was not per-concept-tuned; a stronger/calibrated
+judge or per-concept alpha tuning could shift the small 2B effect, though the qualitative
+picture is robust to the n=500 paired test. See FINDINGS.md S-16.
 
 ---
 
@@ -706,8 +746,8 @@ FINDINGS.md S-16.
 
 | Method / hypothesis | Best rung reached | Gate cleared | Last composite | Notes |
 |--------------------|-------------------|-------------|---------------|-------|
-| E7: relative-steering directional effect — REAL AxBench (270M) | Rung 3 (STANDARD) — NEGATIVE/NULL | Real does NOT beat shuffled-label control on AxBench (n=500 concepts, off-family local judge AUC 0.68): real 0.046 vs shuffled 0.056, delta −0.010, bootstrap CI [−0.0142,−0.0066], Wilcoxon p=1.4e-6; ordinal gate FALSE | N/A (controlled directional test, not a config composite) | **The real-benchmark verdict for E7.** Synthetic-ocean win did NOT generalize; both conditions at the floor (~0.05/1.0) at 270M. Sign-blind auto-label corrected to NEGATIVE (exp#118). SUPERSEDES the synthetic exp#116/117 row below. Gemma-2-2B rerun pending (likely a capacity effect). See FINDINGS.md S-16 |
-| E7: relative-steering directional effect — SYNTHETIC "ocean" (superseded by AxBench) | Rung 3 (STANDARD) — PROVISIONAL (superseded) | Real > shuffled-label control on BOTH scales, Holm-corrected, bootstrap CI excludes 0 (270M +0.135 p=4e-4; 1B +0.096 p=.014); n=20 seeds, off-family judge | N/A (controlled directional test, not a config composite) | First hypothesis to reach rung 3 via the controlled n=20 / off-family-judge / cross-scale protocol (exp#116/117) — but on a SYNTHETIC single concept. Did NOT generalize to AxBench (exp#118, row above). See FINDINGS.md S-15 |
+| E7: relative-steering directional effect — REAL AxBench (270M vs 2B) | Rung 3 (STANDARD) — WEAK / SCALE-DEPENDENT | On AxBench (n=500 concepts, off-family local judge AUC 0.68): 270M real does NOT beat shuffled — real 0.046 vs 0.056, delta −0.010, CI [−0.0142,−0.0066], p=1.4e-6, ordinal FALSE (exp#118); 2B real beats shuffled but TINY — real 0.138 vs 0.134, delta +0.004, CI [+0.0003,+0.0077], p=0.011, ordinal FALSE (exp#119) | N/A (controlled directional test, not a config composite) | **The real-benchmark verdict for E7.** Synthetic-ocean +0.135 win did NOT generalize: negative/floor at 270M, significant-but-tiny (~3% rel, ordinal-fail, shuffled captures ~97%) at 2B — weak, scale-dependent, mostly-generic. Sign-blind 270M auto-label corrected to NEGATIVE (exp#118). SUPERSEDES the synthetic exp#116/117 row below. See FINDINGS.md S-16 |
+| E7: relative-steering directional effect — SYNTHETIC "ocean" (superseded by AxBench) | Rung 3 (STANDARD) — PROVISIONAL (superseded) | Real > shuffled-label control on BOTH scales, Holm-corrected, bootstrap CI excludes 0 (270M +0.135 p=4e-4; 1B +0.096 p=.014); n=20 seeds, off-family judge | N/A (controlled directional test, not a config composite) | First hypothesis to reach rung 3 via the controlled n=20 / off-family-judge / cross-scale protocol (exp#116/117) — but on a SYNTHETIC single concept. Did NOT generalize to AxBench (exp#118/119, row above): the +0.135 synthetic edge became negative at 270M and a tiny +0.004 at 2B. See FINDINGS.md S-15 |
 | N17: off-shell displacement predicts incoherence | Rung 3 (STANDARD) | Spearman +0.585, CI [+0.353, +0.758], p=8×10⁻⁶ on WikiText-2 | N/A (geometry relationship, not a config composite) | Strong rung-3 result; still not fully external-ready (see FINDINGS.md) |
 | E3: coherence cliff exists | Rung 2 (DEV) | Confirmed on 3 models, 4 behaviors | Best window: α=0.10 relative_add, composite −1.677 | Screening only |
 | E4: DiffMean ≈ PCA-top1 | Rung 2 (DEV) | Cosine 0.994–0.999 across 3 models, 4 behaviors | — | Screening only |
@@ -735,7 +775,7 @@ FINDINGS.md S-16.
 ## Where to find full detail
 
 - **Per-experiment reasoning** (7-step: diagnosis, citation, hypothesis, prediction, analysis, checkpoint): `autoresearch_results/reasoning_annotations.json`
-- **Raw metrics**: `autoresearch_results/experiment_log.jsonl` (one JSON object per line, 118 lines; exp 110–113 use `method_metric`/`method_value` fields rather than the standard 5-axis composite; exp 114–117 use the controlled-confirmation fields — per-condition judge behavior/coherence, paired delta, bootstrap CI, Wilcoxon p, Holm/ordinal/matched-coherence flags; exp 118 uses the AxBench fields — per-concept real/shuffled judge behavior across 500 concepts, paired delta, bootstrap CI, Wilcoxon p, ordinal gate, judge AUC)
+- **Raw metrics**: `autoresearch_results/experiment_log.jsonl` (one JSON object per line, 119 lines; exp 110–113 use `method_metric`/`method_value` fields rather than the standard 5-axis composite; exp 114–117 use the controlled-confirmation fields — per-condition judge behavior/coherence, paired delta, bootstrap CI, Wilcoxon p, Holm/ordinal/matched-coherence flags; exp 118–119 use the AxBench fields — per-concept real/shuffled judge behavior across 500 concepts, paired delta, bootstrap CI, Wilcoxon p, ordinal gate, judge AUC)
 - **Current champion config**: `autoresearch_results/best_config.json`
 - **Per-experiment dashboard pages**: `docs/dashboard/experiments/expNNN.html` — shows the α/layer sweep curves, generation samples (steered vs unsteered), geometry probes, and all five axis metrics with confidence intervals
 - **Per-hypothesis sub-dashboards**: `ideas/<NN>/dashboard/index.html` — hypothesis statement, falsifier, predicted delta, current verdict, back-linked to master
@@ -744,5 +784,5 @@ FINDINGS.md S-16.
 - **External-ready findings and screening observations**: `FINDINGS.md`
 
 > Composite formula fingerprint: `a9001e87087e`
-> Program initialized 2026-05-30. 118 experiments total: the first 113 at SCREENING tier (n=1; exp 110–113 use method-specific metrics, not the standard composite); exp 114–117 are the E7 controlled confirmation on SYNTHETIC data (n=20 seeds, off-family judge, matched-displacement controls — rung 3, PROVISIONAL); exp 118 is the first REAL-benchmark evaluation (E7 on AxBench, n=500 concepts, off-family local judge — rung 3, NEGATIVE/NULL).
-> No experiment has cleared the full six-part statistical gate for external claims; the external-ready count remains zero. The key recent result is the AxBench reality check (exp#118): E7's synthetic-ocean directional win did NOT generalize — on the real benchmark the real DiffMean direction does not beat a label-shuffled control and both are at the floor at 270M (NEGATIVE/NULL). The faithful Gemma-2-2B rerun is pending (the 270M floor is likely a capacity effect).
+> Program initialized 2026-05-30. 119 experiments total: the first 113 at SCREENING tier (n=1; exp 110–113 use method-specific metrics, not the standard composite); exp 114–117 are the E7 controlled confirmation on SYNTHETIC data (n=20 seeds, off-family judge, matched-displacement controls — rung 3, PROVISIONAL); exp 118–119 are the first REAL-benchmark evaluation (E7 on AxBench, n=500 concepts, off-family local judge — rung 3; 270M NEGATIVE/NULL, 2B DIRECTIONAL-but-tiny).
+> No experiment has cleared the full six-part statistical gate for external claims; the external-ready count remains zero. The key recent result is the AxBench reality check (exp#118–119): E7's synthetic-ocean +0.135 directional win did NOT generalize — on the real benchmark the real-vs-shuffled advantage is scale-dependent and weak (NEGATIVE/at-the-floor at 270M; significant-but-tiny +0.004, ordinal-fail, ~97%-generic at 2B). The synthetic single-concept evaluation overstated the effect; the real 500-concept benchmark at two scales revealed how weak it is.

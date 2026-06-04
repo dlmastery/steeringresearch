@@ -255,7 +255,7 @@ PREFIX_CAMPAIGN: dict[str, str] = {
     "E20-diffmean-3stack": "E20-saets.json",
     "E20-saets-3stack": "E20-saets.json",
     "E7-confirm": "E7-confirm-gemma-3-270m-it.json + E7-confirm-gemma-3-1b-it.json",
-    "E7-axbench": "E7-axbench-gemma-3-270m-it.json",
+    "E7-axbench": "E7-axbench-gemma-3-270m-it.json + E7-axbench-gemma-2-2b-it.json",
 }
 
 # Reproduce command(s) for each tag-prefix (the real invocation that produced it).

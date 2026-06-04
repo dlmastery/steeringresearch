@@ -1062,5 +1062,14 @@
     "prediction": "mean real-minus-shuffled delta > 0 with bootstrap CI excluding 0; EXTERNAL-READY only if the strict ordinal gate also passes. fingerprint a9001e87087e.",
     "verdict": "DISCARD \u2014 composite -0.0103, behavior +0.0459, CR 0.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
     "learning": "Behavior +0.0459 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0000 | CR 0.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 16 | Fisher 0.0000"
+  },
+  "119": {
+    "_manual": true,
+    "diagnosis": "E7 evaluated on the REAL AxBench benchmark (arXiv:2501.17148): its concepts, its contrast text (-> DiffMean), its held-out eval instructions, and its concept+fluency judge rubric \u2014 none authored by us. Replication unit = the CONCEPT (500 of them), so the paired real-vs-shuffled test is over independent concepts, not generation seeds or correlated bootstraps.",
+    "citations": "Wu, Zhong et al., 2025 ICML 'AxBench: Steering LLMs? Even Simple Baselines Outperform Sparse Autoencoders' (arXiv:2501.17148) \u2014 the benchmark, which itself finds difference-in-means is the strongest concept method; Panickssery et al., 2024 (arXiv:2312.06681) CAA.",
+    "hypothesis": "If the DiffMean concept direction carries the concept (not norm), the real direction beats a matched-displacement shuffled-label direction on AxBench's concept+fluency score, across the concept population \u2014 paired Wilcoxon + bootstrap CI + ordinal gate.",
+    "prediction": "mean real-minus-shuffled delta > 0 with bootstrap CI excluding 0; EXTERNAL-READY only if the strict ordinal gate also passes. fingerprint a9001e87087e.",
+    "verdict": "DISCARD \u2014 composite +0.0040, behavior +0.1382, CR 0.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.1382 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0000 | CR 0.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 20 | Fisher 0.0000"
   }
 }
