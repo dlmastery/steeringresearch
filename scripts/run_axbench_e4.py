@@ -57,8 +57,11 @@ def main() -> None:
     cosines = []
     for ci, c in enumerate(concepts):
         pos = _pool_acts(model, tok, c["pos_texts"][: args.max_pos], layer)
-        dm = diffmean_vector(pos, neg)
-        pca = pca_top1_vector(pos, neg)
+        # pca_top1 needs PAIRED pos/neg (per-pair differences); AxBench has more
+        # (shared) negatives than positives, so pair against the first len(pos).
+        neg_sub = neg[: pos.shape[0]]
+        dm = diffmean_vector(pos, neg_sub)
+        pca = pca_top1_vector(pos, neg_sub)
         cosines.append(abs(cosine(dm, pca)))
         if (ci + 1) % max(1, len(concepts) // 8) == 0:
             print(f"  {ci+1}/{len(concepts)}  running mean |cos| = {np.mean(cosines):.4f}", flush=True)

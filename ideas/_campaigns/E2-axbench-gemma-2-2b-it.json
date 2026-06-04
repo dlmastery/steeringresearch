@@ -1,0 +1,41 @@
+{
+  "hyp": "E2",
+  "model": "google/gemma-2-2b-it",
+  "dataset": "concept500",
+  "n_concepts": 20,
+  "instrument": "local_judge:Qwen2.5-7B-Instruct",
+  "curve": [
+    {
+      "layer": 6,
+      "behavior": 0.1656,
+      "fluency": 0.6094
+    },
+    {
+      "layer": 10,
+      "behavior": 0.1625,
+      "fluency": 0.6406
+    },
+    {
+      "layer": 14,
+      "behavior": 0.1656,
+      "fluency": 0.6062
+    },
+    {
+      "layer": 18,
+      "behavior": 0.1844,
+      "fluency": 0.6312
+    },
+    {
+      "layer": 20,
+      "behavior": 0.1781,
+      "fluency": 0.6687
+    },
+    {
+      "layer": 22,
+      "behavior": 0.175,
+      "fluency": 0.6188
+    }
+  ],
+  "best_layer": 18,
+  "timestamp": "2026-06-04T15:39:32"
+}

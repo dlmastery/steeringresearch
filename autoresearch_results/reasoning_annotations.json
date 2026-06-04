@@ -1080,5 +1080,23 @@
     "prediction": "behavior(alpha) rises then plateaus/declines; fluency(alpha) collapses past a knee alpha; the steepest-fluency-drop alpha marks the cliff. fingerprint a9001e87087e.",
     "verdict": "DISCARD \u2014 composite +0.1625, behavior +0.1625, CR 0.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
     "learning": "Behavior +0.1625 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0000 | CR 0.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 20 | Fisher 0.0000"
+  },
+  "121": {
+    "_manual": true,
+    "diagnosis": "E2 (which residual-stream layer is best for steering) on the REAL AxBench benchmark; sweep the injection layer over 20 concepts at the knee alpha, judged behavior+coherence by the off-family local judge. Replaces the synthetic single-concept layer sweep.",
+    "citations": "Wu/Zhong et al., 2025 ICML 'AxBench' (arXiv:2501.17148); the layer question is E2/E13 \u2014 mid-to-late residual layers usually steer best.",
+    "hypothesis": "Because concept directions are most linearly separable in mid-to-late layers, AxBench-judged behavior should peak at a mid/late layer and fall at very early/late layers \u2014 a single best injection layer.",
+    "prediction": "behavior(layer) is unimodal with a peak at a mid-to-late layer; the best-behavior layer is reported. fingerprint a9001e87087e.",
+    "verdict": "DISCARD \u2014 composite +0.1844, behavior +0.1844, CR 0.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.1844 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0000 | CR 0.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 18 | Fisher 0.0000"
+  },
+  "122": {
+    "_manual": true,
+    "diagnosis": "E4 (DiffMean ~ PCA-top1) on the REAL AxBench benchmark over 100 concepts at layer 20: a pure geometry check (no judge/generation) of whether the two extraction sources give the same direction on real concepts, not just one synthetic concept.",
+    "citations": "Wu/Zhong et al., 2025 ICML 'AxBench' (arXiv:2501.17148), which finds difference-in-means is the strongest concept method; E4 asks whether PCA-top1 of the difference set is the same direction.",
+    "hypothesis": "Because the per-pair difference set is dominated by the shared concept axis, its top PCA component aligns with DiffMean; cosine ~ 1 across the concept population (a near-tautology the magnitude of which E4 measures).",
+    "prediction": "mean |cos(DiffMean, PCA-top1)| is high (>0.9) across AxBench concepts; report mean/median/p5 + fraction>=0.9. fingerprint a9001e87087e.",
+    "verdict": "DISCARD \u2014 composite +0.6529, behavior +0.6529, CR 0.0000 (global best remains +0.8336 tag=E3-cliff-a1.0)",
+    "learning": "Behavior +0.6529 | MMLU drop 0.0000 | \u0394PPL_norm 0.0000 | rep 0.0000 | CR 0.0000 | harmless_refusal 0.0000 | offshell 0.0000 | layer 20 | Fisher 0.0000"
   }
 }

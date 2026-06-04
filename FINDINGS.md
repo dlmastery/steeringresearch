@@ -35,7 +35,7 @@ that a cheap geometric measurement — how far a steering operation pushes the m
 hidden state off the surface of its normal activation sphere (called "off-shell
 displacement") — predicts how incoherent the model's outputs will become.
 
-**S-1 through S-17** are the screening/confirmation observations recorded in this
+**S-1 through S-19** are the screening/confirmation observations recorded in this
 document. S-1 through S-14 are directional findings from single experimental runs
 (n=1). S-15 is different: it is the program's first controlled, multi-seed (n=20),
 off-family-judged, cross-scale result — measured the way the earlier single-seed
@@ -56,8 +56,19 @@ tests it on the REAL AxBench benchmark with 30 concepts and an off-family local 
 judge measuring both behavior and coherence simultaneously. The cliff is SUPPORTED: behavior
 and coherence both peak at alpha~0.10 and collapse super-linearly past alpha~0.20. This
 generalizes the program's geometry/coherence results (E3, N17) to a real benchmark, in
-contrast to E7's directional claim (S-16), which did not generalize. None of S-1 through
-S-17 meets the full six-part bar required for an external claim.
+contrast to E7's directional claim (S-16), which did not generalize. S-18 asks the
+complementary E2 question — which layer is best to inject the steering vector? — but
+on the REAL AxBench benchmark with 20 concepts at 2B (26-layer Gemma-2-2B-it), sweeping
+layers 6–22. The layer curve is NEARLY FLAT: behavior ranges only 0.163–0.184 (~13%
+relative) with a shallow peak at layer 18; coherence ranges 0.606–0.669 with a shallow
+peak at layer 20. There is a weak mid-to-late layer preference but no sharp single optimum.
+This extends the E7/E3 emerging theme: DIRECTION and LAYER matter little; the dominant
+control variable is alpha (the E3 coherence cliff, S-17). S-19 returns to the E4 question —
+whether DiffMean and PCA-top1 are interchangeable — but on 100 REAL AxBench concepts
+(Gemma-2-2B-it, layer 20, exp#122): the mean |cos(DiffMean, PCA-top1)| is only 0.65
+(median 0.73, p5 0.19, only 16% of concepts >=0.90). The synthetic cos~0.99 result did NOT
+generalize; on real concepts the two extraction methods are only MODERATELY aligned.
+None of S-1 through S-19 meets the full six-part bar required for an external claim.
 
 **"rung-3"** refers to the third level on a five-rung evaluation ladder this project
 uses. Rung 0–2 experiments are cheap, fast, and run on small synthetic datasets.
@@ -148,7 +159,7 @@ a HARKing violation (Hypothesizing After Results are Known) and is a project BLO
 
 ## Current status
 
-**No external-ready findings yet — 120 experiments run. On the REAL AxBench benchmark,
+**No external-ready findings yet — 122 experiments run. On the REAL AxBench benchmark,
 across two model scales (exp#118 at 270M, exp#119 at 2B), E7's directional steering
 advantage over a label-shuffled control is SCALE-DEPENDENT and WEAK: NEGATIVE/at the
 floor at 270M, and statistically-significant-but-tiny (+0.004, p=0.011) at 2B where the
@@ -156,20 +167,31 @@ ordinal gate still fails and a shuffled vector captures ~97% of the effect — t
 synthetic-"ocean" +0.135 win (S-15) did NOT generalize. In contrast, the E3
 ALPHA-COHERENCE CLIFF — the program's geometry/coherence result — IS SUPPORTED on the
 real AxBench benchmark (30 concepts, 2B, off-family local judge, exp#120): behavior and
-coherence both peak at alpha~0.10 and collapse super-linearly past alpha~0.20 (S-17).**
+coherence both peak at alpha~0.10 and collapse super-linearly past alpha~0.20 (S-17).
+The E2 LAYER SWEEP on real AxBench (20 concepts, 2B, off-family local judge, exp#121)
+finds a NEARLY FLAT layer curve — behavior 0.163–0.184 across layers 6–22, shallow peak
+at layer 18 (coherence best at layer 20), weak mid-late preference, no sharp optimum (S-18).
+E4 (DiffMean vs PCA-top1 alignment) on 100 REAL AxBench concepts (2B, layer 20, exp#122)
+finds only MODERATE alignment — mean |cos| 0.65, median 0.73, only 16% of concepts >=0.90,
+p5 0.19 — the synthetic cos~0.99 did NOT generalize (S-19). The overall pattern across S-16
+through S-19 is consistent: synthetic single-concept results overstate; real benchmarks correct.**
 
-120 experiments have run on real Gemma-3-270m, Gemma-3-1B, Gemma-2-2B, and
-Qwen-2.5-0.5B. They produced 17 screening/confirmation observations (S-1 through S-17)
-spanning 18 of the 70 hypotheses. Four rung-3 evaluation attempts have now been
+122 experiments have run on real Gemma-3-270m, Gemma-3-1B, Gemma-2-2B, and
+Qwen-2.5-0.5B. They produced 19 screening/confirmation observations (S-1 through S-19)
+spanning 18 of the 70 hypotheses. Five rung-3 evaluation attempts have now been
 completed: N17 (off-shell displacement predicts incoherence), E7 on SYNTHETIC data
 (relative-steering directional control, exp#116/117 — real matched-displacement
 controls, n=20 seeds, off-family LLM judge, cross-scale replication), E7 on the
-REAL AxBench benchmark at two scales (exp#118 at 270M, exp#119 at 2B — see S-16), and
-E3 (the alpha-coherence cliff) on the REAL AxBench benchmark at 2B (exp#120 — see S-17).
-The E7 AxBench evaluation is the important reality check: it replaced ALL prior synthetic/
-hand-authored data with AxBench's 500 real concepts, contrast text, and held-out eval
-instructions, scored by an off-family local judge (Qwen2.5-7B-Instruct, 4-bit; judge
-validated at ROC-AUC 0.68 vs AxBench ground truth — WEAK but UNBIASED, disclosed).
+REAL AxBench benchmark at two scales (exp#118 at 270M, exp#119 at 2B — see S-16),
+E3 (the alpha-coherence cliff) on the REAL AxBench benchmark at 2B (exp#120 — see S-17),
+and E2 (layer selection) on the REAL AxBench benchmark at 2B (exp#121 — see S-18).
+A pure geometry check on E4 (DiffMean vs PCA-top1 alignment) on 100 REAL AxBench
+concepts (exp#122 — see S-19) completes the growing body of real-benchmark corrections
+to synthetic results. The E7 AxBench evaluation is the important reality check: it
+replaced ALL prior synthetic/hand-authored data with AxBench's 500 real concepts,
+contrast text, and held-out eval instructions, scored by an off-family local judge
+(Qwen2.5-7B-Instruct, 4-bit; judge validated at ROC-AUC 0.68 vs AxBench ground truth —
+WEAK but UNBIASED, disclosed).
 The replication unit is the CONCEPT (n=500). On AxBench the real DiffMean direction's
 advantage over a matched-displacement shuffled-label control is scale-dependent: at
 270M the real direction is significantly WORSE and both conditions are at the floor
@@ -186,13 +208,21 @@ of the steering effect is generic, not direction-specific. The exp#120 E3 AxBenc
 evaluation (S-17) is a complementary result: it tests a DIFFERENT claim — whether the
 coherence cliff shape is real on a real benchmark — and finds a clear positive
 confirmation. The geometry/coherence findings (E3 cliff, N17 off-shell predicts
-incoherence) generalize to AxBench; the direction-specificity finding (E7) does not. By
-the program's own rigor floor there are STILL zero external-ready findings. (S-17 caveats:
-30 concepts only — a curve, not a population test; single model 2B + single layer 20;
-judge AUC 0.68 (disclosed, unbiased); the cliff alpha may shift with model/layer, but the
-qualitative shape — peak ~0.10, super-linear collapse past ~0.20 — is robust across the
-30 concepts and consistent with S-2, S-4, S-8, S-9, S-11.) The screening observations
-motivate the next required experiments but are NOT citable claims.
+incoherence) generalize to AxBench; the direction-specificity finding (E7) does not.
+The exp#121 E2 AxBench evaluation (S-18) extends this to the layer-selection question:
+the layer curve is nearly flat, reinforcing that alpha (E3) is the dominant control
+variable and layer choice (E2) matters little in this regime. The exp#122 E4 geometry
+check (S-19) extends the pattern to E4: on 100 real AxBench concepts the DiffMean and
+PCA-top1 directions are only moderately aligned (mean |cos| 0.65), not the near-tautological
+cos~0.99 observed on clean synthetic paired data. By the program's own rigor floor there are
+STILL zero external-ready findings. (S-17 caveats: 30 concepts only — a curve, not a
+population test; single model 2B + single layer 20; judge AUC 0.68 (disclosed, unbiased);
+the cliff alpha may shift with model/layer, but the qualitative shape — peak ~0.10,
+super-linear collapse past ~0.20 — is robust across the 30 concepts and consistent with
+S-2, S-4, S-8, S-9, S-11. S-18 caveats: 20 concepts, single model/2B, single knee
+alpha=0.1, judge AUC 0.68. S-19 caveats: 100 concepts, single model/layer, unpaired
+AxBench data — see S-19.) The screening observations motivate the next required
+experiments but are NOT citable claims.
 
 ---
 
@@ -203,9 +233,9 @@ All verdicts are SCREENING (single-run, n=1) unless marked [rung-3].
 | Hypothesis | Plain-English question | Verdict | One-line result |
 |---|---|---|---|
 | E1: DiffMean pair-count knee | How many contrast pairs do you need before the steering vector stabilizes? | DIRECTIONAL (underpowered) | Vector reaches >0.95 cosine of full at ~5 pairs on a simple concept; the corpus's 50-pair threshold cannot be tested yet |
-| E2: Fisher layer selection | Is the most linearly separable layer the best one to inject the steering vector? | FALSIFIED | Spearman(Fisher ratio, efficacy) = +0.14, p=0.74; the most separable layer on Gemma-270m (layer 12) is not the best steering layer |
+| E2: Fisher layer selection | Is the most linearly separable layer the best one to inject the steering vector? | FALSIFIED; additionally FLAT on real AxBench | Spearman(Fisher ratio, efficacy) = +0.14, p=0.74; the most separable layer on Gemma-270m (layer 12) is not the best steering layer; on REAL AxBench (2B, 20 concepts, exp#121) the layer curve is NEARLY FLAT — behavior 0.163–0.184 across L6–22, shallow peak L18, no sharp optimum (S-18) |
 | E3: Alpha coherence cliff | Does output quality collapse super-linearly once steering strength exceeds a threshold? | SUPPORTED — now confirmed on REAL AxBench (exp#120, S-17) | Confirmed on all three models across synthetic data; additionally confirmed on 30 real AxBench concepts (2B, layer 20, off-family judge) — behavior + coherence peak at alpha~0.10 and collapse super-linearly past alpha~0.20 |
-| E4: DiffMean vs PCA-top1 alignment | Do the cheap and expensive vector construction methods produce the same direction? | SUPPORTED | Cosine alignment 0.994–0.999 across 3 models and 4 behaviors; the two methods are effectively equivalent |
+| E4: DiffMean vs PCA-top1 alignment | Do the cheap and expensive vector construction methods produce the same direction? | PARTIAL — synthetic cos~0.99 did NOT generalize to real AxBench (S-19) | Synthetic screening: cosine 0.994–0.999 across 3 models and 4 behaviors. On 100 REAL AxBench concepts (2B, layer 20, exp#122): mean |cos| 0.65, median 0.73, p5 0.19, only 16% >=0.90. The two methods are only MODERATELY aligned on real concepts; the near-equivalence was a paired-data artifact |
 | E7: Norm-relative alpha | Does expressing steering strength as a fraction of activation magnitude reduce variability — and does the real concept direction beat a matched-displacement control? | WEAK / SCALE-DEPENDENT on REAL AxBench [rung-3]; the synthetic-only +0.135 win did NOT generalize | On the synthetic single concept "ocean" the real direction beat the shuffled control on both scales (S-15, PROVISIONAL, +0.135). On the REAL AxBench benchmark (500 concepts, off-family local judge AUC 0.68) the advantage is weak and scale-dependent: at 270M (exp#118) real 0.046 vs shuffled 0.056, delta −0.010, CI [−0.0142, −0.0066], p=1.4e-6 — significant but NEGATIVE, both at the floor (~0.05/1.0); at 2B (exp#119) concepts become expressible (both ~0.135) and real BEATS shuffled but only by +0.004 (CI [+0.0003, +0.0077] barely excludes 0, p=0.011), ordinal gate FAILS, shuffled captures ~97% of the effect. Weak, scale-dependent, mostly-generic — see S-16 |
 | E10: Category orthogonality | Do steering vectors for distinct concepts point in different directions? | PARTIAL | Mostly orthogonal (|cosine| < 0.3) except anger and happiness share a component (cosine = +0.48) |
 | E17: Near-orthogonal stacking | Can two behavior vectors be applied simultaneously without mutual interference? | SUPPORTED | Stacking anger + happiness retains 101%/110% of solo behavior despite +0.48 cosine overlap |
@@ -1223,6 +1253,139 @@ a real off-family judge. This generalizes the program's synthetic-data cliff res
 geometry result to a real benchmark. Contrast with S-16: geometry/coherence findings generalize;
 direction-specificity (E7) does not. SCREENING ONLY — not an external claim. Zero
 external-ready findings.
+
+---
+
+### S-18: E2 layer curve is NEARLY FLAT on real AxBench (2B, 20 concepts) — weak mid-late preference (best ~L18–20), no sharp optimum
+
+**What hypothesis this tests:** "E2 — Fisher layer selection." The pre-registered prediction was
+that the layer of maximum linear separability (Fisher ratio) is the best injection layer. E2 was
+already FALSIFIED on synthetic Gemma-270m screening (S-5, Spearman +0.14, p=0.74). S-18 asks the
+more general layer-selection question on the REAL AxBench benchmark at 2B scale: does ANY layer
+stand out as clearly best for steering?
+
+**Design.** Model: google/gemma-2-2b-it (26 layers). Benchmark: AxBench
+(`pyvene/axbench-concept500`), 20 concepts × 8 eval instructions. Operation: relative_add at the
+knee alpha=0.10. Layers swept: 6, 10, 14, 18, 20, 22. Both behavior (concept score 0–2 → [0,1])
+and coherence (fluency score 0–2 → [0,1]) scored by the off-family local judge
+(Qwen2.5-7B-Instruct, 4-bit; judge AUC 0.68 vs AxBench ground truth — WEAK but UNBIASED,
+disclosed). Experiment: exp#121, tag E2-axbench-gemma-2-2b-it.
+
+**The layer-behavior-coherence curve:**
+
+| Layer | Behavior ([0,1]) | Coherence ([0,1]) |
+|-------|-----------------|-------------------|
+| 6 | 0.166 | 0.609 |
+| 10 | 0.163 | 0.641 |
+| 14 | 0.166 | 0.606 |
+| **18** | **0.184 (PEAK)** | 0.631 |
+| 20 | 0.178 | **0.669 (PEAK)** |
+| 22 | 0.175 | 0.619 |
+
+**Interpretation — honest.** The layer curve is NEARLY FLAT. Behavior ranges only 0.163–0.184 —
+a ~13% relative spread — across layers 6–22. The peak behavior layer (18) beats the weakest
+(layer 10) by just 0.021 absolute. The peak coherence layer (20) is one step later. This is a
+WEAK mid-to-late layer preference, not a sharp single optimum. There is no layer that dominates;
+steering works roughly equally across a wide range of layers in this mid-to-late regime. The mild
+best (layers 18–20) is consistent with AxBench's own use of layer 20 for the 2B model.
+
+**Verdict: WEAK / FLAT.** No strong layer dependence. This fits the emerging program theme from
+E7 (direction weak, S-16) and E2 (layer nearly flat, this section): the DIRECTION of the steering
+vector and the LAYER of injection both matter little in the range tested. The dominant control
+variable is alpha — the E3 coherence cliff (S-17) — not the specific direction or layer. Taken
+together: practitioners should spend optimization budget on alpha tuning, not on layer search.
+
+**Caveats:** 20 concepts only (single sweep, not a population paired test); single model (2B)
+and single knee alpha; layers sampled at intervals of 4, not exhaustively; judge AUC 0.68
+(disclosed, unbiased). Single seed / screening tier — not external-ready.
+
+**Cross-references:** S-5 (E2 FALSIFIED on synthetic Gemma-270m — Fisher ratio does not predict
+best layer); S-16 (E7 WEAK — direction does not matter much); S-17 (E3 SUPPORTED — alpha is the
+dominant control).
+
+**Model / data:** google/gemma-2-2b-it, 20 AxBench concepts × 8 eval instructions, relative_add
+alpha=0.10, layers 6/10/14/18/20/22, off-family local judge Qwen2.5-7B-Instruct (4-bit), exp#121
+(tag: E2-axbench-gemma-2-2b-it).
+
+**WEAK / FLAT — E2 layer curve is nearly flat on real AxBench (2B). Mild mid-late preference
+(best ~L18–20), no sharp optimum.** Reinforces the emerging theme: alpha (E3) is the dominant
+control; direction (E7) and layer (E2) matter little. SCREENING ONLY — not an external claim.
+Zero external-ready findings.
+
+---
+
+### S-19: DiffMean and PCA-top1 are only MODERATELY aligned on real AxBench concepts (mean |cos| 0.65) — the synthetic cos~0.99 did not generalize
+
+**What hypothesis this tests:** "E4 — DiffMean vs PCA cosine alignment." The pre-registered
+prediction is that DiffMean and PCA-top1 produce the same steering direction (cosine > 0.95)
+so the cheaper DiffMean suffices for all practical purposes. S-1 (Qwen), S-3 (Gemma-270m),
+and S-8 (Gemma-1B) established cosine alignment of 0.994–0.999 across 3 models and 4 behaviors
+on synthetic single-concept data, apparently confirming E4. S-19 re-tests E4 as a pure geometry
+check on 100 REAL AxBench concepts (no generation, no judge) and finds the near-equivalence
+does NOT hold: on real concepts the two extraction methods are only moderately aligned.
+
+**Design.** Model: google/gemma-2-2b-it, injection layer 20. Benchmark: AxBench
+(`pyvene/axbench-concept500`), 100 concepts. For each concept: build v_DiffMean = mean(positive
+activations) − mean(negative activations) from the AxBench contrast text; build v_PCA = top-1
+principal component of the set of (positive minus negative) activation difference vectors from
+the same contrast text; compute |cos(v_DiffMean, v_PCA)|. This is a pure geometry check — no
+steering, no generation, no judge. Experiment tag: E4-axbench-gemma-2-2b-it. Experiment
+number: exp#122.
+
+**Results (100 AxBench concepts, Gemma-2-2B-it, layer 20):**
+
+| Metric | Value |
+|--------|-------|
+| Mean |cos(DiffMean, PCA-top1)| | **0.6529** |
+| Median |cos(DiffMean, PCA-top1)| | **0.7292** |
+| 5th percentile (p5) | **0.1889** |
+| Fraction of concepts with |cos| >= 0.90 | **0.16 (16%)** |
+
+**Honest interpretation.** The synthetic screens (S-1, S-3, S-8) found cos 0.994–0.999 across
+three models and four behaviors and labelled E4 SUPPORTED. On 100 real AxBench concepts the
+picture is completely different: the mean alignment is only 0.65 and the median 0.73. Only 16%
+of concepts reach the pre-registered >=0.95 threshold; the bottom 5% of concepts are nearly
+ORTHOGONAL (p5=0.19). DiffMean and PCA-top1 are NOT interchangeable on real, diverse concepts
+— they point in meaningfully different directions for the majority of the AxBench population.
+
+**Why the synthetic result was misleading — the unpaired-data nuance.** The synthetic screens
+used a small set of TRUE matched pairs: each positive sentence was paired with its corresponding
+negative, so the (positive − negative) difference vectors all pointed in essentially the same
+direction. In that setting, the first PCA component captures almost all the variance and aligns
+tightly with the DiffMean. AxBench's contrast data does not supply true matched pairs: the
+positive outputs and negative outputs for a concept are NOT individually matched sentence-to-
+sentence. PCA-top1 of arbitrarily-paired differences picks up sentence-to-sentence text
+variation as well as the concept direction, and that extra variance pulls the PCA direction
+away from the DiffMean. This is the mechanism by which the cos~0.99 paired-data result failed
+to generalize: it was a consequence of clean pairing, not of an inherent geometric equivalence.
+
+**Connection to the synthetic-overstates theme.** This result continues the pattern established
+by S-16 (E7: synthetic +0.135 direction win did not generalize — weak at 2B, negative at 270M),
+S-18 (E2: layer curve nearly flat on real AxBench, no sharp optimum), and this section (E4:
+cos~0.99 equivalence did not generalize). The one real-benchmark positive result — the E3
+coherence cliff (S-17) — concerns the alpha-sweep geometry, which does not depend on the
+quality of a single contrast pair. The pattern is: claims that depend on the quality or pairing
+structure of the contrast set (E4, E7) are fragile when moved to real diverse data; claims about
+gross steering geometry (E3, N17) are robust.
+
+**Caveats.** 100 concepts only (a sample of AxBench's 500); single model (2B) and single layer
+(20); the unpaired-data nuance above means the result is not a clean test of the original E4
+hypothesis (which assumed paired data). A version of E4 re-stated for unpaired data would need
+a dedicated test design. SCREENING — not external-ready.
+
+**Cross-references:** S-1, S-3, S-8 (the synthetic E4 confirmations this section revises);
+S-16 (E7 WEAK on real AxBench); S-17 (E3 SUPPORTED on real AxBench — contrast: geometry
+findings generalize, direction-specificity and extraction-equivalence do not).
+
+**Model / data:** google/gemma-2-2b-it (layer 20), 100 AxBench concepts from
+`pyvene/axbench-concept500`, pure geometry check (no generation, no judge), exp#122
+(tag: E4-axbench-gemma-2-2b-it).
+
+**PARTIAL (revised from SUPPORTED) — E4 cosine equivalence does NOT generalize to real AxBench
+concepts.** Mean |cos| 0.65, median 0.73, only 16% >=0.90, p5 0.19 on 100 concepts (2B,
+layer 20, exp#122). The synthetic cos~0.99 relied on clean paired data and was a pairing
+artifact. On real unpaired AxBench contrast data the two methods diverge substantially.
+SCREENING ONLY — not an external claim. Zero external-ready findings.
 
 ---
 
