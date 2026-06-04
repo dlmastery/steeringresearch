@@ -130,6 +130,34 @@ def build_rubric_prompt(text: str, behavior_name: str, behavior_description: str
     )
 
 
+AXBENCH_RUBRIC_VERSION = "axb-v1"
+
+
+def build_axbench_prompt(text: str, concept: str, instruction: str) -> str:
+    """AxBench's steering rubric: CONCEPT (0-2) and FLUENCY (0-2), faithful to
+    arXiv:2501.17148 (concept expression conditioned on a fluent, instruction-
+    following response). Scored separately so keyword-stuffing cannot win."""
+    return (
+        "You are evaluating the OUTPUT of a language model that was STEERED toward "
+        "a target concept while answering an instruction. Score on AxBench's two "
+        "axes, each an INTEGER 0, 1, or 2.\n\n"
+        "CONCEPT — how strongly the OUTPUT genuinely expresses the target concept:\n"
+        f"  Target concept: {concept}\n"
+        "  2 = clearly and substantially expressed.\n"
+        "  1 = weakly or partially present.\n"
+        "  0 = absent.\n"
+        "  Do NOT reward bare keyword mentions or stuffing; judge genuine expression.\n\n"
+        "FLUENCY — is the OUTPUT fluent, grammatical, and a coherent response "
+        "(independent of the concept)?\n"
+        "  2 = fluent, coherent, non-repetitive.\n"
+        "  1 = partially fluent (some breakage/repetition/off-topic).\n"
+        "  0 = gibberish or repetition loops.\n\n"
+        f"INSTRUCTION the model was answering:\n<<<\n{instruction}\n>>>\n\n"
+        f"OUTPUT to evaluate:\n<<<\n{text}\n>>>\n\n"
+        'Respond with ONLY compact JSON: {"concept": <int 0-2>, "fluency": <int 0-2>}\n'
+    )
+
+
 # ---------------------------------------------------------------------------
 # Key / model / cache resolution helpers.
 # ---------------------------------------------------------------------------
@@ -378,6 +406,42 @@ class GeminiJudge:
         ``behavior_efficacy`` field consumed by ``eval.composite``.
         """
         return self.score(text, behavior_name, behavior_description)["behavior"] / 10.0
+
+    # -- AxBench rubric (concept 0-2 + fluency 0-2) ------------------------
+    def score_axbench(self, text: str, concept: str, instruction: str) -> dict:
+        """Score one steered OUTPUT with AxBench's rubric (arXiv:2501.17148).
+
+        Returns ``{"concept": 0..2, "fluency": 0..2, "behavior": concept/2,
+        "axbench": fluency-gated concept in [0,1], "cached": bool, "raw": str}``.
+        ``behavior`` (concept/2) slots into the harness Axis-1 field; ``axbench``
+        zeroes the concept score when the output is non-fluent (a degenerate
+        output is not successful steering). Cached + retried like ``score``.
+        """
+        h = hashlib.sha256()
+        for part in (self.model, AXBENCH_RUBRIC_VERSION, concept, instruction, text):
+            h.update(b"\x00")
+            h.update(part.encode("utf-8"))
+        key = h.hexdigest()
+        hit = self._cache_read(key)
+        if hit is not None and "concept" in hit and "fluency" in hit:
+            concept_s, fluency_s, raw, cached = (
+                float(hit["concept"]), float(hit["fluency"]), hit.get("raw", ""), True)
+        else:
+            raw = self._call_with_retries(build_axbench_prompt(text, concept, instruction))
+            try:
+                obj = json.loads(raw)
+                concept_s = max(0.0, min(2.0, float(obj["concept"])))
+                fluency_s = max(0.0, min(2.0, float(obj["fluency"])))
+            except (json.JSONDecodeError, TypeError, KeyError, ValueError) as exc:
+                raise JudgeUnavailable(f"bad AxBench judge output: {raw!r}") from exc
+            self._cache_write(key, {"concept": concept_s, "fluency": fluency_s, "raw": raw})
+            cached = False
+        return {
+            "concept": concept_s, "fluency": fluency_s,
+            "behavior": concept_s / 2.0,
+            "axbench": (concept_s / 2.0) if fluency_s >= 1.0 else 0.0,
+            "cached": cached, "model": self.model, "raw": raw,
+        }
 
 
 def make_judge_or_none(
