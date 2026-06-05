@@ -253,6 +253,58 @@ be stated.
 
 ---
 
+## Mandate D — Honest re-evaluation scoreboard
+
+When a body of prior INTERNAL claims is re-evaluated on a REAL external
+benchmark (see `../autoresearch-paper-rigor/SKILL.md` §L12), the findings
+document MUST include an explicit **honest scoreboard** section.
+
+### D1. Required scoreboard section
+
+Add a section to FINDINGS.md titled "External-benchmark re-evaluation" that
+contains:
+
+1. A table listing every prior INTERNAL claim that was re-evaluated, with:
+   - The claim in plain English
+   - The prior evidence (tier, n, dataset)
+   - The real-benchmark result (metric, benchmark name, n_items)
+   - A status: GENERALIZES / DOES NOT GENERALIZE / PARTIALLY GENERALIZES
+
+2. A one-sentence synthesis of the unifying pattern across claims:
+   > "[What generalizes] generalized; [what did not] did not, suggesting
+   > [the unifying mechanism]."
+
+3. An explicit statement of the current state:
+   > "As of this writing, [N] of [M] prior claims generalize on real
+   > external benchmarks. EXTERNAL-READY results: [list or 'none']."
+
+### D2. Null results as process successes
+
+A null result on a real external benchmark — a prior INTERNAL claim that
+does NOT generalize — is a SUCCESS of the research process, not a failure.
+It must be:
+- Reported with equal prominence as positive results (same visual weight,
+  same location in the document, not buried in a limitations section).
+- Labeled DOES NOT GENERALIZE (not "inconclusive" or "needs more work"
+  when the evidence is clear).
+- Interpreted constructively: what does the non-generalization tell us
+  about the mechanism?
+
+### D3. "Zero external-ready results" is a valid state
+
+If no claims have been confirmed on a real external benchmark, the honest
+state is:
+
+> "No EXTERNAL-READY results have been confirmed as of this writing. All
+> results to date are INTERNAL or SCREENING tier. This is an honest
+> interim state; the program is working to confirm claims on real external
+> benchmarks."
+
+This statement is required if the program is in this state. It is NOT a
+failure or a reason to rush a claim to EXTERNAL-READY status.
+
+---
+
 ## Hard rules
 
 1. **FINDINGS.md preamble is required.** No finding may appear before the
@@ -270,6 +322,11 @@ be stated.
 9. **Provenance summary per tested hypothesis.** Not just in experiment_log.jsonl
    — in a human-readable location linked from the hypothesis's own README.
 10. **Shared-harness disclosure in README and dashboard** when applicable.
+11. **Honest re-evaluation scoreboard required** (Mandate D) whenever prior
+    INTERNAL claims are re-evaluated on a real external benchmark. Null results
+    receive equal prominence as positive results.
+12. **"Zero external-ready" state explicitly stated** when applicable (D3). Never
+    imply external-readiness that has not been confirmed.
 
 ---
 
@@ -286,6 +343,9 @@ be stated.
 | "See EXPERIMENT_LEDGER.md for details" in FINDINGS.md | Forces cross-referencing; findings must stand alone |
 | Hypothesis listed in IDEA_TABLE but no provenance artifact | A reader cannot investigate what was done for the hypothesis |
 | README says nothing about shared harness | "Few files in src/" is mistaken for incomplete work |
+| Re-evaluating on a real benchmark without an explicit scoreboard | Reader cannot tell which prior claims survived; null results are buried or absent |
+| Burying null/negative real-benchmark results in a limitations section | Positive and null results receive equal prominence; the null result is a process success |
+| Implied external-readiness when all results are INTERNAL | "Zero external-ready" must be stated plainly; never implied as temporary |
 
 ---
 

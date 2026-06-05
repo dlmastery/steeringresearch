@@ -609,6 +609,29 @@ process is "done" for a given claim only when all of the following hold:
 - [ ] **Power adequacy (L9):** minimum delta of interest pre-registered; n chosen
       to provide ≥ 80% power for that delta; result classified as SIGNIFICANT /
       INCONCLUSIVE / UNDERPOWERED.
+- [ ] **Real external benchmark (L12):** behavior-efficacy claims at Rung 2+ are
+      evaluated on a published benchmark with a population of items — not on
+      researcher-authored synthetic data. Dataset name logged in every experiment.
+- [ ] **Sign-aware verdict (L11):** every "win" / "supported" verdict verified to
+      have Δ > 0 (not just |Δ| > 0 or p < α). Verdict logic gates on sign.
+- [ ] **Item as replication unit (L13):** n_items and n_seeds reported separately;
+      the item is the replication unit for the paired test when the benchmark
+      provides a population; seeds measure within-item variance only.
+- [ ] **Judge validated against benchmark ground truth (L14):** ROC-AUC on
+      labeled benchmark items computed and disclosed before the first DEV-rung run.
+      Judge fallback chain documented: Tier-A (API) → Tier-B (local off-family) →
+      Tier-C (screening proxy, never backs a claim). Hard-abort if no valid judge.
+- [ ] **Batching (L15):** generation and judging batched over all items in single
+      GPU forward passes for any sweep over ≥ 50 items.
+- [ ] **Two-model memory budget (L16):** models loaded sequentially (generate →
+      unload → judge); pre-flight VRAM/RAM check before any two-model run.
+- [ ] **Honest scoreboard (L12):** when prior INTERNAL claims are re-evaluated on
+      a real benchmark, an explicit scoreboard of generalizing vs non-generalizing
+      claims, with a synthesis sentence, is in FINDINGS.md. Null results have equal
+      visual prominence to positive results.
+- [ ] **Plain-English accessibility (L14, doc-organization):** every hypothesis/
+      experiment page opens with an "In Plain English" box defining all technical
+      terms in-page; project GLOSSARY exists and is linked from all pages.
 
 A claim that cannot tick every relevant box is `INTERNAL` only and ships with the
 "independent external review pending" qualifier.
@@ -643,6 +666,15 @@ A claim that cannot tick every relevant box is `INTERNAL` only and ships with th
 | No program-level confirmation holdout | Pre-designate and never-touch confirmation set + promotion budget K; see L8 |
 | n=7 assumed adequate for all effect sizes | Pre-register minimum delta; compute required n; see L9 |
 | Use an extracted direction without checking stability | Bootstrap-cosine stability_p5 ≥ 0.85 gate; see L10 in [`autoresearch-experiment`](../autoresearch-experiment/SKILL.md) |
+| Claiming a behavioral result on researcher-authored synthetic data | Synthetic is SCREENING only; real published benchmark with item population required; see L12 in [`autoresearch-paper-rigor`](../autoresearch-paper-rigor/SKILL.md) |
+| Significant result labelled "win" without checking sign | |Δ| > 0 is not sufficient; gate on Δ > 0; see L11 in [`autoresearch-paper-rigor`](../autoresearch-paper-rigor/SKILL.md) |
+| "n=7 replications" when n=7 refers to seeds on one item | Report n_items and n_seeds separately; item is the replication unit; see L13 |
+| No judge ROC-AUC validation against benchmark ground truth | Judge discrimination unknown; must disclose AUC before any DEV+ run; see L14 in [`autoresearch-paper-rigor`](../autoresearch-paper-rigor/SKILL.md) |
+| Silent fallback to endogenous proxy when judge unavailable | Hard-abort required; proxy may only back SCREENING with explicit tag; see judge fallback chain |
+| Per-item generation/judge loops over large benchmarks | 10–16x slower than batching; makes sweeps infeasible; batch all items |
+| Both models in VRAM simultaneously on constrained hardware | OOM or commit-limit crash; load sequentially: generate → unload → judge |
+| Re-evaluating on real benchmark without honest scoreboard | Reader cannot distinguish which prior claims survived; null results must have equal prominence |
+| Technical-only documentation with no plain-English box | Non-specialist readers cannot engage; "In Plain English" box required on every hypothesis/experiment page; see L14 in [`autoresearch-doc-organization`](../autoresearch-doc-organization/SKILL.md) |
 
 ---
 

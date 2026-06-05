@@ -118,6 +118,96 @@ and then confirming them inflates the family-wise false positive rate. The
 promotion budget + confirmation holdout together control this inflation at the
 program level, not just the hypothesis level.
 
+### L11 — Sign-aware verdicts: significance is not a win
+
+**A statistically significant result is not automatically a WIN — check
+the SIGN of the effect.**
+
+**Documented failure mode in this program:** a bug in the verdict logic
+labelled a significant NEGATIVE delta (the control beat the method by a
+detectable margin) as "DIRECTIONAL". Any verdict logic must gate a
+"supported / win" verdict on ALL THREE:
+
+1. The test is statistically significant (p < α after correction).
+2. The 95% CI excludes zero in the direction that matters.
+3. The delta has the HYPOTHESIZED sign (method beats control, not the
+   reverse).
+
+**Checklist item (binding):**
+
+- [ ] Δ > 0 (method > baseline/control) confirmed before writing "win",
+      "supported", "positive result", or "directional effect".
+- [ ] Verdict code in `src/steering/stats.py:verdict()` gates on sign:
+      `significant AND ci_lo > 0 AND delta > 0` → SUPPORTED;
+      `significant AND delta < 0` → FALSIFIED (method harms); must not
+      be labelled DIRECTIONAL or NEAR-MISS.
+
+**Anti-pattern:** using `abs(delta) > threshold` as the win criterion.
+Absolute magnitude is direction-agnostic. Always use the signed delta.
+
+---
+
+### L12 — Honest scoreboard: report which claims generalize and which do not
+
+When a body of prior claims is re-evaluated on a real external benchmark,
+present an **explicit scoreboard** of which claims generalized vs which did
+not — alongside a one-line unifying synthesis of the pattern.
+
+**Why this is required:**
+
+- Without an explicit scoreboard, the reader cannot distinguish which
+  prior INTERNAL results held up and which were sampling artifacts.
+- A rigorous negative or null result on a real benchmark is a SUCCESS of
+  the process (the harness is doing its job). It must be reported with the
+  same prominence as a positive result, not buried.
+- The pattern of what generalizes vs what does not is itself a finding.
+  In this program: geometry/coherence claims (the alpha "coherence cliff")
+  generalized; direction-, layer-, source-, and operation-specificity did
+  NOT (most effect was governed by the alpha magnitude, not the specific
+  choice). This synthesis belongs in FINDINGS.md and the master dashboard.
+
+**Scoreboard template (for each re-evaluation campaign):**
+
+```
+Re-evaluation scoreboard: <prior benchmark / dataset> → <new real benchmark>
+
+| Prior claim                     | Prior evidence | Real-benchmark result | Status      |
+|---------------------------------|----------------|----------------------|-------------|
+| Alpha coherence cliff exists    | INTERNAL n=1   | AUC=0.72, AxBench500 | GENERALIZES |
+| Layer 18 is uniquely optimal    | INTERNAL n=1   | AUC=0.51, AxBench500 | DOES NOT GENERALIZE (NUMEROLOGY) |
+| DiffMean beats PCA source       | INTERNAL n=3   | Δ=-0.01 n.s.         | DOES NOT GENERALIZE |
+
+Synthesis: [one sentence explaining the unifying pattern]
+```
+
+Log the scoreboard in the per-hypothesis `PROVENANCE.md` and summarize in
+FINDINGS.md under "External-benchmark re-evaluation results."
+
+**Reporting rule:** the phrase "evaluated on a real benchmark" is not
+sufficient. Explicitly identify which prior claims survived and which did
+not. "Zero EXTERNAL-READY results" is an honest and reportable state.
+
+---
+
+### L13 — The item is the replication unit (steering instantiation)
+
+When the evaluation benchmark provides many independent items (e.g., 500
+concept vectors in AxBench), **the ITEM is the replication unit** for the
+paired statistical test — not the generation seed.
+
+- The paired Wilcoxon runs over n = number of items (concepts), not over
+  n = number of seeds.
+- Seeds provide within-item variance estimates but are NOT independent
+  replication units.
+- Report `n_items` and `n_seeds` separately in every EXPERIMENT_LEDGER.md
+  row that uses a multi-item benchmark.
+- Never conflate "n=7 seeds on 1 concept" with "n=7 independent replications."
+  The former is within-item noise; the latter is between-item replication.
+
+See `../steering-eval-bundle/SKILL.md` §L13 for the full protocol.
+
+---
+
 ### L9 — Power for an effect size, not just a p-value
 
 Pre-register the **minimum delta of interest** (the smallest real effect you
@@ -231,12 +321,20 @@ Every cited paper: `Author1, Author2, ..., YEAR VENUE 'Title' (arXiv:XXXX.XXXXX)
 - [ ] Controls both beat: delta_vs_random_direction > 0 AND
       delta_vs_shuffled_label > 0 (L6)
 - [ ] Metric calibration documented: ρ >= 0.70 against reference labels (L1)
-- [ ] Off-family judge used at Rung 2+; judge id logged (L2)
+- [ ] Off-family judge used at Rung 2+; judge id AND tier (A/B/C) logged (L2)
 - [ ] Extraction stability: bootstrap_cosine_p5 >= 0.85 for any vector used (L10)
 - [ ] No inherited numbers presented without [NEEDS VERIFICATION] tag
 - [ ] Citation format correct for every cited paper
 - [ ] Verdict tier assigned (NOVEL+TESTABLE / DERIVATIVE+TESTABLE / NUMEROLOGY / etc.)
 - [ ] Qualifier "Internal QA pass — independent external review pending" on any ACCEPT
+- [ ] SIGN check: delta > 0 (not just |delta| > threshold) for any "win" claim (L11)
+- [ ] Evaluation used a REAL external benchmark (not researcher-authored synthetic
+      data) for behavior-efficacy claims at Rung 2+; dataset name logged (L12 / §L12 in eval-bundle)
+- [ ] n_items AND n_seeds reported separately; replication unit is the ITEM (concept),
+      not the seed (L13)
+- [ ] If re-evaluating prior INTERNAL claims on a real benchmark: an explicit
+      scoreboard of which claims generalized vs which did not, plus a synthesis
+      sentence, is present in FINDINGS.md (L12)
 
 ---
 
@@ -248,7 +346,10 @@ Every cited paper: `Author1, Author2, ..., YEAR VENUE 'Title' (arXiv:XXXX.XXXXX)
 - Statistical contract: CLAUDE.md Section 7
 - Verdict tiers: CLAUDE.md Section 7
 - E49 (reproducibility audit): `../../IDEA_TABLE.md`
-- Metric calibration + off-family judge: `../steering-eval-bundle/SKILL.md` §10–11
+- Metric calibration + off-family judge + judge AUC + real benchmark rule:
+  `../steering-eval-bundle/SKILL.md` §10–11, §L12–§L14
 - Controls + extraction stability: `../steering-experiment/SKILL.md` §L6, §L10
 - Harness modules: `src/steering/stats.py` (paired_wilcoxon, bootstrap_ci,
-  holm_bonferroni, seed_noise_band, ordinal_gate, rigor_report.external_ready)
+  holm_bonferroni, seed_noise_band, ordinal_gate, rigor_report.external_ready,
+  verdict — must gate on sign)
+- Judge validation: `scripts/validate_judge.py`

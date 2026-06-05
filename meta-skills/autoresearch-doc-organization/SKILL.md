@@ -132,6 +132,59 @@ One short paragraph.
   shared runner for multiple hypotheses, state it explicitly so "few
   files in src/" is not mistaken for incomplete work.
 
+## Plain-English accessibility mandate (L14)
+
+**L14 (domain-agnostic) — Every hypothesis/experiment page must be
+accessible to a non-specialist. Technical-only documentation is
+incomplete.**
+
+A reader who is a domain expert but not an ML practitioner — or a
+collaborator from a different discipline — must be able to read any
+hypothesis or experiment page and understand what is being tested, why
+it matters, and what a result would mean, without needing to look up
+terms in another file.
+
+### "In Plain English" box (required on every hypothesis and experiment page)
+
+Every hypothesis sub-dashboard and every experiment leaf page must open
+with a visually distinct "In Plain English" box (before any tables or
+charts) containing:
+
+1. **What this tests** (1–2 sentences in ordinary language, no jargon).
+2. **Key terms defined in-page** — every technical term used on the page
+   defined in ≤2 sentences each, within this box or in a collapsible
+   panel immediately below it. No term-on-first-use that requires opening
+   another document.
+3. **Why it matters** (1 sentence — what changes about the project's
+   conclusions depending on the result).
+4. **What a result would mean** (1–2 sentences, concretely — what does
+   a positive result mean vs a null/negative result, for this specific
+   hypothesis).
+
+### Project GLOSSARY (required)
+
+Every autoresearch project must maintain a single, linked, project-wide
+glossary (e.g., `docs/GLOSSARY.md`) defining every technical term used
+in hypothesis, experiment, and dashboard pages. The glossary is:
+
+- Linked from the master dashboard "how to read this" block.
+- Linked from every per-page "In Plain English" box.
+- Linked from the project README.
+- Updated whenever a new technical term is introduced.
+
+A document that relies on a reader's background knowledge of the domain
+instead of defining terms in-page or in the linked glossary fails the
+accessibility mandate.
+
+### What this is NOT
+
+This mandate does not require dumbing down the technical content. The
+technical detail (formulas, metrics, plots) stays on the page. The
+"In Plain English" box is an ADDITION that makes the page accessible
+to a broader audience — it does not replace the technical content.
+
+---
+
 ## Cross-reference rewriting after a restructure
 
 When a file moves from `<root>/FINDINGS.md` to `paper/FINDINGS.md`:
@@ -181,6 +234,9 @@ print("Root-file check PASS.")
 | Positive finding in the headline, negative buried in limitations | Both receive equal prominence; a hostile reviewer reads the front page first |
 | Quick-start that assumes a pre-configured environment | A clean-clone test is cheap and catches missing steps before release |
 | Self-grading ACCEPT banner without the circularity qualifier | Every internal audit verdict carries the "independent external review pending" disclosure |
+| Per-hypothesis/experiment page with no "In Plain English" box | A non-specialist cannot understand what is being tested; accessibility mandate (L14) requires the box before any table or chart |
+| Technical terms used on a page without in-page definitions | Forces readers to search other files; fails the zero-cross-reference standard for accessibility |
+| No project-wide GLOSSARY | Readers encountering jargon have no single authoritative reference; all pages must link to the glossary |
 
 ## Cross-references
 
@@ -203,3 +259,6 @@ print("Root-file check PASS.")
   — the self-contained FINDINGS and interpretable ledger discipline;
   FINDINGS.md is one of the canonical root-adjacent documents governed
   by both this skill and the findings-ledger skill.
+- [`../autoresearch-dashboard/SKILL.md`](../autoresearch-dashboard/SKILL.md)
+  — the dashboard rendering rules; the "In Plain English" box and
+  project GLOSSARY (L14) are rendered as dashboard pages.

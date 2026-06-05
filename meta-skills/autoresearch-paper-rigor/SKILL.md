@@ -230,6 +230,101 @@ and choose the sample/seed count to provide ≥ 80% power for THAT delta.
 [adequately / underpowered] for detecting the pre-registered minimum delta
 of [value] at σ=[value]."
 
+## Pillar 4D — Sign-aware verdicts
+
+**L11 (domain-agnostic).** A statistically significant result is NOT
+automatically a win — the SIGN of the effect must match the hypothesis.
+
+A common bug in verdict logic: checking `|delta| > threshold` or even
+`p < alpha` without separately confirming `delta > 0`. This can label a
+result where the control beats the method as "DIRECTIONAL" or
+"NEAR-MISS".
+
+**The three-part win criterion:**
+
+1. Significant: `p < alpha` (after correction).
+2. CI excludes zero in the hypothesized direction: `CI_lower > 0` (for a
+   hypothesis that the method beats the baseline).
+3. Effect has the hypothesized sign: `delta > 0`.
+
+All three must hold for a verdict of SUPPORTED, WIN, or POSITIVE. If
+`p < alpha` but `delta < 0`, the correct verdict is FALSIFIED (the
+control beat the method by a detectable margin), NOT DIRECTIONAL or
+NEAR-MISS.
+
+**Anti-pattern:** using `abs(delta)` as the criterion. Reject this pattern
+in any code review of verdict logic.
+
+**Verification:** `stats.py:verdict(delta, p, ci_lo)` (or equivalent) must
+gate on sign. Add a unit test: `verdict(delta=-0.05, p=0.01, ci_lo=-0.09)`
+must return FALSIFIED, not SIGNIFICANT/DIRECTIONAL.
+
+---
+
+## Pillar 4E — Real external benchmark mandate
+
+**L12 (domain-agnostic).** A behavioral or performance claim is not
+credible until it is evaluated on a REAL, external, published benchmark
+with a POPULATION of items and a matched control — not on data the
+researcher authored.
+
+**Why:** researcher-authored synthetic evaluations SYSTEMATICALLY
+OVERSTATE effects because:
+- The researcher unconsciously authors items that favour the method.
+- A handful of items has extreme sampling variance.
+- There is no matched control from an independent source.
+
+**The external-benchmark rule:**
+
+1. The evaluation items come from a publicly released benchmark (not
+   authored by the researcher for this experiment).
+2. The benchmark provides a population (≥ 50 items at SMOKE, ≥ 200 at
+   DEV, full benchmark at STANDARD+).
+3. The benchmark supplies a matched control (positive and negative
+   conditions) or the researcher constructs one from the same benchmark
+   items.
+
+**Screening exception:** researcher-authored synthetic items are acceptable
+for SMOKE/screening only (cheap signal, not a claim). They must be labeled
+SYNTHETIC/SCREENING and cannot graduate to a claim at any rung.
+
+**Honest re-evaluation scoreboard:** when prior INTERNAL claims are
+re-evaluated on a real benchmark, present an explicit scoreboard:
+
+```
+| Prior claim | Prior evidence | Real-benchmark result | Status |
+|-------------|---------------|----------------------|--------|
+| …           | INTERNAL n=X  | [metric, benchmark]   | GENERALIZES / DOES NOT GENERALIZE |
+```
+
+Plus a one-sentence synthesis of the unifying pattern. A null or negative
+result on a real benchmark is a SUCCESS of the process, not a failure.
+Report it with equal prominence.
+
+---
+
+## Pillar 4F — The item is the replication unit
+
+**L13 (domain-agnostic).** When a benchmark provides many independent
+items, the ITEM is the unit of replication for the paired statistical
+test — not the repetition seed.
+
+**Why:** repeating a measurement over N seeds on a single item measures
+within-item sampling noise. Running the measurement on N independent
+benchmark items measures real replication. These are fundamentally
+different quantities.
+
+**Protocol:**
+
+- The paired statistical test (Wilcoxon, t-test) runs over n = number of
+  items, not n = number of seeds.
+- Seeds are used to estimate within-item variance, not as replication units.
+- Report `n_items` and `n_seeds` separately in every claim.
+- Never say "n=7 replication" when the n=7 refers to generation seeds on
+  a single item.
+
+---
+
 ## Pillar 5 — Limitations in the abstract; internal-contradiction audit
 
 ### Limitations IN THE ABSTRACT
@@ -305,6 +400,17 @@ evidence in support of a claim about the project's hypotheses.
 - **Placing the circularity disclosure only in a limitations
   appendix.** It must appear in the section where the audit rate is
   cited as evidence.
+- **Verdict logic that checks |delta| instead of signed delta.** A
+  significant negative delta is FALSIFIED, not DIRECTIONAL. See L11.
+- **Claiming a behavioral result on researcher-authored synthetic data.**
+  Synthetic data is SCREENING only; a real external benchmark with a
+  population of items is required for any claim. See L12.
+- **Reporting "n=7 replication" when n=7 refers to generation seeds on
+  one item.** Report n_items and n_seeds separately; the item is the
+  replication unit. See L13.
+- **Re-evaluating on a real benchmark without an explicit scoreboard
+  of which prior claims generalized.** The scoreboard is required;
+  a null result is a success of the process, not a failure. See L12.
 
 ## Cross-references
 

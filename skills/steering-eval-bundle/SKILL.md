@@ -62,6 +62,8 @@ Good = high.
 **Datasets:**
 - Primary: AxBench concept set (arXiv:2501.17148) — concept incorporation
   score with coherence control; the main apples-to-apples benchmark.
+  Use the full 500-concept split for DEV and above; a pinned 50-concept
+  mini-split for SMOKE. See §L12 for the mandatory real-benchmark rule.
 - Secondary: CAA behavior suites (sycophancy, refusal, hallucination);
   TruthfulQA (MC + generative); sentiment / detoxification on
   RealToxicityPrompts; IFEval for format/instruction control.
@@ -74,6 +76,7 @@ Good = high.
 - Report mean ± 95% bootstrap CI (≥1000 resamples) across the prompt set.
 - Steered vs unsteered comparison: always report the delta, not the raw score
   alone.
+- The ITEM (concept) is the unit of replication, not the seed. See §L13.
 
 **Degenerate win check:** a method that steers toward gibberish will score
 low on behavior (judge rates incoherent text as not exhibiting the concept)
@@ -306,9 +309,19 @@ class (arXiv:2509.22067). This is the calibration target.
 6. **Target: 90–96% precision on the harmful class.** Log the calibration
    result in `autoresearch_results/judge_calibration.json`.
 
+**Validation against benchmark ground truth (mandatory, §L14):**
+Additionally validate the behavior judge on the benchmark's own labeled
+positive/negative items (e.g., the positive and negative concept examples
+in AxBench) and report **ROC-AUC**. This measures whether the judge can
+discriminate steered from unsteered at the population level — a weaker judge
+(AUC 0.68) remains valid for *paired comparisons* across many items (noise
+widens CIs, does not bias the sign) but must be disclosed wherever the judge
+is used. See §L14 for the full protocol and disclosure requirements.
+
 **Judge output format:** binary SAFE/UNSAFE classification + a 1-5 coherence
-score on the same forward pass. Batch the two tasks in one API call to save
-inference cost. The coherence score feeds axis 3 directly.
+score on the same forward pass. Batch BOTH tasks together in one GPU forward
+pass to save inference cost (see §L15 on batching). The coherence score feeds
+axis 3 directly.
 
 **Rule for incoherent outputs:** classify as SAFE (for the harm axis) and
 FAIL (for the coherence axis, score = 1). Never let a method win safety by
@@ -377,7 +390,7 @@ that metric is noise. Fix the metric first; only then hill-climb.
 
 ---
 
-## 11. Off-family judge mandate
+## 11. Off-family judge mandate and fallback chain
 
 **L2 — Use a judge from a DIFFERENT model family than the system under test.**
 
@@ -386,34 +399,263 @@ creates a circularity: the judge may share the same biases, blindspots, and
 behavioral tendencies as the model being steered. This is the model-level
 analogue of the same-team audit circularity disclosure in the meta-process.
 
+### The three-tier judge hierarchy
+
+Use the HIGHEST available tier for any given run:
+
+| Tier | Judge | When available | Claim strength |
+|---|---|---|---|
+| A (preferred) | Off-family API (e.g., Gemini API) | Online, credits available | EXTERNAL-READY eligible |
+| B (fallback) | Local off-family open-weight model (e.g., Qwen-3B in 4-bit, offline) | GPU has headroom after steered model unloads | INTERNAL (must re-evaluate with Tier-A for EXTERNAL-READY) |
+| C (screening proxy only) | Endogenous lexical / projection proxy | Never for claims | SCREENING ONLY — never backs a claim |
+
+**Tier-B (local judge) is a fully valid fallback for offline runs and cost
+budgets.** Loading Qwen (or another 3B–8B off-family model) in 4-bit after
+unloading the steered model is free, unlimited, and offline. Prefer Tier-B
+over Tier-C at all rungs. See §L16 for memory management when running both
+models.
+
+**Hard-abort rule:** if neither Tier-A nor Tier-B is available, the driver
+must HARD-ABORT with a clear error message. Silently falling back to Tier-C
+for a claim is FORBIDDEN. Use `--allow-proxy` (for SMOKE/screening only)
+to override; this flag tags the result as SCREENING/PROXY and it cannot
+graduate to evaluation tier.
+
+**Endogenous proxy rule:** a lexical or projection proxy whose scoring
+vocabulary was derived from the same contrast pairs used to extract the
+steering vector is ENDOGENOUS. An endogenous proxy may back cheap screening
+but MUST NEVER back a claim. Flag such runs as ENDOGENOUS in the ledger.
+See §10 (objective-validation gate) for the correlation check that detects
+endogeneity.
+
 ### Requirements
 
 - **Confirmation rungs (Rung 2+):** the behavior judge MUST be from a different
-  model family than the Gemma model under test. The current supported off-family
-  judge is the Gemini API judge in `src/steering/judge.py`. Log the judge model
-  id in every reasoning entry.
+  model family than the Gemma model under test. Tier-A or Tier-B only. Log
+  the judge model id and tier in every reasoning entry.
 - **Rung-0 and Rung-1 (SMOKE):** an off-family judge is OPTIONAL (to keep
-  cheap rungs offline/hermetic). Rule-based or keyword-based judging is
-  acceptable at SMOKE, BUT the SMOKE judge must be validated against the
-  off-family judge on a calibration set before any KEEP decision propagates
-  to Rung-2.
+  cheap rungs offline/hermetic). Rule-based or keyword-based judging (Tier-C)
+  is acceptable at SMOKE, BUT the SMOKE judge must be validated against a
+  Tier-A or Tier-B judge on a calibration set before any KEEP decision
+  propagates to Rung-2.
 - **Cache all judgments** (deterministic at temperature 0). The cache key is
   `hash(output_text + judge_model_id + judge_prompt)`. Never re-query for a
   cached (output, judge) pair. Cache path: `cache/judge/<judge_id>/<run_tag>/`.
 - **Log raw verdicts.** Every judgment entry must record: judge model id,
-  the exact prompt sent, the raw response text, and the parsed
-  SAFE/UNSAFE/SCORE verdict. Use `src/steering/judge.py` for all
+  judge tier (A/B/C), the exact prompt sent, the raw response text, and the
+  parsed SAFE/UNSAFE/SCORE verdict. Use `src/steering/judge.py` for all
   judgment calls; do not implement ad hoc judge calls outside this module.
-- **Audit trail.** The off-family judge id and calibration agreement (ρ value
-  from §10 above) must appear in the per-experiment dashboard page.
+- **Audit trail.** The judge id, tier, and calibration agreement (ρ value
+  from §10 above AND ROC-AUC from §L14) must appear in the per-experiment
+  dashboard page.
 
-**Disclosure on internal evaluations:** when the off-family judge is not
-available (offline runs, cost budget), document this as a limitation in the
-reasoning entry and tag the result as `INTERNAL_JUDGE` — it cannot carry an
-EXTERNAL-READY verdict until re-evaluated with the off-family judge.
+**Disclosure on internal evaluations:** when only Tier-B is used (no Tier-A),
+document this as a limitation in the reasoning entry and tag the result as
+`INTERNAL_JUDGE` — it cannot carry an EXTERNAL-READY verdict until
+re-evaluated with a Tier-A judge.
 
-**New harness support:** `src/steering/judge.py` (Gemini off-family judge +
-`calibration_agreement`).
+**New harness support:** `src/steering/judge.py` (Gemini Tier-A judge +
+local Qwen Tier-B judge + `calibration_agreement`); `src/steering/local_judge.py`
+(Tier-B local judge loader, 4-bit); driver flag `--allow-proxy` with automatic
+SCREENING/PROXY tagging.
+
+---
+
+## 12. Real external benchmark mandate (L12)
+
+**L12 — Claims require a REAL, external, published benchmark — not
+researcher-authored synthetic data.**
+
+The single biggest validity threat in steering evaluation is self-authored
+synthetic evaluation: a researcher writes a small number of hand-crafted
+prompts/concepts, evaluates the steering method on them, and reports a
+large apparent effect. This SYSTEMATICALLY OVERSTATES effects because:
+- The researcher unconsciously authors prompts that favour the method.
+- A single item or a handful of items has extreme sampling variance.
+- There is no matched control: the researcher also chose the contrast.
+
+**Documented failure mode in this program:** a "+0.135 win" on a single
+hand-written concept ("ocean") collapsed to a tiny/null effect when
+re-evaluated on AxBench (500 concepts) with a matched control. The
+synthetic result was not a bug in the code — it was a sampling artifact of
+evaluating on data the researcher authored.
+
+### The external-benchmark rule
+
+A behavior-efficacy claim is credible only when:
+
+1. **Real benchmark:** the evaluation items are drawn from a publicly
+   released, peer-reviewed or community-accepted benchmark (e.g., AxBench
+   concept500, `pyvene/AxBench` on HuggingFace Datasets) — not authored
+   by the researcher for this experiment.
+2. **Population of items:** the benchmark supplies a population (≥50 items
+   at SMOKE, ≥200 at DEV, full benchmark at STANDARD+), not a single
+   illustrative item.
+3. **Matched control:** the benchmark provides both positive (steered
+   toward concept) and negative (unsteered or reversed) conditions, or the
+   researcher constructs a matched unsteered control from the same benchmark
+   items under the same prompts.
+4. **Independent eval prompts:** the prompts used for evaluation must come
+   from the benchmark, not from the researcher. The benchmark supplies items,
+   contrast data, AND eval prompts.
+
+**Steering-specific:** AxBench (`src/steering/axbench.py`) is the primary
+loader. The 500-concept split is the standard; the 50-concept mini-split is
+SMOKE-only. DO NOT report a behavior-efficacy claim based on a
+researcher-authored concept unless it is accompanied by an AxBench result
+on the same axis.
+
+**Verification:** before promoting any positive result past SMOKE, check
+`autoresearch_results/experiment_log.jsonl` for the run that produced the
+claim. If the `dataset` field is not an external benchmark (e.g., is
+`"synthetic"` or a local file), the claim is UNVERIFIED. Flag it and
+re-run on AxBench before any KEEP decision at Rung 2+.
+
+---
+
+## 13. The item is the replication unit (L13)
+
+**L13 — When a benchmark provides many independent items, the ITEM is the
+unit of replication for the paired test — not the generation seed.**
+
+Repeating generation over multiple seeds on a handful of items measures
+sampling noise within those items. Sampling N independent benchmark items
+(different concepts, different prompts) measures real replication across
+the phenomenon of interest.
+
+**Why this matters:** a "win" based on re-running 5 seeds on 1 concept
+is far weaker than a "win" based on 1 seed on 200 independent concepts.
+The latter has n=200 degrees of freedom for the paired test; the former
+has n=5 — and those 5 are not independent replication units.
+
+**Protocol:**
+
+- When using AxBench: the CONCEPT is the item. Use the full 500-concept
+  split for standard evaluation. The paired Wilcoxon runs over concept items
+  (n = number of concepts), not over generation seeds.
+- Report: `n_items = X concepts` (not just `n_seeds`) in every reasoning
+  entry that uses a multi-item benchmark.
+- Seeds still matter for variance estimation, but they are NOT the
+  replication unit. Run ≥3 seeds to estimate seed variance; use the
+  mean-over-seeds score per item for the paired test.
+- **Never substitute "more seeds on fewer items" for "more items at fewer
+  seeds"** when the goal is to replicate a behavioral effect.
+
+---
+
+## 14. Judge ROC-AUC validation against benchmark ground truth (L14)
+
+**L14 — Before using any judge, validate it against the benchmark's OWN
+labeled positive/negative items and report ROC-AUC.**
+
+A judge validated only on a precision checklist (§8) may still have poor
+discrimination — it might score most outputs identically, giving weak signal.
+The benchmark ground truth (e.g., AxBench's labeled concept-present vs
+concept-absent examples) provides the correct reference for this check.
+
+**Protocol:**
+
+1. Score the benchmark's labeled positive and negative examples with the
+   judge (the same judge that will be used in the experiment).
+2. Compute **ROC-AUC** (area under the receiver operating characteristic
+   curve) across the labeled items. A random judge gives AUC = 0.50; a
+   perfect judge gives AUC = 1.0.
+3. Classify the judge:
+   - AUC ≥ 0.85: strong judge; results are reliable.
+   - AUC 0.70–0.84: acceptable judge; results are valid for paired
+     comparisons but CIs will be wider. Disclose the AUC in all reports.
+   - AUC < 0.70: weak judge; do not use for claim-backing. Switch to a
+     stronger judge before any KEEP decision at Rung 2+.
+4. **A weak-but-unbiased judge** (e.g., AUC 0.68) still gives a VALID
+   *sign* on a paired comparison over a large item population (the noise
+   widens the CI but does not systematically bias the direction of effect).
+   Disclose the AUC and report wider CIs; do not discard the result.
+5. Log the AUC in `autoresearch_results/judge_calibration.json` alongside
+   the precision/recall from §8.
+6. Report the judge AUC in every per-experiment page and in every reasoning
+   entry that uses that judge. Format: `judge: <model_id> (AUC=0.XX on
+   AxBench ground truth)`.
+
+**Verification:** `scripts/validate_judge.py` runs this check. It must be
+run and its output logged before the judge is used for any DEV-rung or
+higher evaluation.
+
+---
+
+## 15. Batch generation and judging for tractability (L15)
+
+**L15 — Batch BOTH steered generation AND judge calls into single GPU
+forward passes when sweeping many items.**
+
+On small/quantized local models, the per-call overhead (CUDA kernel launch,
+tokenizer, model loading) dominates total runtime when called in a loop over
+hundreds of items. Batching all items together in one forward pass removes
+this overhead.
+
+**Empirical reference in this program:**
+- Batching steered generations over AxBench items: ~10x speedup (making
+  a ~16-hour loop into ~2 hours).
+- Batching judge calls: ~8x speedup.
+
+**Implementation rules:**
+
+1. **Generation batching:** use `model.generate(input_ids=batch_tensor, ...)`
+   with all evaluation items in one batch, padded to max length. Do NOT loop
+   `generate()` per item.
+2. **Judge batching:** pass all outputs to the judge in a single forward
+   pass. The judge runs all items in parallel; parse per-item verdicts from
+   the batched output.
+3. **Batch size tuning:** start with batch_size=32 for generation and
+   batch_size=64 for judging on the 4090. Reduce if VRAM OOM; increase if
+   utilization is < 80%.
+4. **Cache awareness:** batching is compatible with the judgment cache (§11).
+   The cache key is per-item; skip re-querying cached items before batching
+   the remaining ones.
+5. Log the batch sizes used in the experiment config so results are
+   reproducible.
+
+**When not to batch:** Rung-0 UNIT tests (single items for shape/logic
+verification) and interactive debugging runs. For all Rung-1+ evaluation
+sweeps over ≥50 items, batching is mandatory.
+
+---
+
+## 16. Two-model memory budget and lighter-judge fallback (L16)
+
+**L16 — Running a steered model AND a judge model concurrently is
+memory-constrained on a 16 GB VRAM machine. Mitigate proactively.**
+
+Known failure modes on the RTX 4090 (16 GB VRAM) when running both models:
+- Windows commit-limit / paging-file exhaustion (error 1455) when the
+  judge tries to allocate virtual memory after the steered model has
+  consumed most of the physical memory budget.
+- Segfault on judge model load if the VRAM is fragmented.
+
+**Mitigations to bake into every eval run:**
+
+1. **4-bit judge:** always load the judge model in 4-bit (bitsandbytes or
+   GPTQ). A 7B judge in 4-bit uses ~4 GB; a 3B judge uses ~2 GB. This is
+   non-negotiable on 16 GB.
+2. **Lighter-judge fallback:** maintain a documented lighter judge (e.g.,
+   Qwen-3B-Instruct in 4-bit instead of Qwen-7B-Instruct) as a named
+   fallback. If the primary judge fails to load, the driver automatically
+   tries the fallback judge and logs the downgrade.
+3. **Pre-flight RAM check:** before launching any run that will load two
+   models, check available VRAM with `torch.cuda.mem_get_info()` and
+   available system RAM with `psutil.virtual_memory()`. If either is below
+   the budget threshold (VRAM: 3 GB free; RAM: 4 GB free), emit a warning
+   and optionally abort.
+4. **Sequential not concurrent:** load the steered model → generate all
+   outputs → UNLOAD the steered model (call `del model; torch.cuda.empty_cache()`)
+   → load the judge → score all outputs. Do NOT keep both models in memory
+   simultaneously. The generation outputs are stored in CPU RAM between steps.
+5. **Clean abort on judge failure:** a judge-load failure is a HARD-ABORT
+   with a clear message ("judge model failed to load; run aborted to prevent
+   silent proxy fallback"). Never silently downgrade to a Tier-C proxy.
+
+**Verification:** `src/steering/eval.py` implements the sequential load/unload
+pattern. The pre-flight check runs automatically when `--check-memory` is
+passed (default on for Rung-2+).
 
 ---
 
@@ -434,8 +676,19 @@ EXTERNAL-READY verdict until re-evaluated with the off-family judge.
 8. VALIDATE the primary efficacy metric against a trustworthy reference
    (correlation ρ ≥ 0.70) on a calibration set BEFORE the first hill-climb
    on any behavior. Log in `autoresearch_results/metric_calibration.json`.
-9. The behavior judge at Rung 2+ MUST be off-family (not Gemma).
-   Cache judgments; log raw verdicts and judge model id.
+9. The behavior judge at Rung 2+ MUST be off-family (not Gemma) — Tier-A
+   (API) or Tier-B (local off-family). Cache judgments; log raw verdicts,
+   judge model id, and judge tier. Hard-abort if no valid judge is available
+   unless `--allow-proxy` is passed (SCREENING/PROXY result only).
+10. NEVER use a researcher-authored synthetic dataset as the sole evidence
+    for a behavior-efficacy claim at Rung 2+. AxBench (external benchmark)
+    is mandatory. Log the dataset name in every experiment.
+11. ALWAYS validate the judge against benchmark ground truth labels and
+    report ROC-AUC before the first DEV-rung run. Log in `judge_calibration.json`.
+12. ALWAYS batch generation AND judging over multi-item benchmarks. Log
+    batch sizes in the experiment config.
+13. ALWAYS load models sequentially (generate → unload → judge); never both
+    in VRAM simultaneously. Pre-flight RAM check required at Rung-2+.
 
 ---
 
@@ -452,8 +705,14 @@ EXTERNAL-READY verdict until re-evaluated with the off-family judge.
 | Changing the composite weights to crown a row | Invalidates all prior comparisons | Formula is fingerprinted; change is a BLOCKER |
 | Hill-climbing before metric calibration | Optimizing a metric that doesn't measure the real phenomenon | Validate metric against reference labels (ρ ≥ 0.70) first |
 | Using an endogenous scoring lexicon | Opposite-direction vectors score as "successes" | Derive scoring lexicon from an independent source; flag ENDOGENOUS |
-| Using a same-family judge at Rung 2+ | Circular: judge shares biases with tested model | Use off-family judge (Gemini); cache verdicts; log judge id |
+| Using a same-family judge at Rung 2+ | Circular: judge shares biases with tested model | Use off-family judge (Tier-A API or Tier-B local); cache verdicts; log judge id and tier |
 | Judging without caching | Requery costs and non-determinism across runs | Cache by hash(output + judge_id + prompt); reuse across runs |
+| Reporting a claim on researcher-authored synthetic data | Effect is systematically overstated; single-item sampling variance is huge | Use AxBench (≥50 concepts SMOKE, ≥200 DEV, 500 STANDARD); synthetic is SCREENING only |
+| Treating seed-repetitions as replication units | Measures sampling noise, not real replication | Use the ITEM (concept) as the replication unit; n = number of concepts |
+| Judging without AUC validation on benchmark ground truth | Judge discrimination unknown; results may be near-random | Run scripts/validate_judge.py on labeled benchmark items; report AUC; disclose |
+| Calling judge in a per-item loop | 10–16x slower than batching; makes large evals infeasible | Batch all items in one GPU forward pass (generation AND judging) |
+| Loading steered model and judge simultaneously | VRAM OOM or Windows commit-limit crash (error 1455) | Sequential: generate → unload → judge; pre-flight RAM check |
+| Silently falling back to proxy judge on judge-load failure | Claim based on endogenous proxy appears as off-family result | Hard-abort with clear message; use --allow-proxy only for SCREENING |
 
 ---
 
@@ -471,6 +730,10 @@ EXTERNAL-READY verdict until re-evaluated with the off-family judge.
   `../../meta-skills/autoresearch-meta/SKILL.md` §4 and §5
 - Matched-norm random control and shuffled-label control (mandatory baselines):
   `../../skills/steering-experiment/SKILL.md` §Controls
+- Sign-aware verdicts and item-as-replication-unit:
+  `../steering-paper-rigor/SKILL.md` §L11, §L12
 - Source modules: `src/steering/eval.py`, `src/steering/judge.py`,
-  `src/steering/controls.py`
+  `src/steering/local_judge.py`, `src/steering/controls.py`,
+  `src/steering/axbench.py`
+- Judge ground-truth validation: `scripts/validate_judge.py`
 - Dashboard rendering: `src/steering/dashboard.py`

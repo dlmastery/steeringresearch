@@ -151,6 +151,29 @@ These are cheap and provide the off-manifold signal needed by N5, N11, N20.
 A trial that improves composite but increases delta_norm past the N5 budget
 threshold is a FALSE POSITIVE — flag it and check.
 
+### L11 — Batch all generation and judging calls within the hill-climb loop
+
+Coordinate descent over 20–25 trials on a large benchmark (AxBench 500
+concepts) is tractable only if generation and judging are batched. Do NOT
+call `generate()` or the judge in a per-item loop within any trial.
+
+**Rule:**
+
+- Before launching a hill-climb, confirm that the eval harness uses
+  batched generation (`src/steering/eval.py`) and batched judging
+  (`src/steering/judge.py`). If the harness loops per-item, file a BUG
+  and DO NOT begin the hill-climb.
+- The typical speedup is ~10x for generation and ~8x for judging on the
+  4090. Without batching, a 20-trial hill-climb over AxBench-500 takes
+  ~16 hours; with batching it takes ~2 hours.
+- Log the batch sizes in the hill-climb config. A trial whose config lacks
+  `generation_batch_size` and `judge_batch_size` is incomplete.
+
+See `../steering-eval-bundle/SKILL.md` §L15 for the batching protocol and
+memory management rules.
+
+---
+
 ### L5 — Pareto-climb, not scalar-climb
 
 The fixed-weight composite is a **tiebreak summary**, not the sole champion
@@ -189,11 +212,16 @@ norm budget is a hard constraint, not a soft penalty.
 - [ ] Only one axis changes per trial
 - [ ] Metric calibrated (ρ ≥ 0.70) against reference labels before first hill-climb
       (see [[steering-eval-bundle]] §10)
+- [ ] Judge validated against benchmark ground truth (AUC ≥ 0.70) before first trial
+      (see [[steering-eval-bundle]] §L14)
+- [ ] Harness uses batched generation AND batched judging — no per-item loops (L11)
+- [ ] batch sizes logged in hill-climb config (generation_batch_size, judge_batch_size)
 - [ ] Strict-greater-than champion rule — no champion update at n=1 (L3)
 - [ ] Adaptive seed allocation: n=1 explore → n=3 promote → n=7 confirm
 - [ ] Layer × alpha interaction checked; joint surface fitted if oscillation detected (L4)
 - [ ] Geometry surrogate (Δ‖h‖) used as inner-loop coherence constraint (L4)
 - [ ] Pareto-dominance check on ALL five axes before each champion update (L5)
+- [ ] Sign check: champion update requires Δ > 0 (not just |Δ| > 0) (L11 in paper-rigor)
 - [ ] Geometry leading indicators logged every trial
 - [ ] N5 norm-budget constraint applied
 - [ ] VERIFY.md signed before hill-climbing
@@ -210,8 +238,10 @@ norm budget is a hard constraint, not a soft penalty.
 - Participation ratio: hypothesis N3 in `../../IDEA_TABLE.md`
 - Champion config: `../../autoresearch_results/best_config.json`
 - Ledger: `../../EXPERIMENT_LEDGER.md`
-- Metric calibration + off-family judge: `../steering-eval-bundle/SKILL.md` §10–11
+- Metric calibration + off-family judge + judge AUC + batching:
+  `../steering-eval-bundle/SKILL.md` §10–11, §L14–§L15
+- Sign-aware verdicts + item-as-unit: `../steering-paper-rigor/SKILL.md` §L11, §L13
 - Statistical rigor floor + power requirements: `../steering-paper-rigor/SKILL.md`
 - Controls (matched-norm random, shuffled-label): `../steering-experiment/SKILL.md` §Controls
-- Harness modules: `src/steering/stats.py` (seed_noise_band, paired_wilcoxon),
+- Harness modules: `src/steering/stats.py` (seed_noise_band, paired_wilcoxon, verdict),
   `src/steering/controls.py` (surrogate fitting, matched_norm_random)

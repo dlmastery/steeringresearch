@@ -127,6 +127,87 @@ Required:
   (incl. axis abbreviations expanded), what-to-pay-attention-to, expected values
 - **Winner color-coding with explicit legend**: KEEP/champion = green,
   NEAR-MISS = yellow, DISCARD = muted, BROKEN = grey; legend present
+- **"In Plain English" box** present at the top of EVERY per-hypothesis and
+  per-experiment page, before any table or chart; defines all technical terms
+  in-page; links to the project GLOSSARY (L17)
+- **Project GLOSSARY** at `hypotheses/GLOSSARY.md` (or `docs/GLOSSARY.md`);
+  linked from master dashboard "how to read this" block and every per-page
+  plain-English box (L17)
+
+---
+
+## Plain-English accessibility mandate (L17)
+
+**L17 — Every hypothesis/experiment page must open with a plain-language
+box, and the project must maintain a GLOSSARY.**
+
+Technical documentation that assumes ML or mechanistic-interpretability
+background is incomplete. A cognitive scientist, a policy researcher, or a
+domain expert should be able to read any hypothesis or experiment page and
+understand: what is being tested, in normal words; what every term means;
+why it matters; and what a result would mean in plain English.
+
+### Per-page "In Plain English" box (required on every hypothesis and
+experiment page)
+
+Every `ideas/<NN>/dashboard/index.html` and every
+`docs/dashboard/experiments/expNNN.html` must open with an "In Plain English"
+box (visually distinct — light background, slightly larger font) containing:
+
+1. **What this tests** (1–2 sentences in ordinary English, no jargon).
+   Example: "We test whether nudging the model's internal representation
+   toward an 'ocean' concept makes it write ocean-related text more often."
+
+2. **Key terms defined in-page** (not by reference to another file).
+   Every technical term used in the page — "residual stream", "steering
+   vector", "alpha", "injection layer", "composite score", etc. — must be
+   defined in this box or in a collapsible inline glossary panel immediately
+   below it. Definition length: 1–2 sentences each.
+
+3. **Why it matters** (1 sentence). What would change about the project's
+   conclusions if this hypothesis is true vs false?
+
+4. **What a result would mean** (1–2 sentences). Concretely: what does
+   KEEP mean, and what does DISCARD mean, for this specific hypothesis?
+
+The box must appear BEFORE any tables, charts, or technical metrics on the
+page. It is the first thing a reader sees.
+
+### Project GLOSSARY (`hypotheses/GLOSSARY.md`)
+
+Maintain a single project-wide glossary at `hypotheses/GLOSSARY.md`
+(or `docs/GLOSSARY.md`). It must define every term that appears in any
+hypothesis or experiment page. Required entries for this project:
+
+- activation steering, residual stream, injection layer, steering vector,
+  alpha (steering coefficient), composite score (one-sentence description
+  of the formula and what it measures), behavior efficacy, capability
+  retention, coherence, safety integrity, selectivity, screening,
+  evaluation, KEEP, DISCARD, NEAR-MISS, EXTERNAL-READY, AxBench,
+  JailbreakBench, off-shell displacement, effective rank, norm budget.
+
+The glossary is linked from:
+- The master dashboard "how to read this" block.
+- Every per-page "In Plain English" box (one link: "See full glossary →").
+- The project README.
+
+The glossary is updated whenever a new technical term is introduced in any
+hypothesis, experiment page, or dashboard section.
+
+### Verification
+
+Playwright accessibility check on any dashboard page:
+
+```javascript
+// In the rendering audit: every experiment page must contain a
+// "plain-english" block before the first table or chart.
+const box = page.locator('[data-role="plain-english"]');
+await expect(box).toBeVisible();
+// The box must appear before the first <table> or <canvas>.
+const boxY = (await box.boundingBox()).y;
+const tableY = (await page.locator('table').first().boundingBox()).y;
+expect(boxY).toBeLessThan(tableY);
+```
 
 ---
 
