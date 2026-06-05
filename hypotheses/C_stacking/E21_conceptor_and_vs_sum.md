@@ -11,6 +11,42 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** When we want three or more behaviors at once, the
+plain method just adds all the nudges together. A "Conceptor" is a smarter way of
+combining them that tries to satisfy all the goals jointly. The question: does the
+smarter combine beat plain addition when text quality is held equal?
+
+**Key terms (defined here):**
+- **Steering / steering vector:** nudging the model by adding a direction to its
+  internal "thoughts"; the direction is the steering vector.
+- **Residual stream:** the model's running internal state we edit mid-sentence.
+- **Layer:** the processing step where we make the edit.
+- **Alpha / strength:** how hard we push.
+- **DiffMean:** the simple recipe for building a nudge.
+- **Coherence:** whether the text stays fluent and sensible (here, kept equal
+  across methods so the comparison is fair).
+- **Stacking:** using several nudges at once for several behaviors.
+- **Interference:** the nudges getting in each other's way.
+- **Orthogonal:** directions that don't overlap.
+- **Conceptor AND-composition:** a math recipe that combines several nudges by
+  finding a direction that honors *all* of them together, instead of just piling
+  them on top of each other ("summed vectors"). The "AND" means "satisfy goal 1
+  AND goal 2 AND goal 3."
+
+**Why we're doing this (the point):** Plain addition gets crowded as you add
+goals. If a smarter combine holds more behaviors together cleanly, that's the
+better tool for multi-behavior control.
+
+**What the result would mean:** A win says: for three-plus goals, use the smarter
+Conceptor combine. A loss says plain addition is good enough and the extra
+machinery isn't worth it.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 When more than two behaviors must be jointly enforced, simple vector summation

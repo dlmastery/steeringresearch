@@ -10,6 +10,37 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** There are two ways to make a model act a certain way
+without retraining: *show it examples* in the prompt ("here are three polite replies…"),
+or *directly nudge its internal state* with a steering arrow. This doc asks whether
+these are really the same thing — whether showing examples shoves the model's internal
+"thought" in almost exactly the direction our hand-built steering arrow points.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" mid-sentence, instead of retraining.
+- **In-context learning (ICL)** — getting the behavior by putting examples in the
+  prompt instead of nudging internals.
+- **Residual stream** — the model's running internal thought; what we read and edit.
+- **Layer** — one of the model's processing steps; a knob.
+- **DiffMean** — the simplest recipe for building a steering arrow: average the
+  internal state on "yes-behavior" examples, average it on "no" examples, subtract.
+- **Cosine / alignment** — how closely two arrows point the same way (1 = identical
+  direction, 0 = unrelated).
+
+**Why we're doing this (the point):** If the example-prompt shove and the steering
+arrow point the same way, we can sanity-check our arrows cheaply (just compare them
+to what examples do) and better explain *why* steering works at all.
+
+**What the result would mean:** A win means examples and steering are two faces of one
+operation. A loss means they change the model in genuinely different ways.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 In-context learning (ICL) and activation steering are both methods for inducing

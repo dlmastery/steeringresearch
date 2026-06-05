@@ -12,6 +12,49 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Bad actors trick models into answering harmful
+requests by tacking weird text onto a prompt. We ask whether a refusal that
+reads the model's *internal understanding* of a request resists these tricks
+better than a refusal that just reads the words on the page.
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing the model's behavior by editing its internal state
+  mid-sentence, without retraining.
+- **Steering vector** — the nudge we add; here, a "refuse this" direction.
+- **Residual stream** — the model's running internal scratchpad of numbers; this
+  holds the model's *meaning* of the request, which is what we read.
+- **Layer** — one of the model's stacked processing steps.
+- **alpha / strength** — how hard we push the nudge.
+- **DiffMean** — the simplest recipe for the refusal direction: average internal
+  state on harmful requests minus harmless ones. No training.
+- **Jailbreak** — a trick prompt designed to make the model misbehave (here,
+  answer something it should refuse).
+- **Adversarial suffix / GCG** — a chunk of gibberish text added to the end of a
+  prompt, specially crafted to slip past the model's safety. "GCG" is one
+  popular automated way to build such gibberish.
+- **Red-team** — deliberately attacking your own system to test how well it
+  holds up.
+- **Conditional refusal (the gate)** — refusing only *when* the request is
+  actually harmful, decided by reading the internal meaning rather than matching
+  surface words.
+- **Coherence** — whether the model's replies stay fluent and sensible.
+
+**Why we're doing this (the point):** Does reading the model's internal meaning
+of a request give a sturdier safety check — one that gibberish add-ons cannot
+easily fool?
+
+**What the result would mean:** If the internal-meaning refusal blocks the trick
+prompts that fool a word-matching refusal, we have a more robust safety method.
+If the tricks fool it just as easily, reading internals gives no real protection
+here.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Adversarial jailbreak suffixes (Zou et al. 2023 GCG; arXiv:2307.15043)

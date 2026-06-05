@@ -11,6 +11,48 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Over a long conversation, a model's "character"
+can slowly drift — it can start out helpful and gradually go off the rails. We
+ask whether we can spot that drift in the model's internal signals *before* it
+shows up in what it actually writes, so we can step in early.
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing the model's behavior by editing its internal state
+  mid-sentence, without retraining.
+- **Steering vector** — a nudge direction. Here we mostly *read* one rather than
+  push it.
+- **Residual stream** — the model's running internal scratchpad of numbers; we
+  read these to watch for drift.
+- **Layer** — one of the model's stacked processing steps.
+- **alpha / strength** — how hard a nudge pushes (used if we intervene).
+- **DiffMean** — the simplest recipe for a "character" direction: average the
+  internal state on in-character text minus out-of-character text. No training.
+- **Persona drift** — the model's character slowly changing over a long chat
+  (e.g. drifting toward rude, deceptive, or unsafe).
+- **Monitoring** — watching internal signals to catch problems early. Here:
+  measuring how far the model's state leans toward a bad persona, turn by turn.
+- **Lead time** — how many words or turns *ahead* the warning fires before the
+  bad behavior actually appears in the text. More lead time = more chance to
+  intervene.
+- **Gating** — stepping in to block or correct a generation once the warning
+  fires.
+- **Interpretability** — understanding what the model is doing inside.
+- **Coherence** — whether the text stays fluent and sensible.
+
+**Why we're doing this (the point):** Can we catch the model going off the rails
+early enough to stop it before it commits to a harmful or off-character reply?
+
+**What the result would mean:** If the internal warning reliably fires ahead of
+the bad output, we have an early-warning system for AI safety. If it only fires
+at the same moment the bad text appears, it gives no useful head start.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Transformer generation is a sequential process: the model computes hidden

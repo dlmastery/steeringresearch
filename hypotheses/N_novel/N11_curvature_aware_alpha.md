@@ -9,6 +9,41 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Push steering too hard and the text turns to gibberish
+— but the "too hard" point isn't the same for every prompt. Some prompts tolerate a
+strong shove; others break early. This doc says the difference is the local *shape* of
+the healthy-thought surface: where it's gently flat you can push far, where it bends
+sharply you fall off quickly. Measure that local bendiness cheaply, and set the right
+strength per prompt.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" mid-sentence, instead of retraining.
+- **Residual stream** — the model's running internal thought; what we edit.
+- **Layer** — one of the model's processing steps; a knob.
+- **alpha / strength** — how hard we push.
+- **Coherence cliff** — the point where pushing harder suddenly breaks the text into
+  gibberish. **Coherence** = whether text stays fluent (measured by **perplexity**).
+- **Norm** — the *size* of the thought-point (today's best method scales strength by this).
+- **Surface (manifold)** — the natural region where healthy thoughts live.
+- **Curvature** — how sharply that surface bends near the current prompt.
+- **Participation ratio / PCA spectrum** — a cheap read-out of the local shape (how
+  many directions the nearby thoughts spread across).
+
+**Why we're doing this (the point):** If local bendiness predicts each prompt's
+breaking point, we can auto-set a safe-but-strong steering strength per prompt instead
+of using one cautious setting for all.
+
+**What the result would mean:** A win means the bendiness estimate predicts the cliff
+and steadies results across prompts better than today's size-based rule. A loss means
+local shape doesn't add anything useful.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The coherence cliff — the sharp PPL increase above a threshold alpha (observed in

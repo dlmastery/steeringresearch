@@ -13,6 +13,48 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** The gate that decides "is this harmful?" can be a
+simple fixed rule, or a small trained model that learns from many examples. This asks
+whether the trained gate does better when the incoming requests look *different* from
+what it was trained on. (Early result: it actually did worse.)
+
+**Key terms (defined here so you don't have to look anything up):**
+- **Language model (LLM):** an AI that predicts the next word; here, small Gemma
+  models.
+- **Steering:** nudging the model's behavior by adding a direction to its internal
+  state while it writes.
+- **Residual stream / hidden state:** the model's running internal state, which the
+  gate reads.
+- **Layer:** one of the model's stacked processing steps.
+- **Conditional steering / the gate:** applying the nudge only when relevant; the
+  gate is the check that decides.
+- **CAST (fixed cosine threshold):** the simple gate — a single fixed cut-off line on
+  how harmful-looking a request is. Set once, used unchanged forever.
+- **Learned (logistic) gate:** a small trained detector that combines clues from
+  several layers and learns its own decision boundary from example data.
+- **Distribution shift / OOD ("out-of-distribution"):** when real requests look
+  different from the training examples — a new topic or style. The realistic hard
+  case for any gate.
+- **Gate AUC:** a 0.5-to-1.0 score for how well the gate tells harmful from harmless;
+  higher = better.
+- **Overfitting:** when a trained model learns the training examples too literally and
+  then fails on anything that looks a bit different.
+
+**Why we're doing this (the point):** Deployment requests never look exactly like the
+training set. We want to know if spending extra effort on a smart, trained gate
+actually pays off when inputs shift — or if the simple fixed rule is more robust.
+
+**What the result would mean:** A positive result would favor the trained gate for
+real-world robustness. The actual (negative) result shows the trained gate overfit
+its small training set and generalized *worse*, so the simple fixed rule is the safer
+choice here.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The CAST cosine gate and the SCS energy-ratio gate (E12) are both fixed

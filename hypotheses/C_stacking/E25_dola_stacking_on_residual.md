@@ -10,6 +10,41 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** "DoLa" is a separate trick that makes a model more
+truthful — it works at the very last moment, when the model is choosing each word,
+not by editing the model's "thoughts." Because it acts somewhere different, the
+hope is it can be added *on top of* any of our regular nudges to gain extra
+truthfulness for free, without harming the text.
+
+**Key terms (defined here):**
+- **Steering / steering vector:** nudging the model by adding a direction to its
+  internal "thoughts"; the direction is the steering vector ("residual steer").
+- **Residual stream:** the model's running internal "thoughts" that a normal nudge
+  edits.
+- **Layer:** the model's stacked processing steps. **DoLa** works by comparing
+  early layers against late layers to favor more confident, factual words.
+- **Alpha / strength:** how hard a nudge pushes.
+- **DiffMean:** the simple recipe for building a nudge.
+- **Coherence:** whether the text stays fluent and sensible.
+- **Stacking:** using two methods together. Here one is a normal nudge to the
+  thoughts, and the other (DoLa) acts at word-selection time — *different places*,
+  so they're expected to add up rather than clash.
+- **Factuality:** how often the answers are actually true (measured on a
+  truthfulness quiz).
+
+**Why we're doing this (the point):** If a truthfulness booster simply layers onto
+whatever else we're steering, with no downside, that's a free win for any setup.
+
+**What the result would mean:** A win means we can bolt truthfulness onto any
+steering recipe at no cost to readability. A loss means DoLa trades against the
+other nudge or hurts the text, so it isn't free after all.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 DoLa (Decoding by Contrasting Layers, arXiv:2309.03883) is a decoding-time

@@ -10,6 +10,48 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** An always-on safety nudge makes the model a bit less
+smart on *every* request, even harmless ones. This asks whether switching the nudge
+on only when a request is actually harmful gives back most of that lost intelligence
+on normal requests.
+
+**Key terms (defined here so you don't have to look anything up):**
+- **Language model (LLM):** an AI that predicts the next word; here, small Gemma
+  models.
+- **Steering:** nudging the model's behavior by adding a direction to its internal
+  state while it writes.
+- **Steering vector:** the specific direction of the nudge (here, a "refuse" nudge).
+- **Residual stream:** the model's running internal state, where the nudge is added.
+- **Layer:** one of the model's stacked processing steps.
+- **alpha (strength):** how hard the nudge pushes.
+- **Always-on steering:** applying the nudge to every request, no matter what.
+- **Conditional steering / the gate:** applying the nudge only when a request is
+  relevant; the gate is the check that decides.
+- **CAST:** the gating method these experiments build on.
+- **Read-only probe:** the gate just *looks* at the internal state without changing
+  it, so on harmless requests it costs essentially nothing.
+- **Capability / MMLU:** whether the model stays smart, measured by a multiple-choice
+  quiz (MMLU).
+- **Capability tax:** the drop in smarts caused by steering. Conditional steering aims
+  to pay this tax only on the few harmful requests, not on everything.
+- **False-positive rate:** how often the gate wrongly fires on a harmless request
+  (kept under 3% per E9).
+
+**Why we're doing this (the point):** In real use, almost all requests are harmless.
+Paying an intelligence cost on all of them just to be safe on a few is wasteful. This
+measures how much of that cost the gate recovers — the main economic argument for
+conditional over always-on safety.
+
+**What the result would mean:** A positive result means gating recovers most of the
+lost intelligence (the nudge only "spends" smarts on the rare harmful requests). A
+negative result means gating doesn't save much, weakening the case for it.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Always-on safety steering — a refusal vector injected unconditionally at every

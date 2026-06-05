@@ -10,6 +10,42 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** The usual nudge moves the model's "thought" in one
+straight shove. This experiment tries moving it in several small curved steps
+instead. The claim is that the curved path only helps when the behavior's region
+has an awkward, dented shape; for simple, smoothly-shaped behaviors the straight
+shove is just as good.
+
+**Key terms (defined here):**
+- **Steering / steering vector:** nudging the model by adding a direction to its
+  internal "thoughts"; the direction is the steering vector.
+- **Residual stream:** the model's running internal "thoughts" that we edit.
+- **Layer:** the processing step where we make the edit.
+- **Alpha / strength:** how hard we push.
+- **DiffMean:** the simple recipe for building a nudge.
+- **Coherence:** whether the text stays fluent and sensible.
+- **Curvature / curved flow:** instead of one straight jump, we move the thought in
+  several small steps that bend along the way (a "flow"), following the natural
+  shape of the thought space. The straight one-shot version is "linear addition."
+- **Convex vs non-convex:** "convex" means a nice, simply-shaped region where a
+  straight line between two good points stays inside good territory. "Non-convex"
+  means a dented or curved region where a straight line can cut through bad
+  territory — and that's where curving around should help.
+
+**Why we're doing this (the point):** If some behaviors have awkward shapes, a
+straight nudge can pass through "bad text" on the way. Curving around it might
+reach the target more cleanly.
+
+**What the result would mean:** A win means: for awkwardly-shaped behaviors, use
+the curved multi-step path; for simple ones, don't bother. A loss means the curved
+path never helps and the straight shove is always fine.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Additive steering moves hidden states from their current position h along a straight

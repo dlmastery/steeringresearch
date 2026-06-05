@@ -13,6 +13,43 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** When we *rotate* a thought instead of *adding* to
+it, we keep the thought's size the same. The model has internal machinery that
+cares a lot about that size. The claim: because rotation doesn't change the size,
+the rest of the model barely notices the edit — which would explain why rotation
+seems to keep the model smart.
+
+**Key terms (defined here):**
+- **Steering / steering vector:** nudging the model by adding a direction to its
+  internal "thoughts"; the direction is the steering vector.
+- **Residual stream:** the model's running internal "thoughts" that we edit.
+- **Layer:** the processing step where we make the edit.
+- **Alpha / strength:** how hard we push.
+- **DiffMean:** the simple recipe for building a nudge.
+- **Coherence:** whether the text stays fluent and sensible.
+- **Capability:** whether the model stays smart (still answers quiz questions).
+- **Rotate vs add:** two nudge methods. *Rotate* turns a thought toward a direction
+  while keeping its length the same; *add* pushes it (and changes its length).
+- **Norm (size of a thought):** how "big" the thought is. Rotation keeps it
+  unchanged.
+- **LayerNorm:** a built-in part of the model that re-scales each thought based on
+  its size. If an edit changes the size, LayerNorm reacts and ripples through the
+  whole computation; if the size is unchanged, LayerNorm sees nothing unusual.
+
+**Why we're doing this (the point):** If keeping the size fixed is *why* rotation
+preserves the model's smarts, that gives us a clear mechanism — and a principled
+reason to prefer size-preserving edits when we don't want to dull the model.
+
+**What the result would mean:** A win means we understand *why* gentle edits keep
+the model capable, and can design future nudges to keep the size fixed. A loss
+means the size isn't the real reason and something else explains it.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Rotational operations are attractive for steering because they are by construction

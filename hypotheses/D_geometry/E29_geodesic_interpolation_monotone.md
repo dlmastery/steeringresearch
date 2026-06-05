@@ -10,6 +10,40 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** When we dial the behavior up from "off" to "on," we
+want the output to change smoothly and predictably with the dial. The idea is that
+moving along a gentle *curved* path (following the natural shape of the model's
+thoughts) gives a smoother, more dependable dial than moving in a *straight* line.
+
+**Key terms (defined here):**
+- **Steering / steering vector:** nudging the model by adding a direction to its
+  internal "thoughts"; the direction is the steering vector.
+- **Residual stream:** the model's running internal "thoughts" that we edit.
+- **Layer:** the processing step where we make the edit.
+- **Alpha / strength:** how hard we push — the dial in this experiment.
+- **DiffMean:** the simple recipe for building a nudge.
+- **Coherence:** whether the text stays fluent and sensible.
+- **Curvature / geodesic:** the *path* the edit takes from the original thought to
+  the steered one. A **geodesic** (SLERP, "spherical" path) follows the natural
+  curved surface of the thought space; the usual straight-line path (LERP) cuts
+  across it.
+- **Monotone:** as you turn the dial up, the behavior only goes up (never wobbles
+  back down) — a well-behaved, predictable control.
+
+**Why we're doing this (the point):** A predictable dial is much easier to use and
+trust. If the curved path gives a steadier response, we get finer, safer control
+over how strong the behavior is.
+
+**What the result would mean:** A win means the curved path gives smoother,
+more reliable control and should be the default. A loss means the simple
+straight-line dial is just as good and the extra geometry isn't needed.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The standard additive steering operation h' = h + alpha * v is a linear

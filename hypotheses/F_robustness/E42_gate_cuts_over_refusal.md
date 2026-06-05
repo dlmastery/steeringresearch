@@ -11,6 +11,47 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** A model tuned hard for safety often refuses
+*harmless* questions that merely sound scary ("how do I kill a process on my
+computer?"). We ask whether adding a smarter "refuse only when truly harmful"
+switch cuts those false refusals without letting real harmful requests through.
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing the model's behavior by editing its internal state
+  mid-sentence, without retraining.
+- **Steering vector** — the nudge we add; here a "refuse this" direction.
+- **Residual stream** — the model's running internal scratchpad of numbers; the
+  switch reads these to judge whether a request is really harmful.
+- **Layer** — one of the model's stacked processing steps.
+- **alpha / strength** — how hard we push the refusal nudge.
+- **DiffMean** — the simplest refusal-direction recipe: average internal state
+  on harmful requests minus harmless ones. No training.
+- **Over-refusal** — wrongly refusing a perfectly safe request because it looks
+  superficially dangerous. The problem we want to fix.
+- **The gate (conditional refusal)** — a switch that applies the refusal nudge
+  *only when* the request is genuinely harmful, instead of always-on.
+- **Benign look-alikes** — safe questions that resemble harmful ones; the test
+  set ("XSTest-style") is built from these.
+- **Coherence** — whether the model's replies stay fluent and sensible.
+- **Red-team / safety** — pressure-testing that the fix doesn't open a hole for
+  real harmful requests.
+
+**Why we're doing this (the point):** An over-cautious model is annoying and
+unhelpful. Can we make it stop refusing safe questions while still refusing
+genuinely dangerous ones?
+
+**What the result would mean:** If the gate sharply cuts false refusals and
+still blocks real harm, it is a clear usability win at no safety cost. If it
+either fails to cut false refusals or starts letting harm through, the gate
+isn't pulling its weight.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 One of the most well-documented failure modes of safety steering is over-

@@ -10,6 +10,46 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Think of steering like a budget you can spend. Each
+nudge knocks the model's internal "thought" off its healthy size by some amount;
+this doc asks whether there's a single fixed budget — and whether the *same* simple
+formula predicts when the text breaks, no matter whether you spend the budget on one
+big nudge or several small ones, and no matter which model you use. **Honest result:
+the single universal formula did NOT hold across model sizes — this claim was
+FALSIFIED.**
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal state mid-sentence, instead of retraining.
+- **Residual stream** — the model's running internal "thought"; what we edit.
+- **Layer** — one of the model's processing steps; a knob.
+- **alpha / strength** — how hard we push.
+- **Coherence** — whether the text stays fluent. Measured by **perplexity** (higher = more broken).
+- **Norm** — the *size* (length) of the thought-point.
+- **Shell / surface (manifold)** — the thin layer of "right-sized" healthy thoughts.
+- **Off-shell displacement** — how far a nudge knocks the thought off its healthy size.
+- **Norm budget** — the running total of off-size displacement when you stack several
+  nudges; this doc asks whether overspending it (by any means) is what breaks the text.
+- **Master curve / universal law** — the hoped-for single formula linking off-size
+  displacement to brokenness that would work for every model and layer at once.
+
+**Why we're doing this (the point):** If one budget number governed everything, then
+combining several steering goals would be simple bookkeeping — stay under budget and
+the text stays readable — instead of messy trial-and-error.
+
+**What the result would mean (and what we found):** We fit the formula on a small
+model and tested whether it predicted a bigger model. It did *not* transfer — the
+prediction was worse than just guessing the average — so the universal-formula claim
+was **FALSIFIED across model sizes**. The earlier "good fit" was an artifact of
+checking the formula on the very same data it was built from. (Its close relative
+N17 — that off-size displacement predicts the *order* of breakage — did survive.)
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 A fundamental question in activation steering is: why does coherence collapse?

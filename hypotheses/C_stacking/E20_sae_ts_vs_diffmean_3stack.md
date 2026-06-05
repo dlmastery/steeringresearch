@@ -15,6 +15,43 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Instead of building three nudges the simple way,
+we tried building them with a tool (an "SAE") that describes the model's thoughts
+as a list of named features. The hope was that nudges built this way would overlap
+less and stack more cleanly. **We tried it at small scale and it FAILED** — the
+SAE-built nudges actually overlapped *more*, collapsing toward a single direction,
+the opposite of what we wanted.
+
+**Key terms (defined here):**
+- **Steering / steering vector:** nudging the model by adding a direction to its
+  internal "thoughts"; the direction is the steering vector.
+- **Residual stream:** the model's running internal state we edit mid-sentence.
+- **Layer:** the processing step where we make the edit.
+- **Alpha / strength:** how hard we push.
+- **DiffMean:** the simple recipe for building a nudge (average "yes", average
+  "no", subtract) — this is the baseline we compared against.
+- **Coherence:** whether the text stays fluent and sensible.
+- **Stacking:** using several nudges at once (here, three).
+- **Orthogonal:** directions that don't overlap.
+- **SAE (sparse autoencoder):** a tool that breaks the model's internal "thoughts"
+  into a long list of separate, human-interpretable features. **SAE-TS** builds a
+  nudge by aiming at chosen features.
+- **Gram mass:** one number for how tangled (overlapping) a set of nudges is —
+  lower is better. Here SAE-TS scored *worse* (3.00) than the simple method (2.13).
+
+**Why we're doing this (the point):** We hoped a feature-aware recipe would let
+more behaviors coexist cleanly. It's worth knowing whether fancier tools help.
+
+**What the result meant (it was tested):** They didn't — at this small model size
+the SAE wasn't rich enough, so the fancy nudges overlapped more, not less. Honest
+takeaway: at small scale the simple DiffMean recipe was the better stacker.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 DiffMean extracts behavior vectors in raw activation space, where two

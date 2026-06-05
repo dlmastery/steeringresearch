@@ -12,6 +12,43 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** We can nudge the model at several of its
+internal processing steps at once. But the "same" behavior direction looks a bit
+different at each step. We ask whether first rotating those directions into
+agreement makes multi-step steering work better.
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing the model's behavior by editing its internal state
+  mid-sentence, without retraining.
+- **Steering vector** — the nudge direction we add.
+- **Residual stream** — the model's running internal scratchpad that flows
+  through its processing steps; the nudge goes here.
+- **Layer** — one of the model's stacked processing steps. This test injects the
+  nudge at several layers at once, not just one.
+- **alpha / strength** — how hard we push.
+- **DiffMean** — the simplest nudge recipe: average internal state on "yes"
+  examples minus "no" examples, computed separately at each layer.
+- **Alignment (rotation)** — gently rotating each layer's direction so they all
+  point "the same way" before injecting, instead of treating each as unrelated.
+  ("Procrustes" is just the math name for finding the best such rotation.)
+- **Coherence** — whether the steered text stays fluent and sensible.
+- **Interpretability** — understanding what the model is doing inside.
+
+**Why we're doing this (the point):** Pushing at several steps can give a
+stronger, steadier effect — but only if the pushes agree. If they fight each
+other, the text breaks. We test whether aligning them first fixes that.
+
+**What the result would mean:** If aligned multi-layer steering beats unaligned,
+we get more effect at the same quality (a practical improvement). If it doesn't
+help, treating each layer separately was fine and the extra step isn't worth it.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 When a behavior direction v is extracted independently at each layer l of

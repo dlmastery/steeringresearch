@@ -10,6 +10,39 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** A safety steer does two jobs: *detect* whether a
+request is harmful, and *act* by making the model refuse. Today these two jobs often
+use the *same* internal direction — so anything that merely looks a bit harmful trips
+both at once, and the model wrongly refuses harmless questions. This doc says: keep the
+"detect" direction and the "act" direction pointing at right angles to each other, so
+detecting harm doesn't automatically pull the trigger.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" mid-sentence, instead of retraining.
+- **Residual stream** — the model's running internal thought; what we read and edit.
+- **Condition / gate (the "detect" step)** — reading the thought to decide if a
+  request is harmful.
+- **Behavior / execution (the "act" step)** — the actual nudge that makes the model refuse.
+- **Orthogonal (right angles)** — two directions that don't overlap, so moving along
+  one doesn't move along the other.
+- **Over-refusal / selectivity** — wrongly refusing harmless requests; the thing we
+  want to reduce without weakening real refusals.
+
+**Why we're doing this (the point):** Separating "is this harmful?" from "refuse now"
+should cut needless refusals of innocent questions while still blocking the genuinely
+harmful ones.
+
+**What the result would mean:** A win means fewer false refusals with real refusals
+intact. A loss means the separation doesn't help (or only helped by quietly weakening
+the steer).
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Activation steering for safety uses two conceptually distinct operations: a CONDITION

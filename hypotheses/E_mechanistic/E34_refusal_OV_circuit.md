@@ -10,6 +10,50 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** When we nudge the model to refuse harmful
+requests, the nudge has to flow through some internal machinery to take effect.
+This test asks *which* piece of that machinery actually does the work — so we
+can target it precisely later.
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing how the model behaves by gently editing its internal
+  "thoughts" mid-sentence, instead of retraining it.
+- **Steering vector** — the specific nudge we add; a direction pointing toward
+  the behavior we want (here, "refuse this").
+- **Residual stream** — the model's running internal scratchpad of numbers that
+  flows through its processing steps; the nudge is added here.
+- **Layer** — one of the model's stacked processing steps. "Where we inject" =
+  which step we edit.
+- **alpha / strength** — how hard we push. Too gentle does nothing; too hard
+  turns the text to gibberish.
+- **DiffMean** — the simplest way to build the nudge: average the model's
+  internal state on "refuse" examples, subtract the average on "comply"
+  examples; the difference is the direction. No training needed.
+- **Attention: routing vs writing** — inside each step the model does two jobs.
+  "Routing" decides *which earlier words to look at*; "writing" decides *what
+  note to add* based on them. This test freezes the routing and checks whether
+  the nudge still works through the writing alone.
+- **Coherence** — whether the text stays fluent and sensible (not gibberish).
+- **Interpretability** — understanding what the model is doing inside.
+- **Monitoring** — watching internal signals to catch problems early.
+
+**Why we're doing this (the point):** If refusal steering works purely through
+the "writing" half, we can build safety tools that touch only that part —
+cleaner and less likely to break the model. It also tells us where the model's
+safety machinery is most fragile, so a guard can protect exactly that spot.
+
+**What the result would mean:** If freezing the routing barely hurts the nudge,
+the "writing" half is the real lever (a clean, useful finding). If freezing it
+badly weakens the nudge, both halves matter and steering is more tangled than
+hoped.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Transformer models decompose the attention block into two semi-independent

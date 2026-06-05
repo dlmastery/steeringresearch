@@ -9,6 +9,38 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** You can deliver a steering nudge as one big shove at a
+single processing step, or as many tiny taps spread across all the steps — same total
+push either way. This doc says spreading it out is gentler: each small tap barely
+disturbs the thought, and the model gets to "digest" each one before the next, so the
+text breaks less and stays safer for the same change in behavior.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" mid-sentence, instead of retraining.
+- **Residual stream** — the model's running internal thought; what we edit.
+- **Layer / step** — one of the model's processing steps; the thought flows through them in order.
+- **alpha / strength** — how hard we push (the total push is held equal in both setups).
+- **Endpoint steering** — one big shove at a single step.
+- **Trajectory steering** — many small taps spread across the steps.
+- **Off-shell displacement** — how far each nudge knocks the thought off its healthy
+  size (smaller per tap is better).
+- **Coherence** — whether the text stays fluent (measured by **perplexity**).
+- **Rogue compliance** — the model producing harmful content; a safety leak to avoid.
+
+**Why we're doing this (the point):** If small-and-spread really is gentler than
+one-big-shove, we get the same behavior with cleaner, safer text — a simple recipe
+change with no extra cost.
+
+**What the result would mean:** A win means spreading the nudge lowers both breakage
+and safety leaks. A loss means concentrating it at one step was just as good.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Standard activation steering applies a single perturbation at one layer (CAA, DiffMean)

@@ -11,6 +11,44 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Refusing a harmful request really involves two
+jobs: *noticing* that a request is harmful, and *deciding to say no*. The claim is
+that these two jobs live in *different* directions inside the model — they're
+separable, not one tangled thing.
+
+**Key terms (defined here):**
+- **Steering / steering vector:** nudging the model by adding a direction to its
+  internal "thoughts"; the direction is the steering vector.
+- **Residual stream:** the model's running internal "thoughts" that we read and
+  edit.
+- **Layer:** the model's stacked processing steps; we check this across many of
+  them.
+- **Alpha / strength:** how hard we push.
+- **DiffMean:** the simple recipe for building a nudge.
+- **Coherence:** whether the text stays fluent and sensible.
+- **Refusal direction:** the internal direction tied to *saying no*.
+- **Detection direction:** the internal direction tied to *noticing harm*.
+- **Cosine similarity:** an overlap score between two directions, from 0 (no
+  overlap, fully separate) to 1 (the same direction). A low score across layers
+  would show the two jobs are separate.
+- **Separable subspaces:** the idea that "notice harm" and "say no" occupy
+  different regions of the thought space, so they can be studied and adjusted
+  independently.
+
+**Why we're doing this (the point):** If noticing harm and refusing are separate,
+we could improve one without disturbing the other — for example, sharpen detection
+without making the model refuse harmless things.
+
+**What the result would mean:** A win (low overlap) means safety has two
+independent knobs we can tune separately. A loss (high overlap) means they're
+entangled and tweaking one inevitably drags the other along.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The CAST framework (arXiv:2409.05907) and its descendants operate by separating

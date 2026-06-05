@@ -10,6 +10,42 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** The steering field has a pile of separately-named
+methods, each fixing one piece of the puzzle. This is the capstone idea: maybe they're
+all the *same master recipe* with different knobs turned on or off. Turn the knobs to
+match any one method and you get that method back; turn them all on at once and you
+should get the best of everything.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" mid-sentence, instead of retraining.
+- **Residual stream** — the model's running internal thought; what we edit.
+- **Layer** — one of the model's processing steps; a knob.
+- **The four knobs:**
+  - **Gate ("when to push")** — only nudge when needed (e.g. only on harmful requests).
+  - **Tangent projection ("stay on the surface")** — bend the nudge to slide *along*
+    the healthy-thought surface instead of off it.
+  - **Flow / transport ("follow the curve")** — move along the curved on-surface path
+    rather than a straight shortcut.
+  - **Budget cap ("don't overspend")** — limit how far the nudge knocks the thought
+    off its healthy size.
+- **Surface (manifold)** — the natural region where healthy thoughts live.
+- **Pareto-dominate** — win on every measure at once (behavior, fluency, safety) with
+  no trade-off.
+
+**Why we're doing this (the point):** One unified recipe would replace a confusing
+toolbox with a single dial-set — and prove the whole geometric story hangs together.
+
+**What the result would mean:** A win means turning all four knobs on beats every
+named method on every axis. A loss means the pieces don't combine into one clean
+operator — the framework is incomplete.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The LLM steering literature has converged on a set of method families that each

@@ -10,6 +10,39 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** When you ask the model to do several steered things
+at once (be safe *and* polite *and* factual), the behaviors start stepping on each
+other. This doc asks: *how many* can you stack before they collide? The answer it
+proposes isn't the model's raw size — it's how many genuinely independent "things"
+the model's internal state is juggling at that processing step.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" mid-sentence; each behavior is one arrow.
+- **Residual stream** — the model's running internal thought; what we edit.
+- **Layer** — one of the model's processing steps; a knob.
+- **Stacking** — applying several steering arrows at the same time.
+- **Surface (manifold)** — the natural region where healthy thoughts live.
+- **Participation ratio / effective rank** — how many independent directions the
+  thought is really using at that step (its "room"). A small number means little room;
+  a big number means lots of room.
+- **Near-orthogonal** — arrows pointing in genuinely different directions, so they
+  don't overlap and interfere.
+
+**Why we're doing this (the point):** If we can read off "how much room" a layer has,
+we can predict in advance how many behaviors it will hold before they start clashing —
+no trial-and-error.
+
+**What the result would mean:** A win means the "room" number reliably predicts the
+breaking point of stacking. A loss means stacking capacity is governed by something
+else (like layer depth) instead.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 When practitioners stack multiple steering vectors simultaneously (e.g., a safety

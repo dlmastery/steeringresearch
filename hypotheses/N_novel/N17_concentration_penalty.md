@@ -9,6 +9,50 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** As the model "thinks," its internal state is a point
+in a huge space, and healthy thoughts all sit at roughly the same *size* (imagine
+they live on the skin of a balloon, all the same distance from the center). When we
+nudge the model to steer it, the dangerous thing isn't *how hard* we push — it's how
+much the push changes that *size*, knocking the thought off the balloon's skin. This
+doc says: that "off-the-skin" distance is the best early-warning sign of when the
+text is about to break. **This is the program's strongest result — and it held up
+when tested.**
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing the model's behavior by adding a chosen
+  direction to its internal state mid-sentence, instead of retraining it.
+- **Residual stream** — the model's running internal "thought"; what we edit.
+- **Layer** — one of the model's processing steps; which one we edit is a knob.
+- **alpha / strength** — how hard we push.
+- **Coherence** — whether the text stays fluent and sensible. Measured by **perplexity**
+  (how "surprised" the model is by normal text — higher = more broken).
+- **Norm** — the *size* (length) of the thought-point.
+- **Shell / surface (manifold)** — the thin layer of "right-sized" healthy thoughts;
+  the balloon's skin.
+- **Off-shell displacement** — how far a nudge knocks the thought off that healthy
+  size. This is the number this doc says predicts brokenness.
+- **Radial vs angular** — radial = changing the thought's *size* (knocks it off the
+  skin, breaks text); angular = changing its *direction* while keeping size fixed
+  (a rotation, gentler).
+
+**Why we're doing this (the point):** If a single, easy-to-measure number tells us
+*before* we generate any text whether the steering will break it, we can budget our
+nudges safely — and we learn that rotation-style moves (which keep the size fixed)
+should stay readable.
+
+**What the result would mean (and what we found):** We tested it on real held-out
+data across two model sizes: the off-shell number reliably tracked the *order* of
+brokenness (it went up as text got worse), so the claim was **SUPPORTED**. Honest
+caveat: a *separate, stronger* claim — that one universal formula links push-distance
+to brokenness across all model sizes (see N5) — was **FALSIFIED**. Off-shell predicts
+the *ranking* of breakage, but there's no single magic equation across scales.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Why does activation steering degrade coherence? The simplest answer is "too much

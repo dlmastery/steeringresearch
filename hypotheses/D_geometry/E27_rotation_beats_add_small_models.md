@@ -10,6 +10,44 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** There are two ways to nudge the model's
+"thoughts." You can *add* a direction (which also makes the thought bigger), or you
+can *rotate* the thought toward that direction while keeping its size the same. The
+guess was that on small models the gentler "rotate" method would break the text
+less. **We tested it on a real benchmark and rotation gave NO benefit** — turning
+the whole thought didn't beat plain adding.
+
+**Key terms (defined here):**
+- **Steering / steering vector:** nudging the model by adding a direction to its
+  internal "thoughts"; the direction is the steering vector.
+- **Residual stream:** the model's running internal "thoughts" that we edit.
+- **Layer:** the processing step where we make the edit.
+- **Alpha / strength:** how hard we push.
+- **DiffMean:** the simple recipe for building a nudge.
+- **Coherence:** whether the text stays fluent and sensible.
+- **Rotate vs add:** the two nudge methods. **Add** pushes the thought in a
+  direction (and lengthens it). **Rotate** turns the thought toward the direction
+  while keeping its length unchanged.
+- **The activation sphere / shell:** healthy "thoughts" all sit at about one
+  natural size, like points on the surface of a ball. *Adding* can push a thought
+  off that surface (breaking the text); *rotating* keeps it on the surface — which
+  is *why* rotation was expected to be gentler.
+
+**Why we're doing this (the point):** We wanted a nudge that controls behavior but
+breaks the text less — especially on small models, where thoughts are easier to
+knock off the healthy surface.
+
+**What the result meant (it was tested):** Rotating the *whole* thought did not
+beat plain adding on a real benchmark — so that simple version of the idea is set
+aside. One narrower piece did hold up: small models really are more fragile to
+edits, which is useful to know even though rotation itself wasn't the fix.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Small language models occupy a geometric regime quite different from their

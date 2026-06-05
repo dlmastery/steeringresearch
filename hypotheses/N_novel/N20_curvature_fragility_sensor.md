@@ -10,6 +10,41 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** One of the biggest choices in steering is *which*
+processing step to nudge — some steps are "fragile" (a small nudge there causes wild,
+sometimes unsafe changes) and some are sturdy. This doc looks for a cheap, behavior-free
+way to spot the fragile steps in advance: it guesses that steps where the thought's
+internal state is squeezed into very few directions are the bendy, fragile ones to avoid.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" mid-sentence, instead of retraining.
+- **Residual stream** — the model's running internal thought; what we edit.
+- **Layer / injection site** — one of the model's processing steps; we're choosing
+  which to nudge.
+- **Surface (manifold)** — the natural region where healthy thoughts live.
+- **Curvature** — how sharply that surface bends at a step; sharp bending = fragile
+  (small nudge, big swing).
+- **Effective rank / participation ratio** — how many independent directions the
+  thought spreads across at a step. Few directions = squeezed = bendy = fragile; many =
+  spread out = sturdy = safer to nudge.
+- **Rogue fragility / rogue compliance** — how easily nudging a step leaks harmful
+  behavior.
+
+**Why we're doing this (the point):** A cheap "fragility meter" would let us pick safe
+steps to steer *before* running any expensive behavior tests.
+
+**What the result would mean (and where it stands):** A win would be: fewer-directions
+steps reliably turn out to be the fragile ones. Honest status: the early single run was
+**underpowered and INCONCLUSIVE** — the signal was weak, though the sharpest-discriminating
+layer was indeed the most fragile, which is at least consistent. Not yet a real result.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Choosing the right injection layer is one of the most important decisions in activation

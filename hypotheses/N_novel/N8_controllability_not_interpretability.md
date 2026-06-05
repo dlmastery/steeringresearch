@@ -11,6 +11,39 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** A popular tool (a "feature dictionary") labels the
+model's internal state into thousands of human-readable concepts — "politeness,"
+"refusal," and so on. But when people try to *steer* using those tidy labels, it works
+worse than a crude hand-built arrow. This doc's explanation: *being able to label* a
+direction is not the same as *being able to push* with it. Most labeled features
+describe the scenery but don't move behavior. So we should build a dictionary aimed at
+*pushing* (causing change), not just at *describing*.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" mid-sentence, instead of retraining.
+- **Residual stream** — the model's running internal thought; what we read and edit.
+- **DiffMean** — the simple, crude recipe for a steering arrow from yes/no examples.
+- **SAE / feature dictionary** — a tool that breaks the internal state into thousands
+  of named, human-readable concept-directions.
+- **Interpretable** — easy for a human to *label*.
+- **Controllable / causal** — actually *moves* the behavior when you push it.
+- **AxBench** — a real, published benchmark of steering methods we test against.
+
+**Why we're doing this (the point):** If we build directions selected for *moving
+behavior* rather than for *being nameable*, we should get a smaller, sharper toolkit
+that actually steers — and explain why the nameable-feature approach disappoints.
+
+**What the result would mean:** A win means a "made-to-push" dictionary is smaller and
+steers better than the popular nameable one. A loss means nameability and control go
+together after all.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Sparse Autoencoder (SAE) features dominate current LLM interpretability research.

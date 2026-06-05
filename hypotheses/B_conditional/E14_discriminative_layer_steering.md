@@ -11,6 +11,45 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** We can inject the nudge at every processing step, or
+only at the steps that actually carry the target behavior. This asks whether nudging
+only the "relevant" steps keeps the model just as effective at the behavior while
+hurting its general smarts less.
+
+**Key terms (defined here so you don't have to look anything up):**
+- **Language model (LLM):** an AI that predicts the next word; here, small Gemma
+  models.
+- **Steering:** nudging the model's behavior by adding a direction to its internal
+  state while it writes.
+- **Steering vector:** the specific direction of the nudge.
+- **Residual stream:** the model's running internal state, where the nudge is added.
+- **Layer:** one of the model's stacked processing steps.
+- **alpha (strength):** how hard the nudge pushes.
+- **All-layer steering:** injecting the nudge at every step at once — strong effect,
+  but more damage to general ability.
+- **Discriminative layer:** a step that genuinely encodes the behavior contrast (its
+  "yes" and "no" examples point opposite ways). Nudging here does real work.
+- **Neutral layer:** a step that doesn't encode the contrast; nudging here mostly just
+  adds noise and hurts general ability without helping the behavior.
+- **Selective steering:** injecting only at the discriminative layers.
+- **Capability / MMLU:** whether the model stays smart, measured by a multiple-choice
+  quiz (MMLU). We want a smaller drop here.
+- **Behavior efficacy:** how well the nudge actually produces the target behavior.
+
+**Why we're doing this (the point):** Steering always costs a little general
+intelligence. If we can get the same behavior change while touching fewer steps, we
+pay a smaller "intelligence tax" — a better trade-off for real use.
+
+**What the result would mean:** A positive result means targeting only the relevant
+steps preserves the model's smarts at no cost to the behavior. A negative result
+means you can't separate the two — the damage comes with the effect.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 All-layer steering — injecting the behavior vector at every layer of the

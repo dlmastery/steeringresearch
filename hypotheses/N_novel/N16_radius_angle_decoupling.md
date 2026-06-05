@@ -11,6 +11,41 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** A steering nudge does two things at once: it changes
+the *size* of the model's internal "thought" and it changes its *direction*. This doc
+splits those apart and says: changing the *size* is what breaks the text, while
+changing only the *direction* (keeping size fixed) is gentler. So a "turn without
+resizing" move should stay more readable for the same behavior change.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" mid-sentence, instead of retraining.
+- **Residual stream** — the model's running internal thought; what we edit.
+- **Layer** — one of the model's processing steps; a knob.
+- **alpha / strength** — how hard we push.
+- **Coherence** — whether the text stays fluent (measured by **perplexity**; higher = more broken).
+- **Norm** — the *size* (length) of the thought-point.
+- **Radial vs angular** — radial = changing the thought's *size* (this is what breaks
+  text); angular = changing its *direction* while keeping size fixed (gentler).
+- **Rotation / angle-only steering** — a move that turns the thought's direction
+  without changing its size.
+- **Shell / surface (manifold)** — the thin layer of "right-sized" healthy thoughts;
+  changing size leaves it, changing angle stays on it.
+
+**Why we're doing this (the point):** If the *size* change is the real culprit behind
+broken text, we can steer by *rotating* instead of *adding* and keep generations clean.
+
+**What the result would mean:** Early screening already lines up: the *size* change
+strongly predicted how much plain addition broke the text, and the *direction* change
+strongly predicted how much rotation broke it — so the split is real (marked SUPPORTED
+at the early, single-run screening stage; still needs the fuller test).
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Activation steering conflates two distinct geometric quantities in a single parameter

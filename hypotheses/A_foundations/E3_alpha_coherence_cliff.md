@@ -11,6 +11,54 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** When we nudge the model, we can push gently or
+hard. This asks what happens as we push harder: there's a "cliff" where the text
+suddenly breaks down into gibberish. We want to find exactly where that cliff is,
+and show the safe pushing range below it.
+
+**Key terms (defined here so you don't have to look anything up):**
+- **Language model (LLM):** an AI that predicts the next word; here, small Gemma
+  models.
+- **Steering:** nudging the model's behavior by adding a direction to its internal
+  state while it writes.
+- **Steering vector:** the specific direction of the nudge.
+- **Residual stream:** the model's running internal state, where the nudge is added.
+- **Layer:** one of the model's stacked processing steps; we nudge at one of them.
+- **DiffMean:** the simple recipe for building the nudge (average the "yes"
+  examples, average the "no" examples, subtract).
+- **alpha (the strength):** how hard we push the nudge. This is the one knob this
+  experiment varies, and the single most important knob overall.
+- **Coherence:** whether the text stays fluent and sensible, not gibberish or
+  repetition.
+- **Perplexity:** a number for how "surprised" the model is by normal text. Higher
+  perplexity = more broken text. We use it to measure coherence.
+- **Coherence cliff:** the strength level past which the text falls apart. Below it,
+  pushing harder shifts behavior; above it, the text collapses.
+- **Super-linear:** rises faster and faster — past the cliff, breakage grows
+  steeply, not gently.
+- **Capability:** whether the model stays smart (still answers quiz questions),
+  measured by a multiple-choice test called MMLU.
+- **Off-manifold:** pushed into a region the model was never trained on — this is
+  what makes the text break.
+- **Safety:** whether pushing too hard accidentally makes the model comply with
+  harmful requests (it can, right at the cliff).
+
+**Why we're doing this (the point):** Everyone who steers a model has to pick a
+push strength, and most people just copy a number from a paper. Knowing exactly
+where the cliff is — and that smaller models may have no safe range at all — tells
+practitioners the usable operating range for every other experiment.
+
+**What the result would mean:** A positive result (which we're seeing) confirms a
+clear safe window below the cliff where behavior changes but the model stays fluent
+and smart. A negative result would mean there's no clean safe range, undermining
+the practicality of steering.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>=100 words)
 
 Every published activation steering result uses some value of alpha — the scalar

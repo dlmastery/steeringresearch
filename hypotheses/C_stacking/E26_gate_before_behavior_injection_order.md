@@ -10,6 +10,43 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Some setups have *two* steps: first a "gate" that
+decides whether a situation calls for the behavior, then the behavior nudge
+itself. The question is simply about order — does deciding first and acting second
+(rather than the reverse) make the model better at applying the behavior only when
+it should?
+
+**Key terms (defined here):**
+- **Steering / steering vector:** nudging the model by adding a direction to its
+  internal "thoughts"; the direction is the steering vector.
+- **Residual stream:** the model's running internal state we edit mid-sentence.
+- **Layer:** the model's stacked processing steps; "order" here means which step
+  we make each edit at — an earlier step happens *before* a later one.
+- **Alpha / strength:** how hard we push.
+- **DiffMean:** the simple recipe for building a nudge.
+- **Coherence:** whether the text stays fluent and sensible.
+- **Gate (conditional gating):** a check that asks "does this situation call for
+  the behavior?" and only then lets the behavior nudge fire — so the model isn't
+  steered all the time, just when relevant.
+- **Selectivity:** doing the behavior in the right situations and *not* in the
+  wrong ones (for example, refusing harmful requests but not harmless ones).
+- **Injection order:** whether we place the gate's edit before or after the
+  behavior's edit in the model's sequence of steps.
+
+**Why we're doing this (the point):** A good safety control must fire only when
+appropriate. If simply reordering "decide, then act" sharpens that aim, it's a
+nearly free improvement.
+
+**What the result would mean:** A win means a simple ordering rule (gate first)
+makes steering more precise. A loss means order doesn't matter here and we can
+ignore it.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 CAST's standard architecture performs the condition read at an early layer L_c

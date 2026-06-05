@@ -10,6 +10,40 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** It turns out there are *many* different steering
+arrows that produce the *exact same* behavior — they only differ in the side-damage
+they cause to the model's other skills. Since they all give identical behavior for
+free, why not pick the one that bruises the model least? This doc says: nudge any
+steering arrow toward its gentlest equivalent — a one-line, no-cost tidy-up that any
+method can use.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" mid-sentence, instead of retraining.
+- **Residual stream** — the model's running internal thought; what we edit.
+- **DiffMean** — the simple recipe for building a steering arrow from yes/no examples.
+- **Coset / equivalence class** — the whole family of arrows that all give the *same*
+  behavior; they differ only in side-effects.
+- **Null space** — the "behaviorally silent" part of an arrow: directions you can add
+  or remove without changing behavior at all (it's estimated to be most of the arrow).
+- **Fragile subspace** — the directions that, if disturbed, do the most damage to the
+  model's general abilities or safety.
+- **Collateral / alignment damage** — harm to the model's other skills (e.g. quiz
+  ability) or extra wrongful refusals.
+
+**Why we're doing this (the point):** If we can swap any arrow for a behavior-identical
+twin that avoids the fragile directions, every steering method gets safer and smarter
+for free.
+
+**What the result would mean:** A win means the tidied arrow keeps the same behavior
+with noticeably less side-damage. A loss means the tidy-up doesn't reduce damage.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The Non-Identifiability paper (arXiv:2602.06801) proved a remarkable and practically

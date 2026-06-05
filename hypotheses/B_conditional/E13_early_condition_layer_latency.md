@@ -10,6 +10,46 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** The gate that decides "is this harmful?" and the
+nudge that acts on it happen at different processing steps inside the model. This asks
+whether we can run the gate at a much *earlier* step without losing accuracy — which
+would let the system decide sooner and run faster.
+
+**Key terms (defined here so you don't have to look anything up):**
+- **Language model (LLM):** an AI that predicts the next word; here, small Gemma
+  models.
+- **Steering:** nudging the model's behavior by adding a direction to its internal
+  state while it writes.
+- **Residual stream:** the model's running internal state, where the nudge is added
+  and the gate reads.
+- **Layer:** one of the model's stacked processing steps (Gemma-2-2B has 26). The
+  model runs them in order, early to late.
+- **DiffMean:** the simple recipe for building a direction from "yes/no" examples.
+- **Conditional steering / the gate:** applying the nudge only when relevant; the
+  gate is the check that decides.
+- **CAST:** the gating method these experiments build on.
+- **Condition layer vs injection layer:** the step where the gate checks (condition)
+  vs. the step where the nudge is applied (injection). They don't have to be the same.
+- **Gate AUC:** a 0.5-to-1.0 score for how well the gate tells harmful from harmless.
+  Higher = better; we want the early-layer gate to score within 0.03 of the late one.
+- **Latency:** how long the model takes to respond. Checking earlier means the system
+  can skip work and answer faster.
+- **Early-exit:** deciding early so later, expensive steps can be short-circuited.
+
+**Why we're doing this (the point):** Speed matters in real deployment. If the gate
+works just as well at an early step, the system can decide whether to steer before
+doing most of its work — saving time on every request.
+
+**What the result would mean:** A positive result means we get the same safety
+accuracy with lower latency. A negative result means the gate must wait until a late
+step, so there's no speed-up to be had.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 In production deployment the latency of a conditional steering system is

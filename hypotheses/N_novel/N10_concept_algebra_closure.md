@@ -10,6 +10,37 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Building a steering arrow for a new behavior usually
+means collecting fresh example sentences — slow work. This doc asks whether behavior
+arrows behave like building blocks you can *do arithmetic with*: combine a few you
+already have to conjure a brand-new behavior you have *no* examples for. (Like the
+famous word-math "King − Man + Woman = Queen," but for behaviors.)
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" mid-sentence, instead of retraining. The arrow is the direction.
+- **Residual stream** — the model's running internal thought; what we edit.
+- **DiffMean** — the simple recipe for building a steering arrow from yes/no examples.
+- **Contrast pairs** — the example sentences (behavior vs. not) used to build an arrow.
+- **Primitive behaviors** — a small starter set of arrows you combine to make others.
+- **Cosine / alignment** — how closely two arrows point the same way (our test of
+  whether the combined arrow matches the real one).
+- **Conceptor AND/OR** — a fancier way to *blend* arrows when plain adding isn't enough
+  (e.g. for behaviors that don't simply sum).
+
+**Why we're doing this (the point):** If behaviors combine like Lego, a handful of
+building-block arrows would let us steer countless new behaviors *without* collecting
+new examples each time.
+
+**What the result would mean:** A win means combined arrows steer a new behavior nearly
+as well as a purpose-built one. A loss means each behavior needs its own fresh examples.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Steering methods require extracting contrast pairs for every behavior of interest —

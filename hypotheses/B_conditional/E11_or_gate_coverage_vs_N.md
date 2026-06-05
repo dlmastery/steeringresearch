@@ -10,6 +10,46 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** If we want to catch many kinds of harm at once, we
+combine several gates so the model refuses if *any* of them fires. This asks: as we
+pile on more gates, does coverage keep growing while harmless requests stay safe —
+and at what point does it start wrongly refusing normal requests?
+
+**Key terms (defined here so you don't have to look anything up):**
+- **Language model (LLM):** an AI that predicts the next word; here, small Gemma
+  models.
+- **Steering:** nudging the model's behavior by adding a direction to its internal
+  state while it writes.
+- **Residual stream:** the model's running internal state, where the nudge is added.
+- **Layer:** one of the model's stacked processing steps.
+- **DiffMean:** the simple recipe for building a direction from "yes/no" examples.
+- **Conditional steering / the gate:** applying the nudge only when relevant; the
+  gate is the check that decides.
+- **CAST:** the gating method these experiments build on.
+- **Condition vector:** the direction a gate uses to recognize one kind of harm.
+- **OR-gate (OR-composition):** combining N gates so the nudge fires if *any* single
+  one fires.
+- **Coverage:** how many kinds of harm the combined system catches.
+- **N:** the number of gates we've stacked together.
+- **False refusal / leakage:** wrongly refusing harmless requests; "leakage" is the
+  point where stacking more gates starts causing this.
+- **Near-orthogonal:** gates pointing in clearly different directions, so they don't
+  interfere (from E10).
+
+**Why we're doing this (the point):** A real safety system needs many categories at
+once. We need to know how many gates we can stack before the false-refusal rate
+starts climbing — the safe limit for a multi-category safety system.
+
+**What the result would mean:** A positive result means we can stack gates up to some
+safe number (around 5) with steady coverage gains and few false refusals. A negative
+result means stacking gates causes harmless requests to get blocked sooner than hoped.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Conditional safety steering in practice must cover multiple harm categories

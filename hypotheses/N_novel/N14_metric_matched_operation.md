@@ -10,6 +10,41 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** There are a few different *ways* to apply a steering
+nudge (add it on, rotate the thought, etc.). Today people pick whichever is easiest to
+code. This doc says the *right* way depends on the *shape* of the concept you're
+steering — a tree-like concept, a dial-like intensity concept, and a pure direction
+each call for a different kind of move, and using the wrong one needlessly breaks the
+text.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" mid-sentence, instead of retraining.
+- **Residual stream** — the model's running internal thought; what we edit.
+- **Operation** — *how* the nudge is applied: add it on, rotate toward it, etc.
+- **Coherence** — whether the text stays fluent (measured by **perplexity**).
+- **Metric / space** — the natural "shape of the ruler" for a concept. Three flavors:
+  - **Hierarchical / tree-like** (a topic with sub-topics) → a "hyperbolic" move that
+    respects the branching.
+  - **Intensity / dial-like** (polite ↔ rude, with a "how much" knob) → a "cylindrical"
+    move that controls *direction* and *amount* separately.
+  - **Directional** (just which way) → a rotation.
+- **Radial vs angular** — the *amount* (size) part vs the *direction* part of a move;
+  the dial-like case controls these two independently.
+
+**Why we're doing this (the point):** Matching the move to the concept's shape should
+change behavior with less collateral damage to the text than a one-size-fits-all add.
+
+**What the result would mean:** A win means shape-matched moves keep text cleaner than
+plain addition for each concept type. A loss means the simple add was fine and the
+shape didn't matter.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 All current steering methods apply one of three operations: additive (Euclidean),

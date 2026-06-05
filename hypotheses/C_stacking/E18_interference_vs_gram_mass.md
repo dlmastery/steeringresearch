@@ -10,6 +10,44 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** When we stack several nudges at once, they fight
+a bit. We want a single number that predicts *how much* they'll fight, just from
+how much the nudges overlap — so we can check a stack's quality without running
+the full (expensive) test.
+
+**Key terms (defined here):**
+- **Steering / steering vector:** nudging the model by adding a direction to its
+  internal "thoughts"; the direction is the steering vector.
+- **Residual stream:** the model's running internal state that we edit mid-sentence.
+- **Layer:** the processing step where we make the edit.
+- **Alpha / strength:** how hard we push.
+- **DiffMean:** the simple recipe for building a nudge (average the "yes"
+  examples, average the "no", subtract).
+- **Coherence:** whether the text stays fluent and sensible.
+- **Stacking:** using several nudges at once for several behaviors.
+- **Interference:** the nudges getting in each other's way.
+- **Orthogonal:** directions that don't overlap (overlap score near 0).
+- **Gram matrix / Gram mass:** if you list how much every pair of nudges overlaps,
+  the **Gram matrix** is that table of overlaps. The **Gram mass** is one number
+  that adds up all those overlaps — a single "how tangled is this stack" score.
+- **Norm budget:** the total amount of push the text can take before it breaks;
+  more overlap eats more of it.
+
+**Why we're doing this (the point):** If one overlap-score reliably predicts the
+trouble, we can audit any stack instantly: measure the overlap, predict the
+fighting, and skip a slow evaluation.
+
+**What the result would mean:** A positive result gives us a cheap, trustworthy
+dial for "will this stack hold together?" A negative result means overlap alone
+isn't enough — the fighting depends on more complicated interactions we'd have to
+measure directly.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 E17 tests a binary claim: do two near-orthogonal vectors stack cleanly? E18 asks

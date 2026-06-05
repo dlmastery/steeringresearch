@@ -11,6 +11,49 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** The model has internal "switches" we can read
+and name. People assume the easy-to-name switches are also the ones that, when
+pushed, actually change the model's behavior. This test checks whether those are
+really the same switches — or two different groups.
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing the model's behavior by editing its internal state
+  mid-sentence, without retraining.
+- **Steering vector** — the nudge we add to push toward a behavior.
+- **Residual stream** — the model's running internal scratchpad; the nudge goes
+  here.
+- **Layer** — one of the model's stacked processing steps.
+- **alpha / strength** — how hard we push.
+- **DiffMean** — the simplest nudge recipe: average internal state on "yes"
+  examples minus "no" examples. No training.
+- **Coherence** — whether the steered text stays fluent and sensible.
+- **SAE feature** — an interpretable internal "switch" the model uses; ideally
+  each stands for one nameable idea.
+- **Interpretable vs controllable** — "interpretable" = we can read a switch and
+  say what idea it stands for. "Controllable" = pushing that switch reliably
+  changes the output. The whole question is whether these two go together.
+- **Overlap score** — a number for how much the "easy-to-name" group and the
+  "actually-works" group share members. Low overlap = they are different groups.
+- **Interpretability / monitoring** — understanding the model's insides, and
+  watching them; both depend on whether readable switches are the meaningful
+  ones.
+
+**Why we're doing this (the point):** A lot of AI-safety work assumes that if we
+can name an internal part, we can also use it to steer. If that assumption is
+wrong, we need a different recipe for finding the switches that truly control
+behavior.
+
+**What the result would mean:** Low overlap means readable and useful are *not*
+the same — a important caution for the whole field. High overlap means the
+comfortable assumption holds.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 A central promise of sparse autoencoders (SAEs) is that their learned

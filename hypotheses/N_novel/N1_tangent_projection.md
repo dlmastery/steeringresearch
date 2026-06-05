@@ -11,6 +11,45 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** As the model "thinks," its internal state is a
+point floating in a huge space. Healthy thoughts don't float just anywhere — they
+sit on a gently curved surface, like cities sit on the curved surface of the Earth.
+Steering nudges the point. If we shove it in a straight line, we push it *off* that
+curved surface (the thought goes "off-world" and the text breaks). This idea says:
+before nudging, bend the nudge so it slides *along* the surface instead of off it —
+and that should keep the text readable while still changing the behavior.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — instead of retraining the model, we add a chosen
+  direction to its internal state mid-sentence to change how it behaves. That
+  direction is the steering vector.
+- **Residual stream** — the model's running internal "thought" as it flows through
+  its processing steps; what we edit.
+- **Layer** — one processing step (this doc edits at step 16). Which step we pick is a knob.
+- **alpha / strength** — how hard we push. Small = gentle, large = a shove that breaks the text.
+- **Coherence** — whether the text stays fluent and sensible rather than turning to gibberish.
+- **Manifold / surface** — the natural curved region where healthy thoughts live.
+- **Tangent** — a direction that slides *along* that surface rather than off it.
+- **Norm** — the length (size) of the thought-point.
+- **Off-shell displacement** — how far a nudge knocks the thought off its healthy size/surface.
+- **Geodesic** — the shortest path that stays *on* the curved surface (a rotation-style move).
+- **kNN / PCA** — a cheap recipe for guessing which way the surface points locally, by
+  looking at the nearest natural thoughts.
+
+**Why we're doing this (the point):** If additive steering only breaks text because
+it leaves the surface, then trimming away the "off-surface" part of the nudge should
+let cheap addition behave as gently as the fancier rotation methods.
+
+**What the result would mean:** A win means we get rotation-quality smoothness almost
+for free. A loss (the falsifier) means trimming the nudge doesn't help — or only helps
+because it made the nudge smaller, not because of the geometry.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Activation steering methods divide into two families: additive methods (CAA, DiffMean,

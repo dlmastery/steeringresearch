@@ -10,6 +10,38 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** When you stack several steering goals at once, they
+can interfere and degrade each other. The naive worry is "more goals = more trouble."
+This doc says that's wrong: trouble comes from goals whose *directions overlap*, not
+from how *many* there are. Five goals pointing genuinely different ways barely
+interfere; two pointing nearly the same way clash hard. Add up the overlaps and you
+get a single "interference budget" that predicts the damage.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" mid-sentence; each goal is one arrow.
+- **Residual stream** — the model's running internal thought; what we edit.
+- **alpha / strength** — how hard we push each arrow.
+- **Stacking** — applying several steering arrows at once.
+- **Cosine overlap** — how much two arrows point the same way (high overlap = they
+  step on each other; zero = they don't).
+- **Near-orthogonal** — arrows pointing in genuinely different directions, so they barely interfere.
+- **Interference budget** — the total of all the pairwise overlaps; this doc's proposed
+  single predictor of how much stacking will degrade behavior.
+
+**Why we're doing this (the point):** If one overlap-total predicts the damage, you can
+check a planned stack *on paper* before running it — and know whether it's safe.
+
+**What the result would mean:** A win means the overlap-total predicts degradation
+better than just counting goals. A loss means the simple count is just as good, or the
+overlap idea doesn't track the damage.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Multi-vector stacking is a central use case for activation steering: simultaneously

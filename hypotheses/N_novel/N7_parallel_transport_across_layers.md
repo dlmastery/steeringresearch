@@ -9,6 +9,39 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** When we steer at several of the model's processing
+steps at once, we usually build a *separate* arrow for each step from scratch. But the
+"be polite" direction at step 10 and at step 14 are probably the *same* idea, just
+carried forward as the thought flows through the model. This doc says: figure out how
+each step reshapes the thought, carry one arrow forward correctly, and you get
+multi-step steering with far fewer pieces to estimate.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" mid-sentence, instead of retraining.
+- **Residual stream** — the model's running internal thought; what we edit.
+- **Layer** — one of the model's processing steps. Multi-layer steering edits several.
+- **DiffMean** — the simple recipe for building a steering arrow from yes/no examples.
+- **Parallel transport** — carrying a direction from one step to the next *correctly*,
+  accounting for how the model reshapes the thought along the way, so it still means
+  the same thing.
+- **Cosine / alignment** — how closely two arrows point the same way.
+- **Coherence** — whether the text stays fluent and sensible.
+
+**Why we're doing this (the point):** Treating one carried-forward arrow as a single
+object (instead of many guessed-from-scratch arrows) means less noise, fewer knobs,
+and likely smoother text.
+
+**What the result would mean:** A win means a transported single arrow matches or
+beats per-step arrows with less effort. A loss means each step's behavior direction
+genuinely has to be learned separately.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Multi-layer steering — injecting the same or related behavior vectors at multiple

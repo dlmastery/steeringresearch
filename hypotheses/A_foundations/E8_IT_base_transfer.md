@@ -11,6 +11,47 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Models come in two versions: a raw "base" version,
+and an "instruction-tuned" version that's been polished to follow instructions and
+refuse harmful requests. This asks whether a steering nudge built from the polished
+version still works on the raw version — which would tell us where these behaviors
+actually live inside the model.
+
+**Key terms (defined here so you don't have to look anything up):**
+- **Language model (LLM):** an AI that predicts the next word; here, small Gemma
+  models.
+- **Steering:** nudging the model's behavior by adding a direction to its internal
+  state while it writes.
+- **Steering vector:** the specific direction of the nudge.
+- **Residual stream:** the model's running internal state, where the nudge is added.
+- **Layer:** one of the model's stacked processing steps.
+- **DiffMean:** the simple recipe for building the nudge.
+- **alpha (strength):** how hard we push the nudge.
+- **Pretraining:** the first, huge training phase where the model learns language
+  from raw text.
+- **Base model:** the model straight out of pretraining — not yet polished.
+- **Instruction-tuned (IT) model:** the base model after extra polishing that
+  teaches it to follow instructions and refuse harmful requests.
+- **Transfer:** taking a nudge built on one version and applying it to the other.
+- **Efficacy loss:** how much weaker the nudge gets when transferred. Under 20% loss
+  counts as "transfers well."
+
+**Why we're doing this (the point):** If a nudge built on the polished model also
+works on the raw model, it means these behaviors were already learned during the
+big pretraining phase, not just bolted on by the polishing. Practically, the
+cheaper-to-run base model could reuse the polished model's safety nudges.
+
+**What the result would mean:** A positive result means behavioral directions are
+baked in during pretraining and are portable across versions. A negative result —
+especially for a safety/refusal nudge — would mean those behaviors come from the
+polishing step and don't exist in the raw model.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>=100 words)
 
 Instruction-tuned (IT) models are aligned versions of base pretrained models: they

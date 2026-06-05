@@ -12,6 +12,50 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** We try to assemble the smallest "recipe" of
+parts that together give top-tier safety control on a small model running on one
+ordinary graphics card — and we check that every part actually pulls its weight.
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing the model's behavior by editing its internal state
+  mid-sentence, without retraining.
+- **Steering vector** — the nudge we add to push toward (or away from) a
+  behavior.
+- **Residual stream** — the model's running internal scratchpad; the nudges go
+  here.
+- **Layer** — one of the model's stacked processing steps.
+- **alpha / strength** — how hard we push.
+- **DiffMean** — the simplest nudge recipe: average internal state on "yes"
+  examples minus "no" examples. No training.
+- **The stack (the recipe)** — several parts combined:
+  - **The gate** — refuse only when a request is genuinely harmful.
+  - **3 ortho vectors** — three safety nudges aimed in non-overlapping
+    directions so they don't smother each other.
+  - **Norm cap** — a limit on how far the combined nudge can move the model's
+    state, so it never breaks the output.
+  - **DoLa decoding** — a tweak to how the model picks each next word that helps
+    keep answers truthful and on-track.
+- **SOTA** — "state of the art," i.e. matching the best published results.
+- **Coherence** — whether the text stays fluent and sensible.
+- **The guard / red-team** — the defensive layers above, and the deliberate
+  attacks used to test them.
+
+**Why we're doing this (the point):** Can a lean, affordable recipe — runnable on
+a single consumer GPU — reach the same safety quality as heavyweight setups, and
+is each ingredient truly necessary?
+
+**What the result would mean:** If the small stack hits top-tier safety and every
+part contributes, we have a cheap, reproducible recipe others can run. If a part
+adds nothing, we drop it; if the whole thing falls short, lean setups can't yet
+match the big ones.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The autoresearch program has proposed and tested individual components of

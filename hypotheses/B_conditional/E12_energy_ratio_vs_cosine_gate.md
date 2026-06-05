@@ -10,6 +10,48 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** The gate that decides "is this request harmful?" can
+be built two ways — a simpler one and a more sophisticated one. This compares them to
+see which one separates harmful from harmless requests more accurately at the same
+cost.
+
+**Key terms (defined here so you don't have to look anything up):**
+- **Language model (LLM):** an AI that predicts the next word; here, small Gemma
+  models.
+- **Steering:** nudging the model's behavior by adding a direction to its internal
+  state while it writes.
+- **Residual stream / hidden state:** the model's running internal state, which the
+  gate reads.
+- **Layer:** one of the model's stacked processing steps.
+- **Conditional steering / the gate:** applying the nudge only when relevant; the
+  gate is the check that decides.
+- **CAST (cosine gate):** the simpler gate. It checks how closely the current request
+  lines up with a "harmful" direction (a cosine similarity score) and fires if that's
+  high enough.
+- **SCS / energy-ratio gate:** the more sophisticated gate. It compares how much of
+  the request's internal "energy" sits in the harmful direction versus a neutral
+  baseline. By design this is less fooled by requests that just happen to be "loud"
+  (large internal state).
+- **Cosine similarity:** a score for how nearly two directions point the same way.
+- **PR-AUC:** a 0-to-1 score for how good a detector is at flagging the right cases
+  while avoiding false alarms. Higher = better.
+- **Distribution shift / OOD:** requests that look different from the training
+  examples (e.g. a new topic or writing style) — the realistic hard case.
+
+**Why we're doing this (the point):** The gate's accuracy decides how well the whole
+safety system works — more harmful requests caught, fewer harmless ones blocked. We
+want to know if the more sophisticated gate is worth using.
+
+**What the result would mean:** A positive result means the energy-ratio gate is
+meaningfully sharper and should be preferred. A negative result means the simpler
+cosine gate is good enough and the extra sophistication isn't worth it.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 CAST (arXiv:2409.05907) gates on cosine similarity between the current hidden

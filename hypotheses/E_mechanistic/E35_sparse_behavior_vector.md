@@ -11,6 +11,50 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** The nudge we use to steer the model is a long
+list of numbers (2304 of them). We ask: is the behavior really stored in just a
+few of those numbers, so we could throw most of them away and still steer just
+as well?
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing the model's behavior by editing its internal
+  "thoughts" mid-sentence, without retraining.
+- **Steering vector** — the nudge we add; here it is a list of 2304 numbers,
+  one per internal dimension.
+- **Residual stream** — the model's running internal scratchpad of numbers; the
+  nudge is added here.
+- **Layer** — one of the model's stacked processing steps; we edit at one of
+  them.
+- **alpha / strength** — how hard we push the nudge. Too hard makes gibberish.
+- **DiffMean** — the simplest recipe for the nudge: average the internal state
+  on "yes" examples, subtract the average on "no" examples. No training.
+- **Coherence** — whether the steered text stays fluent and sensible.
+- **Sparse** — most of the numbers are near zero; only a few really matter.
+  "Top 10%" = keep the 230 biggest numbers, zero out the rest.
+- **Random control** — a fair comparison: keep 230 *randomly chosen* numbers
+  instead of the biggest. If the behavior is truly concentrated, the biggest-230
+  version should win big over the random-230 version.
+- **Interpretability** — understanding what the model is doing inside; a short
+  list of important numbers is easier to inspect than a long one.
+- **SAE feature** — an interpretable internal "switch" the model uses; this work
+  connects to whether the few important numbers line up with such switches.
+
+**Why we're doing this (the point):** If behaviors live in a handful of numbers,
+steering gets cheaper, easier to understand, and easier to combine several
+behaviors at once without them clashing.
+
+**What the result would mean:** If the biggest-10% nudge keeps most of its
+effect and the random-10% does not, the behavior is concentrated (a clean,
+useful result). If both do about the same, the behavior is spread out and you
+need the whole nudge.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The Linear Representation Hypothesis (Park et al. 2023, arXiv:2311.03658)

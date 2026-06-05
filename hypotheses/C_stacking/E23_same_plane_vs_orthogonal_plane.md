@@ -11,6 +11,44 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** There are two ways to nudge: *add* a direction, or
+*rotate* the thought toward a direction. The claim is that what really decides
+whether two nudges cooperate or clash isn't which method you use — it's *where*
+they act. Nudges working in the same little region clash; nudges in separate,
+non-overlapping regions stack fine.
+
+**Key terms (defined here):**
+- **Steering / steering vector:** nudging the model by adding a direction to its
+  internal "thoughts"; the direction is the steering vector.
+- **Residual stream:** the model's running internal state we edit mid-sentence.
+- **Layer:** the processing step where we make the edit.
+- **Alpha / strength:** how hard we push.
+- **DiffMean:** the simple recipe for building a nudge.
+- **Coherence:** whether the text stays fluent and sensible.
+- **Stacking:** using several nudges at once. **Interference:** the nudges getting
+  in each other's way (here, "destructive" means they cancel each other).
+- **Add vs rotate:** two ways to apply a nudge. *Add* just pushes the thought in a
+  direction. *Rotate* turns the thought toward a direction while keeping its size
+  the same.
+- **Plane (same vs orthogonal):** a "plane" is a small flat region of the thought
+  space where an edit acts. **Same plane** = both edits act in the same region (so
+  they collide). **Orthogonal planes** = separate, non-overlapping regions (so they
+  coexist).
+
+**Why we're doing this (the point):** It would replace a vague rule ("do these two
+methods mix?") with a precise one ("do they touch the same region?"). That tells
+us *exactly* when two controls can be combined.
+
+**What the result would mean:** A win means we can predict cooperation purely from
+*where* edits act, regardless of method name — a clean design rule. A loss means
+the method itself matters, and the picture is more tangled.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The decision matrix in the corpus (steering-stackable-vs-competing-analysis.md)

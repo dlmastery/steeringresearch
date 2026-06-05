@@ -11,6 +11,45 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** We want the model to do two things at once (for
+example, refuse harmful requests *and* sound more positive). We do this by adding
+two gentle nudges to its "thoughts" at the same time. The question: do the two
+nudges leave each other alone, or do they get in each other's way?
+
+**Key terms (defined here):**
+- **Steering:** nudging the model's behavior while it writes, by adding a
+  direction to its internal "thoughts" — no retraining needed.
+- **Steering vector:** the specific direction we add; it points from "not the
+  behavior" toward "the behavior."
+- **Residual stream:** the model's running internal state (a long list of
+  numbers) that we read and edit mid-sentence.
+- **Layer:** the model works in stacked steps; we pick one step to make our edit.
+- **Alpha / strength:** how hard we push. Too hard and the text turns to nonsense.
+- **DiffMean:** the simple way we build a nudge — average the "yes" examples,
+  average the "no" examples, subtract.
+- **Coherence:** whether the text stays fluent and sensible (not gibberish).
+- **Stacking:** using several nudges at once to control several behaviors.
+- **Interference:** the nudges getting in each other's way, so each works worse.
+- **Orthogonal:** two directions that don't overlap — like North and East. We use
+  the cosine (a 0-to-1 overlap score) to check: near 0 means barely overlapping.
+- **Norm budget:** there's a total amount of "push" the text can absorb before it
+  breaks; two nudges added together use up more of that budget than one.
+
+**Why we're doing this (the point):** A real safety system may need to control
+several behaviors together. Can we do that without the two controls fighting, and
+without the text falling apart?
+
+**What the result would mean:** If two non-overlapping nudges each keep almost all
+of their solo effect, stacking is safe and we have a green light to combine
+behaviors. If they badly weaken each other even when they barely overlap, then
+clean stacking is harder than the simple math suggests, and we'd need a fix.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The central design question for a multi-property safety stack is whether multiple

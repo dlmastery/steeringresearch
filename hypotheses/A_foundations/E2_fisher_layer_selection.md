@@ -10,6 +10,46 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** The model thinks in stacked steps called layers.
+We have to pick which layer to inject our nudge at. This asks whether a quick math
+score (the "Fisher ratio") can tell us the best layer in advance, so we don't have
+to test every layer by hand. (Spoiler: it can't — this idea was disproven.)
+
+**Key terms (defined here so you don't have to look anything up):**
+- **Language model (LLM):** an AI that predicts the next word; here, small Gemma
+  models.
+- **Steering:** nudging the model's behavior by adding a direction to its internal
+  state as it writes, instead of retraining it.
+- **Steering vector:** the specific direction of that nudge.
+- **Residual stream:** the model's running internal state, where the nudge is added.
+- **Layer:** one of the model's stacked processing steps (Gemma-2-2B has 26).
+  Which layer we nudge at is the knob this experiment is about.
+- **DiffMean:** the simple recipe for building the nudge — average the "yes"
+  examples, average the "no" examples, subtract.
+- **alpha (strength):** how hard we push the nudge.
+- **Coherence:** whether the text stays fluent and sensible.
+- **Fisher ratio:** a quick math score for how cleanly a layer separates the "yes"
+  examples from the "no" examples. The idea was that a high score might mean the
+  best layer to nudge — this turned out to be wrong.
+- **"Read-out" vs "write-in":** the layer where the model has clearly *recorded* an
+  idea is not necessarily the layer where *adding* a nudge has the biggest effect.
+  That mismatch is why the quick score failed.
+
+**Why we're doing this (the point):** Testing every layer one by one is slow. A
+reliable shortcut for picking the layer would save a lot of time. We wanted to
+know if this particular shortcut works.
+
+**What the result would mean:** A positive result would have given a cheap rule for
+layer choice. The actual (negative) result tells us this shortcut is unreliable, so
+the layer must be chosen by directly testing behavior — and other experiments
+should not rely on this shortcut either.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>=100 words)
 
 Choosing which transformer layer to inject a steering vector is one of the most

@@ -12,6 +12,46 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** When the model writes a long answer, we could
+re-apply the steering nudge at *every single word* (expensive) or just *once at
+the start* (cheap). We ask whether applying it once at the start is enough to get
+the same behavior.
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing the model's behavior by editing its internal state
+  mid-sentence, without retraining.
+- **Steering vector** — the nudge we add to push toward a behavior.
+- **Residual stream** — the model's running internal scratchpad; the nudge goes
+  here.
+- **Layer** — one of the model's stacked processing steps.
+- **alpha / strength** — how hard we push.
+- **DiffMean** — the simplest nudge recipe: average internal state on "yes"
+  examples minus "no" examples. No training.
+- **Token** — roughly one word-piece; the model produces text one token at a
+  time.
+- **Prefill** — the very beginning of generation, before the model writes its
+  first new word. "Prefill-only" = nudge once, at the start, then leave it.
+- **Per-token recomputation** — the expensive alternative: rebuild and re-apply
+  the nudge at every new word.
+- **Temporal stability** — whether the behavior direction stays put as the answer
+  grows, rather than drifting word by word.
+- **Coherence** — whether the text stays fluent and sensible.
+
+**Why we're doing this (the point):** If a single nudge at the start lasts the
+whole answer, steering gets much cheaper and simpler to run — important on
+limited hardware.
+
+**What the result would mean:** If once-at-the-start matches nudging every word,
+we get the same effect for far less compute (a clean efficiency win). If the
+behavior fades unless we keep re-applying it, the cheap shortcut isn't safe.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Activation steering is typically implemented as a once-at-prefill (or once-

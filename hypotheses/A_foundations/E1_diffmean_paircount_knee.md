@@ -10,6 +10,47 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** To nudge an AI's behavior we build a "steering
+nudge" by comparing example sentences. This asks: how many example sentences do
+we actually need? Is there a point where adding more stops helping?
+
+**Key terms (defined here so you don't have to look anything up):**
+- **Language model (LLM):** an AI that predicts the next word. We use small open
+  models from Google's Gemma family.
+- **Steering:** changing how the model behaves by nudging its internal "thoughts"
+  while it writes, instead of retraining it. Cheap and reversible.
+- **Steering vector:** the specific direction of that nudge — it points from "not
+  the behavior" toward "the behavior" (e.g. from not-ocean to ocean).
+- **Residual stream:** the model's running internal state as it reads and writes;
+  the nudge is added here.
+- **Layer:** the model processes text in stacked steps; "layer 16" means we act
+  at step 16.
+- **Contrast pairs:** matched example sentences that do vs. don't show the
+  behavior (an ocean sentence vs. a non-ocean one). We compare the model's
+  internal states on these to build the nudge.
+- **DiffMean:** the simplest way to build the nudge — average the model's internal
+  state on the "yes" examples, average it on the "no" examples, and subtract.
+- **PCA:** a different recipe for finding the same direction (compared in E4).
+- **alpha (strength):** how hard we push the nudge.
+- **Coherence:** whether the text stays fluent and sensible, not gibberish.
+- **The "knee":** the point on a curve where adding more (here, more example
+  pairs) stops making much difference — extra effort, little payoff.
+
+**Why we're doing this (the point):** Each example pair has to be hand-written,
+which costs time and money. If 20 examples work as well as 200, teams can build
+steering nudges far more cheaply. We want to find that cut-off.
+
+**What the result would mean:** If the nudge stabilizes after a small number of
+examples, steering is cheap to set up. If hard behaviors need 100+ examples, then
+"data-efficient steering" claims are overstated and other experiments that assumed
+a stable nudge must be re-checked.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>=100 words)
 
 DiffMean — the difference of mean hidden-state activations between contrastive prompt

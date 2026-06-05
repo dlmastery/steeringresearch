@@ -10,6 +10,39 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Normally we pick one steering strength at the start
+and keep it fixed for the whole answer — like setting a thermostat once and never
+touching it. Over a long answer, the model can drift off-behavior. This doc borrows
+the *thermostat* idea: keep watching how "on-behavior" the text currently is, and
+automatically push harder when it drifts away and ease off when it's on target.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" as it writes, instead of retraining.
+- **Residual stream** — the model's running internal thought; what we read and edit.
+- **alpha / strength** — how hard we push.
+- **Open-loop (fixed alpha)** — set the strength once, never adjust it.
+- **Closed-loop / feedback control** — keep measuring the behavior and adjust the
+  strength on the fly (the thermostat).
+- **Drift** — the answer wandering away from the target behavior as it gets longer.
+- **Coherence** — whether the text stays fluent. Measured by **perplexity**.
+- **Off-shell displacement** — how far a nudge knocks the thought off its healthy size
+  (we check feedback doesn't make this worse).
+
+**Why we're doing this (the point):** A self-adjusting steer should hold the behavior
+steady across long answers without anyone hand-tuning the strength — and without
+overshooting into broken text.
+
+**What the result would mean:** A win means the thermostat-style steer drifts less and
+stays readable over long generations. A loss means fixed strength was just as good (or
+feedback made things worse).
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The standard activation steering paradigm applies a fixed perturbation alpha*v at

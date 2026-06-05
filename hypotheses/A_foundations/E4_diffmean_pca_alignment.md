@@ -11,6 +11,50 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** There are two recipes for building the steering
+nudge — a cheap one and an expensive one. This asks whether they end up pointing in
+almost the same direction. If they do, the cheap recipe is all anyone needs.
+
+**Key terms (defined here so you don't have to look anything up):**
+- **Language model (LLM):** an AI that predicts the next word; here, small Gemma
+  models.
+- **Steering:** nudging the model's behavior by adding a direction to its internal
+  state while it writes.
+- **Steering vector:** the specific direction of the nudge.
+- **Residual stream:** the model's running internal state, where the nudge is added.
+- **Layer:** one of the model's stacked processing steps; we build the nudge from
+  one of them.
+- **Contrast pairs:** matched "yes/no" example sentences used to build the nudge.
+- **DiffMean:** the cheap recipe — average the "yes" examples, average the "no"
+  examples, subtract. No heavy math.
+- **PCA (PCA-top-1):** the expensive recipe — find the main axis of variation among
+  the examples. Needs more computation.
+- **Cosine alignment:** a 0-to-1 score for how nearly two directions point the same
+  way. 1.0 = identical direction; 0 = unrelated. We ask if DiffMean and PCA score
+  above 0.95.
+- **alpha (strength):** how hard we push the nudge.
+- **Coherence / perplexity:** whether the text stays fluent (perplexity = how
+  "surprised" the model is; higher = more broken).
+- **CAST gate:** a method (used later in Block B) that decides *when* to apply the
+  nudge; it currently uses the expensive recipe, so this result could let it switch
+  to the cheap one.
+
+**Why we're doing this (the point):** If the two recipes agree, the expensive one
+is wasted effort — teams can use the cheap, simpler DiffMean everywhere. It also
+settles a recurring confusion in the literature where papers use one recipe and
+assume results carry over to the other.
+
+**What the result would mean:** A positive result (which we're seeing — scores
+around 0.99) means the cheap recipe suffices and any performance differences between
+the two must come from other settings, not the direction. A negative result would
+mean the recipe choice genuinely matters and must be reported carefully.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>=100 words)
 
 Two main extraction pipelines dominate practical steering research. DiffMean

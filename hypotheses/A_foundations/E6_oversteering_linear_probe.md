@@ -10,6 +10,46 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Pushing the nudge too hard breaks the text. Right
+now we only find out *after* the model has written the broken text. This asks
+whether a cheap predictor can warn us *before* generating — "this push will produce
+gibberish" — so we can stop it in time.
+
+**Key terms (defined here so you don't have to look anything up):**
+- **Language model (LLM):** an AI that predicts the next word; here, small Gemma
+  models.
+- **Steering:** nudging the model's behavior by adding a direction to its internal
+  state while it writes.
+- **Steering vector:** the specific direction of the nudge.
+- **Residual stream / hidden state:** the model's running internal "thought" state,
+  where the nudge is added and which we can read.
+- **Layer:** one of the model's stacked processing steps.
+- **alpha (strength):** how hard we push the nudge.
+- **Over-steering:** pushing so hard the output turns incoherent — and, dangerously,
+  sometimes more willing to comply with harmful requests.
+- **Coherence / perplexity:** whether text stays fluent (perplexity higher = more
+  broken).
+- **Linear probe:** a tiny, simple predictor trained to read the model's internal
+  state and output a yes/no guess — here, "will this push break the text?"
+- **AUC:** a 0.5-to-1.0 score for how good a yes/no predictor is. 0.5 = coin-flip
+  useless; 1.0 = perfect. We want at least 0.80.
+- **Pre-generation:** before the model writes any words — the probe runs early, so
+  it can veto a bad push cheaply.
+
+**Why we're doing this (the point):** A reliable early warning lets a safe steering
+system skip a bad push instead of generating broken or unsafe text and redoing it.
+That's faster and safer than checking after the fact.
+
+**What the result would mean:** A positive result gives a cheap, built-in safety
+brake for steering. A negative result means we can't predict breakage early and must
+keep checking the finished text the slow way.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>=100 words)
 
 Over-steering is the failure mode that makes deployment of activation steering

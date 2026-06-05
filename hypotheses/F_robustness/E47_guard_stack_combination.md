@@ -13,6 +13,49 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** We have three safety add-ons that each protect
+the model in a different way. We ask whether using all three together works
+better than any one alone — and whether they genuinely team up rather than
+getting in each other's way.
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing the model's behavior by editing its internal state
+  mid-sentence, without retraining.
+- **Steering vector** — the nudge we add to push toward (or away from) a
+  behavior.
+- **Residual stream** — the model's running internal scratchpad; the nudges go
+  here.
+- **Layer** — one of the model's stacked processing steps.
+- **alpha / strength** — how hard we push.
+- **DiffMean** — the simplest nudge recipe: average internal state on "yes"
+  examples minus "no" examples. No training.
+- **The guard** — defensive layers that keep steering from breaking the model's
+  safety. This doc combines three of them:
+  - **The gate** — refuse only when the request is genuinely harmful (reads the
+    internal meaning, not just the words).
+  - **Ortho-stack** — when running several nudges at once, first make them point
+    in non-overlapping directions so they don't smother each other.
+  - **Norm cap** — a limit on how far the total nudge can move the model's state,
+    so steering never shoves it so hard the output breaks.
+- **Stacking** — running several of these together.
+- **Coherence** — whether the text stays fluent and sensible.
+- **Red-team** — deliberately attacking your own system to test it.
+
+**Why we're doing this (the point):** Does layering several defenses give the
+best mix of "stays safe" and "stays smart," and do they cooperate — so the whole
+is more than the sum of its parts?
+
+**What the result would mean:** If the full three-part guard beats every smaller
+combination, layered defense is the way to go. If one piece alone does just as
+well, the extra machinery isn't earning its keep.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The Rogue Scalpel paper (arXiv:2509.22067) identifies five guard layers

@@ -11,6 +11,41 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** A behavior (say, "formal tone") might really live
+in just a tiny handful of directions inside the model, not spread across thousands.
+If so, we could steer using only those few directions and lose nothing — a much
+simpler, cleaner handle on behavior.
+
+**Key terms (defined here):**
+- **Steering / steering vector:** nudging the model by adding a direction to its
+  internal "thoughts"; the direction is the steering vector.
+- **Residual stream:** the model's running internal "thoughts" (a long list of
+  numbers) that we edit.
+- **Layer:** the processing step where we make the edit.
+- **Alpha / strength:** how hard we push.
+- **DiffMean:** the simple recipe for building a nudge.
+- **Coherence:** whether the text stays fluent and sensible.
+- **Low-rank / behavior plane:** a "behavior plane" is the small shared region
+  where a behavior actually lives. **Low-rank** means just 2-3 directions are
+  enough to capture it — instead of the full thousands.
+- **Principal components:** the few most important directions of variation; we ask
+  whether the top 2-3 of them cover more than 90% of what makes the behavior the
+  behavior.
+
+**Why we're doing this (the point):** If a behavior fits in a tiny plane, steering
+becomes simpler, easier to reason about, and easier to combine with other
+behaviors without overlap.
+
+**What the result would mean:** A win means we can steer with just a few directions
+and get the full effect — a big simplification. A loss means behaviors are spread
+out and need the full, high-dimensional nudge.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 If behavior is a direction, the natural follow-up question is how many directions.

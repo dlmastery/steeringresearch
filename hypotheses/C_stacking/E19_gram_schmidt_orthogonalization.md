@@ -11,6 +11,42 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Before adding a new nudge to ones already in use,
+we mathematically strip out the part of it that overlaps with the existing nudges.
+The question: does this "clean" nudge still do its job, while no longer interfering
+with the others?
+
+**Key terms (defined here):**
+- **Steering / steering vector:** nudging the model by adding a direction to its
+  internal "thoughts"; the direction is the steering vector.
+- **Residual stream:** the model's running internal state that we edit mid-sentence.
+- **Layer:** the processing step where we make the edit.
+- **Alpha / strength:** how hard we push.
+- **DiffMean:** the simple recipe for building a nudge.
+- **Coherence:** whether the text stays fluent and sensible.
+- **Stacking:** using several nudges at once.
+- **Interference:** the nudges getting in each other's way.
+- **Orthogonal:** directions that don't overlap. **Gram-Schmidt** is a standard
+  procedure that takes a new direction and removes the parts that overlap with
+  existing ones, leaving a purely non-overlapping remainder.
+- **Norm budget:** the total push the text can take before it breaks; stripping
+  overlap also shrinks how far we push, which is gentler on this budget.
+
+**Why we're doing this (the point):** It's a clean recipe for adding behaviors one
+at a time without each new one disturbing the ones already working — exactly what
+a growing safety stack needs.
+
+**What the result would mean:** If the cleaned nudge keeps almost all of its
+effect, we have a safe, reusable way to grow a stack. If cleaning it guts its
+effect, that means the overlapping part was actually carrying real behavior, and
+this simple trick won't work for those behaviors.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 When a new behavior vector v_new must be added to an already-active stack of

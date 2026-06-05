@@ -11,6 +11,48 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** A published benchmark found that steering with
+the model's own interpretable internal "switches" works worse than a plain
+average-based nudge. We ask: is that because the switches are bad, or just
+because people pick the *wrong* switches?
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing the model's behavior by editing its internal state
+  mid-sentence, without retraining.
+- **Steering vector** — the nudge we add to push toward a behavior.
+- **Residual stream** — the model's running internal scratchpad; the nudge goes
+  here.
+- **Layer** — one of the model's stacked processing steps.
+- **alpha / strength** — how hard we push.
+- **DiffMean** — the simplest nudge recipe: average the internal state on "yes"
+  examples minus the average on "no" examples. The strong, simple baseline here.
+- **Coherence** — whether the steered text stays fluent and sensible.
+- **SAE feature** — an interpretable internal "switch" the model uses; each
+  switch ideally stands for one human-nameable idea (e.g. "this is about the
+  ocean"). Steering one switch is the alternative we are testing.
+- **Picking by "what it's about" vs "what it does"** — the wrong way picks
+  switches that *light up* on a topic; the right way (we argue) picks switches
+  that, when pushed, actually *change the output*. This difference is the whole
+  point.
+- **Interpretability** — understanding what the model is doing inside; the
+  switches are prized because they are human-readable.
+
+**Why we're doing this (the point):** Interpretable switches would be the ideal
+steering tool — clean and explainable. We want to know whether they really
+underperform, or whether better selection rescues them.
+
+**What the result would mean:** If picking switches by their real effect matches
+the plain nudge, the switches were fine all along — the problem was selection
+(good news for interpretable steering). If they still lose, the switches really
+are the wrong tool for control.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The AxBench benchmark (arXiv:2501.17148, Stanford) compares steering

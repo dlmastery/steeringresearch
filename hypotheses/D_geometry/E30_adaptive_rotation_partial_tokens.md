@@ -11,6 +11,42 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** When the model writes, each word has its own little
+"thought." Some are already pointed the way we want, some point the opposite way,
+and some are in between. The idea: only nudge the in-between ones, and leave the
+rest alone. The hope is that this keeps the text smoother while still steering the
+behavior just as much overall.
+
+**Key terms (defined here):**
+- **Steering / steering vector:** nudging the model by adding a direction to its
+  internal "thoughts"; the direction is the steering vector.
+- **Residual stream:** the model's running internal "thoughts"; here, each written
+  word ("token") has its own thought we could nudge.
+- **Layer:** the processing step where we make the edit.
+- **Alpha / strength:** how hard we push.
+- **DiffMean:** the simple recipe for building a nudge.
+- **Coherence:** whether the text stays fluent and sensible.
+- **Rotate vs add:** two nudge methods. *Rotate* turns a thought toward a direction
+  while keeping its size the same; *add* just pushes it. This experiment rotates.
+- **Adaptive / partially-aligned:** "adaptive" means we treat each word
+  differently instead of nudging them all the same. "Partially-aligned" words are
+  the in-between ones (not already on-target, not fully opposed) — the only ones
+  we touch.
+
+**Why we're doing this (the point):** Nudging every word equally is heavy-handed
+and can roughen the text. Touching only the words that need it may give the same
+behavior with cleaner output.
+
+**What the result would mean:** A win means selective, per-word nudging keeps text
+smoother at the same behavior level — a gentler steering knob. A loss means
+nudging everything uniformly works just as well and the selectivity isn't worth it.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Standard residual-stream steering applies the same intervention to every token

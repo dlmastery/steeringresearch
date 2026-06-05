@@ -18,6 +18,54 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Normally, to steer a new behavior you must hand-
+collect example sentences first. We ask whether a small helper program can skip
+that step — read a one-sentence *description* of a behavior ("be more concise")
+and write the steering nudge for it directly, even for a behavior it never saw.
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing the model's behavior by editing its internal state
+  mid-sentence, without retraining.
+- **Steering vector** — the nudge we add to push toward a behavior.
+- **Residual stream** — the model's running internal scratchpad; the nudge goes
+  here.
+- **Layer** — one of the model's stacked processing steps.
+- **alpha / strength** — how hard we push.
+- **DiffMean** — the normal, example-based recipe for a nudge (average internal
+  state on "yes" examples minus "no" examples). Here it's the *target* the
+  helper program tries to reproduce, and the yardstick we score against.
+- **Hypernetwork** — a small helper network that *writes* a steering nudge from
+  a text description, instead of us building it from examples.
+- **HyperSteer** — the specific published method (a hypernetwork for steering)
+  this doc adapts and tests.
+- **Zero-shot** — working on a behavior the helper was never trained on; the
+  real test of whether it learned a general skill.
+- **Coherence** — whether the steered text stays fluent and sensible.
+
+**Why we're doing this (the point):** If it works, adding a new steerable
+behavior would be as easy as describing it in a sentence — no data collection.
+That would make steering far faster to deploy.
+
+**What we found (honest status):** We built the helper program and tried it, but
+only at a tiny scale (four behaviors). The result was **inconclusive**: on
+behaviors it hadn't seen, the nudges it wrote were sometimes right, sometimes
+pointed the *wrong way*, with no consistency. The basic machinery works on a
+larger pretend dataset, so the idea isn't broken — we just can't yet say whether
+it really works. A fair verdict needs many more behaviors and a proper quality
+check on the actual generated text.
+
+**What a future result would mean:** If, at larger scale, the described-into-
+existence nudges reliably match the example-built ones, steering gets a powerful
+shortcut. If they keep pointing the wrong way, the description-only approach
+isn't trustworthy enough to use.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The standard workflow for extracting a steering vector requires a contrast

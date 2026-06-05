@@ -12,6 +12,48 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Real safety systems must catch several kinds of harm
+at once (hate speech, self-harm, illegal advice). Each kind gets its own gate. This
+asks whether those gates point in genuinely different directions inside the model, so
+they don't accidentally trigger each other.
+
+**Key terms (defined here so you don't have to look anything up):**
+- **Language model (LLM):** an AI that predicts the next word; here, small Gemma
+  models.
+- **Steering:** nudging the model's behavior by adding a direction to its internal
+  state while it writes.
+- **Residual stream:** the model's running internal state, where nudges are added and
+  gates read.
+- **Layer:** one of the model's stacked processing steps.
+- **DiffMean:** the simple recipe for building a direction from "yes/no" examples.
+- **Conditional steering / the gate:** applying the nudge only when a request is
+  relevant; the gate is the check that decides.
+- **CAST:** the gating method these experiments build on (Conditional Activation
+  Steering).
+- **Condition vector:** the specific direction a gate uses to recognize one kind of
+  harm (e.g. a "hate speech" detector direction).
+- **Cosine similarity:** a score for how nearly two directions point the same way.
+  Near 1 = almost identical; near 0 = unrelated/independent.
+- **Near-orthogonal:** pointing in clearly different directions (low cosine, under
+  0.3) — meaning the gates don't overlap and won't set each other off.
+- **OR-gate:** a combined gate that fires if *any* one of the category gates fires
+  (tested further in E11).
+
+**Why we're doing this (the point):** If the category detectors are independent, we
+can simply stack them — add a new harm category without messing up the others, and
+at almost no extra cost. If they overlap, we'd need a more complicated combined
+detector instead.
+
+**What the result would mean:** A positive result (detectors point in different
+directions) means clean, cheap stacking of multiple safety categories. A negative
+result means the categories interfere and require a smarter, learned combined gate.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 A realistic deployment of conditional safety steering will not protect against

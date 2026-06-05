@@ -11,6 +11,41 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** We can nudge the model in two different *places*
+inside it at once: in its running "thoughts," and in its short-term memory of the
+words so far. The idea is that two nudges in different places shouldn't fight. We
+also check a catch: on long passages, the memory nudge may slowly "leak" and
+muddy the text.
+
+**Key terms (defined here):**
+- **Steering / steering vector:** nudging the model by adding a direction to its
+  internal "thoughts"; the direction is the steering vector.
+- **Residual stream:** the model's running internal "thoughts" as it writes — one
+  place we can nudge.
+- **KV-cache:** the model's short-term memory of the words it has already seen,
+  which it reuses to write the next word — a *second*, separate place we can nudge.
+- **Layer:** the processing step where we make the edit.
+- **Alpha / strength:** how hard we push.
+- **Coherence:** whether the text stays fluent and sensible.
+- **Stacking:** using several nudges at once. **Disjoint sites:** the two nudges
+  act in *different* places (thoughts vs memory), so they shouldn't collide.
+- **Interference / contamination:** the nudges getting in each other's way; here,
+  on long text the memory nudge can build up and gradually spoil the output.
+
+**Why we're doing this (the point):** Nudging in two separate places is a natural
+way to get two effects without them clashing. But we need to know how long it
+lasts before the memory side starts to leak.
+
+**What the result would mean:** A win means we can combine these two nudge sites
+for short replies and get both effects nearly in full. The expected catch — worse
+results on long text — tells us where the safe limit is.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The intervention-site taxonomy (corpus: steering-stackable-vs-competing-analysis.md

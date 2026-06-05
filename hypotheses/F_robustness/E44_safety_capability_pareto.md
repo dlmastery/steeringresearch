@@ -12,6 +12,48 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Pushing several safety nudges harder makes the
+model safer but a bit dumber. We ask whether there's a clear "sweet spot" — the
+setting that buys the most safety for the least loss of smarts — and whether we
+can find it without trying every possible combination.
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing the model's behavior by editing its internal state
+  mid-sentence, without retraining.
+- **Steering vector** — the nudge we add; here several safety nudges at once.
+- **Residual stream** — the model's running internal scratchpad; the nudges go
+  here.
+- **Layer** — one of the model's stacked processing steps.
+- **alpha / strength** — how hard we push each nudge. This is the main knob we
+  sweep.
+- **DiffMean** — the simplest nudge recipe: average internal state on "yes"
+  examples minus "no" examples. No training.
+- **Capability** — how smart the model stays; measured by whether it still
+  answers quiz questions correctly.
+- **Trade-off curve (Pareto frontier)** — a map of the best you can do: for each
+  safety level, the least smarts you have to give up. You can't beat the curve;
+  you can only move along it.
+- **The knee** — the bend in that curve; the sweet spot where you get a lot of
+  extra safety for only a little lost smarts. Past it, you pay a lot of smarts
+  for tiny safety gains.
+- **Stacking** — running several nudges together.
+- **Coherence** — whether the text stays fluent and sensible.
+
+**Why we're doing this (the point):** People need a principled way to set
+safety strength — not too weak, not so strong it lobotomizes the model. We want
+a cheap way to find that balance point.
+
+**What the result would mean:** If the sweet spot is real and findable without
+brute force, tuning safety becomes quick and reliable. If there's no clear knee
+or it can't be predicted, you're stuck with expensive trial and error.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The safety-capability trade-off is the central design tension in any

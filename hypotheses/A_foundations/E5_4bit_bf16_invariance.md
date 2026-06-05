@@ -10,6 +10,50 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** To fit a model on a small laptop GPU, we "compress"
+it (store its numbers with less precision). This asks whether compressing the model
+changes the steering nudge — or whether results on the compressed model still hold
+for the full, uncompressed one.
+
+**Key terms (defined here so you don't have to look anything up):**
+- **Language model (LLM):** an AI that predicts the next word; here, small Gemma
+  models.
+- **Steering:** nudging the model's behavior by adding a direction to its internal
+  state while it writes.
+- **Steering vector:** the specific direction of the nudge.
+- **Residual stream:** the model's running internal state, where the nudge is added.
+- **Layer:** one of the model's stacked processing steps.
+- **DiffMean:** the simple recipe for building the nudge (average the "yes"
+  examples, average the "no" examples, subtract).
+- **alpha (strength):** how hard we push the nudge.
+- **Coherence / perplexity:** whether the text stays fluent (perplexity higher =
+  more broken).
+- **Quantization (4-bit / "compression"):** storing the model's internal numbers
+  with less precision so it uses far less memory. "4-bit" is heavily compressed;
+  "bf16" is the fuller-precision version.
+- **VRAM:** the memory on the graphics card; compression is what lets a big model
+  fit on a small laptop GPU.
+- **Cosine alignment:** a 0-to-1 score for how nearly two directions point the same
+  way (1.0 = identical). We check the compressed and uncompressed nudges score above
+  0.95.
+- **Within noise:** the difference is so small it could just be random measurement
+  wobble — i.e. effectively no difference.
+
+**Why we're doing this (the point):** All our experiments run on the compressed
+model because that's what fits the laptop. If compression quietly changed the
+results, none of our findings would apply to real, full-precision deployments. This
+checks that the shortcut is honest.
+
+**What the result would mean:** A positive result means compressed-model findings
+transfer to full models — our whole research program stays valid. A negative result
+means every result needs a "compressed model only" caveat and a correction factor.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>=100 words)
 
 The practical case for quantization in this research program is overwhelming: Gemma-2-2B

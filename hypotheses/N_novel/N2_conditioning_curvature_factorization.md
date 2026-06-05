@@ -10,6 +10,37 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Several different steering methods each answer the
+same two questions in their own way: *should I nudge right now?* and *which way?*
+This doc says all of them are secretly the same recipe — a "when" dial times a
+"which-way" arrow — and that learning the "when" dial directly should match or beat
+every individual method.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" mid-sentence, instead of retraining. The vector is
+  the "which-way" arrow.
+- **Residual stream** — the model's running internal thought; what we edit.
+- **Layer** — one of the model's processing steps; a knob.
+- **Gate / conditioning** — the "when" decision: reading the current thought to decide
+  whether (and how much) to nudge — e.g. only refuse when a request actually looks harmful.
+- **Curvature** — how sharply the "healthy thought" surface bends near the current
+  point; this doc treats the "when" dial as following that bending.
+- **Coherence** — whether the text stays fluent and sensible.
+
+**Why we're doing this (the point):** If three "different" gating methods are really
+one recipe with different settings, we can stop arguing about which to use and just
+fit the one best "when" dial — simpler and likely better.
+
+**What the result would mean:** A win means a single learned gate reproduces all three
+named methods and beats them. A loss means they really are different tools, not one.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The steering literature has produced a proliferation of gating and conditioning methods:

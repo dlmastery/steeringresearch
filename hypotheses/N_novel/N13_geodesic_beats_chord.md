@@ -9,6 +9,41 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** To move the model's internal "thought" from here to
+there, you can cut a straight line *through* empty space (a shortcut), or follow the
+curved healthy-thought surface the long way around. The straight shortcut passes
+through "off-world" regions where the model behaves strangely — including unsafe ways.
+This doc says following the curve (even though it's longer) stays safer and breaks the
+text less, for the same change in behavior.
+
+**Key terms (defined here):**
+- **Steering / steering vector** — changing behavior by adding a chosen direction to
+  the model's internal "thought" mid-sentence, instead of retraining.
+- **Residual stream** — the model's running internal thought; what we edit.
+- **Surface / manifold** — the natural region where healthy thoughts live.
+- **Chord** — the straight-line shortcut that cuts *through* off-surface space (plain
+  additive steering).
+- **Geodesic** — the shortest path that stays *on* the curved surface (manifold-following
+  steering).
+- **Off-manifold / off-shell displacement** — how far the nudge knocks the thought off
+  the healthy surface.
+- **Rogue compliance** — the model producing harmful content when probed; a safety leak
+  we want to avoid.
+
+**Why we're doing this (the point):** If the shortcut is what drags the model into
+unsafe, off-surface regions, then following the curve should cut the safety risk and
+keep text cleaner — at no cost in behavior.
+
+**What the result would mean:** A win means the on-surface path leaks less harmful
+content and stays off-surface less. A loss means the curved path is no safer than the
+shortcut (or our curve approximation was too crude to tell).
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The distinction between a geodesic (the shortest path on a curved surface) and a chord

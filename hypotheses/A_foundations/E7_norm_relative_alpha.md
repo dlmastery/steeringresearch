@@ -12,6 +12,49 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** "How hard to push" is usually given as a raw number,
+but the same number means different things on different models and prompts. This asks
+whether measuring the push as a *fraction* of the thought's own size (e.g. "nudge it
+by 10%") gives one consistent setting that works everywhere.
+
+**Key terms (defined here so you don't have to look anything up):**
+- **Language model (LLM):** an AI that predicts the next word; here, small Gemma
+  models.
+- **Steering:** nudging the model's behavior by adding a direction to its internal
+  state while it writes.
+- **Steering vector:** the specific direction of the nudge.
+- **Residual stream:** the model's running internal state, where the nudge is added.
+- **Layer:** one of the model's stacked processing steps.
+- **DiffMean:** the simple recipe for building the nudge.
+- **alpha (strength):** how hard we push the nudge — the knob this experiment
+  reparameterizes.
+- **Norm (‖h‖) / "size of the thought":** how big the model's internal state is at
+  that moment. It varies a lot by model and prompt, which is why a raw push number
+  is hard to compare.
+- **Relative (norm-relative) alpha:** measuring the push as a fraction of that size
+  (e.g. 10% of the thought) instead of a fixed raw number, so it means the same
+  thing everywhere.
+- **Coherence cliff:** the push level past which text breaks down (see E3). The point
+  here is that in the fraction-based measure, the cliff sits at the same place across
+  models.
+- **Scale-invariant:** behaves the same regardless of model size — the goal of this
+  reparameterization.
+
+**Why we're doing this (the point):** If one fraction (about 10%) is the sweet spot
+on every model and prompt, practitioners get a single portable rule for push
+strength instead of re-tuning a raw number every time. It also makes cross-model
+comparisons fair.
+
+**What the result would mean:** A positive result (which we're seeing) means push
+strength becomes a universal, transferable setting. A negative result would mean push
+strength stays model-specific and must be re-tuned case by case.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>=100 words)
 
 Every published activation steering result reports alpha as a raw scalar (e.g., alpha=20

@@ -12,6 +12,46 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** This whole project builds on numbers reported in
+other researchers' papers. We ask: when we redo their experiments ourselves on
+our own model, do their headline numbers actually come out roughly the same?
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing the model's behavior by editing its internal state
+  mid-sentence, without retraining.
+- **Steering vector** — the nudge we add to push toward a behavior.
+- **Residual stream** — the model's running internal scratchpad; the nudge goes
+  here.
+- **Layer** — one of the model's stacked processing steps.
+- **alpha / strength** — how hard we push.
+- **DiffMean** — the simplest nudge recipe: average internal state on "yes"
+  examples minus "no" examples. No training.
+- **Coherence** — whether the steered text stays fluent and sensible.
+- **Reproduce** — redo someone else's experiment and check you get a similar
+  result. The heart of this test.
+- **Source corpus / source claims** — the published papers (and their reported
+  numbers) that the rest of this project relies on.
+- **Within 20%** — our "close enough" bar: a number counts as reproduced if it
+  lands within a fifth of the original.
+- **Robustness / monitoring** — making sure the foundation is solid before we
+  build a 50-experiment program on top of it.
+
+**Why we're doing this (the point):** If we're going to trust other people's
+results as our starting point, we'd better check they hold up. This is a
+foundation-inspection step — boring but essential for honesty.
+
+**What the result would mean:** If most of the borrowed numbers reproduce, our
+foundation is sound and we can build on it confidently. If many don't, parts of
+the literature we relied on are shaky, and we have to be far more careful about
+what we claim.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The entire autoresearch program rests on a set of quantitative claims

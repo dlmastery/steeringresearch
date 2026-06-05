@@ -12,6 +12,46 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** We build a nudge from one kind of text (say,
+news articles). We ask whether it still works on very different text — computer
+code, casual chat, medical writing — and whether its effect fades gently rather
+than collapsing all at once.
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing the model's behavior by editing its internal state
+  mid-sentence, without retraining.
+- **Steering vector** — the nudge we add to push toward a behavior.
+- **Residual stream** — the model's running internal scratchpad; the nudge goes
+  here.
+- **Layer** — one of the model's stacked processing steps.
+- **alpha / strength** — how hard we push.
+- **DiffMean** — the simplest nudge recipe: average internal state on "yes"
+  examples minus "no" examples, built here from one kind of text. No training.
+- **Domain** — a kind of text with its own flavor: news, code, dialogue,
+  medical notes, and so on.
+- **Domain shift / out-of-distribution** — using the nudge on a kind of text
+  *different* from the one it was built on.
+- **Graceful degradation** — the effect weakening slowly and predictably as the
+  text gets more different, instead of failing suddenly.
+- **Coherence** — whether the steered text stays fluent and sensible.
+- **Robustness** — whether the method keeps working outside the exact conditions
+  it was made for.
+
+**Why we're doing this (the point):** In real use you can't rebuild a nudge for
+every kind of text. We want to know if one nudge travels — and how far before it
+stops being useful.
+
+**What the result would mean:** If the effect fades gently across very different
+text, nudges are reusable and dependable (a practical win). If it collapses the
+moment the text changes, every new setting would need its own nudge.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Steering vectors are extracted from a specific contrast set (e.g., harmful

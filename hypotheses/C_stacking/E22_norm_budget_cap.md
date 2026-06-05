@@ -11,6 +11,43 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Every nudge pushes the model's "thoughts" a little
+off their natural spot. Push too far and the text breaks. The idea: set a hard
+limit on the total push, so no matter how many nudges we stack, we never shove the
+text past the breaking point.
+
+**Key terms (defined here):**
+- **Steering / steering vector:** nudging the model by adding a direction to its
+  internal "thoughts"; the direction is the steering vector.
+- **Residual stream:** the model's running internal state we edit mid-sentence.
+- **Layer:** the processing step where we make the edit.
+- **Alpha / strength:** how hard we push.
+- **DiffMean:** the simple recipe for building a nudge.
+- **Coherence:** whether the text stays fluent and sensible.
+- **Stacking:** using several nudges at once.
+- **The activation shell (in-distribution shell):** healthy "thoughts" all sit at
+  roughly one natural size, like points on the surface of a ball. Edits that push
+  the thought off that surface tend to break the text.
+- **Norm budget:** the total amount of push the text can absorb before it breaks.
+  This experiment proposes a **cap** — clamp the combined push at a safe size
+  (set from the model's own typical activation sizes) so a big stack can't
+  overshoot.
+
+**Why we're doing this (the point):** It's a safety brake for stacking. We want to
+add as many behaviors as possible *and* keep the text readable — a cap lets us
+stack freely without falling off the cliff.
+
+**What the result would mean:** If capping the total push prevents the text from
+collapsing while keeping the behaviors working, we have a simple, reliable guard
+rail for multi-behavior steering. If capping kills the behaviors too, the limit is
+too blunt and we'd need a subtler control.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 The norm-budget conservation law (N5, SUPPORTED: logPPL = 5.40 + 2.87 * offshell,

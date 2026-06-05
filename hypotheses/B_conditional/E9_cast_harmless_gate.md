@@ -12,6 +12,53 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** A refusal nudge that's always on makes the model
+refuse *everything*, even harmless questions — annoying and useless. This asks
+whether a "gate" can switch the nudge on only when a request is actually harmful, so
+normal requests are left untouched.
+
+**Key terms (defined here so you don't have to look anything up):**
+- **Language model (LLM):** an AI that predicts the next word; here, small Gemma
+  models.
+- **Steering:** nudging the model's behavior by adding a direction to its internal
+  state while it writes.
+- **Steering vector:** the specific direction of the nudge (here, a "refuse" nudge).
+- **Residual stream / hidden state:** the model's running internal "thought" state,
+  where the nudge is added and which the gate reads.
+- **Layer:** one of the model's stacked processing steps.
+- **DiffMean:** the simple recipe for building a direction from "yes/no" examples
+  (here, harmful vs. harmless prompts).
+- **alpha (strength):** how hard the nudge pushes.
+- **Conditional steering:** only applying the nudge *when it's relevant*, instead of
+  always.
+- **The condition / gate:** a quick check that decides whether to fire the nudge. It
+  measures how close the current request looks to "harmful" examples, and fires only
+  if it crosses a set line.
+- **CAST:** the name of this gating method (Conditional Activation Steering).
+- **Threshold:** the cut-off line the gate uses to decide harmful vs. harmless.
+- **Read-only probe:** the gate just *looks* at the internal state, it doesn't change
+  it — so checking is essentially free and can't itself break the text.
+- **Over-refusal / false refusal:** wrongly refusing a harmless request. We want this
+  under 3%.
+- **Safety:** whether the model refuses genuinely harmful requests (measured on a
+  jailbreak test).
+
+**Why we're doing this (the point):** Safety steering is only deployable if it
+catches harmful requests without blocking everyday ones. This tests whether the gate
+delivers that precision — strong refusal on harmful inputs, almost none on benign
+ones.
+
+**What the result would mean:** A positive result means we can add a safety nudge
+that stays quiet on normal use — the foundation for every other gated experiment in
+this block. A negative result means the gate can't separate harmful from harmless
+cleanly, so conditional safety steering isn't practical yet.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Activation steering — adding a fixed behavior vector alpha*v to the residual

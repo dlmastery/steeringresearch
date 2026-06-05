@@ -11,6 +11,46 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** There are two kinds of nudge — one that teaches
+the model *what task to do* (e.g. "translate this") and one that sets *how it
+should sound* (e.g. "be formal"). We ask whether we can combine both into a
+single edit that delivers task skill and style at once.
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing the model's behavior by editing its internal state
+  mid-sentence, without retraining.
+- **Steering vector** — the nudge we add to push toward a behavior.
+- **Residual stream** — the model's running internal scratchpad; the nudge goes
+  here.
+- **Layer** — one of the model's stacked processing steps.
+- **alpha / strength** — how hard we push.
+- **DiffMean** — the simplest nudge recipe for style: average internal state on
+  "this style" examples minus "not this style." No training.
+- **Task vs style** — "task" is *what* the model does (the job); "style" is
+  *how* it sounds (the tone). This test mixes the two.
+- **Task vector (from examples)** — a nudge that captures a job by watching the
+  model do that job from a few worked examples, then bottling the effect.
+- **Shared subspace** — the idea that task-nudges and style-nudges live in the
+  same small internal "neighborhood," which is what would let them combine
+  cleanly.
+- **Coherence** — whether the steered text stays fluent and sensible.
+- **Interpretability** — understanding what the model is doing inside.
+
+**Why we're doing this (the point):** If one edit can carry both task and style,
+controlling the model gets simpler and cheaper — fewer separate knobs to set.
+
+**What the result would mean:** If the combined edit beats either nudge alone,
+task and style really do share internal space and can be steered together (a
+practical win). If combining them hurts, they are separate and must be handled
+apart.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 Two streams of research have converged on residual-stream directions as the

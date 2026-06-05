@@ -13,6 +13,47 @@
 
 ---
 
+## In Plain English
+
+**What we're testing, simply:** Usually we assume "more steering = more behavior
+but more damage to the model's smarts," as one fixed trade. We ask whether you
+can actually hold the behavior steady while separately dialing the damage up or
+down — meaning the trade-off is two knobs, not one.
+
+**Key terms (defined here):**
+- **Language model** — an AI that writes text one word at a time.
+- **Steering** — changing the model's behavior by editing its internal state
+  mid-sentence, without retraining.
+- **Steering vector** — the nudge we add to push toward a behavior.
+- **Residual stream** — the model's running internal scratchpad; the nudge goes
+  here.
+- **Layer** — one of the model's stacked processing steps; *which* step is one
+  of the knobs.
+- **alpha / strength** — how hard we push; another knob.
+- **DiffMean** — the simplest nudge recipe: average internal state on "yes"
+  examples minus "no" examples. No training.
+- **Sparsity** — how few of the nudge's internal numbers we keep (a third knob).
+- **Efficacy** — how strongly the target behavior shows up in the output.
+- **Capability tax** — how much the model's general smarts drop as a side effect
+  (measured by whether it still answers quiz questions).
+- **Iso-behavior contour** — a set of knob settings that all give the *same*
+  behavior level. Moving along it changes only the damage, not the behavior.
+- **Coherence** — whether the steered text stays fluent and sensible.
+
+**Why we're doing this (the point):** If behavior and damage can be tuned
+separately, we could get the behavior we want at the *lowest possible* cost to
+the model's intelligence — instead of being forced to accept whatever damage
+comes with it.
+
+**What the result would mean:** If we can hold behavior fixed while shrinking the
+damage, steering becomes far more controllable (a real practical gain). If
+behavior and damage always move together, the trade-off really is a single fixed
+curve and you can't cheat it.
+
+See [`../GLOSSARY.md`](../GLOSSARY.md) for any other term.
+
+---
+
 ## 1. Motivation (>= 100 words)
 
 A common implicit assumption in steering experiments is that the trade-off
