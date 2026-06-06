@@ -1,0 +1,353 @@
+# Researcher Review — Conditional Multi-Intent Safety Steering
+
+*Reviewer lens: a working steering/interp researcher (CAA / RepE / CAST /
+refusal-direction author). I read the source, not the marketing. Judged against
+the stated goal: a **SOTA conditional activation-steering method for multi-intent
+safety** that conditionally steers toward safer-than-baseline responses, handles
+multiple simultaneous intents, preserves capability/coherence/over-refusal, and
+lands a top-venue ACCEPT.*
+
+*Scope read: `src/steering/{hooks,extract,eval,gate,judge,local_judge,controls,
+stats,sae,hypersteer,geometry,model,axbench,runner}.py`; `hypotheses/METHODOLOGY.md`;
+`E9`, `E15`, plus the registry; `FINDINGS.md` (S-1…S-21); `scripts/run_axbench_*`.*
+
+---
+
+## 1. Verdict + the single biggest gap
+
+**Verdict: REJECT (as a method paper). Strong infrastructure, no method.** This
+is a competently engineered *measurement harness* that re-implements DiffMean/CAA
+plus three operations and a five-axis composite, and a body of *negative/null*
+characterization results on generic concept steering. It is not yet a research
+contribution toward the stated goal, and on its current trajectory it cannot be:
+the thing the title promises has not been started.
+
+**The single biggest gap: the method does not exist, and the one component that
+is the actual contribution — a conditional gate that reads intent from
+activations and fires a safety intervention *inside the forward pass* — is
+unbuilt.** `gate.py` is an *offline numpy classifier* that mean-pools
+whole-prompt activations and is never wired to `hooks.py`. There is no
+`cast.py`, no read-at-`L_c`/write-at-`L_b` dispatch, no refusal/safe-completion
+target direction, no multi-intent decomposition, and no adversarial robustness
+test. The "safety" axis is a 22-string regex (`is_refusal`) and, on the offline
+path, a hardcoded constant `"I can't help with that."` Everything downstream of
+"we will build CAST" is a design doc with `Status: PENDING`.
+
+You are ~1 paper of engineering and 0 papers of novelty away from the goal. The
+good news: the harness is reusable. The bad news: nobody has yet proposed or
+built a new mechanism.
+
+---
+
+## 2. Honest summary of the actual scientific/method content
+
+**What is actually implemented and runs:**
+
+- **Vector construction (`extract.py`):** DiffMean (`mean(pos)-mean(neg)`),
+  PCA-top1 of uncentered pairwise differences, Fisher-ratio layer selection,
+  disk caching keyed on model+quant+pairs. Clean, correct, standard.
+- **Injection (`hooks.py`):** forward-hook editing with four operations —
+  `add`, `relative_add` (push = `α·‖h‖·v̂`), `project_out`, `rotate`
+  (norm-preserving Gram-Schmidt rotation in the (h,v) plane). The KV-cache-aware
+  position mask is genuinely careful work.
+- **Evaluation (`eval.py`):** five axes + a SHA-fingerprinted composite;
+  generation-based concept-rate scorer (non-circular lexical overlap), MCQ
+  capability tripwire, perplexity, repetition, regex refusal detector.
+- **Judges:** off-family `GeminiJudge` and `LocalJudge` (Qwen2.5-7B), disk
+  cached; AxBench concept(0-2)/fluency(0-2) rubric. **Validated at ROC-AUC 0.68
+  vs AxBench ground truth — weak, and it is the primary behavior instrument.**
+- **Controls (`controls.py`):** matched-norm random, shuffled-label, bootstrap
+  extraction stability. This is the best part of the science — real confound
+  killers, used correctly in S-15/S-16.
+- **Stats (`stats.py`):** paired Wilcoxon, bootstrap CI, Holm-Bonferroni,
+  ordinal gate. Rigor floor is real and largely honored.
+- **Auxiliary, offline-only:** `gate.py` (Cosine/Logistic gate, **not** in the
+  forward pass), `sae.py` (a *self-trained toy* SAE + SAE-TS gradient optimizer,
+  **not** GemmaScope), `hypersteer.py` (description→vector MLP). All three are
+  tested against `FakeResidualLM`, not exercised as parts of a method.
+
+**What the science actually found (FINDINGS S-16…S-21, the honest core):** on
+real AxBench at 2B, *alpha is the only knob that matters* (E3 cliff, peak ~0.10,
+super-linear collapse past ~0.20). Direction barely beats a shuffled control
+(+0.004, ordinal gate fails, shuffled captures ~97% of the effect); layer is
+flat; DiffMean≈PCA is a wash; rotation gives no benefit. **Translation: generic
+additive concept steering is a near-null effect on a real benchmark.** The one
+positive is N17 (off-shell ‖Δh‖ predicts incoherence, Spearman +0.585) — a
+coherence-screening probe, not a steering method.
+
+**Net:** the project has rigorously demonstrated that the *baseline it
+re-implemented* is weak, and has not yet built the *new thing* that would beat it.
+
+---
+
+## 3. Real strengths (credit where due)
+
+1. **Measurement discipline is publishable-grade.** Matched-norm + shuffled-label
+   controls, n≥7 + four-part contract, HARKing guardrails, fingerprinted
+   composite, off-family judge with disclosed AUC. Most steering papers do *less*
+   than this. This is a moat — do not lose it.
+2. **Intellectual honesty.** FINDINGS reports its own null results (97%-of-effect
+   captured by shuffle; N5 falsified across scale at R²=−1.6) without spin. Rare
+   and valuable.
+3. **The hook/operation layer is correct and reusable.** `relative_add`,
+   norm-preserving `rotate`, and the KV-cache position mask are exactly the
+   primitives a real method needs.
+4. **Geometry probes (N16/N17) are genuinely interesting** and would be a nice
+   *secondary* contribution if operationalized.
+5. **Offline `FakeResidualLM` test path** makes the harness CI-able without GPU —
+   good engineering hygiene.
+
+---
+
+## 4. Weaknesses (grouped)
+
+### 4a. Absence of a novel method (the fatal one)
+
+- There is no new mechanism anywhere. Every implemented primitive is from
+  2023–2024 literature (CAA/ActAdd, PCA, CAST cosine gate, SAE-TS, HyperSteer).
+  The contribution the title promises — *conditional multi-intent safety
+  steering* — is a set of `PENDING` design docs (E9, E11, E47, E50).
+- **No conditional execution exists.** `gate.py::condition_features` mean-pools
+  the *entire prompt* and scores offline; `SteeringContext` always fires. They
+  never meet. A CAST-style gate that reads `h@L_c` and masks the write `@L_b`
+  *within one forward pass* is not implemented (E9 §11 admits this).
+- **No safety target.** The harness steers toward *concepts* scored by lexical
+  overlap. It never extracts or uses a **refusal direction** (Arditi) or a
+  **safe-completion** target. "Safety" = `is_refusal()` regex over 22 markers; on
+  the FakeLM path it is the literal constant `"I can't help with that."` The
+  JailbreakBench "baseline 0%" is *asserted*, never measured on real attacks.
+- **No multi-intent anything.** Nothing decomposes a prompt carrying multiple
+  simultaneous intents, routes per-intent gates, or resolves conflicts between a
+  benign and a harmful intent in the same request. The word "multi-intent" does
+  not correspond to any code.
+
+### 4b. Per-hypothesis depth (templated, not investigated)
+
+- The docs are *structurally* impressive (In-Plain-English, Motivation,
+  Falsifier, Citations, Mechanism, Predicted-Delta, Committee Q&A, SciCritic
+  addendum, Pseudocode) and *scientifically* thin. The "Mechanism" sections
+  **assert** rather than **probe**. E9's mechanism is one sentence restating CAST
+  ("harmful inputs place `h_early` closer to the harmful mean *by construction*")
+  with zero supporting analysis — no per-layer Fisher curve on real safety data,
+  no logit-lens, no activation patching, no attention/OV inspection.
+- The block that *should* carry the depth — mechanistic (E32 refusal-vs-detection
+  direction, E34 refusal OV circuit) — is entirely unbuilt. So the project asserts
+  a refusal mechanism it never opens up.
+- **Citation hygiene is a liability.** Several arXiv IDs look fabricated or
+  future-dated: "FineSteer arXiv:2604.15488", "Rogue Scalpel / Korznikov 2026
+  ICML arXiv:2509.22067". `[NEEDS VERIFICATION]` tags do not absolve citing a
+  possibly nonexistent paper as the motivating prior. A reviewer who pulls one
+  dead arXiv ID discounts the whole bibliography.
+- "70 hypotheses" is breadth as a substitute for depth: 19/70 touched, mostly
+  n=1 screens, most now NULL on real data. One hypothesis investigated to the
+  bottom (refusal geometry under multi-intent) beats 70 skimmed.
+
+### 4c. Code/method design and the missing design docs
+
+- **There is no DESIGN.md, no architecture rationale, no ADR anywhere in the
+  repo** (confirmed: `find` for design/architecture returns nothing; `src/` has
+  no module README). `METHODOLOGY.md` documents the *experiment recipe*, not the
+  *software architecture* and not the *design of the intended method*. For a
+  method that must compose gates, directions, budgets, and adversarial tests,
+  the absence of an architecture spec is the root cause of 4a.
+- **The abstraction is wrong for the target.** Everything is shaped around
+  "one vector → one layer → `add` → concept score." Conditional multi-intent
+  safety needs abstractions that do not exist:
+  - a `Detector`/`Gate` that runs *as a hook* and returns a per-position (or
+    per-sequence) fire decision from a live probe;
+  - a `SteeringPolicy` that holds *K* directions, per-direction gates, and a
+    *shared norm budget* (N5) and composes them;
+  - a `SafetyTarget` (refusal / safe-completion direction) distinct from a
+    concept vector;
+  - an adversarial harness (GCG/AutoDAN suffixes) as a first-class evaluator.
+  `SteeringContext` accepts a single vector or a static per-layer dict — it
+  cannot consume a live gate signal. `gate.py` is numpy and offline; `hooks.py`
+  is torch and online; the seam between them is exactly where the method should
+  live, and it is empty.
+- **`dashboard.py` is 4153 lines** — larger than the entire scientific core
+  combined. Effort allocation is inverted: the transparency layer is gold-plated
+  while the method layer is unstarted.
+- **The SAE-TS objective is mechanistically suspect.** `sae_ts_vector` optimizes
+  `encode(v)` of the raw steering vector through a *toy* SAE. The published
+  SAE-TS uses an output→feature attribution map, not the encoder applied to the
+  vector itself; and a self-trained SAE on cached activations is not GemmaScope.
+  As written this cannot support the E20 orthogonality claim.
+
+### 4d. Are the geometry findings leveraged into the method? (No — left as trivia)
+
+- N17 (off-shell ‖Δh‖ → incoherence) and N16 (radial/angular decoupling) are the
+  most novel empirical results and are used **only** as post-hoc coherence
+  predictors. They are *begging* to become method components and aren't:
+  - N17 should be the **coherence-budget constraint** in a constrained safety
+    steer (project/scale the edit so predicted ‖Δh‖ stays under the cliff).
+  - E3's α≈0.10 knee should set a **per-intent alpha cap**; with K stacked safety
+    directions the N5 norm budget should *split* across intents.
+  - N16 should dictate **operation choice** for the safety write (radial vs
+    angular cost) instead of the current "add by default."
+- As it stands these are interesting figures with no causal role in any method.
+
+### 4e. Scientific coherence toward the goal
+
+- The 70 hypotheses ladder toward *"characterize generic concept steering,"* not
+  *"build conditional multi-intent safety."* They answered foundational questions
+  (DiffMean≈PCA? which layer? alpha cliff?) whose collective verdict is
+  "direction/layer/source/op barely matter" — useful, but it is the *baseline's*
+  epitaph, not the new method's foundation.
+- There is no experimental *ladder toward the deliverable*: extract & validate a
+  refusal direction → calibrate an in-forward gate on real safety data →
+  compose multi-intent with a shared budget → measure over-refusal on
+  XSTest/OR-Bench → adversarial robustness → SOTA safety benchmark. Block B
+  (E9–E16) is the only goal-relevant block and it is almost entirely PENDING or
+  toy-screened (E15 already FALSIFIED_OOD on an n=1 synthetic split).
+
+### 4f. The conditional + multi-intent mechanism specifically
+
+- **Gate detection in activations:** prototype exists (`condition_features` +
+  `CosineGate`/`LogisticGate`) but (i) mean-pools the whole prompt (loses
+  positional/per-intent signal), (ii) is offline, (iii) was tested only on a toy
+  set where the *learned* gate overfit (E15). No calibration, no per-category
+  thresholds, no real safety dataset.
+- **Composing multiple safety directions:** the only "stacking" code
+  (`run_axbench_stack.py`) literally adds `v̂_A + v̂_B`. No Gram-Schmidt (E19
+  unbuilt), no conditioning, no interference control beyond a correlation
+  readout. For multi-intent this will collide directions and blow the norm
+  budget.
+- **The conditional trigger:** there is no online trigger at all.
+- **Steer toward safe without over-refusal:** the method blunt-refuses (regex);
+  there is no safe-completion direction, no over-refusal benchmark wired
+  (XSTest/OR-Bench named in docs, absent in code), so the central tension of the
+  whole project is unmeasured.
+- **Adversarial robustness:** zero. No GCG/AutoDAN suffix harness, no
+  prefilling attack, despite the Rogue Scalpel framing. A safety-steering paper
+  without an attack section is desk-rejected.
+
+**On the right primitive:** AxBench's "diff-in-means is the best *detector*"
+supports DiffMean **for the gate**. But your own FINDINGS show additive DiffMean
+is a near-null *steerer* for abstract concepts. Refusal is different — it *is* a
+strong linear direction (Arditi) — so DiffMean-add may work better for the safety
+*write* than for concepts, **but** the SOTA move for safety is more likely
+*projection/ablation* of the harmful-completion direction and/or steering toward
+a *safe-completion* target, not blunt additive refusal. Test this, don't assume.
+
+---
+
+## 5. 20–25 specific, actionable improvements (P0 = do first)
+
+**P0 — Build the actual method and the spec it needs**
+
+1. **Write `src/steering/DESIGN.md` BEFORE more code.** Specify the four missing
+   abstractions: `Detector`(in-forward gate), `SafetyTarget`(refusal/safe-completion
+   direction), `SteeringPolicy`(K directions + per-direction gate + shared N5
+   budget), `AdversarialHarness`. Define the seam between numpy gates and torch
+   hooks. This document is the missing keystone.
+2. **Build `src/steering/cast.py`: a real in-forward conditional steer.** One
+   forward pass: probe `h@L_c` via a `ProbeHook`, compute the gate decision, and
+   have the `L_b` `_SteerHook` consume that live signal to mask the write. This
+   is the single highest-value missing module; without it nothing else is a
+   method.
+3. **Extract and validate a refusal / safe-completion direction.** Use
+   Arditi-style diff-in-means on harmful-vs-harmless *instructions* (and a
+   refuse-vs-comply contrast), confirm it ablates/induces refusal, and make it a
+   first-class `SafetyTarget` — replacing the `is_refusal` regex as the steering
+   objective.
+4. **Replace the regex safety axis with a real compliance judge + real attacks.**
+   Wire JailbreakBench/HarmBench prompts and an LLM-judged (or StrongREJECT)
+   compliance score; measure the *baseline* CR instead of asserting 0%. The
+   offline hardcoded `"I can't help with that."` constant must never back a
+   number.
+5. **Build the intent-gate as a calibrated probe, specced first.** Per-category
+   linear probe on `h@L_c` over SORRY-Bench / HarmBench categories, with
+   per-category thresholds and Platt/isotonic calibration; report ECE and
+   per-category PR-AUC, not one global AUC. Pool over *answer-onset* positions,
+   not the whole prompt.
+6. **Implement multi-intent construction and evaluation.** Build a multi-intent
+   eval set (benign+harmful intents co-occurring in one prompt; compose from
+   OR-Bench benign-looking + HarmBench harmful), and define the success metric:
+   refuse/redirect the harmful intent while answering the benign one.
+7. **Compose K safety directions via Gram-Schmidt (build E19) and test
+   interference on multi-intent prompts.** Orthogonalize the per-intent
+   directions, allocate the N5 norm budget across them, and measure per-intent
+   retention + coherence vs the naive `Σ v̂` baseline you currently ship.
+
+**P1 — Turn geometry trivia into method, deepen the gate**
+
+8. **Operationalize N17 as a coherence-budget constraint.** Before applying an
+   edit, predict ‖Δh‖ and scale/project it to stay below the E3 cliff knee; ship
+   this as a guard in `SteeringPolicy` and ablate it.
+9. **Use N16 (radial/angular) to choose the safety operation.** Empirically pick
+   add vs project_out vs rotate per-layer by which incurs less coherence cost at
+   matched refusal uplift; report the decision rule.
+10. **Make the gate online and per-position.** Replace whole-prompt mean-pool
+    with running per-token gating so the trigger can fire mid-generation
+    (needed for prefill/suffix attacks and multi-intent).
+11. **Adversarial robustness harness (P1, gate to ACCEPT).** Add GCG/AutoDAN
+    suffix attacks and a prefilling attack against the *guarded* method; the
+    Rogue Scalpel 20-vector probe must be neutralized at the final rung.
+12. **Over-refusal as a first-class axis with real data.** Wire XSTest +
+    OR-Bench; report harmless-refusal and the harmful/harmless refusal gap on
+    every safety run, not a synthetic selectivity proxy.
+13. **Fix or replace the judge (AUC 0.68 is too weak to back claims).** For
+    *safety*, prefer rule+LLM hybrid (StrongREJECT-style) which is far more
+    reliable than concept judging; report judge agreement on a held-out human-
+    labeled safety set before trusting any number.
+14. **Rebuild SAE-TS faithfully or cut it.** Swap the toy SAE for GemmaScope and
+    use the published output→feature attribution objective; otherwise remove E20
+    rather than ship a mechanism that can't support its claim.
+15. **Deepen ≥3 goal-relevant hypotheses to real mechanism.** For E32/E34
+    (refusal direction vs detection direction; OV circuit): add activation
+    patching, logit-lens, and per-layer Fisher on *real safety* contrasts.
+    Depth here is the difference between "we used CAST" and "we explain why our
+    gate fires."
+16. **Calibrate per-model alpha caps from E3.** Make the α≈0.10 knee a
+    model-specific, empirically-fit budget the policy reads, not a hardcoded
+    constant — N5 transfer failed across scale (R²=−1.6), so caps must be
+    re-fit per model.
+
+**P2 — Hygiene, coherence, and the write-up**
+
+17. **Audit every arXiv ID; delete or `[FABRICATED?]`-flag the unverifiable
+    ones** (FineSteer 2604.15488, Rogue Scalpel 2509.22067, "2026 ICML"). One
+    dead citation in review sinks credibility.
+18. **Re-scope the hypothesis registry around the deliverable.** Promote Block B
+    + the new safety/multi-intent experiments to the spine; demote the
+    now-null foundational E-series (E2/E4/E27/E36) to an appendix "what doesn't
+    matter for steering" — which is itself a clean contribution.
+19. **Add a method-ladder doc** mirroring METHODOLOGY.md but for the *method*:
+    refusal-direction → in-forward gate → multi-intent compose → over-refusal →
+    adversarial → SOTA benchmark, with the promotion gate at each rung.
+20. **Rebalance effort away from `dashboard.py` (4153 LOC).** Freeze the
+    dashboard; redirect that engineering budget to `cast.py` and the adversarial
+    harness.
+21. **Add a no-steer and a prompt-classifier baseline to every safety claim.**
+    Your method must beat (a) no steering and (b) a small input classifier router
+    — the E9 Q&A admits this comparison is open; close it empirically.
+22. **Position-aware contrast extraction.** Current extraction mean-pools all
+    tokens; for refusal/intent the signal concentrates at instruction/answer-onset
+    positions — extract there and compare.
+23. **Define and pre-register the multi-intent success metric and its
+    falsifier** (e.g., "harmful-intent compliance < X% while benign-intent task
+    success > Y%, at over-refusal ≤ Z%") before running — to keep the HARKing
+    floor intact for the new work.
+24. **Report a Pareto frontier (safety uplift vs over-refusal vs capability)
+    against published CAST/RepE numbers**, not just internal composites — a top
+    venue wants to see you dominate a named prior method on a named benchmark.
+25. **Cross-scale + cross-model external validity.** Given N5's across-scale
+    failure, demonstrate the final method on ≥2 model families/sizes before any
+    SOTA claim; one-model results will not survive review.
+
+---
+
+### Bottom line
+
+The harness, controls, and honesty are real assets — keep them. But this is not
+yet a paper, because there is no method: the conditional, in-forward, multi-intent
+safety mechanism is unbuilt, "safety" is a regex, the geometry insights are
+unused trivia, the citations are shaky, and there is no design document anchoring
+any of it. Write `DESIGN.md`, build `cast.py` with a real refusal target and an
+in-forward gate, make multi-intent and adversarial robustness first-class, and
+operationalize N17/E3 as budget constraints. Do those P0s and you have the
+skeleton of a genuine contribution; skip them and you have an excellent
+measurement of why the *baseline* doesn't work.
+
+*Internal QA pass — independent external review pending (same-model-family
+disclosure applies).*

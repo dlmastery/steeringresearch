@@ -1,0 +1,284 @@
+# Lab-Leader Deep Review — steeringresearch
+
+> Reviewer role: hands-on big-tech AI lab director. I read the code, the dashboard,
+> the ledgers, and a sample of hypothesis docs. I judge this against ONE bar:
+> **a SOTA *conditional* activation-steering method for MULTI-INTENT SAFETY** —
+> conditionally steer toward safer-than-baseline responses, multi-intent, without
+> wrecking capability/coherence/over-refusal — validated on real safety benchmarks,
+> deliverable = a top-venue ACCEPT + code I'd let ship.
+>
+> Date: 2026-06-06. Read-only audit; the only file I wrote is this one.
+
+---
+
+## 1. Verdict, greenlight, and the bar
+
+**Verdict: STRONG REVISE / NOT ON TRACK for the stated goal. Would I greenlight as-is? NO.**
+
+I would greenlight a **2-week pivot sprint**, not the current trajectory. Here is the
+brutal truth: **the actual deliverable does not exist.** The goal is *conditional,
+multi-intent safety steering*. The repo contains zero lines that implement conditional
+safety steering, zero multi-intent anything (the string "multi-intent" appears nowhere
+in `src/`, `scripts/`, `FINDINGS.md`, or `README.md`), no `cast.py`, no `guard.py`, no
+real safety benchmark wired in, and a global champion (`best_config.json`) that steers
+the concept **"ocean" on Qwen2.5-0.5B** — not a safety result, not even on the target
+model family. What exists is an elaborate *research-process scaffold* — a harness, a
+composite, 70 templated hypothesis docs, a beautiful multi-page dashboard, skills, and
+audits — wrapped around a body of evidence that is **n=1 synthetic-concept geometry
+screening** with **zero external-ready results** and whose single most rigorous number
+is **honestly negative**.
+
+The bar for greenlight-to-continue: a built-and-tested CAST-style conditional pipeline,
+a calibrated safety judge (AUC ≥ 0.85, not 0.68), and ONE honest end-to-end number on a
+real safety benchmark (StrongREJECT / HarmBench / SORRY-Bench + XSTest over-refusal)
+beating an unconditional-steering baseline. None of those three exist today. Until they
+do, every additional hypothesis doc and dashboard panel is **motion, not progress.**
+
+The author's own instincts are correct: this is, right now, **volume over substance.**
+
+---
+
+## 2. Honest summary of state
+
+- **Engineering scaffold: real and above-average.** Clean module split in `src/steering/`
+  (~9.2k LOC), 133 unit tests across 14 files, a `FakeResidualLM` enabling offline CI-
+  style runs, a SHA-256-fingerprinted composite, an append-only experiment log, and a
+  genuinely good-looking, self-contained dashboard. This is competent infra.
+- **Scientific output: thin and, where rigorous, negative.** 124 experiment rows, the
+  first 113 are n=1 SCREENING. The one multi-seed (n=20) controlled result — E7 "real
+  direction beats matched-norm random" — **fails**: on real AxBench the advantage is
+  +0.004 (p=0.011) and a **label-shuffled vector reproduces ~97% of the effect**
+  (FINDINGS S-15/S-16). That is the headline being honest that the headline isn't real.
+- **The target mission is unstarted.** The conditional/gated block (E9–E16) — i.e. the
+  entire point — is uniformly `PENDING — UNTESTED`. E9 itself states the required code
+  (`src/steering/cast.py`, `src/steering/guard.py`, JailbreakBench-100/AlpacaEval-100
+  eval bundle, dual-forward Guard-D) **has not been built.**
+- **Real-model work is blocked** (per project memory: Gemma runs gated on HF login),
+  so most "results" are FakeLM or tiny synthetic concepts.
+
+Net: a strong *process* artifact and a weak *result* artifact, with a README/landing
+page that markets the process as if it were the result.
+
+---
+
+## 3. Real strengths (credit where due)
+
+1. **Shared-harness architecture** is the right call (one composable harness, drivers in
+   `scripts/`), not per-hypothesis copy-paste. `hooks.py`, `extract.py`, `geometry.py`,
+   `eval.py` are coherent.
+2. **The composite is genuinely Goodhart-resistant** and the fingerprinting discipline
+   (`eval.py:COMPOSITE_FORMULA`, weights pinned, `safe` weight = 2.0 dominant) is exactly
+   the kind of anti-gaming guardrail I want to see.
+3. **Intellectual honesty in the right places.** FINDINGS.md openly labels S-15→S-16 as
+   a non-generalization and N5's "universal law" as falsified across scale. The
+   ICML_SIGNOFF_v2 caught its own ruff/mypy regression and downgraded to CONDITIONAL.
+   That self-correction is real and rare.
+4. **Offline testability** via `FakeResidualLM` is a smart way to keep a 16 GB-bound
+   project CI-able.
+5. **Plain-English layer** (GLOSSARY, "In Plain English" boxes) lowers the barrier for a
+   non-specialist — a transparency positive, when attached to real results.
+
+---
+
+## 4. Weaknesses (grouped)
+
+### 4a. Transparency
+- **A newcomer cannot, in 5 minutes, separate real from aspirational.** README leads with
+  "discover and engineer SOTA steering" and a wall of links; the actual status ("n=1
+  screening, zero external-ready, the one rigorous result is negative, safety pipeline
+  unbuilt") is buried at line 40+ and softened. The first thing a reader sees should be
+  the last thing they currently find.
+- **The README goal is the WRONG goal.** It describes generic "SOTA steering," not the
+  conditional multi-intent *safety* mission. A reviewer would not learn the actual
+  objective from the front door.
+- **Marketing-by-counting.** "70 hypotheses," "60 papers," "72 dashboard pages,"
+  "19 verdicts" — these count *artifacts*, not *validated knowledge*. ~50 of the 70 are
+  UNTESTED. Counting them as deliverables is the core transparency failure.
+- **README contradicts its own audit.** README: "ICML reviewer: unconditional sign-off,
+  Rubric E 8/8." Actual `ICML_SIGNOFF_v2.md`: "**CONDITIONAL ACCEPT — unconditional
+  sign-off WITHHELD**." That is an overclaim against a file in the same repo.
+
+### 4b. Goal / outcome articulation & validation
+- **No crisp success metric anywhere.** There is no sentence of the form "*Safety-rate X
+  on benchmark Y, beating unconditional-steering baseline Z by margin M, at ≤ N pp
+  over-refusal on XSTest and ≤ K pp MMLU drop = success.*" Without it, the project cannot
+  know if it has won.
+- **No outcome-validation protocol.** What number, on what held-out safety benchmark,
+  beating what baseline, at what over-refusal/capability budget, at n≥7 seeds with the
+  rigor contract = DONE? Undefined. The composite is an *internal* score; it is not a
+  validated outcome on an external safety task.
+- **The champion is not a safety artifact.** `best_config.json` = "ocean"/Qwen, with
+  `compliance_rate: 0.0`, `harmful_refusal_rate: 1.0`, `selectivity_gap: 1.0`,
+  `harmless_refusal_rate: 0.0` — these are **defaults, not measurements** (the safety
+  axes were never exercised for a concept-steering run). Presenting them as the priced
+  champion is misleading.
+
+### 4c. Engineering / reproducibility / design docs
+- **No DESIGN.md. Anywhere.** There is no architecture rationale for the harness, no
+  design doc for the (unbuilt) safety method, no ADRs. For a system this opinionated,
+  that is the single biggest engineering gap.
+- **`dashboard.py` is 4,153 lines** — a monolith that is also where the ruff/mypy
+  regressions live (ICML_SIGNOFF_v2 BLOCKER-1). The dashboard is the largest module in
+  the repo; the *method* should be.
+- **No CI.** `.github/workflows/` does not exist. A project whose constitution mandates
+  "commit + push every milestone" and ships `verify_rubrics.py` has no automated gate —
+  which is exactly how ruff+mypy silently went red and falsified two written attestations.
+- **No single reproduce-the-headline command.** The "headline" (N17 rung-3) lives in
+  `scripts/rung3_n17.py` but there is no `reproduce_headline.sh` that runs it end-to-end
+  and prints PASS/FAIL against the pre-registered threshold.
+- **Reproducibility is asserted, not demonstrated.** Real-model results are blocked on HF
+  login; data subsets (`*_mini.json`) are tiny and unversioned; no dataset hashes/seeds
+  manifest; no environment lockfile beyond `requirements.txt`.
+
+### 4d. Anti-slop — specific offenders
+1. **`best_config.json` safety fields** — hardcoded `0.0/1.0/1.0/0.0` defaults presented
+   as measured axes. Decision value: zero. Worse: actively misleading.
+2. **Provenance composite cells** — `hypotheses/PROVENANCE/E3.md` table shows composites
+   of **-2,573,303** and PPL of **5.18e6** (α=24 garbage runs). These are noise rows that
+   exist only because "append-only" never prunes. They convey nothing a reader can act on.
+3. **189 SCREENING/EVALUATION chips on the master dashboard** (149 + 39) over data that is
+   overwhelmingly n=1 synthetic-concept geometry. The chips imply a rigor stratification
+   the underlying evidence doesn't have.
+4. **70 hypothesis docs (~470 lines each)** with "In Plain English," "Committee Q&A," and
+   a "Research-Scientist Critique" addendum — for experiments **never run** (E9 et al.).
+   This is the textbook volume-over-substance offender: beautifully templated speculation.
+5. **Five "ICML"/signoff/rubric audit files** grading a program that has no external
+   result — ceremony outrunning substance.
+
+### 4e. The judge as a safety classifier
+- **AUC 0.68 = WEAK by the repo's own standard.** `scripts/validate_judge.py` calls
+  0.65–0.80 "WEAK" and only ≥0.80 "TRUSTWORTHY." A 0.68 judge cannot adjudicate a SOTA
+  safety claim — it is the measurement instrument for the entire deliverable and it is
+  not fit for purpose.
+- **The judge is offline most of the time.** `judge.py` notes the Gemini key returns HTTP
+  429 ("prepayment credits are depleted") and **falls back to the lexical proxy in
+  `eval.py`** — meaning most "behavior" numbers are gameable lexicon-overlap heuristics,
+  not real judgments. For a safety project this is disqualifying until fixed.
+- **No safety-specific classifier at all.** There is no harmful-compliance/refusal
+  classifier (e.g. a LlamaGuard/WildGuard-style head or a validated StrongREJECT
+  grader). `compliance_rate` is never genuinely measured on a real attack set.
+
+### 4f. Execution toward the goal
+- **The ladder is climbing the wrong hill.** 124 runs went into α-cliff (E3), DiffMean≈PCA
+  (E4), relative-α (E7) — synthetic-concept *geometry*. Interesting, but **none is the
+  safety deliverable.** The mission-critical block (conditional gating E9–E16, the
+  five-layer Rogue-Scalpel guard A–E) has **zero runs.**
+- **No multi-intent construct exists** — not in data, code, or eval. The "multi-intent"
+  half of the goal has not been operationalized even on paper.
+- **Effort is allocated inversely to value:** most lines went to docs/dashboard/audits;
+  the fewest to the actual method. A director reading this sees a team optimizing the
+  *appearance* of a research program over its output.
+
+---
+
+## 5. 20–25 specific, actionable improvements (P0 = do now)
+
+1. **[P0] Write `src/steering/DESIGN.md` before any new feature** — harness data flow
+   (extract → hooks → eval → composite → dashboard), the conditional-safety method
+   architecture (condition read L_c → gate → masked behavior write L_b → guard), and
+   the multi-intent formulation. No new code until this exists.
+
+2. **[P0] Add a README "Outcome & success criterion" box at the very top** — one
+   sentence: e.g. "*Success = StrongREJECT safety-rate ≥ baseline+X pp on multi-intent
+   prompts, at ≤ Y pp XSTest over-refusal and ≤ Z pp MMLU drop, n≥7 seeds, rigor
+   contract met.*" Show a **current vs target** table (current: not built).
+
+3. **[P0] Rewrite README's first screen to state the REAL goal** (conditional,
+   multi-intent *safety* steering) and lead with honest status: "method UNBUILT; zero
+   external-ready results; strongest rigorous result is negative." Move the link wall down.
+
+4. **[P0] Fix the README/audit contradiction** — change "unconditional sign-off, Rubric E
+   8/8" to match `ICML_SIGNOFF_v2.md` ("CONDITIONAL ACCEPT, blocker open") or close the
+   blocker first. No claim may exceed its own audit.
+
+5. **[P0] Build `src/steering/cast.py`** — the conditional pipeline E9 specifies:
+   read-only cosine/logistic gate at L_c, masked behavior write at L_b, single forward
+   pass, wired through `hooks.SteeringContext`. This is the deliverable's spine.
+
+6. **[P0] Define and implement a multi-intent eval set** — prompts carrying ≥2 intents
+   (e.g. benign + harmful sub-request); a `src/steering/data/multi_intent.json` with
+   provenance, plus the metric (per-intent safe-completion vs benign-task retention).
+
+7. **[P0] Replace the safety judge** — integrate a real grader (StrongREJECT rubric +
+   a WildGuard/LlamaGuard-class refusal/compliance classifier). Gate: report calibration
+   AUC ≥ 0.85 on a labeled harmful/harmless set via `validate_judge.py` before any safety
+   number is logged. Kill the silent lexical fallback for safety axes (fail loudly).
+
+8. **[P0] Wire one real safety benchmark end-to-end** — StrongREJECT or HarmBench for
+   harmful-compliance + XSTest for over-refusal + AdvBench-style attacks. Measure
+   `compliance_rate` for real; baseline must be 0% as the constitution demands.
+
+9. **[P0] Add `scripts/reproduce_headline.sh`** (and `.ps1`) that runs the single current
+   headline (N17 rung-3) end-to-end from raw data and prints PASS/FAIL vs the
+   pre-registered Spearman threshold. One command, no hidden state.
+
+10. **[P0] Stop presenting `best_config.json` safety fields as measured.** Either measure
+    them on a real safety run or render them `null`/"N/A" with an explicit "not exercised
+    for concept-steering champion" note. No default masquerading as data.
+
+11. **[P0] Add CI** (`.github/workflows/ci.yml`): ruff + mypy + pytest + `verify_rubrics.py`
+    + composite-fingerprint check on every push. This single gate would have caught the
+    ICML BLOCKER-1 regression automatically.
+
+12. **[P1] Split `dashboard.py` (4,153 LOC)** into `dashboard/` submodules (master, per-
+    hypothesis, per-experiment, plotting). Clear the E741/F841 lint and mypy `Any|None`
+    errors flagged in ICML_SIGNOFF_v2 §1 as part of the split.
+
+13. **[P1] Add a `STATUS.md` (single source of truth)** — a table: deliverable component ·
+    built? · tested? · validated on real benchmark? · result. Link it from README top.
+    Make "real vs aspirational" a 10-second read.
+
+14. **[P1] Prune the dashboard of decision-free cells** — drop α≥4 garbage rows (composite
+    −2.5M, PPL 5e6) or collapse them into a single "diverged" marker. Every visible cell
+    must change a reader's decision; if it doesn't, delete it.
+
+15. **[P1] Demote the 50 UNTESTED hypothesis docs** — move `*_UNTESTED` docs to a clearly
+    labeled `hypotheses/backlog/` and stop counting them as deliverables in README. Keep
+    only the ≤10 on the critical path to the safety method front-and-center.
+
+16. **[P1] Pre-register the safety success criterion in git** (a `PREREGISTRATION_safety.md`)
+    BEFORE running the CAST sweep — metric, benchmark, baseline, margin, seeds, screening-
+    vs-evaluation split — to avoid the HARKing the constitution warns about.
+
+17. **[P1] Add a dataset/version manifest** (`data/MANIFEST.json`): each eval subset's
+    source, size, sha256, seed, license. The `*_mini.json` files are currently unversioned
+    and unaudited — unacceptable for a safety benchmark.
+
+18. **[P1] Implement and ablate the five-layer Rogue-Scalpel guard (A–E)** as the safety
+    method's core, with the 20-vector universal-attack red-team probe at Rung 4. Right now
+    §10 of the constitution is entirely unhonored in code.
+
+19. **[P1] Build the unconditional-steering baseline harness** so every conditional result
+    is reported as a Pareto delta over it on the (harmful-refusal, harmless-refusal) plane.
+    No safety claim without this baseline beside it.
+
+20. **[P1] Surface the composite λ-weights and per-axis breakdown on every dashboard row**
+    (currently only the fingerprint shows). A reviewer must see *why* a row scored what it
+    did, not just a scalar.
+
+21. **[P2] Add a one-page `ARCHITECTURE.md` diagram** (PNG, per the no-SVG rule) of the
+    request→gate→steer→guard→judge path for the safety method.
+
+22. **[P2] Consolidate the five audit/signoff files** into one `audits/REVIEW_LOG.md` and
+    add the same-model-family circularity disclaimer prominently — five ceremony files for
+    a result-free program reads as inflation.
+
+23. **[P2] Add seed-stability and CI bars to the *safety* axis specifically** once real
+    runs exist; n≥7 for any external safety claim, per §7.
+
+24. **[P2] Delete or quarantine FakeLM-only "results" from any results-facing surface** —
+    keep FakeLM strictly for plumbing tests, never on the master results table.
+
+25. **[P2] Add a `make repro` / task runner** documenting the canonical commands (tests,
+    headline, dashboard build, rubric verify) so reproduction is one entry point, not a
+    scavenger hunt through `scripts/`.
+
+---
+
+### Bottom line
+The *machinery* is good enough to support a real program; the *program has not started
+on its actual goal.* Stop producing documents and dashboards about steering and start
+**building and validating the conditional multi-intent safety method**, instrumented by a
+judge you can trust, measured on a real safety benchmark against an honest baseline. Do
+items 1–11 (the P0 block) and you will have, for the first time, an artifact whose claims
+match its evidence. Until then: not greenlit.

@@ -1,0 +1,312 @@
+# NeurIPS Review — "Conditional Multi-Intent Safety Steering" (steeringresearch)
+
+**Reviewer role:** Senior area-chair-track reviewer. Lens: significance & contribution
+to the field, benchmark adequacy, safety/datasets/broader-impact, evaluation rigor.
+**Judged against the stated goal:** a *state-of-the-art conditional activation-steering
+method for multi-intent safety* — conditionally steer an LLM toward safer-than-baseline
+responses, across multiple intents, without breaking capability/coherence or
+over-refusing; method dev may use AxBench but the *final* evaluation must use SOTA
+safety benchmarks; deliverable = a top-venue ACCEPT.
+
+---
+
+## 1. Verdict, score, and the bar
+
+**Verdict: REJECT (strong reject against the stated goal).**
+**Overall score: 2 / 10** (NeurIPS scale: "Strong Reject — clear rejection").
+**Confidence: 5/5.** The claim under review is checkable directly from the repo's own
+ledgers, which honestly state the outcome.
+
+**The bar a top-venue safety-steering paper must clear:**
+1. A *named, novel, operationalized* contribution (here: "conditional multi-intent
+   safety steering" — must be defined, not gestured at).
+2. A working method, evaluated on **SOTA safety benchmarks** (JailbreakBench,
+   StrongREJECT, HarmBench, AdvBench for attack-success; XSTest / OR-Bench for
+   over-refusal; SORRY-Bench / WildGuard / Aegis for multi-category coverage).
+3. **Baselines that matter for safety** (Llama-Guard-class input/output filters,
+   circuit-breakers/RepE, refusal-direction ablation, CAST, DRO/safety-SFT).
+4. A capability/coherence tax measured on real MMLU/GSM8K/ARC, plus a Pareto frontier.
+5. Statistical rigor and an honest dual-use/broader-impact treatment.
+
+**Where the work actually is (from its own `FINDINGS.md` / `IDEA_TABLE.md`):** the
+safety contribution is **0% demonstrated**. Every conditional-safety hypothesis
+(E9–E16 CAST gating; E41–E50 robustness/safety) is `PENDING / UNTESTED`. The CAST
+gating *pipeline does not exist in code*. The "safety axis" is a **rule-based
+keyword refusal detector** run over a **10-prompt synthetic `jailbreak_mini`** slice
+and an **8-prompt synthetic `xstest_mini`** slice. No real safety benchmark is wired
+anywhere (grep of `src/` for jailbreakbench/strongreject/harmbench/advbench/sorry-bench/
+wildguard/llama-guard returns only a *label string* in `dashboard.py`, not a loader).
+"Multi-intent" is **never defined or operationalized**. There are **zero
+external-ready findings** by the project's own rigor contract. What *has* been done is
+generic single-vector steering mechanics on AxBench with a self-disclosed weak judge
+(AUC 0.68). That is a methods/infrastructure preprint at best — it is not, and does
+not pretend in its own ledger to be, a safety paper.
+
+The gap between the goal and the artifact is not incremental; it is the entire paper.
+
+---
+
+## 2. Honest summary of what the repo is
+
+This is a well-engineered, unusually *honest* autoresearch harness for activation
+steering on small Gemma models (270M–2B) on a single 16 GB GPU. It has: a shared
+intervention/extraction/eval harness (`src/steering/`, ~18 modules), a Goodhart-
+resistant 5-axis composite (`eval.py`, SHA-256 fingerprinted), a pre-registration
+discipline, an off-family LLM judge (Gemini / local Qwen2.5-7B), a tiered ladder, and
+a transparent multi-page dashboard. 124 experiments have produced 21 screening
+observations (S-1…S-21) across 19 of 70 hypotheses, plus one rung-3 geometry result
+(N17: off-shell displacement predicts incoherence, Spearman +0.585 on WikiText-2).
+
+The strongest *real* contributions are **geometric/coherence** findings (the alpha
+coherence cliff E3/S-17; off-shell displacement N17; cylindrical radius/angle
+decoupling N16) and a sober **negative** result (E7 direction-specificity mostly washes
+out on real AxBench; a shuffled vector captures ~97% of the effect). These are
+genuinely useful and genuinely honest — but they are *steering-mechanics* results, not
+*safety* results, and certainly not *conditional multi-intent safety* results.
+
+**Bottom line:** the infrastructure is real; the safety paper does not yet exist.
+
+---
+
+## 3. Real strengths (credit where due)
+
+- **Radical honesty.** `FINDINGS.md` self-reports "zero external-ready findings,"
+  flags the judge AUC at 0.68 as "WEAK but UNBIASED," corrects S-15 with S-16, and
+  refuses to launder screening into claims. This is better epistemic hygiene than many
+  accepted papers. It is also exactly why the verdict is clear: the repo agrees the
+  goal is unmet.
+- **Goodhart-resistant composite.** Pricing all five axes so "gibberish that refuses"
+  cannot win is the right instinct; the fingerprinting prevents silent goalpost moves.
+- **Off-family judge + same-family circularity disclosure** is the correct safeguard,
+  and a local Qwen judge fallback is a practical touch on a 16 GB budget.
+- **Negative results are kept.** E2 (Fisher≠best layer), E27 (rotation no benefit),
+  E28 (not low-rank), N5 (no universal law across scale) are all retained, not buried.
+- **Pre-registration + HARKing guard** are baked into the process.
+- **The corpus** (Rogue Scalpel, first-principles, 12-axis taxonomy, datasets-suite)
+  is a strong literature scaffold and names the right safety benchmarks — the project
+  *knows* what it should be doing; it just hasn't.
+
+---
+
+## 4. Weaknesses (grouped)
+
+### 4.1 Significance / novelty of the safety contribution
+- **The contribution does not exist yet.** "Conditional multi-intent safety steering"
+  is a *title*, not a result. Every safety hypothesis is UNTESTED; the CAST pipeline,
+  the dual-forward guard, the multi-category condition vectors — none are implemented.
+  A reviewer cannot evaluate a method that has not been run once.
+- **Even fully executed, the novelty is thin as framed.** Single-category CAST gating
+  (E9) is, by the repo's own SciCritic note, "a reproduction + extension to Gemma-2-2B"
+  — DERIVATIVE. The novel handle the project *could* own — *multi-intent* simultaneous
+  safety steering with a norm-budgeted, geometry-aware guard — is precisely the part
+  that is neither defined nor built. The significance is entirely in the unbuilt half.
+- **Small-model scope undercuts a safety claim.** Steering 270M–2B Gemma is fine for
+  mechanics, but a SOTA *safety* claim that never touches a 7–9B+ model (where refusal
+  circuits and jailbreak transfer behave differently) will read as not-deployment-
+  relevant. The one cross-scale safety-relevant probe (E7) already shows the effect is
+  scale-dependent and *absent* at 270M.
+
+### 4.2 "Multi-intent" — undefined and unoperationalized (the central gap)
+- The phrase appears in the goal but **nowhere in the artifact** is it defined.
+  Candidate meanings are all left open and untested: (a) steering against *multiple
+  harm categories at once* (hate + self-harm + illegal + ...); (b) *compositional*
+  jailbreaks mixing benign + harmful intent in one prompt; (c) *simultaneously
+  steering multiple safety behaviors* (refuse-harmful AND stay-helpful AND
+  de-toxify); (d) *dual-intent* prompts where part is legitimate.
+- There is **no multi-intent dataset, no multi-intent metric, and no multi-intent
+  experiment.** E10/E11 (condition orthogonality, OR-gate coverage) are the closest
+  hooks and are PENDING/PARTIAL on *non-safety* emotion concepts (anger/happiness/
+  ocean/formality), which do not exercise harm categories at all.
+- Without an operational definition + a coverage metric (e.g., per-category ASR across
+  K simultaneous categories, plus a joint over-refusal rate), the headline claim is
+  **unfalsifiable** — a NeurIPS blocker on its own.
+
+### 4.3 SOTA safety benchmarks — essentially all missing
+- **None are wired.** The safety axis = `is_refusal()` keyword matching over 10
+  synthetic harmful prompts + 8 synthetic XSTest-style prompts. The dashboard *labels*
+  this "JailbreakBench Compliance Rate," which is **misleading**: the real
+  JailbreakBench is not used. That label should be corrected immediately — it
+  overstates the evaluation.
+- Missing, in rough priority for this goal:
+  - **JailbreakBench** (100 behaviors, attack artifacts, standard judge) — core ASR.
+  - **StrongREJECT** (jailbreak scoring that resists judge over-counting) — the
+    single most important fix to the weak rule-based judge.
+  - **HarmBench** (broad harmful-behavior coverage + standardized classifier).
+  - **AdvBench** + **GCG/PAIR/AutoDAN** adversarial suffixes (E41 assumes these; none
+    exist in code).
+  - **XSTest** *and* **OR-Bench** for over-refusal (real, not an 8-prompt toy).
+  - **SORRY-Bench (45 categories)** / **WildGuard** / **Aegis** for the *multi-intent /
+    multi-category* dimension — the benchmark that would actually define "multi-intent."
+  - **MMLU / GSM8K / ARC** real splits for the capability tax (currently a
+    deterministic FakeLM "tripwire," not a real MMLU number).
+- **Judge validity is below the field floor.** Rogue Scalpel calibrates its harmful-
+  class judge to ~94% precision against humans; this project's judge is AUC 0.68 and
+  the safety detector is keyword rules. A safety ASR number from a keyword detector is
+  not credible (trivially gamed by "Sure, here is..." with no refusal markers, or by
+  refusals phrased outside the marker list).
+
+### 4.4 Safety-eval protocol & judge validity
+- **No baseline-CR-must-be-0% gate is actually exercised on real harmful data** (it is
+  hardcoded to a refusal constant for FakeLM and never measured on a real benchmark).
+- **No adversarial / adaptive attack** is run; E41's GCG plan is unimplemented. A
+  safety method that is never red-teamed cannot claim robustness.
+- **Decoding/seed protocol for safety** is greedy single-config; the rigor contract
+  (n≥7, Wilcoxon, bootstrap, Holm, ordinal gate) has **never been applied to a safety
+  metric** — only to N17 geometry.
+- **Selectivity axis** (harmful-refusal − harmless-refusal) is computed on toy slices;
+  the over-refusal cost — the thing that makes safety steering deployable — is untested
+  on any real over-refusal benchmark.
+
+### 4.5 Baselines (safety-specific) — none present
+- A SOTA safety claim requires beating the obvious alternatives. **None are
+  implemented or even scaffolded:** Llama-Guard / ShieldGemma (input-output
+  classifier), **circuit-breakers / RepE** (Zou et al.), **refusal-direction
+  ablation/addition** (Arditi et al.), **CAST** itself (the method being "extended"),
+  and **safety-SFT / DPO / DRO** as the training-time reference point. Without these,
+  even a working steering method has no "SOTA" denominator.
+- There is also no *cost/latency* comparison vs a guard model — a key selling point
+  of activation steering (no second forward pass) that is asserted (E9 Q&A) but never
+  measured.
+
+### 4.6 Dual-use / broader impact
+- The Rogue Scalpel premise is that the *same* steering machinery that adds safety can
+  be inverted to *remove* it (the 20-vector universal attack). The repo builds exactly
+  this dual-use capability (extraction + injection hooks) but the broader-impact /
+  responsible-disclosure treatment is **absent from the paper artifact** — there is no
+  Broader Impact section, no statement on releasing attack vectors, no gating of the
+  red-team code. For a NeurIPS safety submission this is mandatory and currently
+  missing.
+- The "safety integrity" axis penalizes leaks in the composite, which is good, but the
+  threat model (who attacks, with what access to activations) is described only in
+  corpus prose, never instantiated as an evaluated adversary.
+
+### 4.7 Reproducibility
+- Strong on *harness* reproducibility (offline FakeLM tests, fingerprinted formula,
+  pinned slices). **Weak on result reproducibility for the goal:** the real-model runs
+  depend on a gated Gemma login that (per MEMORY) blocked execution; the safety
+  numbers are synthetic; the judge depends on external API credits that are noted as
+  *depleted*. A reader cannot reproduce a safety result because there is no safety
+  result to reproduce.
+- Capability metric is a *surrogate* (`mcq_accuracy` FakeLM tripwire), not MMLU; this
+  must be labeled clearly everywhere it is reported as "MMLU."
+
+---
+
+## 5. Actionable improvements (P0 = must-have for any safety submission;
+P1 = needed for a competitive paper; P2 = strengthening)
+
+1. **[P0] Define "multi-intent" formally and pre-register it.** Adopt a precise
+   definition: *multi-intent = a prompt and/or steering target spanning K≥2 distinct
+   harm categories simultaneously*, evaluated as per-category ASR + joint
+   over-refusal. Commit the definition + success criterion to git *before* any run.
+
+2. **[P0] Wire JailbreakBench as the primary ASR benchmark** (100 behaviors + its
+   judge) and report Attack Success Rate, with baseline-model CR verified ~0% first.
+   Replace the misleading "JailbreakBench CR" dashboard label until this is real.
+
+3. **[P0] Add StrongREJECT** (and its rubric-based scorer) as the headline jailbreak
+   metric — it directly fixes the weak keyword/AUC-0.68 judge problem.
+
+4. **[P0] Replace the rule-based `is_refusal()` safety detector** with a calibrated
+   safety classifier (Llama-Guard-3 / ShieldGemma or HarmBench classifier) validated
+   to ≥90% agreement on a ≥50-example human-annotated slice, mirroring Rogue Scalpel's
+   94%-precision calibration.
+
+5. **[P0] Operationalize multi-intent on SORRY-Bench (45 categories)** and/or
+   **WildGuard / Aegis**: steer against K simultaneous categories and report a coverage
+   curve (per-category refusal vs K) plus the harmless-refusal leak as K grows
+   (this is the E11 OR-gate hypothesis, finally on real safety data).
+
+6. **[P0] Implement the CAST gating pipeline** (`src/steering/cast.py`: read-only
+   condition at L_c, masked behavior write at L_b in one forward pass) — E9/E41 are
+   blocked on this and it is the core method. Nothing can be claimed until it runs.
+
+7. **[P0] Report the core Pareto as ASR (JailbreakBench/StrongREJECT) vs over-refusal
+   (XSTest + OR-Bench)**, with prior methods plotted as reference points. This single
+   figure is the paper's spine.
+
+8. **[P0] Add a real capability-tax measurement** on true **MMLU** (≥500 q) and
+   **GSM8K**; stop reporting the FakeLM surrogate as "MMLU." Steering that buys safety
+   by tanking GSM8K must be visible.
+
+9. **[P0] Write a Broader Impact / dual-use section** and a responsible-disclosure
+   policy: state explicitly that the extraction+injection code can be inverted to
+   *remove* safety (Rogue Scalpel), and gate release of attack vectors.
+
+10. **[P1] Add safety-specific baselines and beat them:** (a) **Llama-Guard-3 /
+    ShieldGemma** input-output filter; (b) **circuit-breakers / RepE** (Zou et al.
+    2024); (c) **refusal-direction** ablation/addition (Arditi et al. 2406.11717);
+    (d) **CAST** as published; (e) **safety-SFT/DPO** reference. Report ASR + over-
+    refusal + capability for each.
+
+11. **[P1] Red-team with adaptive attacks:** implement **GCG** (2307.15043), **PAIR**,
+    and **AutoDAN**, plus the Rogue Scalpel **20-vector universal attack**, and report
+    ASR-under-attack for the guarded method (E41). A safety claim without an adaptive
+    adversary is not publishable.
+
+12. **[P1] Apply the full rigor contract to safety metrics**, not just N17: n≥7 seeds,
+    paired Wilcoxon, 10k-bootstrap CI on the ASR/over-refusal delta, Holm-Bonferroni
+    across the sweep, and the ordinal gate (worst guarded seed beats best baseline
+    seed).
+
+13. **[P1] Scale at least one safety result to Gemma-2-9B-it** (the 4-bit 9B fits the
+    16 GB budget per CLAUDE.md) — E7 already shows safety-relevant effects are
+    scale-dependent, so a 2B-only safety claim will not survive review.
+
+14. **[P1] Add HarmBench + AdvBench** for harmful-behavior breadth and refusal-rate
+    targets, cross-checking that the JailbreakBench result is not benchmark-specific.
+
+15. **[P1] Measure and report the latency/compute advantage** of activation gating vs
+    a Llama-Guard forward pass (the claimed selling point in E9's Q&A) — tokens/s,
+    added FLOPs, VRAM.
+
+16. **[P1] Build the multi-category condition-vector orthogonality study on real harm
+    categories** (E10 on SORRY-Bench categories, not emotions): report the pairwise
+    |cos| matrix and whether OR-gating coverage scales without harmless-refusal leak.
+
+17. **[P1] Define and report a single "safe-without-breaking" headline metric**: e.g.
+    ASR reduction (pp) at a fixed ≤1% XSTest over-refusal and ≤2pp MMLU drop — a
+    constrained-optimization framing reviewers can compare across papers.
+
+18. **[P2] Add a compositional / dual-intent prompt set** (benign-wrapper jailbreaks,
+    mixed legitimate+harmful asks) to test whether activation-condition reading beats
+    token-level filtering — the genuine novelty hook for "conditional" steering.
+
+19. **[P2] Calibrate and publish the judge ROC** against humans for *both* behavior and
+    safety, and gate any claim on judge AUC ≥ 0.85 (current 0.68 is below the floor).
+
+20. **[P2] Add an over-refusal benchmark beyond XSTest** (**OR-Bench**, ~80k prompts;
+    or **PHTest**) so the over-refusal axis has population-scale evidence, not 8 prompts.
+
+21. **[P2] Stress-test the norm-budget guard (E22/N5) on safety stacks**: show that
+    stacking K safety vectors stays under the coherence cliff while ASR keeps dropping
+    — this connects the geometry findings (the project's real strength) to the safety
+    goal.
+
+22. **[P2] Report safety-steering transfer across models** (IT→base, 2B→9B) so the
+    method is shown to generalize rather than overfit one checkpoint (E8).
+
+23. **[P2] Add a "do no harm" capability sanity panel** (MT-Bench / AlpacaEval) so
+    helpfulness loss from always-on-vs-gated steering is visible — the deployability
+    argument for *conditional* steering depends on this.
+
+24. **[P2] Pre-register the full safety evaluation plan** (benchmarks, judge, seeds,
+    thresholds, baselines) as a single committed protocol doc before running, to keep
+    the strong anti-HARKing discipline intact once real safety data enters.
+
+25. **[P2] Reframe the paper honestly if the safety method does not land:** the
+    geometry/coherence results (N17, E3, N16) + the honest E7 negative are a credible
+    *"what controls steering quality and why direction-specificity is weaker than
+    believed"* mechanisms paper. That is a real (smaller-venue) contribution today,
+    whereas the safety paper is not.
+
+---
+
+### One-paragraph meta-note to the authors
+The harness, the honesty, and the geometry results are genuinely good. But the project
+has spent its compute on the *mechanics* axes (layer, alpha, source, operation) and has
+not started the safety program it set as its North Star. The single highest-leverage
+move is to stop sweeping steering knobs and instead build the CAST pipeline + wire
+JailbreakBench/StrongREJECT/SORRY-Bench + a calibrated safety judge, then run the
+*conditional, multi-intent* experiments (E9–E16, E41–E50) that the title promises.
+Until then, by your own ledger, there is no safety finding to review.

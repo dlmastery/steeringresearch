@@ -1,0 +1,367 @@
+# ICLR-Calibre Adversarial Review — Steering Research Repository
+
+**Reviewer stance:** top-tier / Area-Chair calibre, no-mercy. The author explicitly
+requested this be "beaten to death."
+**Goal the work is judged against (the author's stated target, not the paper's
+actual content):** a *state-of-the-art CONDITIONAL activation-steering method for
+MULTI-INTENT SAFETY* — steer toward safer responses only when warranted, across
+multiple intents, without breaking capability/coherence or over-refusing benign
+prompts; final eval on SOTA safety benchmarks (JailbreakBench, StrongREJECT,
+HarmBench, XSTest, AdvBench); deliverable = a paper a top venue would ACCEPT.
+
+Date of review: 2026-06-06. Repo state reviewed: master @ commit `9e1652c`,
+124 experiments logged, composite fingerprint `a9001e87087e`.
+
+---
+
+## 1. Verdict + the bar to clear
+
+**Verdict: REJECT (against the stated safety goal).** As a *different* paper —
+"a pre-registered autoresearch harness + a geometric account of the coherence
+cliff" — the current `paper/PAPER.md` is a borderline **MAJOR REVISION** workshop
+submission. But measured against the goal the author actually wants to hit
+(SOTA conditional multi-intent safety steering), this is a **clear reject**,
+because **the method does not exist**. There is no conditional safety-steering
+method implemented, no multi-intent safety evaluation, and not a single run on
+any of the five named safety benchmarks. The repository is, at this moment, a
+*measurement harness plus a screening study that produced a mostly-negative
+result about steering in general* — which is the opposite of evidence for a SOTA
+steering method.
+
+**The bar to clear for the safety goal (main-track accept):**
+1. A *named, implemented* conditional safety-steering method (e.g., CAST-style
+   gate + refusal-direction write + a guard) that runs end-to-end in one forward
+   pass — currently only a `CosineGate` primitive (`src/steering/gate.py`) exists;
+   the CAST *pipeline* is admitted UNTESTED in every Block-B/F design doc.
+2. Final evaluation on ≥3 of {JailbreakBench, StrongREJECT, HarmBench, XSTest,
+   AdvBench} with the benchmark-native classifiers — none are wired in
+   (`grep` finds these names only in design-doc prose and dashboard HTML, never
+   in `src/`; the only safety data is a 10-prompt synthetic `jailbreak_mini.json`).
+3. A result that **Pareto-dominates** the obvious baselines (system-prompt refusal,
+   prompting, the unconditional refusal-direction of Arditi et al.) on the
+   (harmful-compliance ↓, benign-over-refusal ↓, capability ≈, coherence ≈) plane,
+   at n≥7 seeds under the project's own six-part rigor contract.
+4. Multi-intent coverage demonstrated (≥2 distinct harm categories gated
+   independently), with a held-out-intent generalization split.
+
+None of (1)–(4) is met. The honest internal status ("safety hypotheses E9–E16,
+E41–E50 are UNTESTED; zero external-ready findings") agrees with this verdict.
+
+---
+
+## 2. What the work currently IS (honest summary)
+
+- A clean, well-engineered **multi-objective evaluation harness** (`src/steering/`,
+  ~18 modules): intervention hooks with four operations (add / relative_add /
+  project_out / rotate), DiffMean+PCA extraction, a five-axis eval bundle, a
+  SHA-256-fingerprinted Goodhart-resistant composite, geometry probes, controls
+  (matched-norm-random, shuffled-label), a bootstrap/Wilcoxon/Holm rigor module,
+  and an off-family local judge (Qwen2.5-7B).
+- A **70-hypothesis pre-registered registry** (E1–E50 + N1–N20), each with a
+  verbose design doc, "In Plain English" box, and a same-family "SciCritic"
+  addendum.
+- **124 experiments**, of which **~19 hypotheses** have screening verdicts and
+  **6** (E2/E3/E4/E7/E27/E36) were re-evaluated on **real AxBench** with a weak
+  local judge (ROC-AUC 0.68). One rung-3 evaluation (N17) on real WikiText-2.
+- A **paper** (`paper/PAPER.md`) that — correctly and explicitly — claims to be a
+  *methodology + harness + screening* contribution and states "This paper does not
+  propose a new steering method or claim a new steering-efficacy result."
+- A large multi-page **dashboard** (72+ generated HTML pages) and GitHub-Pages site.
+
+**The central honest finding** (FINDINGS.md S-16..S-21): on real AxBench, *almost
+every steering knob is weak or null* — direction barely beats a shuffled control
+(~97% of the effect is generic), layer is flat, source is a wash, rotation gives
+no benefit; **only the alpha/coherence "cliff" (a geometry/coherence result, not a
+control result) generalized.** This is a genuinely useful, well-documented negative
+result. It is also, bluntly, evidence *against* the feasibility of the SOTA-steering
+goal as framed — and the repo has not yet reconciled that tension.
+
+---
+
+## 3. Strengths (only the real ones)
+
+- **S1. Intellectual honesty is the standout asset.** The rigor contract,
+  HARKing/screening-vs-evaluation discipline, the explicit "zero external-ready
+  findings" status, and the two-sided ledger (falsifications reported as loudly as
+  confirmations) are genuinely above the median ML paper. The N5 "universal law"
+  self-falsification (within-pool R²=0.81 → held-out R²=−1.6) is exemplary.
+- **S2. The circularity audit of the behavior metric is correct and important.**
+  `eval.py` documents the projection identity Δproj = α‖v‖ and replaces it with a
+  generation-based scorer. Recognizing and neutralizing a tautological metric is
+  exactly the kind of thing most steering papers get wrong.
+- **S3. Controls exist and are conceptually right** (`controls.py`:
+  matched-norm-random, shuffled-label, bootstrap extraction stability). The
+  shuffled-label control is what produced the most valuable finding (direction is
+  ~97% generic).
+- **S4. The harness is reproducible offline** (FakeLM path, pinned seeds, ruff/mypy/
+  pytest gates, fingerprinted composite).
+- **S5. The 2026 geometry-wave positioning is literate** — relative-displacement
+  parameterization and the radial×angular (cylindrical) decomposition are a coherent
+  lens, even if not novel.
+
+---
+
+## 4. Weaknesses (detailed, grouped)
+
+### 4A. Goal / contribution clarity — FATAL mismatch
+- **W1. The paper and the goal are different papers.** Title: "The Geometry of the
+  Coherence Cliff." Goal: conditional multi-intent safety steering. The paper
+  explicitly disowns a method and a safety claim. There is no through-line from the
+  harness to a safety deliverable. A reviewer cannot accept a safety paper that
+  contains no safety method and no safety benchmark.
+- **W2. No articulated contribution that matches the goal.** The four enumerated
+  contributions (harness, composite, instruments, geometry account) are all
+  *infrastructure or measurement*. None is "a steering method that does X better
+  than Y." For the stated goal, the contribution slot is empty.
+- **W3. The safety program is 100% on paper.** Every Block-B (E9–E16) and Block-F
+  (E41–E50) safety/conditional hypothesis is PENDING/UNTESTED. The capstone E50
+  ("minimal SOTA stack") and E41 (jailbreak-suffix resistance) are design docs with
+  predicted tables and zero rows in `experiment_log.jsonl`.
+
+### 4B. Transparency & outcome validation — the "AI slop" concern is partly valid
+- **W4. The dashboard optimizes for surface volume over decision-relevance.** 72+
+  pages, most for UNTESTED hypotheses, each padded with "In Plain English" boxes and
+  a same-family auto-"SciCritic" verdict. The signal (6 real-benchmark nulls + 1
+  geometry result) is buried under 60+ pages of pre-registration prose and synthetic
+  n=1 screens. The author's self-description ("dashboard full of useless numbers") is
+  fair: a reader cannot answer "what is the one result that survived?" in 30 seconds.
+- **W5. Self-grading presented as a credential.** `README.md` headlines "ICML
+  reviewer: unconditional sign-off, Rubric E 8/8" and `audits/ICML_SIGNOFF_v2.md`.
+  These are same-model-family self-audits. CLAUDE.md §14 itself mandates the
+  "internal QA pass — external review pending" qualifier; the README violates the
+  spirit of that by foregrounding a self-issued "sign-off" as if external.
+- **W6. Verdicts are softened by construction.** "DIRECTIONAL," "PARTIAL,"
+  "SUPPORTED(scr)" let weak/null screens read as partial wins. E1 is "DIRECTIONAL
+  (underpowered)" for a knee at ~5 pairs that *cannot test* the registered ≥50-pair
+  claim — that is UNTESTED dressed as directional.
+
+### 4C. Novelty & related-work positioning
+- **W7. Even the geometry result is not novel.** "Cap displacement at ~10% of ‖h‖"
+  and "radial vs angular cost" restate CRH (arXiv:2605.01844), Manifold Steering
+  (2605.05115), and In-Distribution Steering (2510.13285), which the paper itself
+  cites as having the same idea. The contribution reduces to "we measured a known
+  geometric story on sub-1B models." That is a workshop reproduction, not a main-track
+  novelty.
+- **W8. For the safety goal, the novelty target is unaddressed.** The relevant prior
+  art — CAST (2409.05907), refusal-is-a-direction (2406.11717), Rogue Scalpel
+  (2509.22067), FineSteer (2604.15488), Selective Steering (2601.19375) — is
+  surveyed but not *competed against*. There is no experiment that beats CAST or the
+  Arditi refusal direction. A safety-steering paper that never runs CAST cannot claim
+  to advance conditional safety steering.
+- **W9. AxBench's own headline ("simple baselines / prompting beat steering and
+  SAEs") is acknowledged but not confronted.** If prompting beats steering for
+  concept control, the burden is to show steering wins *where prompting cannot* (e.g.,
+  black-box deployment, latency, composability under attack). That argument is never
+  made empirically.
+
+### 4D. Soundness & rigor (of what exists)
+- **W10. The weak judge (ROC-AUC 0.68) cannot support any efficacy or safety claim.**
+  An AUC-0.68 concept judge is barely better than coin-flip-plus; the +0.004 E7
+  "win" at 2B is well inside judge noise. For safety, refusal classification at
+  0.68 AUC would mislabel a large fraction of jailbreaks. No agreement-with-human
+  calibration exists (`judge.calibration_agreement` is defined but unused on a
+  labeled slice).
+- **W11. Capability and safety axes are synthetic stubs, yet feed the composite.**
+  `mcq_accuracy` is a "deterministic surrogate" tripwire on 20 items, not MMLU;
+  the FakeLM safety path returns a constant refusal string (`safety_real=False`).
+  The composite that "prices all five axes" has, in practice, never been computed
+  with two real axes simultaneously on a real model. The headline property
+  ("a method cannot win by sacrificing an axis") is asserted via unit tests on stub
+  values, not demonstrated on real generations.
+- **W12. Composite weights are unjustified and unaudited.** λ_safe=2.0 etc. are
+  pinned and fingerprinted but never derived; the paper concedes no
+  weight-sensitivity / champion-ordering-robustness analysis. Fingerprinting freezes
+  an *arbitrary* choice; it does not make it sound. The PPL term is unbounded and can
+  dominate.
+- **W13. Statistical unit conflation.** The rung-3 N17 result pools 50 (layer×α)
+  configurations and bootstraps over them as if iid; the paper admits this is a
+  "within-grid estimate." AxBench runs treat *concept* as the replication unit
+  (good) but are single-seed, single-model (2B), single-layer (20) — so the six-part
+  contract (n≥7 seeds, Holm across family, ordinal gate) is never actually satisfied.
+  Zero external-ready findings is the honest and correct consequence.
+- **W14. The generation behavior scorer is still semi-circular.** `concept_rate`
+  uses a lexicon `lexicon_from_pairs` derived from the *same contrast pairs* that
+  built the vector (acknowledged in code). A held-out lexicon / independent judge is
+  required before any magnitude is trusted.
+
+### 4E. Reproducibility
+- **W15. Real results depend on a gated model + a flaky proxy fetcher and were run on
+  one laptop.** Defensible for a hobby program, but there is no seed-sweep artifact,
+  no environment lock for the real runs, and the standard model (Gemma-2-2B) is only
+  partially exercised; Gemma-2-9B cross-scale never run. The "small-GPU results
+  transfer" story is explicitly untested (4-bit↔fp16 invariance, E5, PENDING).
+- **W16. The dashboard/`docs` is partly generated for hypotheses with no data**,
+  which is a reproducibility smell (pages imply results that do not exist).
+
+### 4F. Writing / presentation / "slop"
+- **W17. Pervasive hedging and length inflation.** FINDINGS.md is 1.6k lines to
+  convey ~7 real observations; the same caveats are restated 5+ times. Every doc
+  re-defines "LLM," "steering vector," "residual stream." This is reader-hostile by
+  volume.
+- **W18. The README over-sells.** "discover and engineer state-of-the-art" /
+  "ICML reviewer: unconditional sign-off" against a body with zero external-ready
+  findings is a credibility liability the moment a real reviewer checks.
+- **W19. The paper's "Reviewer-loop changelog" appendix** narrates its own prior
+  review rounds inside the artifact — a presentation tell that signals
+  machine-generated iteration rather than a finished paper.
+
+### 4G. The gap to the stated safety goal (summary)
+- No CAST/conditional pipeline (only a gate primitive; E15 learned gate already
+  FALSIFIED OOD, exp#110). No refusal-direction extraction on real harmful data.
+  No multi-intent gating. No JailbreakBench/StrongREJECT/HarmBench/XSTest/AdvBench.
+  No calibrated safety judge. No red-team (the 20-vector Rogue-Scalpel universal
+  attack is a design-doc aspiration). The safety deliverable is at ~0% complete.
+
+---
+
+## 5. 20–25 Specific, Actionable Improvements (prioritized)
+
+> Priority key: **P0** = blocks any safety claim / must exist for a submittable
+> paper; **P1** = required for a competitive accept; **P2** = strengthens / hardens.
+> Each is tied to making the *conditional multi-intent safety* goal publishable.
+
+**P0 — Build the method and the real safety eval (without these there is no paper):**
+
+1. **(P0) Implement the conditional safety-steering method end-to-end.** Build
+   `src/steering/cast.py`: read-only condition probe at L_c (`gate.CosineGate`) →
+   masked refusal-direction write at L_b (`hooks.apply_operation`, `relative_add`)
+   in one forward pass. This is the object E9/E41 say is "missing"; it is the
+   paper's actual contribution slot. Name it and commit it before any more screening.
+
+2. **(P0) Extract a real refusal direction and per-intent condition vectors** from
+   real harmful/harmless data (AdvBench + Sorry-Bench for training), not the
+   10-prompt `jailbreak_mini.json`. Verify with `controls.shuffled_label_vector`
+   that the refusal direction beats shuffled (the one control that already exposed
+   weak effects for concepts — do not let safety repeat E7's fate undetected).
+
+3. **(P0) Wire the SOTA safety benchmarks as first-class loaders + native judges.**
+   Add `src/steering/safety_bench.py` with JailbreakBench (and its rule+LLM
+   classifier), StrongREJECT (its fine-grained scorer), HarmBench (its validated
+   classifier), XSTest (over-refusal), AdvBench. Use each benchmark's *own* scorer —
+   do not score jailbreaks with the AUC-0.68 Qwen concept judge.
+
+4. **(P0) Replace / calibrate the judge before any number ships.** For safety, use
+   the JailbreakBench Llama-Guard/GPT-4 classifier protocol and report
+   agreement (Cohen's κ / accuracy) vs a 50–100 human-labeled slice via the
+   already-present `judge.calibration_agreement`. Target ≥90% agreement; report it.
+   The 0.68-AUC concept judge must be retired from any efficacy/safety conclusion.
+
+5. **(P0) Make capability and coherence axes real in the same run.** Swap the
+   `mcq_accuracy` surrogate for true MMLU/ARC logprob scoring (≥500 items) and PPL
+   on WikiText-103, computed on the *same steered model* that the safety eval uses,
+   so the composite is finally evaluated with all five axes real at once (W11).
+
+6. **(P0) Define and run the multi-intent setup.** Pick ≥4 harm intents (e.g.,
+   JailbreakBench's 10 categories collapsed to 4–5), build a condition vector per
+   intent, and OR-gate them (E11). Demonstrate independent per-intent firing — this
+   is the "multi-intent" in the goal, currently absent.
+
+**P0 — Baselines and the dominance claim:**
+
+7. **(P0) Run the mandatory baselines on the exact same eval.** (a) system-prompt
+   refusal; (b) unconditional refusal-direction add (Arditi 2406.11717); (c) CAST
+   as published (2409.05907); (d) a prompting baseline (AxBench's finding demands
+   it); (e) no-steer. The contribution is only meaningful as a *delta over the best
+   of these*. A win vs only "no-steer" is not a contribution.
+
+8. **(P0) State and test the Pareto-dominance claim explicitly.** Pre-register:
+   "method reduces harmful-compliance by ≥X pp vs CAST at ≤Y pp XSTest over-refusal,
+   with ≤Z pp MMLU drop and ≤W% ΔPPL." Then apply the project's six-part rigor
+   contract (n≥7 seeds, paired Wilcoxon, 10k bootstrap CI, Holm across the method
+   family, ordinal gate). This is what turns the harness into a finding.
+
+**P1 — Rigor, robustness, novelty:**
+
+9. **(P1) Add an adaptive red-team.** Reproduce the Rogue-Scalpel 20-vector
+   universal attack and a GCG suffix transfer test (E41) *against your guarded
+   method*. A safety method that is not attacked is not a safety method. Report
+   compliance under attack as a headline axis.
+
+10. **(P1) Held-out-intent generalization split.** Extract gates on intents
+    {1..k-1}, evaluate on held-out intent k. Report the drop. This is the single
+    most convincing evidence that the gate learns "harm-relevance," not surface
+    vocabulary (the confound that already killed the concept direction in E7/S-16).
+
+11. **(P1) Run weight-sensitivity on the composite.** Perturb each λ ±50% and show
+    the method's ranking vs baselines is stable (W12). Without this, the composite
+    is an unfalsifiable scoreboard.
+
+12. **(P1) Fix the statistical unit.** For every safety claim, the replication unit
+    must be the prompt/seed, with ≥7 seeds, not a pooled (layer×α) grid (W13).
+    Retire the within-grid bootstrap from anything labeled rung-3.
+
+13. **(P1) Establish the novelty axis empirically.** Pick the one thing your method
+    can do that CAST/prompting cannot — e.g., (a) composability: stack a safety gate
+    with a behavior steer under the norm budget (E22) without breaking either; or
+    (b) latency/black-box: no second-model forward pass. Measure it head-to-head.
+    This is the difference between "reproduction" (W7/W8) and "contribution."
+
+14. **(P1) Confront the AxBench negative result head-on in the framing.** Either (a)
+    pivot the paper's thesis to "conditional *safety* steering survives where generic
+    concept steering does not, and here is why," backed by data, or (b) report a
+    bounded-scope safety result. Do not ship a "SOTA steering" framing on top of a
+    body that shows steering is mostly generic (W9, current §2 tension).
+
+15. **(P1) 4-bit↔fp16 invariance (E5) before claiming transfer.** One sweep; if it
+    fails, scope all claims to 4-bit. The "runs on a 4090" selling point is hollow
+    until this is shown (W15).
+
+16. **(P1) Reproduce on Gemma-2-2B end-to-end and one larger scale.** The safety
+    window is known to emerge with scale (your own S-8); a sub-1B-only safety result
+    will not transfer and reviewers know it. At least 2B + a 7–9B check.
+
+**P1/P2 — Presentation, "de-slop," reproducibility:**
+
+17. **(P1) Rewrite the paper around the method.** New title, e.g., "Conditional
+    Activation Steering for Multi-Intent Safety: A Pareto-Dominant, Red-Teamed
+    Recipe on Small Models." Lead with the method figure, the dominance table, and
+    the attack-resistance plot. Move the harness/geometry to Methods/Appendix.
+    Delete the "Reviewer-loop changelog" appendix (W19).
+
+18. **(P1) Collapse the dashboard to a decision-first front page.** One screen:
+    the method vs 4 baselines on the 4-axis safety Pareto, the red-team plot, the
+    one-line verdict, and the n/tier chip. Demote the 60+ UNTESTED-hypothesis pages
+    to an appendix index; do not generate result-shaped pages for hypotheses with no
+    data (W4, W16).
+
+19. **(P1) Remove self-grading from the README and top of the dashboard.** Delete
+    "ICML reviewer: unconditional sign-off / Rubric E 8/8"; replace with "internal
+    QA only — no external review; zero external-ready findings to date" per your own
+    CLAUDE.md §14 (W5, W18).
+
+20. **(P2) Cut FINDINGS.md by ~60%.** One canonical definition block (point to
+    GLOSSARY), one row per observation, caveats once. Reader should reach the 7 real
+    observations in under a page (W17).
+
+21. **(P2) Make every dashboard numeric cell carry its instrument provenance**
+    (`safety_real`, judge id + AUC/κ, n, seed count, model, layer). Right now a
+    reader cannot tell a stubbed safety value from a measured one without reading code
+    (W11).
+
+22. **(P2) Add a leakage/contamination check for the safety eval.** Confirm
+    harmful/benign eval prompts do not share surface tokens that let the gate act as
+    a keyword classifier (the E9 SciCritic's own "prompt-set contamination" confound).
+
+23. **(P2) Publish a single `reproduce_safety.py`** that, given HF auth, runs the
+    full method + 4 baselines + 5 benchmarks + rigor report and regenerates the front
+    dashboard — one command, pinned env, logged seeds.
+
+24. **(P2) Report a compute/latency budget** for the method vs prompting and vs a
+    second-model classifier gate (the deployment argument for steering over prompting).
+
+25. **(P2) Pre-register the safety success criterion in git BEFORE the sweep** (the
+    project already mandates this; apply it to the safety experiments specifically so
+    a weak result cannot later be relabeled "screening" — the HARKing guard that
+    matters most given how E7 played out).
+
+---
+
+## 6. One-line bottom line
+
+The harness and the honesty are real assets; the *paper's* coherence-cliff geometry
+is a competent reproduction of 2026 prior art on tiny models. But the **stated goal —
+SOTA conditional multi-intent safety steering — is essentially unstarted**: no method,
+no real safety benchmark, no baseline it beats, no red-team. Until improvements
+#1–#8 exist, there is nothing to accept; #9–#16 are what make it competitive; the
+rest is de-slopping. Build the method, run CAST and prompting as baselines on real
+JailbreakBench/StrongREJECT/HarmBench/XSTest, and let the six-part contract decide.
