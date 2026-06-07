@@ -12,11 +12,16 @@ import numpy as np
 
 from steering.stats import (
     bootstrap_ci,
+    directional_consistency,
     holm_bonferroni,
+    min_meaningful_effect,
     ordinal_gate,
+    paired_sign_test,
     paired_wilcoxon,
+    power_note,
     rigor_report,
     seed_noise_band,
+    verdict,
 )
 
 try:
@@ -161,23 +166,44 @@ def test_rigor_report_external_ready_clean_win():
     legs = res["legs"]
     assert legs["wilcoxon_significant"]
     assert legs["ci_excludes_zero"]
-    assert legs["ordinal_gate_passes"]
+    assert legs["paired_gate_passes"]      # sign test + full directional consistency
+    assert legs["ordinal_gate_passes"]     # still reported for matched-design reader
+    assert legs["enough_seeds"]            # n>=7 evaluation floor
+    assert legs["holm_applied"]            # a real family was supplied
     assert legs["holm_rejected"]
 
 
-def test_rigor_report_clean_win_without_family():
+def test_rigor_report_holm_not_vacuous_without_family():
+    # HOLM-VACUOUS BUG FIX: Wilcoxon + CI + paired-gate all pass, but with NO
+    # family the Holm leg was NOT applied -> cannot be external-ready.
     method, baseline = _clean_win()
-    res = rigor_report(method, baseline)  # no family -> Holm vacuously satisfied
-    assert res["external_ready"] is True
+    res = rigor_report(method, baseline)  # no family
     assert res["holm"] is None
+    assert res["legs"]["holm_applied"] is False
+    assert res["legs"]["wilcoxon_significant"]  # the other legs DID pass
+    assert res["legs"]["ci_excludes_zero"]
+    assert res["legs"]["paired_gate_passes"]
+    assert res["external_ready"] is False, "no family => Holm not applied => not ready"
 
 
-def test_rigor_report_fails_when_ordinal_gate_fails():
-    # Significant + CI excludes 0, but seed distributions OVERLAP -> gate fails.
+def test_rigor_report_holm_applied_and_rejecting_is_external_ready():
+    # And it flips to True once a real family is supplied and Holm rejects.
+    method, baseline = _clean_win()
+    res = rigor_report(method, baseline, family_pvalues=[0.001, 0.2, 0.3])
+    assert res["legs"]["holm_applied"] is True
+    assert res["legs"]["holm_rejected"] is True
+    assert res["external_ready"] is True
+
+
+def test_rigor_report_fails_when_paired_gate_fails():
+    # One item REGRESSES (delta -0.05): sign test p=0.125 and consistency<1.0, so
+    # the correctly-specified per-item gate fails even though most items improve.
     method = [0.80, 0.55, 0.82, 0.81, 0.79, 0.83, 0.80]
     baseline = [0.50, 0.60, 0.49, 0.51, 0.48, 0.53, 0.50]
-    res = rigor_report(method, baseline)
-    assert res["legs"]["ordinal_gate_passes"] is False
+    res = rigor_report(method, baseline, family_pvalues=[0.001, 0.2, 0.3])
+    assert res["legs"]["paired_gate_passes"] is False
+    assert res["legs"]["ordinal_gate_passes"] is False  # also overlaps
+    assert res["directional_consistency"] < 1.0
     assert res["external_ready"] is False
 
 
@@ -223,3 +249,129 @@ def test_rigor_report_fails_when_holm_rejects_other_but_not_this():
     else:
         # If still rejected, at least confirm the other legs held (sanity).
         assert res["external_ready"] is True
+
+
+# --------------------------------------------------------------------------- #
+# paired_sign_test (the concept/item-as-replicate test)
+# --------------------------------------------------------------------------- #
+def test_paired_sign_test_all_positive():
+    # 7 items all improve -> n_pos=7, two-sided p = 2 * 0.5**7 = 0.015625.
+    a = [0.8, 0.9, 0.7, 0.85, 0.6, 0.95, 0.75]
+    b = [0.5, 0.4, 0.3, 0.45, 0.2, 0.55, 0.35]
+    res = paired_sign_test(a, b)
+    assert res["n"] == 7
+    assert res["n_pos"] == 7 and res["n_neg"] == 0
+    assert abs(res["p_value"] - 2 * 0.5**7) < 1e-12
+    assert res["p_value"] < 0.05
+
+
+def test_paired_sign_test_drops_ties_and_is_two_sided():
+    # deltas: +,+,0,-  -> one tie dropped, n=3, k=min(2,1)=1.
+    a = [1.0, 2.0, 3.0, 4.0]
+    b = [0.0, 1.0, 3.0, 5.0]
+    res = paired_sign_test(a, b)
+    assert res["n"] == 3  # the zero delta is dropped
+    assert res["n_pos"] == 2 and res["n_neg"] == 1
+    # two-sided p = 2 * (C(3,0)+C(3,1)) * 0.5**3 = 2 * (1+3)/8 = 1.0
+    assert abs(res["p_value"] - 1.0) < 1e-12
+
+
+def test_paired_sign_test_all_ties_degenerate():
+    res = paired_sign_test([1.0, 2.0], [1.0, 2.0])
+    assert res["n"] == 0
+    assert res["p_value"] == 1.0
+
+
+# --------------------------------------------------------------------------- #
+# directional_consistency
+# --------------------------------------------------------------------------- #
+def test_directional_consistency_known_arrays():
+    # 3 of 4 positive -> 0.75 for hypothesised +1.
+    assert abs(directional_consistency([0.1, 0.2, -0.3, 0.4]) - 0.75) < 1e-12
+    # all positive -> 1.0
+    assert directional_consistency([0.1, 0.2, 0.3]) == 1.0
+    # hypothesised NEGATIVE flips the count.
+    assert abs(directional_consistency([-0.1, -0.2, 0.3], hypothesized_sign=-1) - (2 / 3)) < 1e-12
+    # a zero delta matches neither sign.
+    assert abs(directional_consistency([0.0, 0.5]) - 0.5) < 1e-12
+    assert directional_consistency([]) == 0.0
+
+
+# --------------------------------------------------------------------------- #
+# verdict — sign-aware labelling
+# --------------------------------------------------------------------------- #
+def test_verdict_external_ready_positive_significant():
+    deltas = [0.30, 0.32, 0.31, 0.33, 0.29, 0.34, 0.30]  # n=7, all positive
+    res = verdict(deltas, family_pvalues=[0.001, 0.5, 0.6], mme=0.05)
+    assert res["label"] == "EXTERNAL-READY"
+    assert res["significant"] and res["ci_excludes_zero"]
+    assert res["holm_applied"] and res["holm_rejected"]
+
+
+def test_verdict_significant_negative_is_NEGATIVE_not_directional():
+    # The reviewer's catch: a significant result in the WRONG direction.
+    deltas = [-0.30, -0.32, -0.31, -0.33, -0.29, -0.34, -0.30]
+    res = verdict(deltas, family_pvalues=[0.001, 0.5, 0.6], mme=0.05)
+    assert res["significant"] is True
+    assert res["label"] == "NEGATIVE"
+    assert res["label"] != "DIRECTIONAL"
+
+
+def test_verdict_no_family_cannot_be_external_ready():
+    deltas = [0.30, 0.32, 0.31, 0.33, 0.29, 0.34, 0.30]
+    res = verdict(deltas, mme=0.05)  # no family -> Holm not applied
+    assert res["holm_applied"] is False
+    assert res["label"] != "EXTERNAL-READY"
+    assert res["label"] == "DIRECTIONAL"
+
+
+def test_verdict_small_n_cannot_be_external_ready():
+    # n<7 is SCREENING -> even a clean positive family cannot be EXTERNAL-READY.
+    deltas = [0.30, 0.32, 0.31, 0.33, 0.29]  # n=5
+    res = verdict(deltas, family_pvalues=[0.001, 0.5, 0.6], mme=0.05)
+    assert res["enough_n"] is False
+    assert res["label"] != "EXTERNAL-READY"
+    assert res["label"] == "DIRECTIONAL"
+
+
+def test_verdict_sub_mme_effect_not_external_ready():
+    # Significant + holm + n>=7 + right sign, but the effect is below the minimum
+    # meaningful effect -> NUMEROLOGY, downgraded to DIRECTIONAL.
+    deltas = [0.030, 0.031, 0.029, 0.032, 0.028, 0.033, 0.030]
+    res = verdict(deltas, family_pvalues=[0.001, 0.5, 0.6], mme=0.10)
+    assert res["big_enough"] is False
+    assert res["label"] != "EXTERNAL-READY"
+
+
+def test_verdict_zero_mean_is_null():
+    rng = np.random.default_rng(11)
+    deltas = rng.normal(0.0, 0.1, size=8)
+    res = verdict(list(deltas), family_pvalues=[0.4, 0.5, 0.6])
+    assert res["label"] == "NULL"
+
+
+# --------------------------------------------------------------------------- #
+# min_meaningful_effect + power_note
+# --------------------------------------------------------------------------- #
+def test_min_meaningful_effect_registry():
+    assert min_meaningful_effect("composite") == 0.02
+    assert min_meaningful_effect("behavior_efficacy") == 0.05
+    # unknown metric -> default
+    assert min_meaningful_effect("nope") == 0.0
+    assert min_meaningful_effect("nope", default=0.07) == 0.07
+
+
+def test_power_note_small_n_cannot_reach_p05():
+    note = power_note(4, effect=0.3, sd=0.1)
+    assert note["is_screening"] is True
+    assert note["can_reach_p05"] is False  # min p = 2*0.5**4 = 0.125 > 0.05
+    assert abs(note["min_achievable_p"] - 0.125) < 1e-12
+    assert "underpowered" in note["note"]
+
+
+def test_power_note_n7_is_evaluation_eligible():
+    note = power_note(7, effect=0.3, sd=0.1)
+    assert note["is_screening"] is False
+    assert note["can_reach_p05"] is True
+    assert abs(note["min_achievable_p"] - 2 * 0.5**7) < 1e-12
+    assert 0.0 <= note["approx_power"] <= 1.0

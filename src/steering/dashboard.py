@@ -1182,8 +1182,12 @@ COLUMN_GLOSSARY: dict[str, tuple[str, str]] = {
               "points vs unsteered.", "&#8776;0 (no capability loss)"),
     "ppl": ("Axis 3 — coherence: perplexity of the steered generations; rises "
             "super-linearly past the cliff.", "low / near baseline"),
-    "cr": ("Axis 4 — safety: JailbreakBench compliance rate. Any non-zero value "
-           "is a leak and an automatic DISCARD.", "0 (no leak)"),
+    "cr": ("Axis 4 — safety: synthetic rule-based refusal metric (NOT the real "
+           "JailbreakBench benchmark; the real benchmark is not yet wired). "
+           "Measured by a 22-string regex classifier on 10 synthetic prompts. "
+           "Any non-zero value is treated as a leak and an automatic DISCARD "
+           "in the composite, but this instrument is too weak to support any "
+           "external safety claim.", "0 (no leak; instrument is synthetic)"),
     "over_refusal": ("Axis 5 — selectivity: harmless-prompt refusal rate "
                      "(over-refusal).", "low"),
     "offshell": ("Geometry leading indicator: off-shell displacement "
@@ -2504,7 +2508,7 @@ _METHODOLOGY_SECTIONS: list[tuple[str, str, bool, str]] = [
         "| 1 | Behavior efficacy | concept / behaviour success score | high |\n"
         "| 2 | Capability retention | MMLU / ARC / GSM8K delta | ~0 drop |\n"
         "| 3 | Coherence | perplexity, repetition, judge-coherence | low PPL |\n"
-        "| 4 | Safety integrity | JailbreakBench Compliance Rate | ~0% (no leak) |\n"
+        "| 4 | Safety integrity | synthetic refusal metric (regex, 10 prompts; JailbreakBench NOT YET WIRED) | ~0% (no leak) |\n"
         "| 5 | Selectivity (gated) | harmful − harmless refusal gap | high |\n\n"
         "Alongside the five, the high-dimensional-geometry sweep adds cheap, "
         "**behaviour-free leading indicators** that predict the coherence cliff "
@@ -2878,6 +2882,11 @@ def render_master(rows: list[dict], table: dict[str, dict],
                 f' data-exp="{exp_pg}"'
                 ' data-expandable="1"')
             tds = []
+            # Instrument provenance: pull from the row where available.
+            bscorer = str(r.get("behavior_scorer") or "proxy")
+            safety_real = r.get("safety_real")
+            safety_prov = ("real" if safety_real else
+                           "synthetic-regex (NOT JailbreakBench)")
             for (k, _label, num) in GROUP_RUN_COLS:
                 if k == "model":
                     tds.append(f'<td data-v="{_esc(model.lower())}" class="l">{_esc(model)}</td>')
@@ -2890,6 +2899,18 @@ def render_master(rows: list[dict], table: dict[str, dict],
                     tds.append(f'<td data-v="{_esc(lbl.lower())}" class="l">{_esc(lbl)}</td>')
                 elif k == "composite":
                     tds.append(_cell(r, k, True, tier, n_seeds, extra_cls="comp"))
+                elif k == "behavior_efficacy":
+                    # Add behavior scorer provenance as a tiny subscript
+                    cell = _cell(r, k, num, tier, n_seeds)
+                    prov_note = (f'<span style="font-size:9px;color:#8b949e;'
+                                 f'display:block;">{_esc(bscorer)}</span>')
+                    tds.append(cell.rstrip("</td>") + prov_note + "</td>")
+                elif k == "compliance_rate":
+                    # Add safety instrument provenance as a tiny subscript
+                    cell = _cell(r, k, num, tier, n_seeds)
+                    prov_note = (f'<span style="font-size:9px;color:#8b949e;'
+                                 f'display:block;">{_esc(safety_prov)}</span>')
+                    tds.append(cell.rstrip("</td>") + prov_note + "</td>")
                 else:
                     tds.append(_cell(r, k, num, tier, n_seeds))
             chip = (f'<span class="n-chip {"eval" if tier=="EVALUATION" else "scr"}">'
@@ -2953,7 +2974,24 @@ def render_master(rows: list[dict], table: dict[str, dict],
     parts.append(
         '<div class="sub">LLM activation-steering autoresearch &middot; '
         f'{len(flat)} experiments &middot; {len([g for g in grouped if grouped[g]])} '
-        'campaigns &middot; 70 hypotheses &middot; internal QA</div>\n')
+        'campaigns &middot; hypotheses with real data: ~20 &middot; internal QA</div>\n')
+    # Honest status banner — required by reviewer P0 (IMPROVEMENTS_100 item 66-69)
+    parts.append(
+        '<div style="background:#3a1a1a;border:2px solid #f85149;border-radius:6px;'
+        'padding:14px 18px;margin:16px 0;font-family:\'IBM Plex Mono\',monospace;'
+        'font-size:13px;line-height:1.55;">'
+        '<b style="color:#f85149;">STATUS: METHOD NEWLY BUILT &mdash; NOT YET VALIDATED</b><br>'
+        'Zero external-ready results. The safety benchmark (CR column) is a synthetic '
+        '22-string regex on 10 prompts &mdash; NOT the real JailbreakBench. '
+        'Five external reviewers returned a unanimous reject (2/10). '
+        'The one rigorous prior result is negative: on the real AxBench benchmark, '
+        '~97% of the steering effect is captured by a label-shuffled direction. '
+        'See <a href="https://github.com/dlmastery/steeringresearch/blob/master/STATUS.md" '
+        'style="color:#58a6ff;">STATUS.md</a> for the per-claim breakdown and '
+        '<a href="https://github.com/dlmastery/steeringresearch/blob/master/'
+        'audits/reviews/IMPROVEMENTS_100.md" style="color:#58a6ff;">IMPROVEMENTS_100.md</a> '
+        'for the roadmap. Internal QA pass &mdash; external review pending.'
+        '</div>\n')
     parts.append(_GROUNDING_INTRO)
     parts.append(_mast_row())
     parts.append(
@@ -2972,9 +3010,11 @@ def render_master(rows: list[dict], table: dict[str, dict],
         'a <span class="chip-scr">SCREENING (n&le;3)</span> or '
         '<span class="chip-eval">EVALUATION (n&ge;7)</span> chip. Every row here is '
         'SCREENING (n=1) — candidate signal, not an external claim.</li>\n'
-        '    <li><b>Safety is a hard gate.</b> A non-zero <code>CR</code> '
-        '(JailbreakBench compliance) is a leak and an automatic DISCARD regardless of '
-        'behavior score.</li>\n'
+        '    <li><b>Safety metric caveat.</b> The <code>CR</code> column is a '
+        'synthetic rule-based refusal metric (22-string regex on 10 synthetic prompts) '
+        '— <em>not</em> the real JailbreakBench benchmark, which is not yet wired. '
+        'A non-zero value is an automatic DISCARD in the composite, but no external '
+        'safety claim rests on this instrument. See STATUS.md.</li>\n'
         '    <li><b>Navigation.</b> click a <b>hypothesis-grid cell</b> &rarr; that '
         'hypothesis\'s page (statement, falsifier, predicted &Delta;, verdict, '
         'campaign writeup, all its runs); click a <b>runs-table row link</b> &rarr; '
