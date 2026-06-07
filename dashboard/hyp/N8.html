@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hypothesis N8 — Controllability != interpretability decomposition</title>
+<title>Hypothesis N8 — Controllability != interpretability</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
  :root{
@@ -557,18 +557,18 @@
 <div class="head-grid">
   <div class="head-left">
     <div class="tag-display">N8</div>
-    <div class="sub"><span class="hyp-cell v-pending" style="cursor:default;width:auto;padding:2px 8px;display:inline-block">PENDING</span> &nbsp; Controllability != interpretability decomposition &nbsp;&middot;&nbsp; 0 runs</div>
+    <div class="sub"><span class="hyp-cell v-pending" style="cursor:default;width:auto;padding:2px 8px;display:inline-block">PENDING</span> &nbsp; Controllability != interpretability &nbsp;&middot;&nbsp; 0 runs</div>
     <div class="mast-row"><a class="mast-pill repo" href="https://github.com/dlmastery/steeringresearch" target="_blank" rel="noopener">source &middot; dlmastery/steeringresearch</a><a class="mast-pill paper" href="https://github.com/dlmastery/steeringresearch/blob/master/paper/PAPER.md" target="_blank" rel="noopener">paper</a><a class="mast-pill lit" href="https://github.com/dlmastery/steeringresearch/blob/master/FINDINGS.md" target="_blank" rel="noopener">FINDINGS</a><a class="mast-pill lit" href="https://github.com/dlmastery/steeringresearch/blob/master/IDEA_TABLE.md" target="_blank" rel="noopener">IDEA_TABLE</a><a class="mast-pill lit" href="https://dlmastery.github.io/steeringresearch/awesome-steering.html" target="_blank" rel="noopener">awesome steering survey</a><a class="mast-pill lit" href="https://dlmastery.github.io/steeringresearch/mindmap.html" target="_blank" rel="noopener">mindmap</a><a class="live-link" href="https://dlmastery.github.io/steeringresearch/" target="_blank" rel="noopener">live &middot; GitHub Pages</a></div>
-    <div style="margin-top:6px"><a class="mast-pill paper" href="https://github.com/dlmastery/steeringresearch/blob/master/hypotheses/N_novel/N8_controllability_not_interpretability.md" target="_blank" rel="noopener">design doc &middot; N8</a></div>  </div>
+    <div style="margin-top:6px"></div>  </div>
   <div class="head-right">
     <a class="back" href="../index.html">&larr; back to master grid</a>
   </div>
 </div>
 <section class="card"><h2>Hypothesis card</h2>
-<p><span class="hyp-cell v-pending" style="cursor:default;width:auto;padding:2px 8px;display:inline-block">PENDING</span> <b>N8 — Controllability != interpretability decomposition</b></p>
-<h3>Falsifiable hypothesis</h3><div class="md-body"><p>A causal-objective dictionary yields fewer, more causal atoms than reconstruction SAEs and beats AxBench SAE results.</p></div>
-<h3>Primary metric + threshold</h3><div class="md-body"><p>Causal-objective dictionary vs GemmaScope SAE on steering; causal better [NEEDS VERIFICATION]</p></div>
-<h3>Current verdict (IDEA_TABLE.md)</h3><div class="md-body"><p>PENDING</p></div>
+<p><span class="hyp-cell v-pending" style="cursor:default;width:auto;padding:2px 8px;display:inline-block">PENDING</span> <b>N8 — Controllability != interpretability</b></p>
+<h3>Falsifiable hypothesis</h3><div class="md-body"><p>BACKLOG</p></div>
+<h3>Primary metric + threshold</h3><div class="md-body"><p><code>backlog/N_novel/</code></p></div>
+<h3>Current verdict (IDEA_TABLE.md)</h3><div class="md-body"></div>
 </section>
 <section class="card" id="hillclimb-hyp"><h2>Hill-climb (rung-2.5 coordinate descent)</h2>
 <div class="hc-empty">
@@ -609,6 +609,6 @@
   <p class="empty">No runs logged for this hypothesis yet — it is pre-registered in IDEA_TABLE.md and awaiting its first experiment.</p>
 </section>
 <div class="doc-footer"><a href="https://github.com/dlmastery/steeringresearch" target="_blank" rel="noopener">Repo</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/paper/PAPER.md" target="_blank" rel="noopener">Paper</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/FINDINGS.md" target="_blank" rel="noopener">FINDINGS</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/IDEA_TABLE.md" target="_blank" rel="noopener">IDEA_TABLE</a> &middot; <a href="https://dlmastery.github.io/steeringresearch/" target="_blank" rel="noopener">GitHub Pages</a></div>
-<div class="meta">composite formula &nbsp; <code>composite = behavior_efficacy - lambda_cap  * max(0, mmlu_drop_pp) - lambda_coh  * max(0, dppl_norm) - lambda_coh_rep * max(0, repetition_rate) - lambda_safe * compliance_rate - lambda_sel  * max(0, harmless_refusal_rate) - lambda_geo  * max(0, offshell_displacement)</code><br>composite fingerprint &nbsp; <code>a9001e87087e</code> &middot; git SHA &nbsp; <code>d399380</code> &middot; generated &nbsp; <code>2026-06-05T06:24:48</code> &middot; hypothesis <code>N8</code><br>Internal QA pass &mdash; external review pending. &middot; Generated by <code>steering.dashboard</code> &middot; brutalist editorial lab notebook &middot; self-contained inline CSS, Google Fonts with offline serif/mono fallback.</div>
+<div class="meta">composite formula &nbsp; <code>composite = behavior_efficacy - lambda_cap  * max(0, mmlu_drop_pp) - lambda_coh  * (dppl_cap * max(0, dppl_norm) / (dppl_cap + max(0, dppl_norm))) - lambda_coh_rep * max(0, repetition_rate) - lambda_safe * compliance_rate - lambda_sel  * max(0, harmless_refusal_rate) - lambda_geo  * max(0, offshell_displacement)</code><br>composite fingerprint &nbsp; <code>8509c229b58f</code> &middot; git SHA &nbsp; <code>bd5d4e7</code> &middot; generated &nbsp; <code>2026-06-06T17:45:09</code> &middot; hypothesis <code>N8</code><br>Internal QA pass &mdash; external review pending. &middot; Generated by <code>steering.dashboard</code> &middot; brutalist editorial lab notebook &middot; self-contained inline CSS, Google Fonts with offline serif/mono fallback.</div>
 </body>
 </html>
