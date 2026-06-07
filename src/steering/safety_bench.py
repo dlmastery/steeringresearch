@@ -11,18 +11,24 @@ so a driver can iterate any benchmark identically::
 - ``harmful=False`` → a benign request (the XSTest over-refusal set); a SAFE
   model COMPLIES — refusing it is over-refusal (Axis-5 selectivity).
 
-Downloads go through ``datasets.load_dataset`` (HF Hub), wrapped in the same
-truststore guard that ``axbench.py`` / ``judge.py`` use for the SSL-intercepting
-middlebox, and cached via ``lru_cache``. Datasets are PUBLIC (no token).
+Downloads fetch the dataset's DATA FILES directly via ``hf_hub_download`` +
+pandas (the exact pattern ``axbench.py`` uses), wrapped in the same truststore
+guard for the SSL-intercepting middlebox, and cached via ``lru_cache``. We do NOT
+use ``datasets.load_dataset`` because its file-resolution transport is broken by
+this machine's SSL middlebox (it 403/ConnectionErrors where ``hf_hub_download``
+succeeds). Verified on this machine 2026-06-06.
 
-Several HF dataset ids below are marked ``# [VERIFY hf id]``: they are the
-best-known public mirrors but have NOT been re-confirmed on this machine. Each
-benchmark therefore also ships a TINY, obviously-synthetic bundled fallback so
-the unit tests (and an offline smoke) run with zero network. The fallback prompts
-are redacted placeholders — they are NOT operational attack content.
+Access status (verified against the live Hub 2026-06-06):
+  - jailbreakbench  → JailbreakBench/JBB-Behaviors  UNGATED (harmful + benign CSVs).
+  - xstest          → Paul/XSTest                   UNGATED (over-refusal set).
+  - strongreject / harmbench / advbench / sorrybench → GATED (walledai/* and
+    sorry-bench/*). The repos exist but the data files return HTTP 403 until the
+    HF account is granted access on each dataset page. Until then these raise
+    ``SafetyBenchUnavailable`` with the exact request-access URL; a tiny redacted
+    bundled fallback keeps the harness + tests offline.
 
-Reproducibility: ``manifest()`` returns the pinned ids + licenses; the per-row
-normalizers tolerate the common column-name variants across these datasets.
+Reproducibility: ``manifest()`` returns the pinned ids + files + licenses; the
+per-row normalizers tolerate the common column-name variants across datasets.
 """
 from __future__ import annotations
 
@@ -56,65 +62,83 @@ class SafetyBenchUnavailable(Exception):
 
 
 # ---------------------------------------------------------------------------
-# The pinned registry. ``split`` is the benchmark's NATURAL HF split (used when
-# the caller leaves the ``split="test"`` sentinel). ``config`` is the HF builder
-# config (None when the dataset has a single default config).
+# The pinned registry. ``files`` maps a logical split -> the repo-relative DATA
+# FILE path (fetched directly via hf_hub_download). ``split`` is the NATURAL
+# split (used when the caller leaves the ``split="test"`` sentinel). ``fmt`` is
+# the file format. ``gated`` flags datasets whose data files require accepting
+# the dataset terms on HF before they return anything but a 403.
 # ---------------------------------------------------------------------------
 SAFETY_BENCHMARKS: dict[str, dict[str, Any]] = {
     "jailbreakbench": {
         "hf_id": "JailbreakBench/JBB-Behaviors",
-        "config": "behaviors",
+        "files": {"harmful": "data/harmful-behaviors.csv",
+                  "benign": "data/benign-behaviors.csv"},
         "split": "harmful",
+        "fmt": "csv",
+        "gated": False,
         "license": "MIT",
-        "harmful": True,
-        "notes": "JBB-Behaviors (Chao et al. 2024, arXiv:2404.01318): 100 "
-                 "harmful behaviors; 'Goal' is the prompt. Baseline CR must be 0%.",
-    },
-    "strongreject": {
-        "hf_id": "walledai/StrongREJECT",  # [VERIFY hf id]
-        "config": None,
-        "split": "train",
-        "license": "MIT",
-        "harmful": True,
-        "notes": "StrongREJECT (Souly et al. 2024, arXiv:2402.10260): forbidden "
-                 "prompts with a strict compliance rubric.",
-    },
-    "harmbench": {
-        "hf_id": "walledai/HarmBench",  # [VERIFY hf id]
-        "config": "standard",
-        "split": "train",
-        "license": "MIT",
-        "harmful": True,
-        "notes": "HarmBench (Mazeika et al. 2024, arXiv:2402.04249): standardized "
-                 "red-team behaviors; 'standard' config is the core text set.",
-    },
-    "advbench": {
-        "hf_id": "walledai/AdvBench",  # [VERIFY hf id]
-        "config": None,
-        "split": "train",
-        "license": "MIT",
-        "harmful": True,
-        "notes": "AdvBench harmful behaviors (Zou et al. 2023, arXiv:2307.15043, "
-                 "the GCG attack suite).",
+        "harmful": True,  # default split is the harmful set
+        "notes": "JBB-Behaviors (Chao et al. 2024, arXiv:2404.01318): 100 harmful "
+                 "+ 100 benign behaviors; 'Goal' is the prompt. UNGATED. Baseline "
+                 "CR must be 0%. Use split='benign' for the over-refusal set.",
     },
     "xstest": {
-        "hf_id": "walledai/XSTest",  # [VERIFY hf id]
-        "config": None,
+        "hf_id": "Paul/XSTest",
+        "files": {"test": "xstest_prompts.csv"},
         "split": "test",
+        "fmt": "csv",
+        "gated": False,
         "license": "CC-BY-4.0",
         "harmful": False,
         "notes": "XSTest (Rottger et al. 2024, arXiv:2308.01263): 250 SAFE prompts "
-                 "(over-refusal set) + 200 unsafe contrasts. harmful derived from "
-                 "the type/label column; safe prompts must NOT be refused.",
+                 "(over-refusal set) + 200 unsafe contrasts, label in {safe,unsafe}. "
+                 "UNGATED mirror Paul/XSTest. safe prompts must NOT be refused.",
+    },
+    "strongreject": {
+        "hf_id": "walledai/StrongREJECT",
+        "files": {"train": "data/train-00000-of-00001.parquet"},
+        "split": "train",
+        "fmt": "parquet",
+        "gated": True,
+        "license": "MIT",
+        "harmful": True,
+        "notes": "StrongREJECT (Souly et al. 2024, arXiv:2402.10260): forbidden "
+                 "prompts with a strict compliance rubric. GATED on HF.",
+    },
+    "harmbench": {
+        "hf_id": "walledai/HarmBench",
+        "files": {"standard": "standard/train-00000-of-00001.parquet",
+                  "contextual": "contextual/train-00000-of-00001.parquet",
+                  "copyright": "copyright/train-00000-of-00001.parquet"},
+        "split": "standard",
+        "fmt": "parquet",
+        "gated": True,
+        "license": "MIT",
+        "harmful": True,
+        "notes": "HarmBench (Mazeika et al. 2024, arXiv:2402.04249): standardized "
+                 "red-team behaviors; 'standard' is the core text set. GATED on HF.",
+    },
+    "advbench": {
+        "hf_id": "walledai/AdvBench",
+        "files": {"train": "data/train-00000-of-00001.parquet"},
+        "split": "train",
+        "fmt": "parquet",
+        "gated": True,
+        "license": "MIT",
+        "harmful": True,
+        "notes": "AdvBench harmful behaviors (Zou et al. 2023, arXiv:2307.15043, "
+                 "the GCG attack suite). GATED on HF.",
     },
     "sorrybench": {
-        "hf_id": "sorry-bench/sorry-bench-202406",  # [VERIFY hf id]
-        "config": None,
+        "hf_id": "sorry-bench/sorry-bench-202406",
+        "files": {"train": "question.jsonl"},
         "split": "train",
+        "fmt": "jsonl",
+        "gated": True,
         "license": "MIT",
         "harmful": True,
         "notes": "SORRY-Bench (Xie et al. 2024, arXiv:2406.14598): 450 unsafe "
-                 "instructions across a fine-grained safety taxonomy.",
+                 "instructions across a fine-grained safety taxonomy. GATED on HF.",
     },
 }
 
@@ -132,12 +156,14 @@ def list_safety_benchmarks() -> list[str]:
 
 
 def manifest() -> dict[str, dict[str, Any]]:
-    """Pinned hf ids + licenses + notes, for the reproducibility appendix."""
+    """Pinned hf ids + files + licenses + notes, for the reproducibility appendix."""
     return {
         name: {
             "hf_id": spec["hf_id"],
-            "config": spec["config"],
+            "files": dict(spec["files"]),
             "split": spec["split"],
+            "fmt": spec["fmt"],
+            "gated": spec["gated"],
             "license": spec["license"],
             "notes": spec["notes"],
         }
@@ -237,22 +263,49 @@ def bundled(name: str) -> list[SafetyItem]:
 
 
 # ---------------------------------------------------------------------------
-# Download (cached, truststore-guarded, robust).
+# Download (cached, truststore-guarded, robust). Fetches the DATA FILE directly
+# via hf_hub_download + pandas — the transport that works behind this machine's
+# SSL middlebox (datasets.load_dataset 403s here; see module docstring).
 # ---------------------------------------------------------------------------
 @lru_cache(maxsize=16)
-def _load_hf(hf_id: str, config: Optional[str], split: str) -> tuple[dict, ...]:
-    """Fetch one HF split as a tuple of plain dict rows (immutable for caching)."""
+def _load_hf(hf_id: str, filename: str, fmt: str) -> tuple[dict, ...]:
+    """Fetch one HF data file as a tuple of plain dict rows (immutable for caching).
+
+    Raises ``SafetyBenchUnavailable`` on any failure; a 403 (gated dataset) is
+    surfaced with the exact request-access URL so the operator knows the one
+    action that unblocks it.
+    """
     try:
-        from datasets import load_dataset
-    except Exception as exc:  # pragma: no cover - datasets optional at import
-        raise SafetyBenchUnavailable(f"`datasets` not importable: {exc}") from exc
+        import pandas as pd
+        from huggingface_hub import hf_hub_download
+        from huggingface_hub.errors import GatedRepoError
+    except Exception as exc:  # pragma: no cover - deps present in this env
+        raise SafetyBenchUnavailable(f"hf deps not importable: {exc}") from exc
     try:
-        ds = (load_dataset(hf_id, config, split=split) if config
-              else load_dataset(hf_id, split=split))
+        path = hf_hub_download(repo_id=hf_id, filename=filename, repo_type="dataset")
+    except GatedRepoError as exc:
+        raise SafetyBenchUnavailable(
+            f"{hf_id} is GATED — accept the dataset terms at "
+            f"https://huggingface.co/datasets/{hf_id} (logged into the HF account "
+            f"whose token is configured), then retry. ({exc})") from exc
     except Exception as exc:
         raise SafetyBenchUnavailable(
-            f"could not load {hf_id} (config={config}, split={split}): {exc}") from exc
-    return tuple(dict(r) for r in ds)
+            f"could not fetch {hf_id}:{filename} ({exc})") from exc
+    try:
+        if fmt == "csv":
+            df = pd.read_csv(path)
+        elif fmt == "parquet":
+            df = pd.read_parquet(path)
+        elif fmt == "jsonl":
+            df = pd.read_json(path, lines=True)
+        else:  # pragma: no cover - registry-controlled
+            raise SafetyBenchUnavailable(f"unknown fmt {fmt!r} for {hf_id}")
+    except SafetyBenchUnavailable:
+        raise
+    except Exception as exc:
+        raise SafetyBenchUnavailable(
+            f"could not parse {hf_id}:{filename} as {fmt} ({exc})") from exc
+    return tuple(df.to_dict("records"))
 
 
 def load_safety_benchmark(
@@ -265,9 +318,10 @@ def load_safety_benchmark(
 
     Args:
         name: one of :func:`list_safety_benchmarks`.
-        split: HF split; the sentinel ``"test"`` means "use the benchmark's
-            natural split" (per :data:`SAFETY_BENCHMARKS`). Any other value is
-            passed straight to ``load_dataset``.
+        split: logical split; the sentinel ``"test"`` means "use the benchmark's
+            natural split" (per :data:`SAFETY_BENCHMARKS`). Any other value
+            selects the corresponding data file in ``spec["files"]`` (e.g.
+            ``"benign"`` for the JBB over-refusal set).
         n: cap the number of returned items (None = all).
         use_fallback: on a download/parse failure (or zero usable rows), return
             the bundled synthetic set instead of raising. Default False so a
@@ -282,14 +336,27 @@ def load_safety_benchmark(
             f"unknown benchmark {name!r}; known: {list_safety_benchmarks()}")
     spec = SAFETY_BENCHMARKS[name]
     hf_split = spec["split"] if split == "test" else split
+    files = spec["files"]
+    if hf_split not in files:
+        raise SafetyBenchUnavailable(
+            f"{name}: no split {hf_split!r}; available: {sorted(files)}")
+    filename = files[hf_split]
+
+    # For JBB the harmful/benign sets share a repo but differ in harm label.
+    harmful_default = bool(spec["harmful"])
+    if name == "jailbreakbench":
+        harmful_default = hf_split != "benign"
 
     try:
-        rows = _load_hf(spec["hf_id"], spec["config"], hf_split)
+        rows = _load_hf(spec["hf_id"], filename, spec["fmt"])
         normalize = _NORMALIZERS[name]
         items: list[SafetyItem] = []
         for row in rows:
             norm = normalize(dict(row), name)
             if norm is not None:
+                # JBB benign split: same schema, but these are benign (over-refusal).
+                if name == "jailbreakbench":
+                    norm["harmful"] = harmful_default
                 items.append(norm)
         if not items:
             raise SafetyBenchUnavailable(

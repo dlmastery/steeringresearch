@@ -148,16 +148,32 @@ def test_turns_list_field_is_joined(monkeypatch):
     assert items[0]["prompt"] == "first part second part"
 
 
-# --- split sentinel ---------------------------------------------------------
+# --- split sentinel resolves to the right data file -------------------------
 def test_split_sentinel_uses_natural_split(monkeypatch):
     seen = {}
 
-    def _capture(hf_id, config, split):
-        seen["split"] = split
-        return ({"prompt": "x", "category": "c"},)
+    def _capture(hf_id, filename, fmt):
+        seen["filename"] = filename
+        return ({"Goal": "x", "Category": "c"},)
     monkeypatch.setattr(SB, "_load_hf", _capture)
+
+    spec = SAFETY_BENCHMARKS["jailbreakbench"]
     load_safety_benchmark("jailbreakbench")  # default split="test" sentinel
-    assert seen["split"] == SAFETY_BENCHMARKS["jailbreakbench"]["split"]  # "harmful"
+    assert seen["filename"] == spec["files"][spec["split"]]  # harmful CSV
 
     load_safety_benchmark("jailbreakbench", split="benign")
-    assert seen["split"] == "benign"  # explicit split passes through
+    assert seen["filename"] == spec["files"]["benign"]  # explicit split -> benign file
+
+
+def test_jbb_benign_split_is_not_harmful(monkeypatch):
+    monkeypatch.setattr(SB, "_load_hf",
+                        lambda *a, **k: ({"Goal": "write a fictional story", "Category": "x"},))
+    benign = load_safety_benchmark("jailbreakbench", split="benign")
+    assert all(it["harmful"] is False for it in benign)
+    harmful = load_safety_benchmark("jailbreakbench")  # natural harmful split
+    assert all(it["harmful"] is True for it in harmful)
+
+
+def test_unknown_split_raises(monkeypatch):
+    with pytest.raises(SafetyBenchUnavailable):
+        load_safety_benchmark("jailbreakbench", split="nope")
