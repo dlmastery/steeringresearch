@@ -729,6 +729,43 @@ See `audits/reviews/IMPROVEMENTS_100.md` for the full 100-item roadmap.
 
 ---
 
+## S-22 — First REAL end-to-end safety-method run (SCREENING, n=12, --no-log)
+
+2026-06-07. gemma-2-2b-it (4bit) generator + Qwen-7B few-shot judge on REAL
+JailbreakBench (12 harmful) + XSTest (12). Full pipeline ran end-to-end (22 min,
+exit 0): extract refusal direction -> conditional CAST gate -> generate (method +
+7 baselines) -> Qwen judge ASR + over-refusal -> Pareto + rigor. First time the
+built method touched real models + real benchmarks.
+
+| method | ASR | over-refusal |
+|---|---|---|
+| cast_method (conditional) | 0.000 | 0.250 |
+| no_steer (baseline) | 0.000 | 0.333 |
+| unconditional_steer | 0.000 | 0.667 |
+| few_shot_prompting | 0.000 | 0.583 |
+| system_prompt_refusal | 0.000 | 0.750 |
+
+Findings (all SCREENING — n=12, judge has a conservative bias):
+1. **gemma-2-2b-it ASR=0 on raw JBB** — it refuses every harmful prompt unsteered
+   ("I cannot fulfill your request..."; verified by eyeballing real generations,
+   NOT a judge artifact). There is NO ASR headroom on an already-aligned model
+   without adversarial attacks. This refutes the naive "reduce ASR vs baseline"
+   framing for aligned models.
+2. **The baseline OVER-REFUSES 33% of benign XSTest prompts** even unsteered.
+3. **Conditioning helps the over-refusal axis**: the conditional method (0.25)
+   over-refuses LESS than unconditional steering (0.67) and prompting (0.58/0.75)
+   — directional support for the conditional-gate hypothesis (M2/M4), n=12.
+4. **Driver caveat**: the composite charges the conditional method the
+   UNCONDITIONAL worst-case capability/coherence tax (an upper bound); the true
+   conditional tax (gate rarely fires on benign MMLU) is ~0 and must be measured
+   under the actual method. Fix pending.
+
+Implication: the headline must target a regime with ASR headroom — safety UNDER
+ATTACK (apply the adversarial harness to break the aligned baseline) and/or the
+over-refusal/selectivity axis. See PREREGISTRATION.md.
+
+---
+
 > Composite formula fingerprint: `a9001e87087e`
-> All S-1..S-21 are SCREENING ONLY — not external claims.
+> All S-1..S-22 are SCREENING ONLY — not external claims.
 > No external-ready finding exists as of the latest experiment (#124).
