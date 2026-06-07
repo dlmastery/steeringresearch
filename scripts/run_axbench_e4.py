@@ -9,6 +9,9 @@ concept population.
 Usage:
   PYTHONPATH=src python scripts/run_axbench_e4.py --model google/gemma-2-2b-it \
       --quant none --layer 20 --dataset concept500 --concepts 100
+
+NOTE: the composite field now holds only the fingerprinted 5-axis composite; the
+raw behavior metric (mean DiffMean-vs-PCA cosine) is in method_value/extra.
 """
 from __future__ import annotations
 
@@ -108,7 +111,9 @@ def main() -> None:
             method_value=mean_c,
             method_extra={"mean_cosine": mean_c, "median_cosine": med_c, "p5_cosine": p5,
                           "fraction_ge_0.9": frac_high, "n_concepts": len(concepts)},
-            composite=round(mean_c, 4), behavior_efficacy=mean_c,
+            # Pure geometry check (no generation/judge/5 axes); the mean cosine is
+            # in method_value, so composite=None keeps the column honest.
+            composite=None, behavior_efficacy=mean_c,
             behavior_scorer="geometry_cosine", started=t0)
     print(f"  elapsed {time.time()-t0:.1f}s")
 

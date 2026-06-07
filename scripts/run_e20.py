@@ -1,5 +1,8 @@
 """run_e20.py — E20 SAE-TS vs DiffMean 3-stack screening driver.
 
+NOTE: the composite field now holds only the fingerprinted 5-axis composite; the
+raw behavior metric (Gram mass) is in method_value/extra.
+
 Pipeline (composes the shared harness with the new `steering.sae` module):
   1. load the model (fake smoke or real Gemma);
   2. for 3 behaviors, extract the DiffMean vector at the injection layer
@@ -185,7 +188,9 @@ def main() -> None:
         method_extra={"behaviors": behaviors, "ppl_base": round(ppl_base, 3),
                       "ppl_stack": round(ppl_dm, 3), "coherence": round(coh_dm, 4),
                       "gram_mass": round(gm_dm, 4)},
-        composite=round(coh_dm - 1.0, 4), perplexity=ppl_dm, dppl_norm=dppl_dm,
+        # No 5-axis composite (gram_mass is the primary metric, in
+        # method_value/extra); composite=None keeps the column honest.
+        composite=None, perplexity=ppl_dm, dppl_norm=dppl_dm,
         behavior_efficacy=coh_dm, elapsed_sec=0.0,
     )
     # Row 2: SAE-TS 3-stack (the optimized-vector condition)
@@ -200,7 +205,9 @@ def main() -> None:
                       "gram_reduction_vs_diffmean": round(gram_reduction, 4),
                       "coherence_gap_vs_diffmean": round(coherence_gap, 4),
                       "verdict": verdict},
-        composite=round(coh_ts - 1.0, 4), perplexity=ppl_ts, dppl_norm=dppl_ts,
+        # No 5-axis composite (gram_mass is the primary metric, in
+        # method_value/extra); composite=None keeps the column honest.
+        composite=None, perplexity=ppl_ts, dppl_norm=dppl_ts,
         behavior_efficacy=coh_ts, started=t0,
     )
 

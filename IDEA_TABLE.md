@@ -162,9 +162,125 @@ A11=DYNAMICS(trajectory) | A12=BASIS/SUPERPOSITION
 
 ---
 
+## BLOCK G — Safety method components (the NEW conditional multi-intent safety-steering method)
+
+> These rows correspond to the components of the CAST-style conditional multi-intent safety-steering
+> method specified in `src/steering/DESIGN.md` and `docs/METHOD_LADDER.md`. Each is a
+> falsifiable hypothesis-under-test. Status is **UNTESTED (BUILT)** where the component
+> is implemented and unit-tested offline against FakeResidualLM but has not yet been
+> validated on real models or real safety benchmarks. Status is **RUN PENDING** where
+> the experiment has been pre-registered in `docs/METHOD_LADDER.md` but not yet executed.
+> All numeric thresholds below are **pre-registered targets, not measured results**.
+> Align with STATUS.md — the method is newly built, not yet validated; zero external-ready
+> results exist.
+
+| ID | Short title | Block | Primary axis | Falsifiable hypothesis (1 line) | Primary metric + success threshold (pre-registered) | Status | Rung reached | Notes |
+|----|-------------|-------|-------------|--------------------------------|------------------------------------------------------|--------|-------------|-------|
+| M1 | Refusal direction validity | G | A2 (direction) | An Arditi-style DiffMean direction extracted from real safety contrasts (harmful vs harmless) is stable and specific: bootstrap cos to full-data direction >= 0.90 on >= 50 contrast pairs. | Bootstrap cos to full-data direction >= 0.90; cos(refusal_direction, DiffMean_baseline) > 0.85 (pre-registered; see METHOD_LADDER Rung 0). | UNTESTED (BUILT) — extract_refusal_direction() exists in safety_target.py; offline unit test passes on FakeResidualLM; real safety-contrast extraction NOT yet run | Rung 0 NOT STARTED | Safety target component; METHOD_LADDER.md Rung 0. Real measurement requires real harmful/harmless prompt pairs and real Gemma activations. |
+| M2 | Conditional gate fires on harmful, not benign | G | A5 (condition) | A CAST-style in-forward conditional gate (read h@L_c, cosine threshold) fires on >= 9/10 held-out harmful prompts and <= 1/10 benign prompts in ONE forward pass, with <= 20% latency overhead. | Harmful recall >= 90%; false-positive rate <= 10%; latency overhead <= 20% vs no-gate baseline (pre-registered; see METHOD_LADDER Rung 1). | UNTESTED (BUILT) — CASTSteerer.generate() implements the conditional gate; offline unit test asserts NO-OP on benign and FIRES on harmful with FakeResidualLM; real in-forward gate NOT yet run on Gemma | Rung 1 NOT STARTED | CAST-style conditioning (axis A5); METHOD_LADDER.md Rung 1. Current status per STATUS.md: gate.py is offline numpy; hooks.py not wired for real conditional pipeline. |
+| M3 | Multi-intent composition without interference | G | A12 (superposition) | Composing K >= 2 Gram-Schmidt-orthogonalized safety directions via the multi_intent module achieves per-category refusal rate >= 80% at XSTest over-refusal <= 5% on a held-out multi-intent eval set. | Per-category refusal rate >= 80%; XSTest over-refusal <= 5%; Gram-mass interference budget not exceeded (pre-registered; see METHOD_LADDER Rung 2). | UNTESTED (BUILT) — gram_schmidt() and compose() in multi_intent.py pass offline unit tests; real multi-intent evaluation NOT yet run | Rung 2 NOT STARTED | Multi-intent stacking (axis A12 + A5); METHOD_LADDER.md Rung 2. Calibrated safety classifier (Llama-Guard-3 or ShieldGemma, >= 0.90 human agreement) required before this rung can be evaluated. |
+| M4 | Conditional gate reduces over-refusal vs unconditional | G | A5 (condition) | The conditional gate reduces XSTest over-refusal by >= 70% compared to unconditional safety steering at matched harmful-refusal rate, confirmed at n >= 7 seeds with paired Wilcoxon p < 0.05. | XSTest over-refusal: gated <= 1%, unconditional > 5% at matched harmful-refusal; MMLU drop <= 2 pp; n >= 7 seeds, paired Wilcoxon p < 0.05 (pre-registered; see METHOD_LADDER Rung 3). | RUN PENDING — not started; requires Rung 1 and Rung 2 gates to be cleared first | Rung 3 NOT STARTED | Over-refusal control (axis A5 + A3); METHOD_LADDER.md Rung 3. Primary safety-capability Pareto axis. JailbreakBench ASR + StrongREJECT + XSTest + MMLU >= 500 all required. |
+| M5 | Method Pareto-dominates CAST and prompting on ASR vs over-refusal | G | A5+A2+A12 | The conditional multi-intent safety-steering method Pareto-dominates CAST baseline and a prompting baseline on the JailbreakBench ASR vs XSTest over-refusal frontier at <= 2 pp MMLU drop, confirmed at n >= 7 seeds. | Pareto dominance confirmed; worst evaluation seed beats best baseline seed (ordinal gate); paired Wilcoxon + 95% bootstrap CI + Holm-Bonferroni + ordinal gate all pass (pre-registered; see README.md success criterion). | RUN PENDING — not started; requires Rungs 0–3 to be cleared first | Rung 4 NOT STARTED | The primary publication-grade claim; METHOD_LADDER.md Rung 4. Off-family Qwen-7B judge (AUC >= 0.85 required; current judge is AUC 0.68, below bar) must be replaced or augmented before this rung. |
+| M6 | ASR reduction by refusal direction (JailbreakBench) | G | A2 (direction) | Steering with the extracted refusal direction reduces JailbreakBench attack success rate vs no-steer baseline at the same MMLU drop budget. | JailbreakBench ASR reduction >= X pp vs no-steer baseline (X to be pre-registered before run; not yet set). | RUN PENDING — not started; JailbreakBench not yet wired (STATUS.md: safety metric is currently synthetic 10-prompt regex labeled mislabeled "JailbreakBench CR") | Rung 3 NOT STARTED | Safety efficacy (axis A2 + A5); METHOD_LADDER.md Rung 3. Real JailbreakBench end-to-end wiring is a P0 item in audits/reviews/IMPROVEMENTS_100.md (item C). |
+| M7 | XSTest over-refusal axis (benign-input selectivity) | G | A5 (condition) | The steered method refuses <= 1% of XSTest benign prompts that the unsteered model accepts, confirming that safety steering does not systematically break helpfulness on benign inputs. | XSTest over-refusal <= 1% absolute increase over baseline (pre-registered; see README.md success criterion). | RUN PENDING — not started; XSTest not yet wired (STATUS.md: XSTest missing) | Rung 3 NOT STARTED | Selectivity / over-refusal (axis A5); METHOD_LADDER.md Rung 3. Paired with M4 (the conditional-vs-unconditional comparison). |
+
+---
+
+## BACKLOG — hypotheses moved to backlog/ (not yet runnable)
+
+> These 34 hypotheses have been moved from `hypotheses/` to `backlog/` because the
+> infrastructure they require does not yet exist. See `backlog/README.md` for the
+> per-group infrastructure requirements. None of these is counted in the tested or
+> active hypothesis totals. Status is BACKLOG in all rows below.
+> Each row retains its original hypothesis statement and pre-registered metric exactly
+> as it appeared in the hypothesis registry; do NOT edit the hypothesis or metric
+> after an idea dir has been created (HARKing prevention).
+
+| ID | Short title | Block | Infrastructure needed before it can run | Status | Backlog group |
+|----|-------------|-------|-----------------------------------------|--------|--------------|
+| E5 | 4-bit vs fp16 invariance | A | Real-model run at both quantizations on a fixed behavior; infra exists but no run allocated. | BACKLOG | `backlog/A_foundations/` |
+| E6 | Over-steering linear probe | A | Calibrated probe on layer activations predicting pre-generation incoherence; no probe code yet. | BACKLOG | `backlog/A_foundations/` |
+| E8 | IT->base transfer | A | Real base-model weights and a reproduction run; base Gemma license and download needed. | BACKLOG | `backlog/A_foundations/` |
+| E9 | CAST harmless refusal gate | B | Conditional gate (cast.py / hooks.py) wired end-to-end on real Gemma; METHOD_LADDER Rung 1 must clear first. | BACKLOG | (blocked on M2) |
+| E10 | Category condition orthogonality | B | Real safety-category contrast activations; depends on refusal direction extraction (M1). | BACKLOG | (blocked on M1) |
+| E11 | OR-gate coverage vs N | B | cast.py end-to-end; METHOD_LADDER Rung 1 must clear first. | BACKLOG | (blocked on M2) |
+| E12 | Energy-ratio vs cosine gate PR-AUC | B | cast.py end-to-end + a calibrated gate comparison harness; not implemented. | BACKLOG | (blocked on M2) |
+| E13 | Early condition layer latency | B | cast.py end-to-end; latency measurement harness. | BACKLOG | (blocked on M2) |
+| E14 | Discriminative-layer steering | B | Discriminative-layer selection logic in cast.py; not implemented. | BACKLOG | (blocked on M2) |
+| E16 | Conditional gate capability tax | B | cast.py end-to-end + real MMLU in-run; METHOD_LADDER Rung 2 must clear first. | BACKLOG | (blocked on M3) |
+| E19 | Gram-Schmidt orthogonalization | C | Multi-vector orchestration in cast.py (now partially available via multi_intent.py); real multi-intent eval needed (METHOD_LADDER Rung 2). | BACKLOG | `backlog/C_stacking/` |
+| E21 | Conceptor AND vs sum | C | Conceptor implementation; no code. | BACKLOG | `backlog/C_stacking/` |
+| E23 | Same-plane vs orthogonal-plane composition | C | Selective-plane rotation operator (distinct from full-vector rotation tested in E27). | BACKLOG | `backlog/C_stacking/` |
+| E24 | Residual + KV-cache composition | C | KV-cache steering hooks; not in harness. | BACKLOG | `backlog/C_stacking/` |
+| E25 | DoLa stacking on residual steer | C | DoLa decoding-time integration; not in runner. | BACKLOG | `backlog/C_stacking/` |
+| E26 | Gate-before-behavior injection order | C | Multi-vector ordering control in cast.py. | BACKLOG | `backlog/C_stacking/` |
+| E29 | Geodesic vs linear alpha monotonicity | D | Geodesic/spherical interpolation operation in hooks.py; not implemented. | BACKLOG | `backlog/D_geometry/` |
+| E30 | Adaptive rotation on partial-aligned tokens | D | Per-token alignment check; not in harness. | BACKLOG | `backlog/D_geometry/` |
+| E31 | Rotation preserves activation norm | D | Dependent on E27 selective-plane rotation (not yet implemented). | BACKLOG | `backlog/D_geometry/` |
+| E32 | Refusal vs detection direction separability | D | Real refusal direction extracted (METHOD_LADDER Rung 0 / M1 must clear first). | BACKLOG | `backlog/D_geometry/` |
+| E33 | Flow vs linear on convex vs non-convex | D | FLAS-style flow implementation; not in harness. | BACKLOG | `backlog/D_geometry/` |
+| E34 | Refusal via OV circuit | E | Attention-score freezing harness; not implemented. | BACKLOG | `backlog/E_mechanistic/` |
+| E37 | Interpretable != controllable | E | GemmaScope SAE features and causal objective dictionary; neither wired. | BACKLOG | `backlog/E_mechanistic/` |
+| E38 | Task + style in one edit | E | ICL-derived function vectors; not extracted. | BACKLOG | `backlog/E_mechanistic/` |
+| E39 | Persona-vector drift monitoring | E | Per-position persona-vector projection during generation; not in runner. | BACKLOG | `backlog/E_mechanistic/` |
+| E41 | Activation-based jailbreak resistance | F | JailbreakBench end-to-end + cast.py conditional gate (M2 must clear first). | BACKLOG | (blocked on M1, M2) |
+| E42 | Gate cuts over-refusal | F | XSTest + cast.py end-to-end (M4 must clear first). | BACKLOG | (blocked on M4) |
+| E43 | Efficacy under domain shift | F | Domain-shifted eval sets; not assembled. | BACKLOG | (blocked on M6) |
+| E44 | Safety-capability Pareto frontier | F | cast.py end-to-end + real MMLU + JailbreakBench; METHOD_LADDER Rung 3. | BACKLOG | (blocked on M5) |
+| E46 | Iso-behavior capability curve | F | cast.py end-to-end + real MMLU; METHOD_LADDER Rung 3. | BACKLOG | (blocked on M4) |
+| E47 | Gate + ortho-stack + norm-cap combination | F | All of E9, E19, E22 working end-to-end (blocked on M2, M3). | BACKLOG | (blocked on M2, M3) |
+| E48 | Prefill vs per-token steering | F | Per-token KV-cache control; not in harness. | BACKLOG | `backlog/` |
+| E49 | Meta-reproducibility audit | F | Reproduction of source-corpus Gemma claims on the ladder; blocked by time budget. | BACKLOG | `backlog/` |
+| E50 | Minimal-stack SOTA recipe | F | All components of the method ladder cleared (M1–M5). | BACKLOG | (blocked on M5) |
+| N1 | Steering manifold tangent hypothesis | Novel | Geodesic/tangent-space operation (see E29); not implemented. | BACKLOG | `backlog/N_novel/` |
+| N2 | Conditioning = curvature algebraic factorization | Novel | Unified gate operator; cast.py not wired end-to-end (M2 must clear). | BACKLOG | `backlog/N_novel/` |
+| N3 | Orthogonal capacity theorem | Novel | Per-layer participation ratio vs stacking degradation; N-vector stacking harness. | BACKLOG | `backlog/N_novel/` |
+| N4 | Steering as inverse ICL | Novel | ICL activation deltas vs DiffMean; no ICL extraction in harness. | BACKLOG | `backlog/N_novel/` |
+| N6 | Gate in read not write | Novel | cos(condition, behavior)=0 enforcement; requires cast.py end-to-end (M2 must clear). | BACKLOG | `backlog/N_novel/` |
+| N8 | Controllability != interpretability | Novel | GemmaScope SAE features; not wired. | BACKLOG | `backlog/N_novel/` |
+| N9 | Steering as closed-loop dynamical control | Novel | Per-token control loop in runner; not implemented. | BACKLOG | `backlog/N_novel/` |
+| N10 | Concept algebra closure | Novel | Primitive-vector library and combination function; not implemented. | BACKLOG | `backlog/N_novel/` |
+| N11 | Curvature-aware alpha per prompt | Novel | Local PCA spectrum per prompt; expensive and not in harness. | BACKLOG | `backlog/N_novel/` |
+| N12 | Single-operator unification (capstone) | Novel | All prior methods as ablation components; the last hypothesis to run. | BACKLOG | `backlog/N_novel/` |
+| N13 | Geodesic > chord | Novel | Geodesic operation (see E29); not implemented. | BACKLOG | `backlog/N_novel/` |
+| N14 | Metric-matched operation | Novel | Hyperbolic/cylindrical/spherical geometry variants; not in harness. | BACKLOG | `backlog/N_novel/` |
+| N15 | Coset min-collateral post-processing | Novel | Non-ID coset enumeration; not implemented. | BACKLOG | `backlog/N_novel/` |
+| N18 | Interference-budget additivity | Novel | N-vector stacking data beyond 2–4 vectors tested so far; more stacking experiments needed. | BACKLOG | `backlog/N_novel/` |
+| N19 | Trajectory beats endpoint | Novel | Per-layer distributed steering; hooks.py supports one layer at a time only. | BACKLOG | `backlog/N_novel/` |
+
+---
+
+## Suggested execution order
+
+*(Transcribed faithfully from `corpus/50-steering-experiments-autoresearch.md`)*
+
+1. **E1–E8** (tooling + measurements) — unlocks everything.
+2. **N5, N3, N1** early — they define the budget/dimensionality/tangent constraints that make later stacking interpretable.
+3. **E9–E26** (conditioning + stacking) interleaved with **N2, N6, N10**.
+4. **E27–E40** (geometry + mechanism) with **N7, N8, N11, N4**.
+5. **E41–E50** (robustness/eval) with **N9**.
+6. **N12** last — the capstone unification consuming results from all prior blocks.
+
+**Note:** The current active execution order is the METHOD_LADDER (M1 → M2 → M3 → M4 → M5)
+before any of the above, because the safety method infrastructure (Rungs 0–4) is a
+prerequisite for the safety-axis hypotheses (E9–E16, E41–E50 and the blocked Novel set).
+Once M2 (conditional gate) passes Rung 1, the blocked BLOCK B and BLOCK F hypotheses above
+can be promoted from BACKLOG back to active.
+
+**N13–N20** (geometry-wave extensions) slot alongside their thematically related predecessors:
+- N13, N14, N16, N17 alongside E27–E33 (geometry block).
+- N15 alongside E4/E36/E37 (identifiability).
+- N18 alongside E17–E22 (stacking).
+- N19 alongside E40/N7/N9 (trajectory/dynamics).
+- N20 alongside E2/E20 (layer selection).
+
+---
+
 > **Note:** All quantitative thresholds above are **[NEEDS VERIFICATION]** — they are
 > pre-registered predictions transcribed from the corpus, not established facts.
 > The harness confirms or falsifies every threshold on the 4090 ladder.
 > Gemma-specific numbers inherited from source papers are additionally subject to
 > the corpus discipline: mark `[UNVERIFIED]` on any individual claim until a
 > reproduction run is recorded in `EXPERIMENT_LEDGER.md`.
+> Method-component rows (M1–M7) are pre-registered targets, not results; all are
+> PENDING as of 2026-06-06.

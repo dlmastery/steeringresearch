@@ -17,6 +17,9 @@ averaged away).
 Usage:
   PYTHONPATH=src python scripts/run_axbench_stack.py --model google/gemma-2-2b-it \
       --quant none --layer 20 --dataset concept500 --pairs 20 --prompts 6
+
+NOTE: the composite field now holds only the fingerprinted 5-axis composite; the
+raw behavior metric (mean stacking retention) is in method_value/extra.
 """
 from __future__ import annotations
 
@@ -146,7 +149,7 @@ def main() -> None:
                 "hypothesis": ("Stacking two vectors steers both behaviors; near-orthogonal pairs "
                                "should retain solo effect (E17); overlap should predict interference "
                                "(E18); the doubled push should cost coherence (E22)."),
-                "prediction": (f"report mean retention, corr(overlap,retention), coherence drop. "
+                "prediction": ("report mean retention, corr(overlap,retention), coherence drop. "
                                "fingerprint a9001e87087e.")}
             log_method_experiment(
                 config={"model": args.model, "rung": 3, "layer": layer, "seed": args.seed,
@@ -158,7 +161,9 @@ def main() -> None:
                 method_extra={"instrument": results["instrument"], "n_pairs": args.pairs,
                               "mean_retention": mean_ret, "corr_overlap_retention": corr,
                               "mean_coherence_drop": coh_drop},
-                composite=round(mean_ret, 4), behavior_efficacy=mean_ret,
+                # No 5-axis composite (a stacking retention/interference study);
+                # the per-hyp metric is in method_value, mean retention in extra.
+                composite=None, behavior_efficacy=mean_ret,
                 behavior_scorer=results["instrument"], started=t0)
     print(f"  elapsed {time.time()-t0:.1f}s")
 

@@ -1,5 +1,8 @@
 """run_e15.py — E15 learned gate vs fixed cosine threshold screening driver.
 
+NOTE: the composite field now holds only the fingerprinted 5-axis composite; the
+raw behavior metric (gate AUC gap) is in method_value/extra.
+
 Pipeline (composes the shared harness with the new `steering.gate` module):
   1. load the model (fake smoke or real Gemma);
   2. build per-layer CONDITION vectors (DiffMean of harmful vs benign in-dist
@@ -145,7 +148,9 @@ def main() -> None:
         method_extra={"feature_layers": layers, **{k: round(float(v), 4)
                       for k, v in res.items() if isinstance(v, (int, float))},
                       "verdict": verdict},
-        composite=round(gap, 4),
+        # No 5-axis composite (gate AUC gap is the primary metric, in
+        # method_value/extra); composite=None keeps the column honest.
+        composite=None,
         behavior_efficacy=float(res["auc_ood_logistic"]),
         behavior_scorer="gate_auc", started=t0,
     )

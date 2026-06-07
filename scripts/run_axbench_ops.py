@@ -9,6 +9,9 @@ coherence for each combo, over a concept subset. Tests two hypotheses at once:
 Usage:
   PYTHONPATH=src python scripts/run_axbench_ops.py --model google/gemma-2-2b-it \
       --quant none --layer 20 --dataset concept500 --concepts 20 --prompts 8
+
+NOTE: the composite field now holds only the fingerprinted 5-axis composite; the
+raw behavior metric (the source x operation grid + best behavior) is in method_value/extra.
 """
 from __future__ import annotations
 
@@ -29,7 +32,6 @@ from method_exp_common import log_method_experiment, write_campaign  # noqa: E40
 from run_axbench_e7 import _pool_acts, _unit  # noqa: E402
 
 from steering.axbench import load_axbench_concepts, load_axbench_eval_instructions  # noqa: E402
-from steering.eval import _ids  # noqa: E402
 from steering.extract import diffmean_vector, pca_top1_vector  # noqa: E402
 from steering.hooks import SteeringContext  # noqa: E402
 from steering.judge import JudgeUnavailable  # noqa: E402
@@ -161,7 +163,9 @@ def main() -> None:
                 method_value=float(val),
                 method_extra={"instrument": f"local_judge:{args.judge_model.split('/')[-1]}",
                               "grid": grid, "best": best, "n_concepts": len(concepts)},
-                composite=round(best["behavior"], 4), behavior_efficacy=float(best["behavior"]),
+                # No 5-axis composite (a source x operation grid, not a priced
+                # run); the per-hyp delta is in method_value, best behavior in extra.
+                composite=None, behavior_efficacy=float(best["behavior"]),
                 behavior_scorer=f"local_judge:{args.judge_model.split('/')[-1]}", started=t0)
     print(f"  elapsed {time.time()-t0:.1f}s")
 

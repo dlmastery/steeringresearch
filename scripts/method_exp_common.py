@@ -77,7 +77,7 @@ def log_method_experiment(
     method_metric: str,
     method_value: float,
     method_extra: dict[str, Any],
-    composite: float,
+    composite: Optional[float] = None,
     behavior_efficacy: float = 0.0,
     perplexity: float = 0.0,
     dppl_norm: float = 0.0,
@@ -91,17 +91,30 @@ def log_method_experiment(
     elapsed_sec: float = 0.0,
     started: Optional[float] = None,
 ) -> dict[str, Any]:
-    """Build a complete standard row (+ method extras) and append it via the runner."""
+    """Build a complete standard row (+ method extras) and append it via the runner.
+
+    INTEGRITY: the ``composite`` column must only ever hold the fingerprinted
+    5-axis ``eval.composite()`` output (CLAUDE.md §6) — never a raw behavior mean.
+    Method drivers whose primary result is a single raw metric (a delta, a best
+    behavior, a cosine, a retention ratio) therefore pass ``composite=None`` and
+    carry that raw value in ``method_value``. When ``composite is None`` the row
+    records ``composite_is_real=False`` and stores a JSON null in ``composite``
+    (so the dashboard renders it as "no composite" and the runner's champion
+    comparison skips it). Pass a real composite ONLY when all five axes were
+    actually measured and fed through ``eval.composite()``.
+    """
     num = _next_num()
     if started is not None:
         elapsed_sec = round(time.time() - started, 2)
 
+    composite_is_real = composite is not None
     entry: dict[str, Any] = {
         "config": config,
         "description": description,
         "rung": config.get("rung", 2),
         "layer": config.get("layer", 0),
-        "composite": round(float(composite), 4),
+        "composite": round(float(composite), 4) if composite is not None else None,
+        "composite_is_real": composite_is_real,
         "behavior_efficacy": round(float(behavior_efficacy), 4),
         "capability_retention": round(1.0 - max(0.0, mmlu_drop_pp) / 100.0, 4),
         "mmlu_drop_pp": round(float(mmlu_drop_pp), 4),

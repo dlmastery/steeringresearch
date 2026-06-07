@@ -37,8 +37,8 @@ bootstrap 95% CI excluding zero.
 | [Live dashboard](https://dlmastery.github.io/steeringresearch/dashboard/) | master -> per-hypothesis -> per-experiment |
 | [audits/reviews/IMPROVEMENTS_100.md](audits/reviews/IMPROVEMENTS_100.md) | the 100-item roadmap from 5 external reviews |
 | [FINDINGS.md](FINDINGS.md) | rigor-gated observations S-1..S-21 (all screening; zero external-ready) |
-| [IDEA_TABLE.md](IDEA_TABLE.md) | hypothesis registry (70 hypotheses + verdicts) |
-| [paper/PAPER.md](paper/PAPER.md) | honest methods / harness / screening draft |
+| [IDEA_TABLE.md](IDEA_TABLE.md) | hypothesis registry (70 original + 7 new safety-method components = 77 total; 19 with verdicts from real data; 34 in backlog; 7 new M1–M7 RUN PENDING) |
+| [paper/PAPER.md](paper/PAPER.md) | method design, evaluation protocol, harness, and screening-results draft (method PENDING validation) |
 | [hypotheses/](hypotheses/) | design docs for tested hypotheses; backlog in [backlog/](backlog/) |
 | [audits/RUBRICS.md](audits/RUBRICS.md) | verification rubrics A-E |
 | [audits/ICML_SIGNOFF_v2.md](audits/ICML_SIGNOFF_v2.md) | reviewer verdict: conditional accept (blocker on lint/type) |
@@ -78,8 +78,10 @@ NOT via a separate code file per hypothesis. Those 10 modules (intervention `hoo
 `extract`, `geometry`, the 5-axis `eval` + composite, the `runner`, the `dashboard`)
 are the complete machinery, and every hypothesis is screened by composing them via the
 drivers in `scripts/`. The ~20 tested hypothesis **design docs** live in `hypotheses/`;
-the remaining ~50 UNTESTED docs have been moved to `backlog/` (they require infra that
-does not yet exist: CAST gating, SAE features, a calibrated LLM judge, hypernetworks).
+34 UNTESTED docs have been moved to `backlog/` (they require infra that does not yet
+exist: CAST gating, SAE features, a calibrated LLM judge, hypernetworks); and 7 new
+safety-method component hypotheses (M1–M7) are registered in IDEA_TABLE.md Block G
+as UNTESTED (BUILT) or RUN PENDING.
 The `backlog/README.md` explains what each group needs before it can run.
 
 **Is anything trained?** No — activation steering is **inference-time**: the model

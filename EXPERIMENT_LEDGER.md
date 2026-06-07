@@ -140,9 +140,11 @@ is effectively broken.
 
 ## Campaign arc — the story behind the rows
 
-The 119 experiments ran in twelve distinct campaigns. Each campaign asked one
+The 124 experiments (exp#1–124) ran in fifteen distinct campaigns. Each campaign asked one
 focused question. Reading the tags in the ledger, the campaign prefix tells you
-which batch you are looking at.
+which batch you are looking at. A further set of PLANNED experiments (PLAN-M1 through
+PLAN-M7) is pre-registered for the safety method but not yet run — see the
+"PLANNED (built, not yet run)" section above.
 
 ### Campaign summary table
 
@@ -968,6 +970,48 @@ CAVEATS: 20 concepts, single model (2B), single layer (20), single alpha (0.10);
 AUC 0.68 (disclosed, unbiased); 4-cell grid with 20 concepts cannot support per-cell
 paired statistics with adequate power; results are means, not per-concept paired tests.
 SCREENING — not external-ready. See FINDINGS.md S-20, S-21.
+
+---
+
+## PLANNED (built, not yet run) — Safety Method Ladder
+
+> This section lists experiments that are pre-registered in `docs/METHOD_LADDER.md`
+> and whose components are built and unit-tested offline (against FakeResidualLM),
+> but which have NOT yet been executed on real models or real safety benchmarks.
+> These rows do NOT contain results. Marking them here prevents them from being
+> mistaken for missing experiments or omitted from the queue. The ordering follows
+> the METHOD_LADDER rungs, which are strict gates: a rung cannot begin until the
+> prior rung's gate passes.
+>
+> All planned experiments share these preconditions:
+> - Real Gemma (Gemma-3-1B-it as smoke; Gemma-2-2B-it as standard) with HF login.
+> - JailbreakBench and XSTest datasets wired end-to-end (currently missing per STATUS.md).
+> - Calibrated safety classifier (Llama-Guard-3 / ShieldGemma; current is_refusal() is a 22-string regex).
+> - Off-family judge calibrated to AUC >= 0.85 (current Qwen-7B judge is AUC 0.68, below bar).
+>
+> Reference: STATUS.md (per-claim built/tested/validated table), docs/METHOD_LADDER.md
+> (rung gates), src/steering/DESIGN.md (method architecture).
+
+| Planned ID | IDEA_TABLE ref | METHOD_LADDER rung | Description | Gate to clear | Pre-run status |
+|-----------|----------------|-------------------|-------------|--------------|---------------|
+| PLAN-M1 | M1 (Refusal direction validity) | Rung 0 | Extract an Arditi-style DiffMean refusal direction from real safety contrasts (harmful prompts vs safe-completion responses) on Gemma-3-1B-it at a candidate layer. Measure bootstrap stability (cos to full-data direction) and cross-layer consistency. | cos(refusal_direction, DiffMean_baseline) > 0.85 on >= 50 contrast pairs; bootstrap cos >= 0.90. NO generation required. | NOT STARTED. cast.py / safety_target.py built and offline unit tests pass. Real safety-contrast pairs not assembled. |
+| PLAN-M2 | M2 (Conditional gate fires on harmful, not benign) | Rung 1 | Wire the in-forward conditional pipeline (read h@L_c → gate decision → masked write @L_b) on real Gemma-3-1B-it. Test on 10 held-out harmful prompts and 10 benign prompts with a rule-based harm classifier. | Harmful recall >= 9/10; false-positive rate <= 1/10; latency overhead vs no-gate <= 20%. | NOT STARTED. gate.py offline; hooks.py not wired for conditional pipeline per STATUS.md. Blocked until PLAN-M1 clears. |
+| PLAN-M3 | M3 (Multi-intent composition) | Rung 2 | Compose K=2 Gram-Schmidt-orthogonalized safety directions (two harm categories) in a single forward pass on Gemma-2-2B-it. Evaluate per-category refusal rate and XSTest over-refusal. | Per-category refusal >= 80%; XSTest over-refusal <= 5%; calibrated safety classifier (>= 0.90 human agreement, >= 100 labeled items) used. | NOT STARTED. multi_intent.py built and offline unit tests pass. Real calibrated classifier not yet wired. Blocked until PLAN-M2 clears. |
+| PLAN-M4a | M4 (Conditional gate reduces over-refusal — SMOKE) | Rung 3 smoke | Compare conditional vs unconditional steering on JailbreakBench (n=20 prompts subset) + XSTest (n=20 benign) at n=3 seeds on Gemma-3-1B-it. Determine direction; this is SCREENING, not the Rung 3 gate. | Directional signal only; not a gate. Report per-axis narrative and composite to 4 dp. | NOT STARTED. Blocked until PLAN-M2 and PLAN-M3 clear. |
+| PLAN-M4b | M4 (Conditional gate reduces over-refusal — STANDARD) | Rung 3 full | Formal Rung 3 evaluation on Gemma-2-2B-it at n >= 7 seeds with paired Wilcoxon p < 0.05, 10k-bootstrap CI, Holm-Bonferroni, ordinal gate. JailbreakBench ASR (primary) + StrongREJECT + XSTest + MMLU >= 500. | XSTest over-refusal: gated <= 1%, unconditional > 5% at matched harmful-refusal. MMLU drop <= 2 pp. All six-part rigor contract legs pass. | NOT STARTED. Blocked until PLAN-M4a shows directional signal. |
+| PLAN-M5 | M5 (Pareto vs CAST and prompting) | Rung 4 | Run method vs CAST baseline and prompting baseline on JailbreakBench + StrongREJECT + XSTest + MMLU >= 500 + HarmBench. Rogue-Scalpel 20-vector universal attack red-team. Five-layer guard (A–E) ablation. | Pareto-dominates CAST and prompting on ASR vs over-refusal frontier. Worst evaluation seed beats best baseline seed (ordinal gate). ASR under adaptive attack <= 5%. XSTest over-refusal <= 1%. MMLU drop <= 2 pp. | NOT STARTED. Blocked until PLAN-M4b clears. |
+| PLAN-M6 | M6 (ASR reduction on JailbreakBench) | Rung 3 | Run method (conditional safety steering with refusal direction) vs no-steer baseline on the full JailbreakBench 100-prompt / 10-category set on Gemma-2-2B-it. Report JailbreakBench ASR + StrongREJECT. | JailbreakBench ASR reduction >= X pp (X to be pre-registered before run). n >= 7 seeds, six-part rigor contract. | NOT STARTED. JailbreakBench wiring missing per STATUS.md. Blocked until PLAN-M2 clears. |
+| PLAN-M7 | M7 (XSTest over-refusal axis) | Rung 3 | Run method on XSTest benign prompts to confirm over-refusal rate <= 1% absolute increase over unsteered baseline on Gemma-2-2B-it. | XSTest over-refusal <= 1%. MMLU drop <= 2 pp. n >= 7 seeds, six-part rigor contract. | NOT STARTED. XSTest wiring missing per STATUS.md. Blocked until PLAN-M2 clears. |
+
+**Baselines required before any planned experiment above can produce a comparative claim:**
+
+| Baseline | Description | Status |
+|---------|-------------|--------|
+| No-steer baseline | Unsteered Gemma-2-2B-it on JailbreakBench + XSTest + MMLU. Establishes the floor for ASR and over-refusal. | NOT YET RUN on real safety benchmarks. Synthetic 10-prompt regex currently mislabeled as "JailbreakBench CR" per STATUS.md. |
+| Unconditional steering | Always-on additive steering with the refusal direction (no gate). Ablates the CONDITIONAL component (M2). | NOT YET RUN. |
+| CAST baseline | Conditional Activation Steering (Lee et al. 2025, arXiv:2409.05907) reproduced on Gemma-2-2B-it. | NOT YET RUN per STATUS.md. |
+| Prompting baseline | Best-effort system-prompt + few-shot safety prompt on Gemma-2-2B-it. Necessary per AxBench finding that prompting beats steering on AxBench. | NOT YET RUN per STATUS.md. |
+| Random-direction control | Matched-displacement random unit vector (same alpha) vs refusal direction. Establishes whether any direction-specificity exists beyond generic off-manifold displacement (the E7 lesson). | NOT YET RUN. |
 
 ---
 

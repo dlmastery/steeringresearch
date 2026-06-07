@@ -368,7 +368,12 @@ def _log_and_checkpoint(entry: dict, description: str) -> None:
             prev_best_tag = saved.get("config", {}).get("tag")
         except Exception:
             pass
-    entry["status"] = "KEEP" if entry["composite"] > prev_best else "DISCARD"
+    # A row with composite=None (a method experiment that did NOT compute the
+    # fingerprinted 5-axis composite — see method_exp_common) can never win the
+    # champion slot; None means "no composite", it is not treated as a number.
+    comp = entry.get("composite")
+    is_winner = comp is not None and comp > prev_best
+    entry["status"] = "KEEP" if is_winner else "DISCARD"
 
     # Append JSONL (append-only).
     with open(log_path, "a", encoding="utf-8") as f:
@@ -377,7 +382,7 @@ def _log_and_checkpoint(entry: dict, description: str) -> None:
     # Reasoning annotations: post-run verdict+learning only; TODO skeleton for pre-run.
     _write_reasoning(entry, description, prev_best, prev_best_tag)
 
-    if entry["composite"] > prev_best:
+    if is_winner:
         best_path.write_text(json.dumps(entry, indent=2), encoding="utf-8")
 
     # Regenerate the three-tier dashboard (master + per-hypothesis + per-exp)
@@ -402,12 +407,18 @@ def _write_reasoning(entry: dict, description: str, prev_best: float, prev_best_
     existing = annotations.get(exp_key, {})
     is_manual = bool(existing.get("_manual"))
 
+    # composite may be None for a method experiment that did not compute the
+    # fingerprinted 5-axis composite (method_exp_common); render it honestly as
+    # "n/a" and never treat None as beating the global best.
+    comp = entry.get("composite")
+    comp_str = f"{comp:+.4f}" if comp is not None else "n/a (no 5-axis composite)"
+    is_winner = comp is not None and comp > prev_best
     new_verdict = (
-        f"{entry['status']} — composite {entry['composite']:+.4f}, "
+        f"{entry['status']} — composite {comp_str}, "
         f"behavior {entry['behavior_efficacy']:+.4f}, CR {entry['compliance_rate']:.4f}"
         + (
             f" (new global best, previous {prev_best:+.4f} tag={prev_best_tag})"
-            if entry["composite"] > prev_best
+            if is_winner
             else f" (global best remains {prev_best:+.4f} tag={prev_best_tag})"
         )
     )

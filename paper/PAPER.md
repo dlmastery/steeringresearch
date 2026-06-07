@@ -1,19 +1,23 @@
-# The Geometry of the Coherence Cliff: A Pre-Registered Autoresearch Harness for Activation Steering and Its First Screening Results
+# Conditional Multi-Intent Safety Steering: A Pre-Registered Method and Evaluation Protocol
 
-*Anonymous submission — methodology, reproducible harness, and screening-results contribution.*
+*Anonymous submission — method specification, reproducible harness, evaluation protocol, and screening-results contribution.*
 *Composite-metric fingerprint: `a9001e87087e` (SHA-256[:12] of the frozen scoring formula).*
+*HONEST STATUS NOTE: The method is newly built but not yet validated on real safety benchmarks.
+All results in the Screening Results section are SCREENING ONLY and are not external-ready.
+The evaluation protocol and baselines described in Sections 6–7 define the work remaining;
+they are a plan, not a completed evaluation. See STATUS.md for the per-component built/tested/validated table.*
 
 ---
 
 ## Abstract
 
-Activation steering — adding or rotating a direction in a transformer's residual stream to control a behavior at inference time — is training-free, cheap, and interpretable, but it is also irreducibly multi-objective: an edit that raises a target behavior can simultaneously degrade general capability, collapse text coherence, break safety refusals, or induce over-refusal on benign inputs. A single scalar "efficacy" number systematically flatters a method by hiding the axis it sacrificed. We present a pre-registered autoresearch harness that makes this multi-objective accounting mandatory, and we report the screening observations it produced across three small models and four behaviors.
+Activation steering — adding or rotating a direction in a transformer's residual stream to control a behavior at inference time — is training-free and interpretable, but unconditional safety steering has two known failure modes: it taxes capability on every prompt and drives over-refusal on benign inputs. We propose a *conditional multi-intent* safety-steering method that applies the refusal direction only when an in-forward gate detects a harm-relevant prompt, composes K independent safety directions per detected intent via Gram-Schmidt orthogonalization, and leaves benign generations bit-identical to the unsteered model.
 
-The harness contributes four mechanisms. First, a single-axis champion loop over a twelve-axis intervention taxonomy: every experiment perturbs exactly one knob of a documented best configuration and is kept only if a composite score improves with no axis regressing past its gate. Second, a cost-ordered five-rung benchmark ladder (UNIT→SMOKE→DEV→STANDARD→FULL) that scores the same five measurement axes at every rung and forbids spending expensive compute before a cheap gate is cleared. Third, a SHA-256-fingerprinted, Goodhart-resistant composite that prices behavior, capability, coherence, safety, and off-manifold displacement simultaneously, with one-sided penalties so a method cannot win by trading an unmeasured axis. Fourth, a statistical rigor floor that hard-classifies n≤3 as screening and reserves the word *finding* for n≥7 results that pass a paired Wilcoxon test, a bootstrap confidence interval, Holm-Bonferroni correction, an empirical seed-noise band, and an ordinal gate.
+The method is newly built but not yet validated. Zero external-ready results exist. The contribution at submission time is: (1) the method specification and its implementation as an auditable policy layer over a shared harness; (2) a pre-registered evaluation protocol — method vs CAST baseline vs prompting baseline on JailbreakBench, StrongREJECT, and XSTest, judged by an off-family Qwen-7B judge, with Pareto comparison on ASR vs over-refusal at matched capability drop; (3) a reproducible autoresearch harness with a SHA-256-fingerprinted composite that prices behavior, capability, coherence, safety, and selectivity simultaneously; (4) a geometric account of the coherence cliff from 124 screening experiments — the only validated finding at submission time.
 
-Our central empirical contribution is a geometric account of the coherence cliff. We parameterize steering by *relative displacement* — the edit magnitude as a fraction of the local residual norm ‖h‖ — and show the coherence cliff has a behavior-independent knee near a ten-percent displacement that is approximately scale-invariant across model sizes, where the same edit in absolute units is strongly scale-dependent. Off-shell radial displacement Δ‖h‖ predicts log-perplexity monotonically on real held-out WikiText-2 (Spearman +0.585, 95% bootstrap CI [+0.353, +0.758], p≈8×10⁻⁶, pooled over two scales), but the *coefficients* of any single collapse law do not transfer across scale (held-out R²=−1.6), so the relationship is directionally robust yet quantitatively model-specific. Additive steering moves h radially off the activation shell while norm-preserving rotation moves it angularly along the shell; an angular displacement metric predicts rotation's log-perplexity at R²=0.997 while radial displacement governs addition (R²=0.81), giving an empirical confirmation of a cylindrical (radius×angle) decomposition of steering cost. We further report cross-model, cross-behavior alignment of difference-of-means and PCA-top-1 directions (cosine 0.994–0.999 across three models and four behaviors), the falsification of Fisher-ratio layer selection as a predictor of steering efficacy (Spearman +0.14), and the falsification of a low-rank behavior-plane hypothesis (top-3 directions explain 66%, not >90%).
+The prior rigorous result is negative: on the real AxBench benchmark, the DiffMean steering direction carries only a weak concept-specific signal at 2B scale (+0.004, CI barely excluding zero, ~97% captured by a label-shuffled control), and is negative/floor at 270M. Five external reviewers returned a unanimous reject (2/10). We report these findings honestly because the evaluation protocol exists precisely to avoid building claims on weak foundations.
 
-We are explicit about scope. Every quantitative result except the rung-3 WikiText evaluation is a single-seed screening observation on sub-1B-parameter models with partly synthetic instruments; none is an external steering-efficacy claim, and each is gated on an enumerated list of required experiments. The contribution is the harness, the geometric account, and a disciplined two-sided ledger of what survived contact with evidence and what did not.
+We are explicit about scope. Every quantitative result except the rung-3 WikiText evaluation is a single-seed screening observation on sub-1B-parameter models with partly synthetic instruments; none is an external steering-efficacy claim. The method results are PENDING: all planned experiments are not yet run. The contribution is the method design, the evaluation protocol, the geometric account of the coherence cliff, and a two-sided ledger of what has and has not been validated.
 
 ---
 
@@ -23,17 +27,21 @@ The residual stream of a decoder-only transformer is the channel through which e
 
 Steering is also, unavoidably, a control problem with multiple objectives in tension. The same residual edit that elicits a target behavior pushes the hidden state away from the distribution the downstream layers were trained on. Past a threshold, perplexity rises super-linearly and the model emits degenerate text; before that, capability on unrelated tasks can erode silently; and — most consequentially — steering edits can break the refusal behavior that keeps a deployed model safe. The Rogue Scalpel result [Korznikov et al. 2025, arXiv:2509.22067] demonstrates that even *random or benign* steering directions raise harmful-prompt compliance, that the damage peaks in early-middle layers, that averaging twenty weak vectors yields a universal jailbreak, and — crucially — that the attack directions are nearly orthogonal to the refusal direction (mean cosine 0.027). Safety is not broken by cancelling the refusal feature; it is broken by displacing the hidden state off the manifold where refusal is computed at all. Any honest evaluation of a steering method must therefore price behavior, capability, coherence, safety, and selectivity *together*. A scalar efficacy number does not; it lets a method "win" by quietly spending an axis nobody measured, and the autoresearch literature is full of such hollow wins.
 
-This paper does not propose a new steering method or claim a new steering-efficacy result. It contributes a research instrument and the geometric findings that instrument produced. Concretely:
+This paper proposes a new conditional multi-intent safety-steering method (Section 3a) and a pre-registered evaluation protocol for it (Sections 6–7). The method is newly built and not yet validated. The paper also contributes a research harness and geometric findings from 124 screening experiments. Concretely:
 
-1. **A pre-registered autoresearch harness** (Section 3) that turns each experiment into a falsifiable, citation-gated, single-axis perturbation of a champion configuration, authored through a seven-step ritual whose pre-run fields are mechanically gated against placeholders and promoted along a cost-ordered ladder. The harness is content-agnostic; steering is its first instantiation.
+1. **A conditional multi-intent safety-steering method** (Section 3a) — a CAST-style in-forward conditional gate that reads the residual stream at a condition layer, fires only on harm-relevant prompts, and applies a Gram-Schmidt-orthogonalized composition of K intent-specific safety directions. When no intent fires, the forward pass is bit-identical to the unsteered model. The method is implemented and unit-tested offline; it is not yet validated on real safety benchmarks. Results are PENDING.
 
-2. **A Goodhart-resistant, fingerprinted composite** (Section 3.3) that prices all five axes plus an off-manifold geometry term with one-sided penalties, so an incoherent-but-"safe" run cannot win because the coherence tax dominates. The formula string is frozen and its SHA-256 prefix appears in every reasoning entry, ledger row, and dashboard footer; editing it to crown a favored row is a defined protocol violation.
+2. **A pre-registered evaluation protocol** (Sections 6–7) — method vs seven baselines (no-steer, unconditional steering, CAST, prompting, random-direction control, ablation without gate, ablation without multi-intent) on JailbreakBench, StrongREJECT, XSTest, and MMLU >= 500, judged by an off-family Qwen-7B judge (target AUC >= 0.85), with Pareto comparison on ASR vs over-refusal. Success criterion is pre-registered in README.md: the method Pareto-dominates CAST and prompting on the ASR vs over-refusal frontier at <= 2 pp MMLU drop, confirmed at n >= 7 seeds with paired Wilcoxon p < 0.05 and a 95% bootstrap CI excluding zero. None of this has been run yet.
 
-3. **Valid measurement instruments** (Section 4) for the two axes most prone to circular self-validation: a generation-based behavior scorer that counts concept incorporation in the model's *output text* rather than projecting the edit onto itself, and a real-generation safety scorer that runs the model on harmful prompts and classifies its own refusals. We state precisely what residual circularity remains and how it is gated.
+3. **A pre-registered autoresearch harness** (Section 3b) that turns each experiment into a falsifiable, citation-gated, single-axis perturbation of a champion configuration, authored through a seven-step ritual whose pre-run fields are mechanically gated against placeholders and promoted along a cost-ordered ladder. The harness is content-agnostic; safety steering is its first instantiation.
 
-4. **A geometric account of the coherence cliff** (Section 5) grounded in the 2026 geometry-of-steering wave [Manifold Steering 2026, arXiv:2605.05115; CRH 2026, arXiv:2605.01844; Non-Identifiability 2026, arXiv:2602.06801], with the central control variable being relative off-manifold displacement and the central decomposition being radial×angular (cylindrical). This is the part of the paper with a rung-3 evaluation on real held-out text.
+4. **A Goodhart-resistant, fingerprinted composite** (Section 3b.3) that prices all five axes plus an off-manifold geometry term with one-sided penalties, so an incoherent-but-"safe" run cannot win because the coherence tax dominates.
 
-We frame the work as infrastructure plus screening because, by its own rigor floor, it cannot yet be more, and we regard that honesty as part of the contribution rather than a hedge against it. Section 2 situates the twelve-axis taxonomy against the sixty-paper literature; Section 3 specifies the harness; Section 4 specifies the instruments; Section 5 reports results, two-sided; Section 6 discusses what the geometry implies for state-of-the-art steering; Section 7 states limitations as scope; Section 8 enumerates the experiments required before any external claim; Sections 9–10 cover reproducibility and conclusions.
+5. **Valid measurement instruments** (Section 4) for the two axes most prone to circular self-validation: a generation-based behavior scorer that counts concept incorporation in the model's *output text* rather than projecting the edit onto itself, and a real-generation safety scorer that runs the model on harmful prompts and classifies its own refusals. We state precisely what residual circularity remains and how it is gated.
+
+6. **A geometric account of the coherence cliff** (Section 5) from 124 screening experiments — the only validated finding at submission time — grounded in the 2026 geometry-of-steering wave [Manifold Steering 2026, arXiv:2605.05115; CRH 2026, arXiv:2605.01844; Non-Identifiability 2026, arXiv:2602.06801].
+
+We frame the work honestly: the method is designed and built; the results are pending. The geometric findings (Section 5) are the paper's only externally-visible empirical content at this stage, and they are scoped carefully. Section 2 situates the twelve-axis taxonomy against the sixty-paper literature; Section 3a specifies the method; Section 3b specifies the harness; Section 4 specifies the instruments; Section 5 reports screening results, two-sided; Section 6 specifies the evaluation protocol and baselines; Section 8 states limitations as scope; Section 9 enumerates the experiments required before any external claim; Sections 10–11 cover reproducibility and conclusions.
 
 ---
 
@@ -67,15 +75,126 @@ We organize the sixty-paper literature, and our own experiments, along twelve ax
 
 ---
 
-## 3. The autoresearch harness
+## 3a. The method: conditional multi-intent safety steering
+
+> **STATUS: BUILT but NOT YET VALIDATED on real models / benchmarks.**
+> Every component below is implemented and unit-tested offline against FakeResidualLM.
+> None of the numbers (efficacy, over-refusal, jailbreak compliance) has been measured
+> on real Gemma yet — that is Rung 1–4 work defined in `docs/METHOD_LADDER.md`.
+> This section is the method specification, not a results section.
+
+The method addresses the two failure modes of naive unconditional safety steering:
+(1) capability tax on every prompt (the model is always being pushed toward refusal,
+even on benign inputs), and (2) over-refusal on benign inputs that activate the
+safety vector by geometric proximity rather than semantic harm intent. The fix has
+two independent components — conditional gating and multi-intent composition — that
+can be ablated independently.
+
+### 3a.1 The three components
+
+**Component A — Refusal direction (the WHAT).** We extract an Arditi-style
+difference-of-means direction [Arditi et al. 2024, arXiv:2406.11717] from real
+safety-contrast activations: DiffMean(harmful prompt activations, safe-completion
+activations) at a candidate injection layer L_write on Gemma. One unit-norm safety
+vector s_c is produced per harm intent category c. Extraction requires no training;
+it is a single forward pass over contrast pairs. This is METHOD_LADDER Rung 0.
+Status: `safety_target.py` built and offline unit tests pass; real safety-contrast
+extraction NOT yet run.
+
+**Component B — Conditional gate (the WHEN).** A CAST-style [Lee et al. 2025,
+arXiv:2409.05907] in-forward conditional gate reads the pooled residual stream at
+a condition layer L_cond (before L_write), computes cosine(h_pooled, v_c) for each
+intent category c where v_c is the condition vector (DiffMean of harmful vs
+harmless prompt activations), and fires the steering write only when the similarity
+exceeds a per-category calibrated threshold τ_c. When no intent fires, the write
+hook is a NO-OP: the forward pass is bit-identical to the unsteered model. This
+conditional identity — no firing = no change = no capability tax — is the key design
+invariant and the first unit test the gate must pass. This is METHOD_LADDER Rung 1.
+Status: `CASTSteerer.generate()` built and offline unit tests pass; real in-forward
+gate NOT yet run on Gemma per STATUS.md (`gate.py` offline numpy; `hooks.py` not
+wired for real conditional pipeline).
+
+**Component C — Multi-intent composition (the HOW-MANY).** Real safety is not one
+axis. We register K intent categories (e.g. weapons, self-harm, privacy, malware),
+each with its own condition vector v_c and safety vector s_c. When multiple intents
+fire, we compose their safety directions via Gram-Schmidt orthogonalization
+(`multi_intent.gram_schmidt`) before summing, so directions that would otherwise
+interfere are made near-orthogonal first. The cumulative Gram-mass budget (N5 norm
+budget) governs how many directions can be safely stacked: we cap the composition at
+the budget to prevent coherence collapse. This is METHOD_LADDER Rung 2. Status:
+`gram_schmidt()`, `compose()`, and `interference_gram_mass()` in `multi_intent.py`
+pass offline unit tests; real multi-intent evaluation NOT yet run.
+
+### 3a.2 The pipeline
+
+```
+request (prompt text)
+    │
+    ▼
+[OFFLINE EXTRACTION]
+safety_target.extract_refusal_direction(...)  → unit safety vector s_c per intent c
+intent_gate.IntentGate.fit / calibrate         → condition vector v_c, threshold τ_c
+multi_intent.gram_schmidt([s_1..s_K])          → low-interference safety basis
+    │
+    ↓ register (v_c, τ_c, s_c)
+    │
+[IN-FORWARD, per prompt]
+layer_condition: READ hook → h_pooled = mean_t h_t
+per intent c: gate_score g_c = cos(h_pooled, v_c)
+              fires? g_c > τ_c
+if fired == ∅ → write hook is a NO-OP (output identical to unsteered model)
+if fired != ∅ → layer_write: WRITE hook
+              v* = compose({s_c : c ∈ fired}, alphas)
+              h ← apply_operation(h, v*, op, alpha)
+    │
+    ▼
+{text, fired_intents, gate_scores}
+    │
+    ▼
+judge.py / eval.py / rogue-scalpel guard
+```
+
+The gate decision is latched on the prompt forward pass and reused across KV-cache
+decode steps, so every generated token sees a consistent policy.
+
+### 3a.3 Design decisions and their justification from screening results
+
+Several design choices are directly motivated by the screening experiments in
+Section 5:
+
+- **Relative-add operation (not absolute-add)** — justified by Section 5.3: relative
+  displacement (as a fraction of ‖h‖) is the scale-portable control variable; the
+  coherence cliff is approximately scale-invariant in relative units but strongly
+  scale-dependent in absolute units.
+- **Alpha near 0.10 (10% of ‖h‖)** — the screening coherence cliff (Section 5.1,
+  5.3; confirmed on real AxBench, S-17) places the behavior-coherence sweet spot at
+  approximately 10% displacement. Over 20% collapses coherence super-linearly.
+- **DiffMean as the direction source** — justified by Section 5.4 and S-21: on real
+  AxBench, DiffMean and PCA-top1 produce similar steering outcomes (marginal
+  behavior/coherence tradeoff only); DiffMean is cheaper and sufficient.
+- **Gram-Schmidt orthogonalization for K-intent composition** — justified by the E17
+  stacking screen (S-10) and the N5 norm budget (E22): near-orthogonal stacking
+  retains > 85% of solo effects; the cumulative displacement budget must stay within
+  the safe manifold region.
+- **Late-middle layer for both gate and write (around L20 on 2B)** — justified by
+  the E2 layer sweep on AxBench (S-18): the layer curve is nearly flat (behavior
+  range only ~13% relative), with a shallow peak at layers 18–20 for the 2B model.
+
+None of these design choices has been validated in the safety-method context yet.
+They are motivated by the screening geometry findings, which may or may not transfer
+to the safety domain.
+
+---
+
+## 3b. The autoresearch harness
 
 The harness operationalizes one invariant: *start from the current best configuration; change exactly one thing; keep it iff the composite improves at matched coherence with no axis regressing past its gate; revert otherwise.* This is a steering-adapted Karpathy loop, with three deliberate departures: the champion configuration is sacred and every experiment is a single-axis perturbation of it; the researcher (here, an agent) supplies an explicit pre-registered mechanism rather than blind search; and promotion is ladder-bound, not time-bound.
 
-### 3.1 The twelve-axis intervention taxonomy as an experiment generator
+### 3b.1 The twelve-axis intervention taxonomy as an experiment generator
 
 Every experiment perturbs exactly one of the twelve axes of Section 2.6. Because the taxonomy encodes orthogonality, a single-axis perturbation has an interpretable marginal effect, and the stack-vs-compete rule tells the loop which two priors may be combined and which will collide. The "everything on" hybrid is forbidden — it is uninterpretable and, empirically across autoresearch, a reliable way to lose to a simpler configuration.
 
-### 3.2 The five-rung ladder
+### 3b.2 The five-rung ladder
 
 The same five measurement axes — behavior efficacy, capability retention, coherence, safety integrity, selectivity — are scored at every rung; only dataset size and realism grow.
 
@@ -89,7 +208,7 @@ The same five measurement axes — behavior efficacy, capability retention, cohe
 
 A method may not consume rung-(k+1) compute until it clears rung k's gate, and a regression at any rung demotes it with a logged `failure_reason`. This is experimental economics: never run an expensive benchmark to find a bug a cheap one would catch.
 
-### 3.3 The Goodhart-resistant fingerprinted composite
+### 3b.3 The Goodhart-resistant fingerprinted composite
 
 Steering has no single scalar, so the composite must price every axis at once. The frozen formula (fingerprint `a9001e87087e`) is
 
@@ -105,11 +224,11 @@ composite = behavior_efficacy
 
 with pinned weights λ_cap=1.0, λ_coh=0.5, λ_coh_rep=0.5, **λ_safe=2.0** (dominant), λ_sel=1.0, λ_geo=0.25. The one-sided `max(0,·)` penalties mean an axis can only hurt, never inflate, the composite. A run that emits gibberish scores "safe" on harm but fails coherence; the coherence tax then dominates and it cannot win — a property the unit tests assert directly. The dominant safety weight and an independent auto-discard gate encode the Rogue Scalpel mandate. The fingerprint prevents mid-project tampering: editing the formula to crown a favored row breaks the attestation in every reasoning entry and dashboard footer. Fingerprinting does *not* make the *initial* weight choice defensible, and we have not yet run a weight-sensitivity analysis; this is a stated limitation (Section 7), not a settled question.
 
-### 3.4 The seven-step ritual
+### 3b.4 The seven-step ritual
 
 Each experiment authors a pre-run reasoning entry — **Diagnose** (≥60 words, naming the specific failure mode and referencing a prior experiment by tag), **Cite** (a real arXiv paper in full format motivating the change), **Hypothesize** (the residual-stream mechanism, naming which axis moves and what the cited paper predicts), **Predict** (a numeric range on the composite and at least one sub-metric, stored *before* the run) — and, after execution, a post-run entry — **Analyse** (actual vs predicted, verdict KEEP / DISCARD / NEAR-MISS, per-axis narrative) and **Checkpoint**. The runner refuses to fabricate pre-run fields: a missing or placeholder diagnosis, citation, hypothesis, or prediction is a protocol violation that blocks the launch. Reasoning quality gates experiment quality.
 
-### 3.5 The screening → hill-climb → evaluation funnel
+### 3b.5 The screening → hill-climb → evaluation funnel
 
 (1) **Screen** one configuration per hypothesis at a documented baseline (cheap, n≤3). (2) **Hill-climb** a surfaced candidate by coordinate descent over the steering cube — (layer × α × source × operation × span) × seed — for 20–25 trials under a strict-improvement champion rule. (3) **Confirm** at n≥7 under the full rigor contract before any external claim. By the rigor floor, n≤3 is *screening, full stop*: n=3 cannot reach p<0.05 under a paired Wilcoxon signed-rank test, so calling an n=3 result a winner is forbidden, and reclassifying a loser as "screening" after the fact is HARKing and a blocker. A claim is external-ready only when the *worst* evaluation seed beats the *best* baseline seed (the ordinal gate) and the paired Wilcoxon, bootstrap CI, Holm-Bonferroni correction, and empirical seed-noise band all hold.
 
@@ -242,7 +361,81 @@ The harness is designed to falsify as readily as to confirm, and it did. **Fishe
 
 ---
 
-## 6. Discussion: what the geometry implies for state-of-the-art steering
+## 6. Evaluation protocol and baselines (PLANNED — not yet run)
+
+> This section specifies the evaluation that will validate or falsify the method
+> described in Section 3a. None of the experiments in this section have been run.
+> The plan is pre-registered here so the success criterion is recorded before any
+> result is observed. Executing this plan requires completing METHOD_LADDER Rungs
+> 0–4 in sequence; see `docs/METHOD_LADDER.md`.
+
+### 6.1 The seven baselines
+
+Every claim of method superiority requires comparison to at least one baseline that
+the method is designed to improve upon. Seven baselines are required before any
+comparative claim is defensible:
+
+| Baseline | Description | Why required |
+|---------|-------------|-------------|
+| B0 — No steer | Unsteered Gemma-2-2B-it | The floor; establishes the ASR and over-refusal the unsteered model already achieves. Must be measured first on real benchmarks. |
+| B1 — Unconditional steering | Always-on additive steering with the refusal direction (no gate), same alpha as the method | Ablates the CONDITIONAL component; quantifies the over-refusal cost of removing the gate. |
+| B2 — CAST baseline | Conditional Activation Steering [Lee et al. 2025, arXiv:2409.05907] reproduced on Gemma-2-2B-it | The prior state of the art for conditional safety steering; the primary comparison. |
+| B3 — Prompting baseline | Best-effort system-prompt + few-shot safety prompt on Gemma-2-2B-it | Necessary per AxBench [Wu et al. 2025, arXiv:2501.17148] finding that prompting beats steering on AxBench; a steering "win" is only a contribution relative to a tuned prompt. |
+| B4 — Random-direction control | Matched-displacement random unit vector (same alpha) vs refusal direction | Establishes whether any direction-specificity exists; the E7 lesson on AxBench is that ~97% of steering effect is captured by a shuffled-label vector. |
+| B5 — Ablation: no gate (single intent) | The safety direction applied unconditionally for a single harm category | Ablates the MULTI-INTENT component independently from the gate. |
+| B6 — Ablation: no Gram-Schmidt | K-intent composition without orthogonalization | Ablates the Gram-Schmidt orthogonalization to measure its interference-reduction contribution. |
+
+Status of all baselines: NOT YET RUN on real safety benchmarks per STATUS.md (current
+safety metric is a synthetic 10-prompt regex mislabeled as "JailbreakBench CR").
+
+### 6.2 Benchmarks and instruments
+
+| Instrument | Role | Status |
+|-----------|------|--------|
+| JailbreakBench [Chao et al. 2024] | Primary attack-success-rate (ASR) metric — 100 prompts, 10 categories | NOT YET WIRED per STATUS.md |
+| StrongREJECT [Souly et al. 2024] | ASR rubric grader that scores refusal quality, not just presence | NOT YET WIRED per STATUS.md |
+| XSTest [Röttger et al. 2023] | Over-refusal axis — 250 safe prompts that superficially resemble harmful ones | NOT YET WIRED per STATUS.md |
+| HarmBench [Mazeika et al. 2024] | Used in Rung 4 adversarial evaluation only | NOT YET WIRED |
+| MMLU >= 500 items (real, in-run) | Capability axis — real multiple-choice benchmark, not the current synthetic 20-item tripwire | NOT YET WIRED; current MMLU axis is a FakeLM surrogate per STATUS.md |
+| Off-family judge (Qwen2.5-7B-Instruct, 4-bit, calibrated) | Behavior and coherence judge with no same-family circularity | PARTIAL — current judge AUC 0.68 vs AxBench ground truth, below the >= 0.85 bar; must be improved before Rung 3+ results are reported |
+| Calibrated safety classifier (Llama-Guard-3 or ShieldGemma) | Binary SAFE/UNSAFE classifier with >= 0.90 human agreement on >= 100 labeled items | NOT YET WIRED; current is_refusal() is a 22-string regex per STATUS.md |
+
+### 6.3 Pre-registered success criterion
+
+The following is the pre-registered success criterion (from README.md, recorded here
+before any run is attempted):
+
+> The conditional multi-intent safety-steering method Pareto-dominates CAST (B2)
+> and the prompting baseline (B3) on the JailbreakBench ASR vs XSTest over-refusal
+> frontier at <= 2 pp MMLU drop, confirmed at n >= 7 seeds with a paired Wilcoxon
+> p < 0.05 and a 95% bootstrap CI excluding zero (10k resamples), Holm-Bonferroni
+> corrected across the baseline family, and the ordinal gate (worst evaluation seed
+> beats best baseline seed) passes.
+
+Specific targets (from README.md):
+
+| Axis | Target |
+|------|--------|
+| JailbreakBench ASR reduction | >= X pp vs no-steer baseline B0 (X to be pre-registered before the Rung 3 run; not yet set) |
+| XSTest over-refusal | <= 1% absolute increase over baseline |
+| MMLU drop | <= 2 pp |
+| Pareto vs CAST + prompting | Pareto-dominates on ASR vs over-refusal frontier |
+
+None of these targets have been measured yet.
+
+### 6.4 The Rogue-Scalpel red-team (Rung 4)
+
+Per the Rogue Scalpel finding [Korznikov et al. 2025, arXiv:2509.22067], even
+random or benign steering directions raise harmful-prompt compliance. The Rung 4
+adversarial evaluation must reproduce the 20-vector universal attack as a red-team
+probe and verify it is neutralized. The five-layer guard (A: refusal-formation
+subspace projection lock; B: norm/manifold clamp; C: avoid fragile mid-layers;
+D: dual-forward verdict check; E: conditional gate) must be implemented and ablated.
+Status: NOT YET IMPLEMENTED per STATUS.md.
+
+---
+
+## 7. Discussion: what the geometry implies for state-of-the-art steering
 
 **Off-manifold displacement is the control variable, not the coefficient.** The single most actionable result is that the coherence cliff is organized by displacement relative to the local residual norm, with a knee near ten percent that is approximately scale-invariant. The raw coefficient α is the wrong variable to expose to a practitioner: it conflates the edit with a large, layer- and model-dependent norm, which is why absolute-α cliffs move across scale while relative-α cliffs do not. State-of-the-art methods that adapt the edit to keep activations in-distribution [IDS 2025, arXiv:2510.13285; Contextual Linear Steering 2026, arXiv:2604.24693] are, in this language, implicitly regulating off-shell displacement; making that the *explicit* control variable — cap ‖Δh‖ at a fixed fraction of ‖h‖ — is a cheap, model-portable default that needs no per-model α search. The norm-budget result (5.7) extends this to stacks: it is the *cumulative* displacement of all simultaneously active vectors, not the count of vectors, that must stay under budget, which gives a concrete capacity rule for multi-vector safety stacks.
 
@@ -256,9 +449,11 @@ The harness is designed to falsify as readily as to confirm, and it did. **Fishe
 
 ---
 
-## 7. Limitations as scope
+## 8. Limitations as scope
 
 We state scope as a researcher states the boundary of a claim, not as an apology for it. Within the boundary the results are sound; outside it we make no claim.
+
+0. **The safety method is not yet validated.** Section 3a describes the designed method and its unit-tested offline implementation. No result on real safety benchmarks (JailbreakBench, StrongREJECT, XSTest) exists. The planned evaluation (Section 6) defines the remaining work. Any sentence that reads as if the method has been validated is an error.
 
 1. **Single seed except the rung-3 evaluation.** Every result in Sections 5.1–5.5 and 5.7–5.8 is n=1; by the rigor floor these are screening, and we report no significance test or seed band for them. The rung-3 WikiText evaluation (5.6) carries a bootstrap CI but its 50 points are (layer × α) configurations, not iid seeds, so the CI is a within-grid estimate.
 2. **Partly synthetic instruments.** The capability axis is a deterministic forward-pass corruption tripwire (20 synthetic MCQ items), not an accuracy measurement on MMLU; the contrast pairs and concept lexicons are small and hand-written. The WikiText-2 evaluation is real; the capability and safety substrates are not yet.
@@ -272,23 +467,29 @@ These are not caveats appended to results; they are the current state of the evi
 
 ---
 
-## 8. Required experiments before any external steering claim
+## 9. Required experiments before any external steering claim
 
-These are ordered, each gating the claim it supports:
+These are ordered, each gating the claim it supports. Items 0–2 are required before
+the safety method can be evaluated at all (Section 6 plan); items 3–7 are required
+for any geometry or harness efficacy claim.
 
-1. **Independent behavior judge.** Replace the lexicon scorer with an LLM-as-judge or AxBench scorer on real generated text, calibrated against a human-annotated slice (target ≈94% judge precision). No efficacy, monotonicity, or Pareto claim ships otherwise. (Generation-based scorer landed; calibration pending.)
-2. **Real safety and selectivity.** Generate on real JailbreakBench (100 prompts, 10 categories) and XSTest, judge SAFE/UNSAFE with a calibrated judge, confirm baseline compliance ≈0%, and demonstrate that the λ_safe penalty and auto-discard can fire. (Real generation landed; real benchmarks and calibrated judge pending.)
-3. **Real datasets.** Real AxBench concept set with a held-out-concept split, real MMLU (≥500 items), real WikiText-103 perplexity; retire the synthetic slices to UNIT/SMOKE only.
-4. **n≥7 with the full rigor contract.** Paired Wilcoxon + 10k-bootstrap CI + Holm-Bonferroni + empirical 2σ_seed band + ordinal gate, on the pre-registered evaluation split.
-5. **Prompting baseline and controls.** The AxBench apples-to-apples comparison, plus random-direction and mean-ablation controls; a steering "win" is only a contribution relative to a tuned prompt.
+0. **Safety method: complete METHOD_LADDER Rungs 0–2.** Extract the real refusal
+   direction (Rung 0 / M1), wire the in-forward conditional gate on real Gemma
+   (Rung 1 / M2), and implement and evaluate multi-intent composition (Rung 2 / M3).
+   The safety method cannot be claimed to exist as a working system until Rung 1 clears.
+1. **Independent behavior judge.** Replace the lexicon scorer with an LLM-as-judge or AxBench scorer on real generated text, calibrated against a human-annotated slice (target AUC >= 0.85 vs human ground truth). No efficacy, monotonicity, or Pareto claim ships otherwise. (Generation-based scorer landed; calibration pending — current Qwen-7B judge AUC 0.68, below bar.)
+2. **Real safety and selectivity.** Generate on real JailbreakBench (100 prompts, 10 categories) and XSTest, judge SAFE/UNSAFE with a calibrated classifier (Llama-Guard-3 / ShieldGemma, >= 0.90 human agreement), confirm baseline compliance ~0%, and demonstrate that the λ_safe penalty and auto-discard can fire. (Real generation landed; real benchmarks and calibrated classifier pending — current is_refusal() is a 22-string regex.)
+3. **Real datasets.** Real AxBench concept set with a held-out-concept split, real MMLU (>=500 items), real WikiText-103 perplexity; retire the synthetic slices to UNIT/SMOKE only.
+4. **n>=7 with the full rigor contract.** Paired Wilcoxon + 10k-bootstrap CI + Holm-Bonferroni + empirical 2σ_seed band + ordinal gate, on the pre-registered evaluation split.
+5. **All seven baselines** (Section 6.1). The comparison against CAST, prompting, unconditional steering, random-direction control, and the two ablation baselines must all be run before any comparative claim.
 6. **Gemma-2-2B reproduction and weight sensitivity.** Reproduce on the standard model, show the champion ordering survives a λ-perturbation, and confirm 4-bit↔fp16 invariance.
-7. **Held-out-concept generalization and a shuffle-test negative control.** Confirm the method works on concepts not used in extraction and *fails* under label/condition shuffling.
+7. **Rogue-Scalpel red-team (Rung 4).** Reproduce the 20-vector universal attack and verify it is neutralized. The five-layer guard (A–E) must be implemented and ablated.
 
-Until items 1–5 are real, the program supports no external steering-efficacy claim; it stands as a methodology, reproducible-harness, and screening-results contribution. This paper claims exactly that, and the geometric findings of Section 5 are scoped accordingly.
+Until items 0–5 are real, the program supports no external safety-steering claim. The geometric findings of Section 5 (coherence cliff, cylindrical decomposition) are separately gated on items 1, 3, and 4 and do not require the safety method pipeline. This paper claims the method design, the evaluation protocol, the harness, and the geometric findings — scoped accordingly.
 
 ---
 
-## 9. Reproducibility
+## 10. Reproducibility
 
 **Code and rigor gates.** `ruff check src/steering tests` (clean), `mypy src/steering --ignore-missing-imports` (clean), `pytest tests/` (green) — covering the rung-0 plumbing, the mechanism-asserting hook/extract/geometry tests, the Goodhart composite tests, and the markdown-leak dashboard tests. The composite fingerprint `a9001e87087e` is asserted stable and re-derives from the scoring source.
 
@@ -307,9 +508,11 @@ An offline fast path (`--model fake`) runs the full reasoning→runner→ledger�
 
 ---
 
-## 10. Conclusion
+## 11. Conclusion
 
-We contribute a pre-registered autoresearch harness for activation steering whose discipline — a single-axis champion loop, a cost-ordered ladder, a fingerprinted Goodhart-resistant composite that prices all five axes plus off-manifold displacement, and a statistical rigor floor that hard-separates screening from evaluation — turns each experiment into a falsifiable, citation-gated unit. On valid instruments (a generation-based behavior scorer and a real-generation safety scorer), the harness produced a coherent geometric account of the coherence cliff: relative off-manifold displacement is the scale-portable control variable, with a knee near ten percent of the local residual norm; the coherence cost decomposes cylindrically into a radial component that prices addition (R²=0.81) and an angular component that prices rotation (R²=0.997); the off-shell predictor holds monotonically on real held-out WikiText-2 (Spearman +0.585, CI excludes zero) even though no single collapse law transfers across scale (held-out R²=−1.6). Difference-of-means and PCA-top-1 are equivalent steering sources across three models and four behaviors; Fisher-ratio layer selection and a low-rank behavior plane are falsified. Every steering-efficacy magnitude remains gated on real AxBench with a calibrated judge, real safety benchmarks, n≥7 under the full rigor contract, a prompting baseline, and a Gemma-2-2B reproduction. The contribution is the harness, the geometry, and a two-sided ledger of what survived.
+We propose a conditional multi-intent safety-steering method — a CAST-style in-forward gate that fires only on harm-relevant prompts and composes K Gram-Schmidt-orthogonalized safety directions per detected intent, leaving benign generations bit-identical to the unsteered model. The method is designed, implemented, and unit-tested offline. It is not yet validated: zero results on real safety benchmarks exist. The pre-registered success criterion (Pareto-dominates CAST and prompting on JailbreakBench ASR vs XSTest over-refusal at <= 2 pp MMLU drop, n >= 7 seeds, six-part rigor contract) defines the remaining work.
+
+We also contribute a pre-registered autoresearch harness whose discipline — a single-axis champion loop, a cost-ordered ladder, a fingerprinted Goodhart-resistant composite that prices all five axes plus off-manifold displacement, and a statistical rigor floor that hard-separates screening from evaluation — turns each experiment into a falsifiable, citation-gated unit. On valid instruments, the harness produced a coherent geometric account of the coherence cliff: relative off-manifold displacement is the scale-portable control variable, with a knee near ten percent of the local residual norm; the coherence cost decomposes cylindrically into a radial component that prices addition (R²=0.81) and an angular component that prices rotation (R²=0.997); the off-shell predictor holds monotonically on real held-out WikiText-2 (Spearman +0.585, CI excludes zero) even though no single collapse law transfers across scale (held-out R²=−1.6). These geometry findings motivate the method's design choices (relative-add at ~10%, late-middle layer, DiffMean source, Gram-Schmidt orthogonalization for stacking). Every steering-efficacy claim for the safety method remains pending: the plan is rigorous, the implementation is ready, and the validation is the next step. The contribution is the method design, the evaluation protocol, the harness, the geometric account, and a two-sided ledger of what has and has not been validated.
 
 ---
 
@@ -369,3 +572,24 @@ This document was hardened through two rounds of adversarial elite-reviewer crit
 4. *Citation completeness.* Added the linear-representation, AxBench, Manifold-Steering, CRH, and Non-Identifiability references inline where their results are used, and consolidated a full reference list with arXiv links.
 
 No clumsy meta-narration remains in the paper body; all self-referential review language is confined to this changelog.
+
+**Round 3 — improvements #93–98: method built, paper updated to reflect new reality.**
+1. *Paper claimed "does not propose a new steering method."* This was true of the prior
+   draft but is no longer accurate: the conditional multi-intent safety-steering method
+   (DESIGN.md) is now built and unit-tested offline. Fixed: Section 3a added with full
+   method specification; introduction updated to reflect the new contribution; the
+   stale claim removed from Section 1.
+2. *No evaluation protocol specified.* External reviewers and the roadmap
+   (audits/reviews/IMPROVEMENTS_100.md) identified the missing baselines and benchmark
+   wiring as the primary gap. Fixed: Section 6 added with the seven baselines, benchmark
+   table, pre-registered success criterion, and Rogue-Scalpel red-team plan.
+3. *Section numbering.* Former Sections 6–9 renumbered to 7–10 to make room for the new
+   method (3a), harness (3b), and evaluation protocol (6) sections.
+4. *Abstract and conclusion.* Updated to reflect: (a) the method is newly built, not yet
+   validated; (b) zero external-ready results; (c) the one rigorous prior result is
+   negative (E7, AxBench). All PENDING language preserved.
+5. *Limitations section.* Added item 0 explicitly stating the safety method is not yet
+   validated, to ensure no reader conflates the method design with a validated result.
+6. *Required experiments section.* Added item 0 (complete METHOD_LADDER Rungs 0–2) and
+   item 5 (all seven baselines) as prerequisites for any safety-method claim; updated
+   the judge AUC and classifier-status disclosures to match STATUS.md current state.

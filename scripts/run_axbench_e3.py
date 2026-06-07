@@ -16,6 +16,9 @@ Usage:
   PYTHONPATH=src python scripts/run_axbench_e3.py --model google/gemma-2-2b-it \
       --quant none --layer 20 --dataset concept500 --concepts 30 --prompts 8 \
       --alphas 0.02 0.05 0.1 0.2 0.4 0.8 --judge local
+
+NOTE: the composite field now holds only the fingerprinted 5-axis composite; the
+raw behavior metric (best behavior on the alpha curve) is in method_value/extra.
 """
 from __future__ import annotations
 
@@ -145,7 +148,9 @@ def main() -> None:
             method_extra={"instrument": f"local_judge:{args.judge_model.split('/')[-1]}",
                           "curve": curve, "peak_alpha": peak_alpha, "cliff_alpha": cliff_alpha,
                           "n_concepts": len(concepts)},
-            composite=round(max(beh), 4), behavior_efficacy=float(max(beh)),
+            # No 5-axis composite (this is an alpha-coherence curve, not a priced
+            # run); the cliff alpha is in method_value and best behavior in extra.
+            composite=None, behavior_efficacy=float(max(beh)),
             behavior_scorer=f"local_judge:{args.judge_model.split('/')[-1]}", started=t0)
     print(f"  elapsed {time.time()-t0:.1f}s")
 

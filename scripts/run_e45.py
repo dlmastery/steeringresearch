@@ -1,5 +1,8 @@
 """run_e45.py — E45 HyperSteer zero-shot screening driver.
 
+NOTE: the composite field now holds only the fingerprinted 5-axis composite; the
+raw behavior metric (mean held-out cosine) is in method_value/extra.
+
 Pipeline (composes the shared harness with the new `steering.hypersteer` module):
   1. load the model (fake smoke or real Gemma);
   2. for each behavior, extract its supervised DiffMean vector at the injection
@@ -187,7 +190,9 @@ def main() -> None:
                                        "proxy; a cos<0 fold still scores ratio>1, so "
                                        "cosine is the trustworthy signal at n=4"),
                       "threshold_supported": 0.70, "threshold_falsify": 0.50},
-        composite=round(mean_cos, 4), behavior_efficacy=mean_ratio,
+        # No 5-axis composite (mean held-out cosine is the primary metric, in
+        # method_value/extra); composite=None keeps the column honest.
+        composite=None, behavior_efficacy=mean_ratio,
         behavior_scorer="projection", started=t0,
     )
     write_campaign("E45-hypersteer", {

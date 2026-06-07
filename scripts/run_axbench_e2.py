@@ -8,6 +8,9 @@ measure AxBench-judged behavior + coherence per layer over a concept subset.
 Usage:
   PYTHONPATH=src python scripts/run_axbench_e2.py --model google/gemma-2-2b-it \
       --quant none --layers 6 10 14 18 20 22 --dataset concept500 --concepts 20 --prompts 8
+
+NOTE: the composite field now holds only the fingerprinted 5-axis composite; the
+raw behavior metric (best-layer behavior) is in method_value/extra.
 """
 from __future__ import annotations
 
@@ -124,7 +127,9 @@ def main() -> None:
             method_value=float(best_layer),
             method_extra={"instrument": f"local_judge:{args.judge_model.split('/')[-1]}",
                           "curve": curve, "best_layer": best_layer, "n_concepts": len(concepts)},
-            composite=round(max(beh), 4), behavior_efficacy=float(max(beh)),
+            # No 5-axis composite (a layer sweep, not a priced run); best_layer is
+            # in method_value and the best-layer behavior in extra.
+            composite=None, behavior_efficacy=float(max(beh)),
             behavior_scorer=f"local_judge:{args.judge_model.split('/')[-1]}", started=t0)
     print(f"  elapsed {time.time()-t0:.1f}s")
 

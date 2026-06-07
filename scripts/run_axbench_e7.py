@@ -18,6 +18,9 @@ Usage:
   GEMINI_API_KEY=... PYTHONPATH=src python scripts/run_axbench_e7.py \
       --model models/google/gemma-3-270m-it --quant none --layer 16 \
       --dataset concept500 --concepts 0 --prompts 10 --knee 0.1     # --concepts 0 = ALL
+
+NOTE: the composite field now holds only the fingerprinted 5-axis composite; the
+raw behavior metric (real-minus-shuffled delta) is in method_value.
 """
 from __future__ import annotations
 
@@ -260,7 +263,10 @@ def main() -> None:
                           "bootstrap_ci": [rr["bootstrap_ci"]["lo"], rr["bootstrap_ci"]["hi"]],
                           "ordinal_pass": rr["ordinal_gate"]["passes"],
                           "external_ready": rr["external_ready"], "verdict": verdict},
-            composite=round(mean_delta, 4),
+            # No 5-axis composite computed here (only behavior real-vs-shuffled);
+            # the raw delta lives in method_value. composite=None keeps the
+            # composite column honest (eval.composite() output only).
+            composite=None,
             behavior_efficacy=float(np.mean(real_scores)), behavior_scorer=instrument, started=t0,
         )
     print(f"  elapsed {time.time()-t0:.1f}s")

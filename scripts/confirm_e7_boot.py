@@ -28,6 +28,9 @@ Usage:
   GEMINI_API_KEY=... PYTHONPATH=src python scripts/confirm_e7_boot.py \
       --model models/google/gemma-3-270m-it --quant none --layer 16 \
       --concepts ocean anger happiness --boots 50 --prompts 8 --knee 0.1
+
+NOTE: the composite field now holds only the fingerprinted 5-axis composite; the
+raw behavior metric (mean real-minus-shuffled delta across concepts) is in method_value.
 """
 from __future__ import annotations
 
@@ -307,7 +310,10 @@ def main() -> None:
                                                "extraction_stability")} for c in args.concepts},
                           "concept_wilcoxon_p": concept_p, "holm_reject": list(holm["reject"]),
                           "verdict": verdict},
-            composite=round(mean_delta, 4),
+            # No 5-axis composite (a bootstrap directional confirmation); the
+            # mean real-minus-shuffled delta is in method_value. composite=None
+            # keeps the composite column honest (eval.composite() output only).
+            composite=None,
             behavior_efficacy=float(np.mean([per_concept[c]["mean_real"] for c in args.concepts])),
             behavior_scorer=instrument, started=t0,
         )

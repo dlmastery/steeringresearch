@@ -29,6 +29,9 @@ Usage:
   PYTHONPATH=src python scripts/confirm_e7.py --model models/google/gemma-3-270m-it --quant none --layer 16
   PYTHONPATH=src python scripts/confirm_e7.py --model models/google/gemma-2-2b-it  --quant 4bit --layer 18
   (then) PYTHONPATH=src python scripts/confirm_e7.py --combine   # cross-scale verdict
+
+NOTE: the composite field now holds only the fingerprinted 5-axis composite; the
+raw behavior metric (real-minus-shuffled bootstrap-mean delta) is in method_value.
 """
 from __future__ import annotations
 
@@ -296,7 +299,10 @@ def main() -> None:
                           "matched_coherence": matched_coh,
                           "extraction_stability": stab["mean_cosine_to_full"],
                           "single_model_verdict": verdict},
-            composite=round(float(vs_shuffled["bootstrap_ci"]["mean"]), 4),
+            # No 5-axis composite (a directional real-vs-control confirmation);
+            # the real-minus-shuffled delta is in method_value. composite=None
+            # keeps the composite column honest (eval.composite() output only).
+            composite=None,
             behavior_efficacy=float(np.mean(real_seeds)),
             behavior_scorer=instrument, started=t0,
         )
