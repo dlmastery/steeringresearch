@@ -813,11 +813,20 @@ INPUT-triggered steering (safety: harmful prompt -> refuse), not concept inducti
 
 Synthesis of the dev-config screening (S-23..S-25): plain steering is generic
 (direction NULL) and weak at small scale; the conditional gate has a moderate
-basis (AUC 0.75) and shows directional collateral-avoidance. Next: a TRAINED gate
-(probe) to lift detection, and an input-triggered (safety) testbed on 1b.
+basis (AUC 0.75) and shows directional collateral-avoidance.
+
+## S-26 — Trained gate OVERFITS; cosine is the gate (SCREENING, replicates E15)
+
+2026-06-08. Held-out detector AUC over 20 concepts (1b, layer 16): raw DiffMean
+**cosine mean 0.738** vs **trained LogisticGate mean 0.434** (worse than chance);
+cosine beats the probe on 80% of concepts. With ~12 positives in 1152 dims the
+logistic memorizes train and fails held-out. Robustly replicates E15
+(FALSIFIED_OOD). CONCLUSION: the conditional gate must be the unsupervised
+cosine threshold (AUC ~0.74), NOT a trained probe, at this data budget. The
+moderate 0.74 ceiling caps the conditional method's selectivity on small models.
 
 ---
 
 > Composite formula fingerprint: `a9001e87087e`
-> All S-1..S-25 are SCREENING ONLY — not external claims.
+> All S-1..S-26 are SCREENING ONLY — not external claims.
 > No external-ready finding exists as of the latest experiment (#124).
