@@ -790,8 +790,34 @@ the displacement norm + coherence carry the effect, not the specific direction.
 Implication: the contribution must be the CONDITIONAL gate (WHEN to steer /
 collateral avoidance), not the steering direction itself.
 
+## S-25 — The conditional GATE on 1b: moderate detector + collateral avoidance (SCREENING)
+
+2026-06-08. Config: gemma-3-1b-it layer 16, AxBench, judge Qwen2.5-3B.
+
+(a) **Gate-as-detector (N6, judge-free).** Does the concept DiffMean direction
+detect concept-relevant INPUTS (so it can gate)? Score cos(pool(h@16), v_C) on C's
+held-out pos_texts (on-target) vs other concepts' texts (off-target), AUC per
+concept over 20 concepts: **mean AUC 0.747, median 0.732, range 0.52-0.99; 35%
+of concepts >0.8, 55% >0.7.** The raw direction is a MODERATE input-detector —
+conditioning is partially viable; a trained probe (intent_gate.py) should lift this.
+
+(b) **Conditional vs unconditional steering (collateral).** no_steer / unconditional
+/ conditional(gated) over ON-target (C's eval instructions) + OFF-target (other
+concepts' texts), 4-concept smoke: unconditional steering DAMAGES off-target
+fluency (0.52->0.40); conditional PRESERVES it (0.52) — **fluency saved +0.125**,
+the selectivity value, in the right direction. BUT the AxBench setup is confounded
+for the conditional GENERATION test: eval instructions already elicit the concept
+(clean induction 0.44 >= steered), and the trigger is in the OUTPUT not the INPUT,
+so the gate rarely fires on-target (0.25). Conditional gating's clean testbed is
+INPUT-triggered steering (safety: harmful prompt -> refuse), not concept induction.
+
+Synthesis of the dev-config screening (S-23..S-25): plain steering is generic
+(direction NULL) and weak at small scale; the conditional gate has a moderate
+basis (AUC 0.75) and shows directional collateral-avoidance. Next: a TRAINED gate
+(probe) to lift detection, and an input-triggered (safety) testbed on 1b.
+
 ---
 
 > Composite formula fingerprint: `a9001e87087e`
-> All S-1..S-24 are SCREENING ONLY — not external claims.
+> All S-1..S-25 are SCREENING ONLY — not external claims.
 > No external-ready finding exists as of the latest experiment (#124).
