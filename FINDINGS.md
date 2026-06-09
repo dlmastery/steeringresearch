@@ -766,6 +766,32 @@ over-refusal/selectivity axis. See PREREGISTRATION.md.
 
 ---
 
+## S-23 — gemma-3-270m-it is UNSTEERABLE on AxBench (SCREENING, --no-log)
+
+2026-06-08. New standard dev config (user-mandated): target gemma-3-270m-it,
+judge Qwen2.5-3B-Instruct, dataset AxBench, layer 12 (of 18). Alpha sweep
+(10 concepts): behavior PEAKS at the gentlest push (alpha=0.1 -> 0.20/2.0) and
+collapses monotonically to 0 (gibberish) by alpha=0.6 — NO steering window.
+E7 directional (8 concepts, knee 0.1): real 0.141 vs shuffled 0.172, delta
+-0.031, VERDICT NULL. Conclusion: 270m is too small to steer; any method result
+on it is near-floor noise. Target switched to gemma-3-1b-it.
+
+## S-24 — gemma-3-1b-it steers (modestly); E7 direction NULL replicates (SCREENING)
+
+2026-06-08. Config: gemma-3-1b-it (26 layers), layer 16, judge Qwen2.5-3B,
+AxBench. Alpha sweep (12 concepts): behavior peaks at alpha~0.05 (0.46/2.0,
+coherence 0.51), ~2.3x better than 270m, then declines (knee ~0.05-0.08; no
+"rise" past the gentlest push — coherence-limited). E7 directional (30 concepts,
+knee 0.06): real 0.4306 vs shuffled 0.4583, delta -0.0278, CI [-0.056, +0.003],
+VERDICT NULL. The real DiffMean direction does NOT beat a same-norm shuffled-label
+control — REPLICATES the 2b AxBench result (S-19, ~97% captured by shuffled) on
+the small-model dev config. Plain directional steering is generic at this scale:
+the displacement norm + coherence carry the effect, not the specific direction.
+Implication: the contribution must be the CONDITIONAL gate (WHEN to steer /
+collateral avoidance), not the steering direction itself.
+
+---
+
 > Composite formula fingerprint: `a9001e87087e`
-> All S-1..S-22 are SCREENING ONLY — not external claims.
+> All S-1..S-24 are SCREENING ONLY — not external claims.
 > No external-ready finding exists as of the latest experiment (#124).
