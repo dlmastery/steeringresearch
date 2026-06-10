@@ -11,7 +11,8 @@
 
 **Method + full evaluation harness now BUILT and unit-tested; NOT yet run on real
 models/benchmarks. Zero external-ready results.**
-Five external reviewers returned a unanimous reject (2/10). Waves A/B/C of the
+Five SIMULATED adversarial reviews (LLM role-played in-session — NOT human peer
+review or any venue) returned a unanimous reject (2/10). Waves A/B/C of the
 100-item roadmap are built (commits bd5d4e7, 5223300): the conditional
 multi-intent method (cast.py), the Qwen-7B safety judge, the real safety-benchmark
 loaders, the 7 baselines, the adversarial red-team harness, the end-to-end driver,

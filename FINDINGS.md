@@ -785,10 +785,15 @@ coherence 0.51), ~2.3x better than 270m, then declines (knee ~0.05-0.08; no
 knee 0.06): real 0.4306 vs shuffled 0.4583, delta -0.0278, CI [-0.056, +0.003],
 VERDICT NULL. The real DiffMean direction does NOT beat a same-norm shuffled-label
 control — REPLICATES the 2b AxBench result (S-19, ~97% captured by shuffled) on
-the small-model dev config. Plain directional steering is generic at this scale:
-the displacement norm + coherence carry the effect, not the specific direction.
-Implication: the contribution must be the CONDITIONAL gate (WHEN to steer /
-collateral avoidance), not the steering direction itself.
+the small-model dev config. CAVEAT (code+research review, 2026-06-09): the honest
+claim is "any direction-specific effect is BELOW THE DETECTION FLOOR of this judge
+(AUC 0.68-0.74) at near-floor small-model behavior" — NOT a proof the direction is
+intrinsically generic; a stronger judge (AUC>=0.85) or a larger model (9B, see G5)
+could resolve a real difference. The displacement norm + coherence plausibly carry
+most of the measured effect. Implication stands: the candidate contribution is the
+CONDITIONAL gate (WHEN to steer / collateral avoidance), not the direction — but
+the NULL must not be promoted past SCREENING until (a) judge AUC>=0.85 and (b) a 9B
+replication.
 
 ## S-25 — The conditional GATE on 1b: moderate detector + collateral avoidance (SCREENING)
 
@@ -805,11 +810,18 @@ conditioning is partially viable; a trained probe (intent_gate.py) should lift t
 / conditional(gated) over ON-target (C's eval instructions) + OFF-target (other
 concepts' texts), 4-concept smoke: unconditional steering DAMAGES off-target
 fluency (0.52->0.40); conditional PRESERVES it (0.52) — **fluency saved +0.125**,
-the selectivity value, in the right direction. BUT the AxBench setup is confounded
-for the conditional GENERATION test: eval instructions already elicit the concept
-(clean induction 0.44 >= steered), and the trigger is in the OUTPUT not the INPUT,
-so the gate rarely fires on-target (0.25). Conditional gating's clean testbed is
-INPUT-triggered steering (safety: harmful prompt -> refuse), not concept induction.
+the selectivity value, in the right direction. **WITHDRAWN AS A CLAIM (research
+review, 2026-06-09):** the gate threshold tau is set IN-SAMPLE from the same
+off-target set it is then scored on (`run_axbench_conditional.py` ~L128), which
+mechanically pins the FPR — so +0.125 is NOT citable even as screening until tau is
+calibrated on a held-out split. Also the S-25(a) AUC-0.74 + S-26 detector probes
+were run as throwaway /tmp scripts (NOT committed -> not reproducible); they must be
+re-run from a committed driver with held-out tau before either number is trusted.
+Separately, the AxBench setup is confounded for the conditional GENERATION test:
+eval instructions already elicit the concept (clean induction 0.44 >= steered), and
+the trigger is in the OUTPUT not the INPUT, so the gate rarely fires on-target
+(0.25). Conditional gating's clean testbed is INPUT-triggered steering (safety:
+harmful prompt -> refuse), not concept induction.
 
 Synthesis of the dev-config screening (S-23..S-25): plain steering is generic
 (direction NULL) and weak at small scale; the conditional gate has a moderate

@@ -11,8 +11,10 @@ Method development is on AxBench; final evaluation targets SOTA safety benchmark
 Zero external-ready results exist. The one rigorous prior result is negative: on
 the real AxBench benchmark, the steering direction carries only a weak
 concept-specific signal (~97% of the steering effect is captured by a label-shuffled
-control). Five external reviewers returned a unanimous reject verdict (2/10); the
-roadmap to address their concerns is in `audits/reviews/IMPROVEMENTS_100.md`.
+control). **Five _simulated_ adversarial reviews — LLM role-played (Opus) in-session,
+NOT human peer review** — returned a unanimous reject (2/10); the roadmap synthesized
+from them is in `audits/reviews/IMPROVEMENTS_100.md`. No human or venue has reviewed
+this work.
 
 ## Outcome and success criterion
 
@@ -35,20 +37,23 @@ bootstrap 95% CI excluding zero.
 |---|---|
 | [STATUS.md](STATUS.md) | single source of truth — what is built, tested, validated |
 | [Live dashboard](https://dlmastery.github.io/steeringresearch/dashboard/) | master -> per-hypothesis -> per-experiment |
-| [audits/reviews/IMPROVEMENTS_100.md](audits/reviews/IMPROVEMENTS_100.md) | the 100-item roadmap from 5 external reviews |
+| [audits/reviews/IMPROVEMENTS_100.md](audits/reviews/IMPROVEMENTS_100.md) | 100-item roadmap from 5 SIMULATED (LLM) adversarial reviews |
 | [FINDINGS.md](FINDINGS.md) | rigor-gated observations S-1..S-21 (all screening; zero external-ready) |
 | [IDEA_TABLE.md](IDEA_TABLE.md) | hypothesis registry (70 original + 7 new safety-method components = 77 total; 19 with verdicts from real data; 34 in backlog; 7 new M1–M7 RUN PENDING) |
 | [paper/PAPER.md](paper/PAPER.md) | method design, evaluation protocol, harness, and screening-results draft (method PENDING validation) |
 | [hypotheses/](hypotheses/) | design docs for tested hypotheses; backlog in [backlog/](backlog/) |
 | [audits/RUBRICS.md](audits/RUBRICS.md) | verification rubrics A-E |
-| [audits/ICML_SIGNOFF_v2.md](audits/ICML_SIGNOFF_v2.md) | reviewer verdict: conditional accept (blocker on lint/type) |
+| [audits/ICML_SIGNOFF_v2.md](audits/ICML_SIGNOFF_v2.md) | SIMULATED infra-audit (Rubric E), distinct from the paper reviews |
 | [meta-skills/](meta-skills/) | reusable autoresearch process pack |
 | [CLAUDE.md](CLAUDE.md) | constitution — rules, composite, ladder, dashboard mandate |
 
-**Reviewer status:** five external reviews = unanimous reject at a top venue.
-Rubric E (methodology/infrastructure audit) = 8/8 pass after fixing a
-lint/type blocker in dashboard.py. The methodology is sound; the safety
-*method and results* are the gap. Composite fingerprint `a9001e87087e`.
+**Reviewer status (all SIMULATED — LLM-generated in-session, no human/venue):**
+five role-played paper reviews (ICLR/ICML/NeurIPS/researcher/lab-leader) =
+unanimous reject (2/10), files in `audits/reviews/` are titled "Adversarial
+Review". A SEPARATE simulated infra audit (Rubric E, `ICML_SIGNOFF_v2.md`) passed
+8/8 after a lint/type fix — that is about the *harness/infrastructure*, not the
+paper, so it does not contradict the reject. Treat all of these as self-critique,
+not external validation. Composite fingerprint `a9001e87087e`.
 
 ## What has been learned (screening observations, not external claims)
 

@@ -73,4 +73,35 @@ not promoted.
 
 ## Amendments
 
-(none yet)
+### Amendment 1 — 2026-06-09 (primary endpoint; the original broke on first data)
+
+**Trigger:** S-22 measured gemma-2-2b-it ASR = **0** on *raw* JailbreakBench (the
+aligned model refuses every harmful prompt unsteered; eyeball-verified). So the
+original §4 criterion #1 — "ASR reduction ≥ 15 pp vs no-steer" — is mathematically
+unachievable on an aligned model with non-adversarial prompts. The original
+criterion is NOT deleted (per the append-only rule); it is superseded for the
+primary endpoint by:
+
+**New primary endpoint (one of the two regimes that actually has headroom):**
+1. **ASR-under-attack** — measure ASR on JBB *after* applying the built
+   `adversarial.py` transforms (prefill / refusal-suppression / PAIR templates) so
+   the no-steer baseline ASR is non-zero; success = conditional steering reduces
+   ASR-under-attack by ≥ 15 pp at ≤ 1% added over-refusal; OR
+2. **Over-refusal / selectivity** — S-22 shows the baseline over-refuses ~33% of
+   benign XSTest prompts (PENDING transcript audit, §6 precondition 4); success =
+   the conditional method reduces over-refusal vs unconditional steering at matched
+   ASR. (This is the regime the simulated research review judged most reachable.)
+
+**Unchanged:** the rigor contract (§4 #5), screening-vs-evaluation rule (§5), and
+judge-calibration precondition (§6 #1, now raised to AUC ≥ 0.85 per review).
+
+**Additional preconditions added by this amendment (must pass before a logged
+evaluation run):**
+- (a) Audit ~50 XSTest baseline transcripts to confirm the 33% over-refusal is a
+  real model behavior, not a judge/chat-template artifact, BEFORE trusting any
+  over-refusal delta.
+- (b) Power analysis: n=12 JBB prompts cannot detect a 15 pp ASR delta; compute the
+  minimum detectable effect and run full JBB-100 / XSTest-250 or do not run.
+- (c) "Seed" is redefined: greedy inference-time steering has ~0 decode variance;
+  the n≥7 replication unit is **resampled extraction pairs × prompt bootstrap**,
+  not decode seeds.
