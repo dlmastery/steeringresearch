@@ -367,6 +367,17 @@ the research harness** (`src/steering`). Lessons and design rules:
   refusal steering vector, applied **conditionally** via lesson-1's probe as the
   gate (CAST-style), validated by the **same Gemma** as a REFUSAL/COMPLIANCE/
   GIBBERISH judge. This is the READ→WRITE composition.
+- **`reft_r1/`** — lesson 3, the **GENERATE** side: AxBench's learned rank-1 ReFT
+  intervention (train r,w,b, LLM frozen) plus the honest ReFT-r1-vs-DiffMean-vs-
+  prompting bake-off (AxBench: simple baselines are strong). *(Replaces an earlier
+  hypernetwork draft, `hypersteer/`, retired to git history. Source: arXiv
+  2501.17148 + 2404.03592.)*
+- **`flas/`** — lesson 3b, **GENERATE+**: flow-based activation steering — a
+  concept-conditioned velocity field integrated over a flow (flow-time = a
+  continuous strength dial). (github.com/flas-ai/FLAS.)
+- **Further lessons** (`multi_intent`, `rogue_scalpel`, `realignment`, `stacking`,
+  and the planned CONTROL/CERTIFY/PROVE tiers) are catalogued in
+  `steering_tutorials/README.md` — the course map with all lesson plans.
 
 **Track standards (elite-data-scientist bar):** principled dataset sampling
 (prompt-level labels not response-level; harm-category stratification; dedup +

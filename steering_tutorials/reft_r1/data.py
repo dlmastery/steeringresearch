@@ -1,19 +1,21 @@
-"""data.py — the train / eval prompts for HyperSteer (lesson 3), from JailbreakBench.
+"""data.py — the train / eval prompts for ReFT-r1 (lesson 3), from JailbreakBench.
 
 Lesson 2 needed two *contrast* sets (harmful vs benign) to build ONE fixed
-diff-of-means vector, and split each class into extract/eval halves. Lesson 3
-learns the steering vector with a hypernetwork instead, so the data has three
-jobs, and this module hands back all three in one NESTED dict:
+diff-of-means vector, splitting each class into extract/eval halves. Lesson 3
+learns a rank-1 intervention by gradient descent instead of averaging, but it
+consumes the SAME shape of data, so this module hands back both classes split
+into train / eval, in one NESTED dict:
 
   1. ``train`` = {"harmful": [...], "benign": [...]} — the prompts the trainer
-     optimises on (harmful drive the refusal-CE loss; benign anchor the KL
-     "don't over-refuse" regulariser).
+     optimises on. Harmful prompts drive the refusal cross-entropy (the pull);
+     benign prompts anchor the KL "don't over-refuse" leash (the leash).
   2. ``eval``  = {"harmful": [...], "benign": [...]} — a disjoint held-out half
-     of each class, never seen during training, for grading the learned vector.
-  3. ``concept_exemplars`` — a small handful (~8) of harmful prompts, drawn from
-     the TRAIN half, whose activations the hypernetwork reads to build the
-     "refusal" concept embedding it conditions on. Drawing them from the train
-     half keeps the eval prompts genuinely unseen.
+     of each class, never seen during training, for grading the learned edit.
+
+Unlike lesson-3-HyperSteer there are NO ``concept_exemplars`` here: the rank-1
+ReFT intervention reads the hidden state ``h`` directly through its learned
+readout ``w`` (see reft.py), so it needs no separate frozen concept embedding to
+condition on. Two splits are all the trainer and the eval/infer modules need.
 
 The train/eval halves are nested one level down (read them as
 ``data["train"]["harmful"]`` / ``data["eval"]["benign"]``) so the trainer and the
@@ -64,20 +66,15 @@ def _load_class(csv_name: str, n: int, rng: random.Random) -> list[str]:
     return prompts[:n]
 
 
-def load_train_eval(n_per_class: int = 60, seed: int = 0, n_concept: int = 8) -> dict:
-    """Return the HyperSteer data splits as a NESTED dict.
+def load_train_eval(n_per_class: int = 60, seed: int = 0) -> dict:
+    """Return the ReFT-r1 data splits as a NESTED dict.
 
     Shape
     -----
         {
           "train": {"harmful": [str], "benign": [str]},   # first half of each class
           "eval":  {"harmful": [str], "benign": [str]},   # disjoint held-out half
-          "concept_exemplars": [str],                      # n_concept harmful TRAIN
         }
-
-    ``concept_exemplars`` are the first ``n_concept`` harmful TRAIN prompts, used to
-    build the frozen "refusal" concept embedding the hypernetwork conditions on —
-    a subset of ``train["harmful"]``, so the eval prompts stay unseen.
 
     Each class is shuffled with its OWN fixed-seed RNG (offset per class so the
     harmful and benign shuffles are independent), truncated to ``n_per_class``,
@@ -91,26 +88,21 @@ def load_train_eval(n_per_class: int = 60, seed: int = 0, n_concept: int = 8) ->
     train = {"harmful": harmful[:half], "benign": benign[:half]}
     eval_ = {"harmful": harmful[half:], "benign": benign[half:]}
 
-    # Concept exemplars are a handful of TRAIN harmful prompts — never eval ones.
-    concept_exemplars = train["harmful"][:n_concept]
-
     print(
         f"[data] train: {len(train['harmful'])} harmful + {len(train['benign'])} benign | "
-        f"eval: {len(eval_['harmful'])} harmful + {len(eval_['benign'])} benign | "
-        f"{len(concept_exemplars)} concept exemplars "
+        f"eval: {len(eval_['harmful'])} harmful + {len(eval_['benign'])} benign "
         f"(n_per_class={n_per_class}, seed={seed})",
         file=sys.stderr,
     )
-    return {"train": train, "eval": eval_, "concept_exemplars": concept_exemplars}
+    return {"train": train, "eval": eval_}
 
 
-if __name__ == "__main__":  # smoke: python -m steering_tutorials.hypersteer.data
+if __name__ == "__main__":  # smoke: python -m steering_tutorials.reft_r1.data
     d = load_train_eval()
     for split in ("train", "eval"):
         print(f"{split:6s} harmful={len(d[split]['harmful'])}  benign={len(d[split]['benign'])}")
-    print(f"concept_exemplars n={len(d['concept_exemplars'])}")
-    print("\n[example concept exemplars]")
-    for p in d["concept_exemplars"][:3]:
+    print("\n[example harmful train prompts]")
+    for p in d["train"]["harmful"][:3]:
         print(f"  - {p[:80]}")
     # Sanity: eval prompts must be disjoint from train prompts (no leakage).
     for cls in ("harmful", "benign"):

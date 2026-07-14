@@ -25,7 +25,8 @@ learning.
 | 1 | `hello_world` | READ | linear/shallow probing of activations for a concept (harm) | light | **done** |
 | — | `probe_tuning` | READ+ | layer sweep + MLP hyperparameter search (CV, no test peeking) | light | **done** |
 | 2 | `hello_world_steering` | WRITE | CAA/diff-of-means steering vector, conditional gating, an LLM judge | med | **done** (code); GPU validation in progress |
-| 3 | `hypersteer` | GENERATE | a hypernetwork that emits steering vectors; amortization to new concepts | med | **done** (code); GPU train+eval queued |
+| 3 | `reft_r1` | GENERATE | AxBench's learned rank-1 ReFT intervention; ReFT-r1 vs DiffMean vs prompting bake-off | med | **done** (code); GPU eval queued |
+| 3b | `flas` | GENERATE+ | flow-based steering: a concept-conditioned velocity field; flow-time = strength dial | med | **next (in build)** |
 | 4 | `displacement_budget` | CONTROL | the coherence cliff; bound off-manifold displacement | light | planned |
 | 5 | `operations` | CONTROL | add vs project-out (ablation) vs rotate (norm-preserving) | light | planned |
 | 6 | `fungibility_null` | CONTROL | direction controls: shuffled/random/orthogonal — is the vector special? | light | planned |
@@ -66,11 +67,22 @@ gate), judged by the same Gemma. **Teaches:** ActAdd/CAA, relative-add, the
 coherence cliff, conditional (CAST-style) gating. **Source:** `2308.10248`,
 `2312.06681`, `2406.11717`, `2409.05907`.
 
-### L3 · hypersteer — GENERATE  ✅ (validating)
-**Goal:** train a hypernetwork `H(concept) → steering vector` and show it can
-emit a vector for a **new** concept from just its exemplars. **Teaches:**
-hypernetworks, backprop through a frozen LLM, amortized steering. **Source:**
-HyperSteer; `1609.09106`.
+### L3 · reft_r1 — GENERATE  ✅ (eval queued)
+**Goal:** implement AxBench's **ReFT-r1** — a learned rank-1 representation edit
+`h' = h + r_unit·((w·h + b) − (r_unit·h))` (train r,w,b, LLM frozen) — and
+reproduce AxBench's head-to-head: **ReFT-r1 vs DiffMean (the L2 baseline) vs
+prompting** on steering + concept detection. **Teaches:** representation
+finetuning, learned vs fixed steering, honest baselines. **Source:** AxBench
+(`2501.17148`); ReFT/LoReFT (`2404.03592`). *(Replaces an earlier hypernetwork
+draft — `hypersteer/`, retired to git history.)*
+
+### L3b · flas — GENERATE+  ⏳ next
+**Goal:** flow-based activation steering — learn a concept-conditioned velocity
+field `v_θ(h,t,c)` and transport activations to their steered position via flow
+integration `h' = h + ∫₀ᵀ v_θ dt`, with flow-time `T` as a continuous,
+zero-shot steering-strength dial. **Teaches:** flow matching / continuous
+transport for steering; one checkpoint, many unseen concepts. **Source:** FLAS
+(github.com/flas-ai/FLAS).
 
 ### L4 · displacement_budget — CONTROL
 **Goal:** measure off-manifold displacement (Δ‖h‖, effective-rank drop,
