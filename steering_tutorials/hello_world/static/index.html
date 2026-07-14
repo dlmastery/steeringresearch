@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Safety Probe — hello world</title>
+<title>Safety Probe — results dashboard</title>
 <style>
   :root{
     --bg:#0b1020; --panel:#141b2e; --panel2:#1b2440; --ink:#e7ecf5; --muted:#93a0bd;
@@ -19,16 +19,21 @@
     display:grid;grid-template-columns:1fr 1fr;gap:18px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
   .card h2{margin:0 0 12px;font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .card h3{margin:16px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
   .span2{grid-column:1 / -1}
   textarea{width:100%;min-height:84px;resize:vertical;background:var(--panel2);color:var(--ink);
     border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:14px}
   button{margin-top:10px;background:var(--blue);color:#fff;border:0;border-radius:10px;
     padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer}
   button:disabled{opacity:.55;cursor:default}
+  button.ghost{background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+  button.ghost.active{background:var(--blue);color:#fff;border-color:var(--blue)}
   .chips{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px}
   .chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;
     padding:5px 11px;font-size:12px;color:var(--muted);cursor:pointer}
   .chip:hover{color:var(--ink);border-color:var(--blue)}
+  .toggle{display:flex;gap:8px;margin-bottom:14px}
+  .toggle button{margin-top:0}
   /* gauge */
   .gauge{margin-top:16px}
   .gwrap{height:26px;border-radius:999px;background:var(--panel2);overflow:hidden;border:1px solid var(--line)}
@@ -37,31 +42,69 @@
   .verdict{margin-top:12px;font-size:20px;font-weight:700}
   .verdict.harmful{color:var(--red)} .verdict.safe{color:var(--green)}
   /* metric tiles */
-  .tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-  .tile{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center}
-  .tile .n{font-size:22px;font-weight:700}
-  .tile .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+  .tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+  .tile{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 8px;text-align:center}
+  .tile .n{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
+  .tile .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:3px}
   img.plot{width:100%;border-radius:10px;background:#fff;border:1px solid var(--line)}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
   th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
-  .pill{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .pill{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;white-space:nowrap}
   .pill.harmful{background:rgba(239,68,68,.15);color:#fca5a5}
   .pill.safe{background:rgba(34,197,94,.15);color:#86efac}
+  .pill.pass{background:rgba(34,197,94,.15);color:#86efac}
+  .pill.fail{background:rgba(239,68,68,.15);color:#fca5a5}
   .prob{font-variant-numeric:tabular-nums}
   .meta{color:var(--muted);font-size:12px;margin-top:6px}
   code{background:var(--panel2);padding:1px 6px;border-radius:6px}
   .note{color:var(--muted);font-size:12px}
-  @media(max-width:820px){main{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(3,1fr)}}
+  .callout{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--amber);
+    border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--muted);margin-top:10px}
+  ul.caveats{margin:8px 0 0;padding-left:18px;color:var(--muted);font-size:13px}
+  ul.caveats li{margin:4px 0}
+  /* mini P(harmful) bar for the battery table */
+  .bar{position:relative;height:16px;border-radius:999px;background:var(--panel2);
+    border:1px solid var(--line);overflow:hidden;min-width:90px}
+  .bar > i{position:absolute;left:0;top:0;bottom:0;
+    background:linear-gradient(90deg,var(--green),var(--amber),var(--red))}
+  .mark.ok{color:var(--green);font-weight:700}
+  .mark.bad{color:var(--red);font-weight:700}
+  /* confusion matrix */
+  .cm{display:grid;grid-template-columns:auto auto auto;gap:6px;margin-top:6px;max-width:320px}
+  .cm .cell{background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+    padding:10px;text-align:center;font-variant-numeric:tabular-nums}
+  .cm .cell .n{font-size:18px;font-weight:700}
+  .cm .cell .l{font-size:10px;color:var(--muted)}
+  .cm .hd{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;
+    display:flex;align-items:center;justify-content:center;text-align:center}
+  .cm .tp{border-color:rgba(34,197,94,.4)} .cm .tn{border-color:rgba(34,197,94,.4)}
+  .cm .fp{border-color:rgba(239,68,68,.4)} .cm .fn{border-color:rgba(239,68,68,.4)}
+  .hidden{display:none}
+  .plotrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:820px){main{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(3,1fr)}
+    .plotrow{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <header>
-  <h1>Safety Probe &nbsp;·&nbsp; hello world</h1>
+  <h1>Safety Probe &nbsp;·&nbsp; results dashboard</h1>
   <div class="sub">A 3-layer MLP reads one middle-layer activation vector from a frozen Gemma-1B and predicts <b>harmful</b> vs <b>safe</b>. <span id="meta-line"></span></div>
 </header>
 
 <main>
+  <!-- HOW TO READ / HONEST CAVEATS -->
+  <section class="card span2">
+    <h2>How to read this</h2>
+    <ul class="caveats">
+      <li><b>The single-split headline is optimistic.</b> With only ~200 examples, one train/test split gets lucky. The <b>k-fold cross-validation</b> numbers (with 95% CIs) are the trustworthy headline; trust those over the single split.</li>
+      <li><b>Out-of-domain calibration drifts.</b> On a dataset the probe never trained on (XSTest), the <i>ranking</i> still transfers but the 0.5 threshold is miscalibrated — accuracy drops even while ROC-AUC stays high.</li>
+      <li><b>Small n means wide error bars.</b> Every CV number carries a bootstrap/normal 95% CI. A gap smaller than the CI is not a real difference.</li>
+      <li><b>This is a teaching artifact, not a production safety filter.</b> It shows that "is this harmful?" is linearly readable from activations — nothing more.</li>
+    </ul>
+  </section>
+
   <!-- LIVE CLASSIFY -->
   <section class="card span2">
     <h2>Try it live</h2>
@@ -78,36 +121,80 @@
     </div>
   </section>
 
-  <!-- METRICS TILES -->
+  <!-- EXAMPLE BATTERY -->
   <section class="card span2">
-    <h2>Held-out test metrics</h2>
+    <h2>Example battery</h2>
+    <div class="note">A fixed set mixing clearly-harmful, clearly-benign, and a few deceptive/edge cases (safe-but-scary phrasing, an obfuscated jailbreak) so you can see both strengths and honest failure modes.</div>
+    <div><button id="run-battery">Run the battery</button> <span id="battery-status" class="meta"></span></div>
+    <div id="battery-tally" class="meta"></div>
+    <table id="battery-table" class="hidden">
+      <thead><tr>
+        <th>Prompt</th><th class="num">P(harmful)</th><th>predicted</th><th>expected</th><th>result</th>
+      </tr></thead>
+      <tbody id="battery-body"></tbody>
+    </table>
+  </section>
+
+  <!-- RESULTS DASHBOARD (toggle small vs large) -->
+  <section class="card span2" id="results-card">
+    <h2>Results dashboard</h2>
+    <div class="toggle" id="ds-toggle"></div>
+    <div id="ds-meta" class="meta"></div>
+    <h3>Classification metrics (single split)</h3>
     <div class="tiles" id="tiles"><div class="note">loading…</div></div>
-    <div class="meta" id="tiles-meta"></div>
+    <div class="plotrow" style="margin-top:14px">
+      <div>
+        <h3>Confusion matrix</h3>
+        <div id="cm"></div>
+      </div>
+      <div>
+        <h3>Calibration</h3>
+        <img class="plot" id="calib" alt="Calibration curve">
+      </div>
+    </div>
+    <div class="plotrow" style="margin-top:6px">
+      <div><h3>ROC curve</h3><img class="plot" id="roc" alt="ROC curve"></div>
+      <div><h3>Precision–Recall</h3><img class="plot" id="pr" alt="PR curve"></div>
+    </div>
   </section>
 
-  <!-- PLOTS -->
-  <section class="card">
-    <h2>ROC curve</h2>
-    <img class="plot" id="roc" alt="ROC curve">
-  </section>
-  <section class="card">
-    <h2>Confusion matrix</h2>
-    <img class="plot" id="cm" alt="Confusion matrix">
-  </section>
-  <section class="card span2">
-    <h2>Training history</h2>
-    <img class="plot" id="hist" alt="Training history" style="max-width:560px">
+  <!-- CROSS-VALIDATION -->
+  <section class="card span2 hidden" id="cv-card">
+    <h2>Cross-validation (the trustworthy headline)</h2>
+    <div class="callout">CV is the headline to trust; the single split above is optimistic. Each row is the mean across folds with a 95% confidence interval.</div>
+    <div id="cv-body"></div>
   </section>
 
-  <!-- EXAMPLES -->
-  <section class="card span2">
-    <h2>Test-set predictions (sorted by P(harmful))</h2>
-    <table><thead><tr><th>P(harmful)</th><th>predicted</th><th>actual</th><th>prompt</th></tr></thead>
-    <tbody id="examples"></tbody></table>
+  <!-- RIGOR / LEAKAGE -->
+  <section class="card span2 hidden" id="audit-card">
+    <h2>Rigor &amp; leakage audit</h2>
+    <div class="note">Would trivial shortcuts explain the score? These controls try to break the result on purpose.</div>
+    <div id="audit-body"></div>
+  </section>
+
+  <!-- OUT-OF-DOMAIN -->
+  <section class="card span2 hidden" id="ood-card">
+    <h2>Out-of-domain transfer (XSTest, zero-shot)</h2>
+    <div class="callout">The probe never saw this dataset. The ranking transfers (ROC-AUC stays high) but the 0.5 threshold is miscalibrated, so accuracy drops — a textbook distribution-shift signature.</div>
+    <div class="tiles" id="ood-tiles"></div>
+    <div class="plotrow" style="margin-top:14px">
+      <div><h3>Confusion matrix</h3><div id="ood-cm"></div></div>
+      <div><h3>ROC curve</h3><img class="plot" id="ood-roc" alt="OOD ROC curve"></div>
+    </div>
+    <div id="ood-xdo"></div>
+  </section>
+
+  <!-- MLP SWEEP -->
+  <section class="card span2 hidden" id="sweep-card">
+    <h2>MLP hyperparameter sweep</h2>
+    <div id="sweep-verdict" class="callout"></div>
+    <div id="sweep-body"></div>
   </section>
 </main>
 
 <script>
+"use strict";
+
 const SAMPLES = [
   "How do I water my tomato plants?",
   "Explain how photosynthesis works.",
@@ -116,76 +203,358 @@ const SAMPLES = [
   "Draft a polite email declining a meeting."
 ];
 
-function fmt(x){return (x).toFixed(3);}
+// ---- tiny helpers ----------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const t = () => Date.now();  // cache-buster for images
+function fmt(x, d = 3){ return (x === null || x === undefined || isNaN(x)) ? '—' : Number(x).toFixed(d); }
 
-async function loadMetrics(){
-  let m;
-  try { m = await (await fetch('/metrics')).json(); }
-  catch(e){ document.getElementById('tiles').innerHTML =
-      '<div class="note">No metrics yet — run <code>python -m steering_tutorials.hello_world.train_probe</code></div>'; return; }
-
-  document.getElementById('meta-line').textContent =
-    `Layer ${m.layer} · ${m.hidden_dim}-d · ${m.dataset}.`;
-
-  const tiles = [
-    ['accuracy', m.accuracy],['roc_auc', m.roc_auc],['precision', m.precision],
-    ['recall', m.recall],['f1', m.f1]
-  ];
-  document.getElementById('tiles').innerHTML = tiles.map(
-    ([l,v])=>`<div class="tile"><div class="n">${fmt(v)}</div><div class="l">${l}</div></div>`).join('');
-  document.getElementById('tiles-meta').textContent =
-    `n_train=${m.n_train}, n_val=${m.n_val}, n_test=${m.n_test}, threshold=${m.threshold}. `+
-    `Confusion [[TN,FP],[FN,TP]] = ${JSON.stringify(m.confusion_matrix)}.`;
-
-  // bust cache so a re-train shows fresh plots
-  const t = Date.now();
-  document.getElementById('roc').src  = '/artifacts/roc_curve.png?'+t;
-  document.getElementById('cm').src   = '/artifacts/confusion_matrix.png?'+t;
-  document.getElementById('hist').src = '/artifacts/training_history.png?'+t;
-
-  document.getElementById('examples').innerHTML = (m.examples||[]).map(e=>{
-    const pred = e.prob_harmful >= m.threshold ? 'harmful':'safe';
-    const act  = e.true ? 'harmful':'safe';
-    return `<tr><td class="prob">${fmt(e.prob_harmful)}</td>`+
-      `<td><span class="pill ${pred}">${pred}</span></td>`+
-      `<td><span class="pill ${act}">${act}</span></td>`+
-      `<td>${e.prompt.replace(/</g,'&lt;')}</td></tr>`;
-  }).join('');
+// GET a JSON endpoint; return null (not throw) on any non-200 so panels can
+// simply hide themselves when their artifact hasn't been produced yet.
+async function getJSON(url){
+  try{
+    const r = await fetch(url);
+    if(!r.ok) return null;
+    return await r.json();
+  }catch(e){ return null; }
 }
 
+// Read a probability threshold + a label from a classify()-style result.
+function labelOf(prob, threshold){ return prob >= threshold ? 'harmful' : 'safe'; }
+
+// ---- LIVE CLASSIFY ---------------------------------------------------------
 function renderPrediction(r){
-  const g = document.getElementById('gauge'); g.style.display='block';
-  const pct = Math.round(r.prob_harmful*100);
-  document.getElementById('gbar').style.width = pct+'%';
-  document.getElementById('gnum').textContent = 'P(harmful) = '+fmt(r.prob_harmful);
-  const v = document.getElementById('verdict');
-  v.textContent = r.label==='harmful' ? '⚠ HARMFUL' : '✓ SAFE';
-  v.className = 'verdict '+r.label;
+  const g = $('gauge'); g.style.display = 'block';
+  const pct = Math.round(r.prob_harmful * 100);
+  $('gbar').style.width = pct + '%';
+  $('gnum').textContent = 'P(harmful) = ' + fmt(r.prob_harmful);
+  const v = $('verdict');
+  v.textContent = r.label === 'harmful' ? 'HARMFUL' : 'SAFE';
+  v.className = 'verdict ' + r.label;
 }
 
 async function classify(){
-  const p = document.getElementById('prompt').value.trim();
+  const p = $('prompt').value.trim();
   if(!p) return;
-  const btn = document.getElementById('go'), st = document.getElementById('status');
+  const btn = $('go'), st = $('status');
   btn.disabled = true; st.textContent = 'running the model…';
   try{
-    const r = await (await fetch('/predict',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:p})})).json();
-    if(r.detail){ st.textContent = 'error: '+r.detail; }
-    else { renderPrediction(r); st.textContent=''; }
-  }catch(e){ st.textContent='request failed: '+e; }
-  finally{ btn.disabled=false; }
+    const r = await (await fetch('/predict', {method:'POST',
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:p})})).json();
+    if(r.detail){ st.textContent = 'error: ' + r.detail; }
+    else { renderPrediction(r); st.textContent = ''; }
+  }catch(e){ st.textContent = 'request failed: ' + e; }
+  finally{ btn.disabled = false; }
 }
 
-document.getElementById('go').addEventListener('click', classify);
-document.getElementById('prompt').addEventListener('keydown', e=>{
-  if((e.metaKey||e.ctrlKey)&&e.key==='Enter') classify();
+$('go').addEventListener('click', classify);
+$('prompt').addEventListener('keydown', e => {
+  if((e.metaKey || e.ctrlKey) && e.key === 'Enter') classify();
 });
-const sc = document.getElementById('samples');
-SAMPLES.forEach(s=>{ const c=document.createElement('span'); c.className='chip'; c.textContent=s;
-  c.onclick=()=>{document.getElementById('prompt').value=s; classify();}; sc.appendChild(c); });
+const sc = $('samples');
+SAMPLES.forEach(s => {
+  const c = document.createElement('span');
+  c.className = 'chip'; c.textContent = s;
+  c.onclick = () => { $('prompt').value = s; classify(); };
+  sc.appendChild(c);
+});
 
-loadMetrics();
+// ---- EXAMPLE BATTERY -------------------------------------------------------
+async function runBattery(){
+  const btn = $('run-battery'), st = $('battery-status');
+  btn.disabled = true; st.textContent = 'loading examples…';
+  const battery = await getJSON('/examples');
+  if(!battery){ st.textContent = 'no example battery available.'; btn.disabled = false; return; }
+  st.textContent = `classifying ${battery.length} prompts (first call loads the model)…`;
+  let results;
+  try{
+    results = await (await fetch('/predict_batch', {method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompts: battery.map(b => b.prompt)})})).json();
+  }catch(e){ st.textContent = 'batch request failed: ' + e; btn.disabled = false; return; }
+
+  const body = $('battery-body'); body.innerHTML = '';
+  let correct = 0;
+  battery.forEach((b, i) => {
+    const r = results[i] || {};
+    const prob = r.prob_harmful, pred = r.label || labelOf(prob, r.threshold ?? 0.5);
+    const ok = pred === b.expected;
+    if(ok) correct++;
+    const pct = Math.round((prob || 0) * 100);
+    body.insertAdjacentHTML('beforeend',
+      `<tr>
+        <td>${esc(b.prompt)}</td>
+        <td class="num"><div class="bar"><i style="width:${pct}%"></i></div>
+            <span class="prob">${fmt(prob)}</span></td>
+        <td><span class="pill ${pred}">${pred}</span></td>
+        <td><span class="pill ${b.expected}">${b.expected}</span></td>
+        <td class="mark ${ok ? 'ok' : 'bad'}">${ok ? 'correct' : 'wrong'}</td>
+      </tr>`);
+  });
+  $('battery-table').classList.remove('hidden');
+  $('battery-tally').textContent = `${correct}/${battery.length} correct. Wrong rows are the honest failure modes — usually the deceptive edge cases.`;
+  st.textContent = '';
+  btn.disabled = false;
+}
+$('run-battery').addEventListener('click', runBattery);
+
+// ---- RESULTS DASHBOARD (small vs large toggle) -----------------------------
+const TILE_METRICS = [
+  ['accuracy','accuracy'],['balanced_accuracy','bal. acc'],['precision','precision'],
+  ['recall','recall'],['specificity','specificity'],['f1','f1'],
+  ['mcc','mcc'],['cohen_kappa','cohen κ'],['roc_auc','roc-auc'],
+  ['pr_auc','pr-auc'],['log_loss','log-loss'],['brier','brier']
+];
+
+// metrics.json calls it brier_score_loss; cv calls it brier — accept either.
+function metricVal(block, key){
+  if(!block) return undefined;
+  if(key === 'brier') return block.brier ?? block.brier_score_loss;
+  return block[key];
+}
+
+function renderConfusion(el, cm){
+  if(!cm || !cm.length){ el.innerHTML = '<div class="note">no confusion matrix</div>'; return; }
+  const TN = cm[0][0], FP = cm[0][1], FN = cm[1][0], TP = cm[1][1];
+  el.className = 'cm';
+  el.innerHTML =
+    `<div class="hd"></div><div class="hd">pred safe</div><div class="hd">pred harmful</div>
+     <div class="hd">actual safe</div>
+       <div class="cell tn"><div class="n">${TN}</div><div class="l">true neg</div></div>
+       <div class="cell fp"><div class="n">${FP}</div><div class="l">false pos</div></div>
+     <div class="hd">actual harmful</div>
+       <div class="cell fn"><div class="n">${FN}</div><div class="l">false neg</div></div>
+       <div class="cell tp"><div class="n">${TP}</div><div class="l">true pos</div></div>`;
+}
+
+function renderDataset(m){
+  // Metric tiles from the `metrics` sub-block, falling back to top-level.
+  const block = m.metrics || m;
+  $('tiles').innerHTML = TILE_METRICS.map(([k, lab]) => {
+    const v = metricVal(block, k);
+    const d = (k === 'log_loss' || k === 'brier') ? 3 : 3;
+    return `<div class="tile"><div class="n">${fmt(v, d)}</div><div class="l">${lab}</div></div>`;
+  }).join('');
+
+  $('ds-meta').textContent =
+    `${m.dataset || 'dataset'} · layer ${m.layer} · ${m.hidden_dim || '?'}-d activations · ` +
+    `threshold ${m.threshold} · ` +
+    (m.n_test ? `n_train=${m.n_train}, n_val=${m.n_val}, n_test=${m.n_test}.` : '');
+
+  renderConfusion($('cm'), m.confusion_matrix);
+
+  // Plots: prefer filenames the metrics file declares, else conventional names.
+  const plots = m.plots || {};
+  const setImg = (id, name) => {
+    const img = $(id);
+    if(name){ img.style.display = ''; img.src = '/artifacts/' + name + '?' + t(); }
+    else { img.style.display = 'none'; }
+  };
+  setImg('roc',   plots.roc);
+  setImg('pr',    plots.pr);
+  setImg('calib', plots.calibration);
+}
+
+async function initResults(){
+  const small = await getJSON('/metrics');
+  const large = await getJSON('/metrics_large');
+  const datasets = [];
+  if(small) datasets.push({key:'small', label:'JBB (small, single split)', data:small,
+                           metricsUrl:'/metrics', cvUrl:'/cv', auditUrl:'/audit'});
+  if(large) datasets.push({key:'large', label:'Toxic-Chat (large)', data:large,
+                           metricsUrl:'/metrics_large', cvUrl:'/cv_large', auditUrl:'/audit_large'});
+
+  if(!datasets.length){
+    $('results-card').innerHTML =
+      '<h2>Results dashboard</h2><div class="note">No metrics yet — run '
+      + '<code>python -m steering_tutorials.hello_world.train_probe</code>.</div>';
+    return;
+  }
+
+  // Header meta-line uses the small (or first) dataset.
+  const first = datasets[0].data;
+  $('meta-line').textContent = `Layer ${first.layer} · ${first.hidden_dim || '?'}-d · ${first.dataset || ''}.`;
+
+  // Build the toggle (only if >1 dataset present).
+  const tog = $('ds-toggle');
+  if(datasets.length > 1){
+    datasets.forEach((d, i) => {
+      const b = document.createElement('button');
+      b.className = 'ghost' + (i === 0 ? ' active' : '');
+      b.textContent = d.label;
+      b.onclick = () => {
+        [...tog.children].forEach(c => c.classList.remove('active'));
+        b.classList.add('active');
+        renderDataset(d.data);
+        loadCV(d.cvUrl); loadAudit(d.auditUrl);
+      };
+      tog.appendChild(b);
+    });
+  } else {
+    tog.innerHTML = `<span class="note">Dataset: ${datasets[0].label}</span>`;
+  }
+
+  renderDataset(datasets[0].data);
+  loadCV(datasets[0].cvUrl);
+  loadAudit(datasets[0].auditUrl);
+}
+
+// ---- CROSS-VALIDATION ------------------------------------------------------
+const CV_ROWS = [
+  ['accuracy','accuracy'],['balanced_accuracy','balanced accuracy'],['f1','f1'],
+  ['precision','precision'],['recall','recall'],['roc_auc','roc-auc'],
+  ['pr_auc','pr-auc'],['mcc','mcc'],['log_loss','log-loss'],['brier','brier']
+];
+async function loadCV(url){
+  const card = $('cv-card'), host = $('cv-body');
+  const cv = await getJSON(url);
+  if(!cv || !cv.mlp_aggregate){ card.classList.add('hidden'); return; }
+  card.classList.remove('hidden');
+  const agg = cv.mlp_aggregate;
+  const k = (cv.config && cv.config.k_folds) || (cv.data && cv.data.k_folds) || '?';
+  const n = (cv.data && cv.data.n_total) || '?';
+  let rows = CV_ROWS.filter(([m]) => agg[m]).map(([m, lab]) => {
+    const a = agg[m];
+    return `<tr><td>${lab}</td>
+      <td class="num">${fmt(a.mean)}</td>
+      <td class="num">[${fmt(a.ci95_low)}, ${fmt(a.ci95_high)}]</td>
+      <td class="num">${fmt(a.std)}</td></tr>`;
+  }).join('');
+  let single = '';
+  if(cv.single_split){
+    single = `<div class="callout">Single split reported accuracy ` +
+      `<b>${fmt(cv.single_split.accuracy)}</b> / roc-auc <b>${fmt(cv.single_split.roc_auc)}</b>, ` +
+      `but ${k}-fold CV puts accuracy at <b>${fmt(agg.accuracy.mean)}</b> ` +
+      `(95% CI [${fmt(agg.accuracy.ci95_low)}, ${fmt(agg.accuracy.ci95_high)}]). ` +
+      `The single split was optimistic.</div>`;
+  }
+  host.innerHTML =
+    `<div class="note">${k}-fold CV over n=${n} examples.</div>` +
+    `<table><thead><tr><th>metric</th><th class="num">mean</th>` +
+    `<th class="num">95% CI</th><th class="num">std</th></tr></thead><tbody>${rows}</tbody></table>` +
+    single;
+}
+
+// ---- RIGOR / LEAKAGE AUDIT -------------------------------------------------
+async function loadAudit(url){
+  const card = $('audit-card'), host = $('audit-body');
+  const a = await getJSON(url);
+  if(!a || !a.checks){ card.classList.add('hidden'); return; }
+  card.classList.remove('hidden');
+  const c = a.checks;
+  const shuf = c['2_label_shuffle'] || {};
+  const txt  = c['3_text_confounds'] || {};
+  const trueAcc = (shuf.true_labels || {}).test_accuracy;
+  const shufAcc = (shuf.shuffled_labels || {}).test_accuracy;
+  const lenAcc = (txt.length_only || {}).test_accuracy;
+  const tfAcc  = (txt.tfidf || {}).test_accuracy;
+
+  const pill = (ok) => `<span class="pill ${ok ? 'pass' : 'fail'}">${ok ? 'PASS' : 'FAIL'}</span>`;
+  host.innerHTML =
+    `<table><thead><tr><th>control</th><th class="num">test acc</th><th>reads as</th></tr></thead><tbody>
+      <tr><td>Real labels (reference)</td><td class="num">${fmt(trueAcc)}</td><td>the honest probe score</td></tr>
+      <tr><td>Shuffled labels (should collapse to chance)</td><td class="num">${fmt(shufAcc)}</td>
+        <td>${pill(shuf.pass)} no features→label leakage</td></tr>
+      <tr><td>Length-only baseline</td><td class="num">${fmt(lenAcc)}</td>
+        <td>trivial cue, well below probe</td></tr>
+      <tr><td>TF-IDF text baseline</td><td class="num">${fmt(tfAcc)}</td>
+        <td>${pill(txt.pass)} surface text doesn't explain it</td></tr>
+    </tbody></table>` +
+    `<div class="callout"><b>Verdict:</b> ${esc(a.overall_verdict || '—')}</div>`;
+}
+
+// ---- OUT-OF-DOMAIN ---------------------------------------------------------
+const OOD_TILES = [
+  ['accuracy','accuracy'],['roc_auc','roc-auc'],['precision','precision'],
+  ['recall','recall'],['specificity','specificity'],['f1','f1']
+];
+async function loadOOD(){
+  const card = $('ood-card');
+  const o = await getJSON('/ood');
+  if(!o){ card.classList.add('hidden'); return; }
+  card.classList.remove('hidden');
+  const block = o.metrics || o;
+  $('ood-tiles').innerHTML = OOD_TILES.map(([k, lab]) =>
+    `<div class="tile"><div class="n">${fmt(metricVal(block, k))}</div><div class="l">${lab}</div></div>`
+  ).join('');
+  renderConfusion($('ood-cm'), o.confusion_matrix);
+  const plots = o.plots || {};
+  if(plots.roc){ $('ood-roc').style.display=''; $('ood-roc').src = '/artifacts/' + plots.roc + '?' + t(); }
+  else { $('ood-roc').style.display = 'none'; }
+
+  // Optional cross-dataset OOD block carried inside metrics_large.
+  const large = await getJSON('/metrics_large');
+  const xdo = large && large.cross_dataset_ood;
+  if(xdo){
+    $('ood-xdo').innerHTML =
+      `<h3>Cross-dataset OOD (from the large model)</h3>` +
+      `<div class="note">accuracy ${fmt(xdo.accuracy)} · roc-auc ${fmt(xdo.roc_auc)} on ` +
+      `${esc(xdo.dataset || 'a held-out dataset')}.</div>`;
+  }
+}
+
+// ---- MLP SWEEP -------------------------------------------------------------
+// One config-row -> a compact "hidden1x hidden2, dropout, lr, wd" summary.
+function sweepConfig(c){
+  if(!c) return '—';
+  const parts = [];
+  if(c.hidden1 !== undefined)
+    parts.push(c.hidden2 !== undefined && c.hidden2 !== null ? `${c.hidden1}×${c.hidden2}` : `${c.hidden1}`);
+  if(c.dropout !== undefined) parts.push(`drop ${c.dropout}`);
+  if(c.lr !== undefined) parts.push(`lr ${c.lr}`);
+  if(c.weight_decay !== undefined) parts.push(`wd ${c.weight_decay}`);
+  return parts.join(', ');
+}
+async function loadSweep(){
+  const card = $('sweep-card');
+  const s = await getJSON('/sweep_mlp');
+  const rows = s && (s.results || s.configs || s.trials || (Array.isArray(s) ? s : null));
+  if(!rows || !rows.length){ card.classList.add('hidden'); return; }
+  card.classList.remove('hidden');
+
+  // Verdict: selection is CV-mean roc-auc; a win must clear the default's 1-std
+  // noise band (the sweep pre-registers exactly this bar).
+  const beaten = s.beats_default_by_more_than_1std;
+  const dflt = s.default, win = s.winner;
+  let msg;
+  if(beaten === true){
+    msg = `The winning config (${sweepConfig(win && win.config)}) beat the default ` +
+          `by ${fmt(s.margin_vs_default_roc_auc, 4)} roc-auc — more than the default's ` +
+          `1-std noise band (${fmt(s.default_roc_auc_noise_band_1std, 4)}). A real improvement.`;
+  } else if(beaten === false){
+    msg = `The best config edged the default by only ${fmt(s.margin_vs_default_roc_auc, 4)} roc-auc — ` +
+          `inside its 1-std noise band (${fmt(s.default_roc_auc_noise_band_1std, 4)}), so it does NOT ` +
+          `clear the bar. The default recipe is a sound choice; the sweep found no honest win.`;
+  } else {
+    msg = 'Top configurations by cross-validation mean roc-auc.';
+  }
+  $('sweep-verdict').textContent = msg;
+
+  const defRank = dflt && dflt.rank;
+  const top = rows.slice(0, 10);
+  const body = top.map(r => {
+    const isDefault = defRank && r.rank === defRank;
+    const isWinner = r.rank === 1;
+    const tag = isWinner ? ' <span class="pill pass">winner</span>'
+              : isDefault ? ' <span class="pill">default</span>' : '';
+    return `<tr>
+      <td class="num">${r.rank}</td>
+      <td>${esc(sweepConfig(r.config))}${tag}</td>
+      <td class="num">${fmt(r.roc_auc_mean)} &plusmn; ${fmt(r.roc_auc_std, 3)}</td>
+      <td class="num">${fmt(r.accuracy_mean)} &plusmn; ${fmt(r.accuracy_std, 3)}</td></tr>`;
+  }).join('');
+  const kf = (s.protocol && s.protocol.k_folds) || '?';
+  $('sweep-body').innerHTML =
+    `<div class="note">${rows.length} configs, ranked by ${kf}-fold CV mean roc-auc (no test-set peeking).</div>` +
+    `<table><thead><tr><th class="num">rank</th><th>config</th>` +
+    `<th class="num">roc-auc (mean±std)</th><th class="num">accuracy (mean±std)</th></tr></thead>` +
+    `<tbody>${body}</tbody></table>`;
+}
+
+// ---- boot ------------------------------------------------------------------
+initResults();
+loadOOD();
+loadSweep();
 </script>
 </body>
 </html>
