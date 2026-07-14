@@ -48,7 +48,7 @@ def load_safety_dataset() -> tuple[list[str], list[int]]:
     return prompts, labels
 
 
-if __name__ == "__main__":  # quick smoke: python -m steering_hello_world_tutorial.data
+if __name__ == "__main__":  # quick smoke: python -m steering_tutorials.hello_world.data
     ps, ys = load_safety_dataset()
     for p, y in list(zip(ps, ys))[:2] + list(zip(ps, ys))[-2:]:
         print(f"[{ 'HARMFUL' if y else 'SAFE   ' }] {p[:80]}")

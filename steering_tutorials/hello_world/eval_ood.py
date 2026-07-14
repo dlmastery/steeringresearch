@@ -19,7 +19,7 @@ The out-of-domain (OOD) set is XSTest (Rottger et al. 2024, arXiv:2308.01263):
 This is a much harder, adversarially-designed distribution than JBB, so it is an
 honest stress test of what the probe actually learned.
 
-Run:  python -m steering_hello_world_tutorial.eval_ood
+Run:  python -m steering_tutorials.hello_world.eval_ood
 """
 from __future__ import annotations
 
@@ -39,9 +39,9 @@ except Exception:  # pragma: no cover - optional
 
 import torch
 
-from steering_hello_world_tutorial import config
-from steering_hello_world_tutorial.model_utils import extract_features, load_model
-from steering_hello_world_tutorial.probe import load_probe, predict_proba
+from steering_tutorials.hello_world import config
+from steering_tutorials.hello_world.model_utils import extract_features, load_model
+from steering_tutorials.hello_world.probe import load_probe, predict_proba
 
 # XSTest ships as one CSV on the Hub. It is already in the local HF cache.
 XSTEST_REPO = "Paul/XSTest"

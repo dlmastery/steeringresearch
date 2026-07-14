@@ -1,6 +1,6 @@
 """audit_leakage.py -- a leakage / dataset-artifact audit of the safety probe.
 
-Run:  python -m steering_hello_world_tutorial.audit_leakage   (from the repo root)
+Run:  python -m steering_tutorials.hello_world.audit_leakage   (from the repo root)
 
 The headline claim of this hello-world is "0.95 test accuracy / 0.98 AUC when a
 tiny MLP reads frozen Gemma activations and classifies JailbreakBench harmful vs.

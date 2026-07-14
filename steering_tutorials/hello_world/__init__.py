@@ -1,4 +1,4 @@
-"""steering_hello_world_tutorial — a standalone hello-world activation-probe safety classifier.
+"""steering_tutorials.hello_world — a standalone hello-world activation-probe safety classifier.
 
 Read a frozen LLM's internal activations for a prompt, and let a tiny 3-layer
 MLP decide whether the prompt is harmful. Self-contained: model loading,

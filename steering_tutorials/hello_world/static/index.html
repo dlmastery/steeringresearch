@@ -122,7 +122,7 @@ async function loadMetrics(){
   let m;
   try { m = await (await fetch('/metrics')).json(); }
   catch(e){ document.getElementById('tiles').innerHTML =
-      '<div class="note">No metrics yet — run <code>python -m steering_hello_world_tutorial.train_probe</code></div>'; return; }
+      '<div class="note">No metrics yet — run <code>python -m steering_tutorials.hello_world.train_probe</code></div>'; return; }
 
   document.getElementById('meta-line').textContent =
     `Layer ${m.layer} · ${m.hidden_dim}-d · ${m.dataset}.`;
