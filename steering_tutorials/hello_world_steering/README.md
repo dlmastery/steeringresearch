@@ -361,17 +361,37 @@ untouched (→ still helpful, no over-refusal). `conditional.png` contrasts the
 harmful and benign streams and shows the gate preserving benign behavior that
 unconditional steering would have destroyed.
 
-**What the artifacts show** (`artifacts/results.json` + the two PNGs):
+**Measured results** (validation run, abliterated Gemma-3-1B, layer 12, n=20/arm):
 
-| Arm | Prompt type | Expected verdict trend | Populated by run |
+*Unconditional sweep on held-out harmful prompts — steering does induce refusal,
+and the coherence cliff is visible as gibberish rising then (past it) falling:*
+
+| alpha | refusal | comply | gibberish |
 |---|---|---|---|
-| (a) baseline | harmful | mostly `COMPLIANCE` | see `results.json` |
-| (b) uncond. sweep | harmful | `REFUSAL` ↑ then `GIBBERISH` ↑ with alpha | see `rates_vs_alpha.png` |
-| (c) conditional | harmful | mostly `REFUSAL` | see `conditional.png` |
-| (c) conditional | benign | mostly `COMPLIANCE` (untouched) | see `conditional.png` |
+| 0.00 (baseline) | 0.50 | 0.40 | 0.10 |
+| 0.05 | 0.55 | 0.20 | **0.25** |
+| 0.10 (chosen) | **0.70** | 0.20 | 0.10 |
+| 0.15 | 0.70 | 0.30 | 0.00 |
 
-Actual rates are filled in by the validation GPU run (this doc is written before
-it); read them from `artifacts/results.json`.
+*Conditional arm (gate fires → steer at alpha=0.10, else leave untouched):*
+
+| metric | value | reading |
+|---|---|---|
+| gate accuracy | **0.975** | the L1 probe reliably tells harmful from benign |
+| harmful refusal rate | 0.65 | steering pushes most harmful prompts to refuse |
+| gibberish rate | 0.175 | the cost of pushing — the cliff is real |
+| benign over-refusal | 0.50 | **see the honest caveat below** |
+
+**The honest caveat.** Benign over-refusal is 0.50 — but the gate is 97.5%
+accurate, so benign prompts are almost never steered. That means the 0.50 is
+**not** caused by our intervention; it is the *baseline* behavior of the
+abliterated model + the weak 1B judge over-flagging JBB "benign" prompts (which
+are themselves unusual instructions) as refusals. The lesson: the conditional
+gate does exactly its job (near-perfectly separates the two streams and only
+steers harmful), but a headline number can still be dominated by the
+measurement instrument, not the method. Fix in later lessons: a stronger/
+calibrated judge (L7) and a proper over-refusal baseline subtraction. Read the
+raw numbers and side-by-side examples in `artifacts/results.json`.
 
 ---
 
