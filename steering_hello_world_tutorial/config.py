@@ -3,7 +3,7 @@
 This project is DELIBERATELY standalone: it does not import anything from the
 research harness in ``src/steering``. Everything it needs (model loading,
 feature extraction, dataset download, the probe, the webapp) lives under
-``safety_probe/`` so you can read it top-to-bottom and run it on its own.
+``steering_hello_world_tutorial/`` so you can read it top-to-bottom and run it on its own.
 
 The idea in one sentence:
     A big language model already "knows" whether a prompt is harmful — that

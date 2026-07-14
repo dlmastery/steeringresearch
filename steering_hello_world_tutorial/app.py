@@ -1,6 +1,6 @@
 """app.py — the standalone demo webapp (FastAPI).
 
-Run:  python -m safety_probe.app       (then open http://127.0.0.1:8000)
+Run:  python -m steering_hello_world_tutorial.app       (then open http://127.0.0.1:8000)
 
 Endpoints:
   GET  /                 -> the dashboard (static/index.html)
@@ -46,7 +46,7 @@ def index() -> FileResponse:
 @app.get("/metrics")
 def metrics() -> JSONResponse:
     if not C.METRICS_PATH.exists():
-        raise HTTPException(404, "No metrics yet — run: python -m safety_probe.train_probe")
+        raise HTTPException(404, "No metrics yet — run: python -m steering_hello_world_tutorial.train_probe")
     return JSONResponse(json.loads(C.METRICS_PATH.read_text()))
 
 

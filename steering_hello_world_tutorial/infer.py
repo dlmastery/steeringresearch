@@ -1,6 +1,6 @@
 """infer.py — classify an arbitrary prompt with the trained probe.
 
-Run:  python -m safety_probe.infer "How do I pick a lock?"
+Run:  python -m steering_hello_world_tutorial.infer "How do I pick a lock?"
 
 Loads the frozen LLM + the saved probe once, extracts the activation vector for
 your prompt, and prints P(harmful) with a verdict. This is exactly what the
@@ -23,7 +23,7 @@ class Classifier:
     def __init__(self):
         if not C.PROBE_PATH.exists():
             raise FileNotFoundError(
-                f"No trained probe at {C.PROBE_PATH}. Run: python -m safety_probe.train_probe")
+                f"No trained probe at {C.PROBE_PATH}. Run: python -m steering_hello_world_tutorial.train_probe")
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.probe, self.scaler, self.meta = load_probe(C.PROBE_PATH, device=self.device)
         self.model, self.tok = load_model(self.meta["model_id"])

@@ -1,0 +1,70 @@
+{
+  "headline_claim": {
+    "probe_true_lr_proxy_test_acc": 0.925,
+    "probe_true_lr_proxy_test_auc": 0.9675,
+    "note": "LogisticRegression proxy on the same features/split; the MLP probe's reported headline is acc=0.95 / auc=0.98 (metrics.json)."
+  },
+  "checks": {
+    "1_disjointness": {
+      "cross_split_prompt_overlaps": 0,
+      "overlap_train_test": 0,
+      "overlap_train_val": 0,
+      "overlap_val_test": 0,
+      "index_level_disjoint": true,
+      "exact_duplicate_prompts_in_dataset": 0,
+      "duplicate_examples": [],
+      "label_balance": {
+        "train": {
+          "harmful(1)": 65,
+          "benign(0)": 65
+        },
+        "val": {
+          "harmful(1)": 15,
+          "benign(0)": 15
+        },
+        "test": {
+          "harmful(1)": 20,
+          "benign(0)": 20
+        }
+      },
+      "pass": true,
+      "verdict": "PASS -- splits are disjoint at both prompt and index level"
+    },
+    "2_label_shuffle": {
+      "true_labels": {
+        "test_accuracy": 0.925,
+        "test_auc": 0.9675
+      },
+      "shuffled_labels": {
+        "test_accuracy": 0.425,
+        "test_auc": 0.48000000000000004
+      },
+      "fail_threshold_shuffled_acc": 0.65,
+      "pass": true,
+      "verdict": "PASS -- true=0.925 high, shuffled=0.425 ~chance; no features->label leakage path"
+    },
+    "3_text_confounds": {
+      "length_only": {
+        "test_accuracy": 0.65,
+        "test_auc": 0.6475
+      },
+      "tfidf": {
+        "test_accuracy": 0.575,
+        "test_auc": 0.635,
+        "n_features": 424
+      },
+      "strong_text_artifact_ge_0.90": false,
+      "interpretation": "Trivial text baselines stay well below the probe -- the probe's score is not explained by surface text features alone.",
+      "pass": true,
+      "verdict": "OK -- text-only baselines (tfidf 0.575) trail the probe"
+    },
+    "4_scaler_discipline": {
+      "reference": "train_probe.py step 4: Scaler.fit(X[tr]) then transform train/val/test with that train-fit scaler",
+      "test_statistics_used_in_fit": false,
+      "pass": true,
+      "verdict": "PASS -- standardization is fit on the train split only; no test statistics leak into the scaler."
+    }
+  },
+  "flags": [],
+  "overall_verdict": "LEGITIMATE -- no leakage and no dominant text artifact; the headline reflects real activation-level signal."
+}

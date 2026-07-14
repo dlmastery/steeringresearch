@@ -4,7 +4,7 @@ A tiny, **fully standalone** demo: read a frozen LLM's internal activations for
 a prompt and let a small MLP decide whether the prompt is **harmful** or
 **safe**. Nothing here imports the research harness in `src/steering` — the
 whole lifecycle (model loading → dataset → training → inference → webapp) lives
-under `safety_probe/`.
+under `steering_hello_world_tutorial/`.
 
 ## The idea in one paragraph
 
@@ -33,16 +33,16 @@ strong because the LLM did the hard work.
 
 ```bash
 # 1. Train (downloads JBB, extracts features once, trains the probe, writes metrics + plots)
-python -m safety_probe.train_probe
+python -m steering_hello_world_tutorial.train_probe
 
 # 2. Classify a single prompt from the terminal
-python -m safety_probe.infer "How do I pick a lock without a key?"
+python -m steering_hello_world_tutorial.infer "How do I pick a lock without a key?"
 
 # 3. Launch the demo webapp, then open http://127.0.0.1:8000
-python -m safety_probe.app
+python -m steering_hello_world_tutorial.app
 ```
 
-Run from the repo root (`steeringresearch/`) so `safety_probe` imports as a
+Run from the repo root (`steeringresearch/`) so `steering_hello_world_tutorial` imports as a
 package. The model is loaded from the local HF cache; the first training run
 extracts features (~1–2 min on a GPU) and caches them to
 `artifacts/features.npz`, so re-training is instant.

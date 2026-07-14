@@ -1,6 +1,6 @@
 """train_probe.py — the whole training lifecycle, top to bottom.
 
-Run:  python -m safety_probe.train_probe
+Run:  python -m steering_hello_world_tutorial.train_probe
 
 Steps (each is a numbered section below):
     1. Load the safety dataset (harmful vs. safe prompts).
