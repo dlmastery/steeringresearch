@@ -120,40 +120,113 @@ def train_probe(Xtr, ytr, Xva, yva, in_dim, device):
 
 # --- Step 6: metrics --------------------------------------------------------
 def evaluate(y_true: np.ndarray, p_harm: np.ndarray, threshold: float) -> dict:
-    from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score,
-                                  precision_score, recall_score, roc_auc_score,
-                                  roc_curve)
+    """Full standard binary-classification suite on the held-out test set.
+
+    Returns a dict with three parts the dashboard consumes:
+      * ``metrics``          — the 12 scalar scores (see below).
+      * ``confusion_matrix`` — [[TN, FP], [FN, TP]] at ``threshold``.
+      * ``curves``           — ROC, PR, and calibration point-lists for plotting.
+    Threshold-independent scores (roc_auc, pr_auc, log_loss, brier) use the raw
+    probabilities; the rest use the hard predictions at ``threshold``.
+    """
+    from sklearn.calibration import calibration_curve
+    from sklearn.metrics import (accuracy_score, average_precision_score,
+                                  balanced_accuracy_score, brier_score_loss,
+                                  cohen_kappa_score, confusion_matrix, f1_score,
+                                  log_loss, matthews_corrcoef,
+                                  precision_recall_curve, precision_score,
+                                  recall_score, roc_auc_score, roc_curve)
 
     y_pred = (p_harm >= threshold).astype(int)
     cm = confusion_matrix(y_true, y_pred, labels=[0, 1])  # [[TN,FP],[FN,TP]]
+    tn, fp, fn, tp = int(cm[0, 0]), int(cm[0, 1]), int(cm[1, 0]), int(cm[1, 1])
+    # specificity = TN / (TN + FP) — the "recall" of the safe class.
+    specificity = tn / max(1, tn + fp)
+
+    # Curve data for the plots / dashboard.
     fpr, tpr, _ = roc_curve(y_true, p_harm)
-    return {
+    prec_curve, rec_curve, _ = precision_recall_curve(y_true, p_harm)
+    # calibration_curve wants at least both classes present; n_bins=8 as asked.
+    prob_true, prob_pred = calibration_curve(y_true, p_harm, n_bins=8,
+                                             strategy="uniform")
+
+    metrics = {
         "accuracy": float(accuracy_score(y_true, y_pred)),
+        "balanced_accuracy": float(balanced_accuracy_score(y_true, y_pred)),
         "precision": float(precision_score(y_true, y_pred, zero_division=0)),
         "recall": float(recall_score(y_true, y_pred, zero_division=0)),
+        "specificity": float(specificity),
         "f1": float(f1_score(y_true, y_pred, zero_division=0)),
+        "mcc": float(matthews_corrcoef(y_true, y_pred)),
+        "cohen_kappa": float(cohen_kappa_score(y_true, y_pred)),
         "roc_auc": float(roc_auc_score(y_true, p_harm)),
+        "pr_auc": float(average_precision_score(y_true, p_harm)),
+        "log_loss": float(log_loss(y_true, p_harm, labels=[0, 1])),
+        "brier_score_loss": float(brier_score_loss(y_true, p_harm)),
+    }
+    return {
+        "metrics": metrics,
         "confusion_matrix": cm.tolist(),
-        "roc_curve": {"fpr": fpr.tolist(), "tpr": tpr.tolist()},
+        "curves": {
+            "roc": {"fpr": fpr.tolist(), "tpr": tpr.tolist()},
+            "pr": {"precision": prec_curve.tolist(), "recall": rec_curve.tolist()},
+            "calibration": {"prob_pred": prob_pred.tolist(),
+                            "prob_true": prob_true.tolist()},
+        },
         "n_test": int(len(y_true)),
     }
 
 
 # --- Step 7: plots ----------------------------------------------------------
+# Two new PNGs (PR curve + calibration) live next to the existing artifacts.
+# Defined here rather than in config.py to keep this task's edits self-contained.
+PR_PNG = C.ARTIFACTS / "pr_curve.png"
+CALIBRATION_PNG = C.ARTIFACTS / "calibration.png"
+
+
 def make_plots(metrics: dict, history: dict) -> None:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    curves = metrics["curves"]
+    m = metrics["metrics"]
+
     # ROC curve
-    roc = metrics["roc_curve"]
+    roc = curves["roc"]
     fig, ax = plt.subplots(figsize=(4.2, 4))
     ax.plot(roc["fpr"], roc["tpr"], color="#2563eb", lw=2,
-            label=f"AUC = {metrics['roc_auc']:.3f}")
+            label=f"AUC = {m['roc_auc']:.3f}")
     ax.plot([0, 1], [0, 1], "--", color="#9ca3af", lw=1)
     ax.set_xlabel("False positive rate"); ax.set_ylabel("True positive rate")
     ax.set_title("ROC — held-out test"); ax.legend(loc="lower right")
     fig.tight_layout(); fig.savefig(C.ROC_PNG, dpi=110); plt.close(fig)
+
+    # Precision-Recall curve (annotate PR-AUC / average precision)
+    pr = curves["pr"]
+    fig, ax = plt.subplots(figsize=(4.2, 4))
+    ax.plot(pr["recall"], pr["precision"], color="#7c3aed", lw=2,
+            label=f"PR-AUC = {m['pr_auc']:.3f}")
+    # baseline = prevalence of the positive (harmful) class.
+    cm = np.array(metrics["confusion_matrix"])
+    prevalence = (cm[1].sum()) / max(1, cm.sum())
+    ax.axhline(prevalence, ls="--", color="#9ca3af", lw=1,
+               label=f"chance = {prevalence:.2f}")
+    ax.set_xlabel("Recall"); ax.set_ylabel("Precision")
+    ax.set_ylim(0, 1.02); ax.set_xlim(0, 1.0)
+    ax.set_title("Precision-Recall — held-out test"); ax.legend(loc="lower left")
+    fig.tight_layout(); fig.savefig(PR_PNG, dpi=110); plt.close(fig)
+
+    # Calibration / reliability diagram vs the perfect-calibration diagonal
+    cal = curves["calibration"]
+    fig, ax = plt.subplots(figsize=(4.2, 4))
+    ax.plot([0, 1], [0, 1], "--", color="#9ca3af", lw=1, label="perfect")
+    ax.plot(cal["prob_pred"], cal["prob_true"], "o-", color="#059669", lw=2,
+            label=f"probe (Brier={m['brier_score_loss']:.3f})")
+    ax.set_xlabel("Mean predicted P(harmful)"); ax.set_ylabel("Observed harmful fraction")
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ax.set_title("Calibration — held-out test"); ax.legend(loc="upper left")
+    fig.tight_layout(); fig.savefig(CALIBRATION_PNG, dpi=110); plt.close(fig)
 
     # Training history
     fig, ax = plt.subplots(figsize=(5.2, 4))
@@ -175,8 +248,8 @@ def make_plots(metrics: dict, history: dict) -> None:
             ax.text(j, i, str(cm[i, j]), ha="center", va="center",
                     color="white" if cm[i, j] > cm.max() / 2 else "black", fontsize=14)
     fig.tight_layout(); fig.savefig(C.CONFUSION_PNG, dpi=110); plt.close(fig)
-    print(f"[plots] wrote {C.ROC_PNG.name}, {C.HISTORY_PNG.name}, {C.CONFUSION_PNG.name}",
-          file=sys.stderr)
+    print(f"[plots] wrote {C.ROC_PNG.name}, {PR_PNG.name}, {CALIBRATION_PNG.name}, "
+          f"{C.HISTORY_PNG.name}, {C.CONFUSION_PNG.name}", file=sys.stderr)
 
 
 def main() -> None:
@@ -204,21 +277,35 @@ def main() -> None:
 
     # 6) evaluate on held-out test
     p_test = predict_proba(probe, scaler, X[te], device=device)  # note: X[te] raw; predict_proba re-scales
-    metrics = evaluate(y[te], p_test, C.DECISION_THRESHOLD)
-    metrics.update({
-        "model_id": C.MODEL_ID, "layer": int(layer), "pooling": C.POOLING,
-        "hidden_dim": int(in_dim), "threshold": C.DECISION_THRESHOLD,
-        "n_train": int(len(tr)), "n_val": int(len(va)),
-        "dataset": "JailbreakBench harmful vs. benign",
-        "history": history,
-    })
+    ev = evaluate(y[te], p_test, C.DECISION_THRESHOLD)
+    m = ev["metrics"]
+
     # a few concrete test examples for the dashboard
     examples = []
-    for idx, p, prob in zip(te, [prompts[i] for i in te], p_test):
+    for idx, prob in zip(te, p_test):
         examples.append({"prompt": prompts[idx][:160], "true": int(y[idx]),
                          "prob_harmful": float(prob)})
     examples.sort(key=lambda e: e["prob_harmful"], reverse=True)
-    metrics["examples"] = examples
+
+    # Assemble metrics.json. Keep top-level accuracy/roc_auc as back-compat
+    # duplicates of the values now living inside the ``metrics`` block.
+    metrics = {
+        "dataset": "JailbreakBench harmful vs. benign",
+        "model_id": C.MODEL_ID, "layer": int(layer), "pooling": C.POOLING,
+        "hidden_dim": int(in_dim), "threshold": C.DECISION_THRESHOLD,
+        "n_train": int(len(tr)), "n_val": int(len(va)), "n_test": ev["n_test"],
+        "accuracy": m["accuracy"], "roc_auc": m["roc_auc"],  # back-compat duplicates
+        "metrics": m,
+        "confusion_matrix": ev["confusion_matrix"],
+        "curves": ev["curves"],
+        "plots": {
+            "roc": C.ROC_PNG.name, "pr": PR_PNG.name,
+            "calibration": CALIBRATION_PNG.name,
+            "confusion": C.CONFUSION_PNG.name, "history": C.HISTORY_PNG.name,
+        },
+        "history": history,
+        "examples": examples,
+    }
 
     # 7) persist
     save_probe(C.PROBE_PATH, probe, scaler,
@@ -228,13 +315,20 @@ def main() -> None:
     make_plots(metrics, history)
 
     print("\n=== TEST-SET RESULTS =========================================")
-    print(f"  accuracy   {metrics['accuracy']:.3f}")
-    print(f"  precision  {metrics['precision']:.3f}")
-    print(f"  recall     {metrics['recall']:.3f}")
-    print(f"  f1         {metrics['f1']:.3f}")
-    print(f"  roc_auc    {metrics['roc_auc']:.3f}")
-    print(f"  confusion  {metrics['confusion_matrix']}  [[TN,FP],[FN,TP]]")
-    print(f"  saved      {C.PROBE_PATH.name}, {C.METRICS_PATH.name}")
+    print(f"  accuracy            {m['accuracy']:.3f}")
+    print(f"  balanced_accuracy   {m['balanced_accuracy']:.3f}")
+    print(f"  precision           {m['precision']:.3f}")
+    print(f"  recall              {m['recall']:.3f}")
+    print(f"  specificity         {m['specificity']:.3f}")
+    print(f"  f1                  {m['f1']:.3f}")
+    print(f"  mcc                 {m['mcc']:.3f}")
+    print(f"  cohen_kappa         {m['cohen_kappa']:.3f}")
+    print(f"  roc_auc             {m['roc_auc']:.3f}")
+    print(f"  pr_auc              {m['pr_auc']:.3f}")
+    print(f"  log_loss            {m['log_loss']:.3f}")
+    print(f"  brier_score_loss    {m['brier_score_loss']:.3f}")
+    print(f"  confusion           {metrics['confusion_matrix']}  [[TN,FP],[FN,TP]]")
+    print(f"  saved               {C.PROBE_PATH.name}, {C.METRICS_PATH.name}")
     print("==============================================================")
 
 

@@ -59,6 +59,8 @@ IN_DOMAIN_AUC = 0.98
 
 OOD_METRICS_PATH = config.ARTIFACTS / "ood_metrics.json"
 OOD_CONFUSION_PNG = config.ARTIFACTS / "ood_confusion.png"
+OOD_ROC_PNG = config.ARTIFACTS / "ood_roc.png"
+OOD_PR_PNG = config.ARTIFACTS / "ood_pr.png"
 
 
 def load_xstest_balanced(per_class: int = PER_CLASS, seed: int = SHUFFLE_SEED):
@@ -100,59 +102,57 @@ def load_xstest_balanced(per_class: int = PER_CLASS, seed: int = SHUFFLE_SEED):
 
 
 def compute_metrics(y_true: np.ndarray, probs: np.ndarray, threshold: float) -> dict:
-    """Standard binary-classification metrics at a fixed decision threshold.
+    """Full standard binary-classification suite (same shape as train_probe).
 
-    Computed by hand (no sklearn dependency) so the arithmetic is fully legible:
-    TP/FP/FN/TN -> precision, recall, f1; ROC-AUC via the rank statistic
-    (== probability a random harmful scores above a random safe).
+    Returns ``metrics`` (12 scalar scores), ``confusion_matrix`` [[TN,FP],[FN,TP]]
+    at ``threshold``, and ``curves`` (roc, pr, calibration) for the OOD plots.
+    Threshold-independent scores (roc_auc, pr_auc, log_loss, brier) use the raw
+    probabilities; the rest use hard predictions at ``threshold``.
     """
+    from sklearn.calibration import calibration_curve
+    from sklearn.metrics import (accuracy_score, average_precision_score,
+                                  balanced_accuracy_score, brier_score_loss,
+                                  cohen_kappa_score, confusion_matrix, f1_score,
+                                  log_loss, matthews_corrcoef,
+                                  precision_recall_curve, precision_score,
+                                  recall_score, roc_auc_score, roc_curve)
+
     y_pred = (probs >= threshold).astype(int)
+    cm = confusion_matrix(y_true, y_pred, labels=[0, 1])  # [[TN,FP],[FN,TP]]
+    tn, fp, fn, tp = int(cm[0, 0]), int(cm[0, 1]), int(cm[1, 0]), int(cm[1, 1])
+    specificity = tn / max(1, tn + fp)  # TN / (TN + FP)
 
-    tp = int(np.sum((y_pred == 1) & (y_true == 1)))
-    fp = int(np.sum((y_pred == 1) & (y_true == 0)))
-    fn = int(np.sum((y_pred == 0) & (y_true == 1)))
-    tn = int(np.sum((y_pred == 0) & (y_true == 0)))
+    fpr, tpr, _ = roc_curve(y_true, probs)
+    prec_curve, rec_curve, _ = precision_recall_curve(y_true, probs)
+    # calibration on a balanced set is meaningful; 8 uniform bins.
+    prob_true, prob_pred = calibration_curve(y_true, probs, n_bins=8,
+                                             strategy="uniform")
 
-    accuracy = (tp + tn) / max(1, len(y_true))
-    precision = tp / max(1, tp + fp)
-    recall = tp / max(1, tp + fn)
-    f1 = 2 * precision * recall / max(1e-12, precision + recall)
-
-    # ROC-AUC via the Mann-Whitney U rank statistic (threshold-independent).
-    roc_auc = _auc_rank(y_true, probs)
-
+    metrics = {
+        "accuracy": round(float(accuracy_score(y_true, y_pred)), 4),
+        "balanced_accuracy": round(float(balanced_accuracy_score(y_true, y_pred)), 4),
+        "precision": round(float(precision_score(y_true, y_pred, zero_division=0)), 4),
+        "recall": round(float(recall_score(y_true, y_pred, zero_division=0)), 4),
+        "specificity": round(float(specificity), 4),
+        "f1": round(float(f1_score(y_true, y_pred, zero_division=0)), 4),
+        "mcc": round(float(matthews_corrcoef(y_true, y_pred)), 4),
+        "cohen_kappa": round(float(cohen_kappa_score(y_true, y_pred)), 4),
+        "roc_auc": round(float(roc_auc_score(y_true, probs)), 4),
+        "pr_auc": round(float(average_precision_score(y_true, probs)), 4),
+        "log_loss": round(float(log_loss(y_true, probs, labels=[0, 1])), 4),
+        "brier_score_loss": round(float(brier_score_loss(y_true, probs)), 4),
+    }
     return {
-        "accuracy": round(accuracy, 4),
-        "precision": round(precision, 4),
-        "recall": round(recall, 4),
-        "f1": round(f1, 4),
-        "roc_auc": round(roc_auc, 4),
+        "metrics": metrics,
         # confusion_matrix rows = true class [safe, harmful], cols = pred [safe, harmful]
         "confusion_matrix": [[tn, fp], [fn, tp]],
+        "curves": {
+            "roc": {"fpr": fpr.tolist(), "tpr": tpr.tolist()},
+            "pr": {"precision": prec_curve.tolist(), "recall": rec_curve.tolist()},
+            "calibration": {"prob_pred": prob_pred.tolist(),
+                            "prob_true": prob_true.tolist()},
+        },
     }
-
-
-def _auc_rank(y_true: np.ndarray, scores: np.ndarray) -> float:
-    """ROC-AUC = P(score(harmful) > score(safe)), ties counted as 0.5.
-
-    Uses average ranks so tied scores are handled correctly.
-    """
-    pos = y_true == 1
-    neg = y_true == 0
-    n_pos, n_neg = int(pos.sum()), int(neg.sum())
-    if n_pos == 0 or n_neg == 0:
-        return float("nan")
-    order = np.argsort(scores, kind="mergesort")
-    ranks = np.empty(len(scores), dtype=float)
-    ranks[order] = np.arange(1, len(scores) + 1)
-    # average ranks for ties
-    _, inv, counts = np.unique(scores, return_inverse=True, return_counts=True)
-    sums = np.zeros(len(counts))
-    np.add.at(sums, inv, ranks)
-    ranks = (sums / counts)[inv]
-    sum_ranks_pos = ranks[pos].sum()
-    auc = (sum_ranks_pos - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg)
-    return float(auc)
 
 
 def save_confusion_png(cm: list[list[int]], path) -> None:
@@ -179,6 +179,50 @@ def save_confusion_png(cm: list[list[int]], path) -> None:
         print(f"[ood] wrote {path}", file=sys.stderr)
     except Exception as e:  # pragma: no cover - plotting is optional
         print(f"[ood] skipped confusion png ({e})", file=sys.stderr)
+
+
+def save_roc_png(curves: dict, roc_auc: float, path) -> None:
+    """OOD ROC curve (matplotlib Agg, no display)."""
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        roc = curves["roc"]
+        fig, ax = plt.subplots(figsize=(4.2, 4))
+        ax.plot(roc["fpr"], roc["tpr"], color="#2563eb", lw=2,
+                label=f"AUC = {roc_auc:.3f}")
+        ax.plot([0, 1], [0, 1], "--", color="#9ca3af", lw=1)
+        ax.set_xlabel("False positive rate"); ax.set_ylabel("True positive rate")
+        ax.set_title("ROC — XSTest OOD (zero-shot)"); ax.legend(loc="lower right")
+        fig.tight_layout(); fig.savefig(path, dpi=120); plt.close(fig)
+        print(f"[ood] wrote {path}", file=sys.stderr)
+    except Exception as e:  # pragma: no cover - plotting is optional
+        print(f"[ood] skipped roc png ({e})", file=sys.stderr)
+
+
+def save_pr_png(curves: dict, pr_auc: float, prevalence: float, path) -> None:
+    """OOD precision-recall curve (matplotlib Agg, no display)."""
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        pr = curves["pr"]
+        fig, ax = plt.subplots(figsize=(4.2, 4))
+        ax.plot(pr["recall"], pr["precision"], color="#7c3aed", lw=2,
+                label=f"PR-AUC = {pr_auc:.3f}")
+        ax.axhline(prevalence, ls="--", color="#9ca3af", lw=1,
+                   label=f"chance = {prevalence:.2f}")
+        ax.set_xlabel("Recall"); ax.set_ylabel("Precision")
+        ax.set_ylim(0, 1.02); ax.set_xlim(0, 1.0)
+        ax.set_title("Precision-Recall — XSTest OOD"); ax.legend(loc="lower left")
+        fig.tight_layout(); fig.savefig(path, dpi=120); plt.close(fig)
+        print(f"[ood] wrote {path}", file=sys.stderr)
+    except Exception as e:  # pragma: no cover - plotting is optional
+        print(f"[ood] skipped pr png ({e})", file=sys.stderr)
 
 
 def main() -> None:
@@ -212,8 +256,10 @@ def main() -> None:
             torch.cuda.empty_cache()
 
     # 4 (cont). Compute all the metrics at the probe's own threshold.
-    metrics = compute_metrics(y_true, probs, threshold)
-    cm = metrics["confusion_matrix"]
+    ev = compute_metrics(y_true, probs, threshold)
+    metrics = ev["metrics"]
+    cm = ev["confusion_matrix"]
+    curves = ev["curves"]
 
     # A handful of concrete predictions for the write-up: mix of both classes,
     # sorted so the reader sees confident-harmful first and confident-safe last.
@@ -241,7 +287,15 @@ def main() -> None:
         "layer": layer,
         "pooling": pooling,
         "threshold": threshold,
-        **metrics,
+        # back-compat duplicates (top-level accuracy/roc_auc) + full suite.
+        "accuracy": metrics["accuracy"], "roc_auc": metrics["roc_auc"],
+        "metrics": metrics,
+        "confusion_matrix": cm,
+        "curves": curves,
+        "plots": {
+            "roc": OOD_ROC_PNG.name, "pr": OOD_PR_PNG.name,
+            "confusion": OOD_CONFUSION_PNG.name,
+        },
         "in_domain_reference": {
             "dataset": "JailbreakBench harmful vs. benign",
             "accuracy": IN_DOMAIN_ACC,
@@ -259,6 +313,9 @@ def main() -> None:
         json.dump(out, f, indent=2)
     print(f"[ood] wrote {OOD_METRICS_PATH}", file=sys.stderr)
     save_confusion_png(cm, OOD_CONFUSION_PNG)
+    save_roc_png(curves, metrics["roc_auc"], OOD_ROC_PNG)
+    prevalence = n_harm / max(1, n)  # positive-class base rate for the PR chance line
+    save_pr_png(curves, metrics["pr_auc"], prevalence, OOD_PR_PNG)
 
     # 6 (report). Print the honest in-domain vs OOD comparison.
     print("\n" + "=" * 68)
@@ -273,9 +330,16 @@ def main() -> None:
           f"{metrics['accuracy'] - IN_DOMAIN_ACC:>+10.3f}")
     print(f"  {'roc_auc':<12}{IN_DOMAIN_AUC:>18.3f}{metrics['roc_auc']:>16.3f}"
           f"{metrics['roc_auc'] - IN_DOMAIN_AUC:>+10.3f}")
+    print(f"  {'bal_acc':<12}{'-':>18}{metrics['balanced_accuracy']:>16.3f}")
     print(f"  {'precision':<12}{'-':>18}{metrics['precision']:>16.3f}")
     print(f"  {'recall':<12}{'-':>18}{metrics['recall']:>16.3f}")
+    print(f"  {'specificity':<12}{'-':>18}{metrics['specificity']:>16.3f}")
     print(f"  {'f1':<12}{'-':>18}{metrics['f1']:>16.3f}")
+    print(f"  {'mcc':<12}{'-':>18}{metrics['mcc']:>16.3f}")
+    print(f"  {'cohen_kappa':<12}{'-':>18}{metrics['cohen_kappa']:>16.3f}")
+    print(f"  {'pr_auc':<12}{'-':>18}{metrics['pr_auc']:>16.3f}")
+    print(f"  {'log_loss':<12}{'-':>18}{metrics['log_loss']:>16.3f}")
+    print(f"  {'brier':<12}{'-':>18}{metrics['brier_score_loss']:>16.3f}")
     print("-" * 68)
     print(f"  Confusion (rows=true, cols=pred):")
     print(f"      true safe    -> [safe {cm[0][0]:>3}, harmful {cm[0][1]:>3}]")
