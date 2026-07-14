@@ -48,3 +48,4 @@ models/
 
 # Gemini judge response cache (regenerable; results are in the campaign artifacts)
 autoresearch_results/judge_cache/
+.playwright-mcp/
