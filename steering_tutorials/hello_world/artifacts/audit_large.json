@@ -1,0 +1,127 @@
+{
+  "checks": {
+    "0_disjointness": {
+      "cross_split_prompt_overlaps": 0,
+      "exact_duplicate_prompts_in_dataset": 0,
+      "label_balance": {
+        "train": {
+          "harmful(1)": 262,
+          "benign(0)": 262
+        },
+        "val": {
+          "harmful(1)": 56,
+          "benign(0)": 56
+        },
+        "test": {
+          "harmful(1)": 56,
+          "benign(0)": 56
+        }
+      },
+      "pass": true,
+      "verdict": "PASS \u2014 splits disjoint, no cross-split prompt leaks"
+    },
+    "1_label_shuffle": {
+      "true_labels": {
+        "test_accuracy": 0.9107142857142857,
+        "test_auc": 0.9760841836734693
+      },
+      "shuffled_labels": {
+        "test_accuracy": 0.5803571428571429,
+        "test_auc": 0.557079081632653
+      },
+      "fail_threshold_shuffled_acc": 0.65,
+      "pass": true,
+      "verdict": "PASS \u2014 true=0.911, shuffled=0.580 ~chance; no features->label leakage path"
+    },
+    "2_surface_baselines": {
+      "length_stats": {
+        "median_chars_harmful": 180.5,
+        "median_chars_benign": 56.0,
+        "mean_chars_harmful": 416.7139037433155,
+        "mean_chars_benign": 134.36096256684493,
+        "length_ratio_harmful_over_benign": 3.2232142857142856
+      },
+      "probe": {
+        "test_accuracy": 0.875,
+        "test_auc": 0.9649234693877551
+      },
+      "length_only": {
+        "test_accuracy": 0.6428571428571429,
+        "test_auc": 0.728156887755102
+      },
+      "tfidf": {
+        "test_accuracy": 0.7410714285714286,
+        "test_auc": 0.857142857142857,
+        "n_features": 4727
+      },
+      "probe_lift_over_length_acc": 0.2321,
+      "probe_lift_over_tfidf_acc": 0.1339
+    },
+    "3_length_matched": {
+      "bins": [
+        {
+          "bin": 1,
+          "char_len_range": [
+            13.0,
+            46.5
+          ],
+          "n": 28,
+          "n_harmful": 8,
+          "n_benign": 20,
+          "both_classes_present": true,
+          "probe_accuracy": 0.8929,
+          "length_only_accuracy": 0.7143,
+          "probe_minus_length": 0.1786
+        },
+        {
+          "bin": 2,
+          "char_len_range": [
+            46.5,
+            90.5
+          ],
+          "n": 28,
+          "n_harmful": 11,
+          "n_benign": 17,
+          "both_classes_present": true,
+          "probe_accuracy": 0.8571,
+          "length_only_accuracy": 0.6071,
+          "probe_minus_length": 0.25
+        },
+        {
+          "bin": 3,
+          "char_len_range": [
+            90.5,
+            296.0
+          ],
+          "n": 28,
+          "n_harmful": 15,
+          "n_benign": 13,
+          "both_classes_present": true,
+          "probe_accuracy": 0.8214,
+          "length_only_accuracy": 0.4286,
+          "probe_minus_length": 0.3929
+        },
+        {
+          "bin": 4,
+          "char_len_range": [
+            296.0,
+            1535.0
+          ],
+          "n": 28,
+          "n_harmful": 22,
+          "n_benign": 6,
+          "both_classes_present": true,
+          "probe_accuracy": 0.9286,
+          "length_only_accuracy": 0.8214,
+          "probe_minus_length": 0.1071
+        }
+      ],
+      "middle_bins_probe_accuracy": 0.8393,
+      "middle_bins_length_only_accuracy": 0.5178,
+      "middle_bins_probe_minus_length": 0.3214,
+      "note": "Middle (overlap-length) bins are the honest test: length carries little signal there, so any probe accuracy above the length-only baseline is genuine intent signal."
+    }
+  },
+  "flags": [],
+  "overall_verdict": "LEGITIMATE \u2014 no leakage (shuffle collapses to chance, splits disjoint). Toxic prompts ARE ~3.2x longer, and a length-only baseline is non-trivial (acc 0.643), so length is a PARTIAL confound. BUT within comparable-length (middle) bins the probe scores 0.839 vs the length-only baseline's 0.518 (+0.321) \u2014 the probe reads toxicity, not merely length."
+}

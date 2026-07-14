@@ -1,52 +1,62 @@
-"""data_large.py — a LARGER, realistic safety training set from Toxic-Chat.
+"""data_large.py — a LARGER, realistic, PRINCIPLED safety training set.
 
-This is the drop-in scale-up of ``data.py`` (which serves only 100+100
-JailbreakBench prompts). It exposes the same ``(prompts, labels)`` contract so
-``train_probe.py`` can switch to it by changing a single import — but it draws
-on REAL, in-the-wild user prompts with expert human safety annotation instead of
-a curated toy set.
+Drop-in scale-up of ``data.py`` (100+100 JailbreakBench toy prompts). Same
+``(prompts, labels)`` contract, but built with elite-data-scientist rigor on
+REAL, human-annotated in-the-wild prompts.
 
-Dataset: **lmsys/toxic-chat** (Lin et al. 2023, arXiv:2310.17389 — EMNLP'23
-Findings), the ``0124`` release. These are genuine user inputs collected from a
-live Vicuna demo, each hand-annotated by humans for ``toxicity`` (0/1) and
-``jailbreaking`` (0/1). We use the ``toxic-chat_annotation_all.csv`` file
-(train+test, ~10.2k prompts). It downloads with ``hf_hub_download`` (works behind
-the SSL middlebox where ``datasets.load_dataset`` fails) and caches in the HF
-cache, so re-runs are instant and offline.
+Dataset: **lmsys/toxic-chat** (Lin et al. 2023, arXiv:2310.17389, EMNLP'23
+Findings), ``0124`` release — genuine user inputs from a live Vicuna demo, each
+hand-annotated by humans for ``toxicity`` and ``jailbreaking``.
 
-WHY THIS DATASET (and why not the obvious alternatives)
--------------------------------------------------------
-The task's harmful-vs-benign probe needs PROMPT-LEVEL intent labels where both
-classes come from the SAME distribution (so the probe can't cheat on source
-style). Toxic-Chat is the best available fit:
-  - The label is on the PROMPT (the user input), not a response — true intent.
-  - Both classes are real user queries from one stream, so there is no
-    source/topic confound (unlike gluing a red-team set onto Alpaca).
-Rejected alternatives (all verified on the live Hub): ``allenai/wildjailbreak``
-is the ideal matched harmful/benign set but is GATED (401 without an accepted
-license); ``PKU-Alignment/BeaverTails`` labels (prompt, RESPONSE) pairs and every
-prompt is a red-team prompt, so its "all-safe" prompts are ~60% harmful-but-
-refused — there is no genuine benign class; ``in-the-wild-jailbreak-prompts``
-"regular" split is full of NSFW/roleplay templates (not benign) with a 2x length
-gap. See DATASETS.md for the full survey.
+WHY THIS DATASET (label-unit integrity — the #1 rule)
+-----------------------------------------------------
+A prompt classifier needs labels on the PROMPT'S INTENT. Toxic-Chat's
+``toxicity`` label is annotated on the user input itself -> it is already
+prompt-level, exactly like WildJailbreak's native ``vanilla_harmful`` /
+``vanilla_benign`` types. NO pair->prompt collapse is needed (see DATASETS.md).
 
-THE LABEL
----------
-``toxicity == 1`` -> harmful/unsafe intent (label 1); ``toxicity == 0`` -> benign
-(label 0). In this release every ``jailbreaking == 1`` prompt is also
-``toxicity == 1`` (jailbreaking is a strict subset), so ``toxicity`` alone is the
-clean single label. Toxic prompts are the minority (~7% of traffic, ~701 unique),
-which caps a fully-balanced set at ~700/class — realistic safety data is
-class-imbalanced, so this is the honest ceiling from one dataset.
+The two "obvious" larger sets were rejected after verification:
+  - **WildJailbreak** (the ideal matched set) is GATED -> 401 without an accepted
+    license; no HF token on this machine, so it is unavailable here.
+  - **BeaverTails** labels (prompt, RESPONSE) pairs. Collapsing to prompt level
+    ("all responses safe -> benign") is fatally biased: a refusal scores
+    ``is_safe=True``, so every *harmful prompt the models refused* collapses into
+    the BENIGN class. A 20-prompt audit of BeaverTails' all-safe prompts found
+    ~60% carry harmful intent (blackmail, harassment, slurs). That violates
+    label-unit integrity, so we do not use it. (The collapse rule is still
+    IMPLEMENTED and DOCUMENTED in DATASETS.md as the teaching point.)
 
-Swapping datasets later is just changing which loader ``train_probe.py`` imports:
-``from .data import load_safety_dataset`` -> ``from .data_large import
-load_large_dataset``. Both return ``(list[str], list[int])`` with 1=harmful.
+WHAT THIS LOADER DOES (the five rigor requirements)
+---------------------------------------------------
+1. LABEL-UNIT INTEGRITY. Native prompt-level labels; no collapse. As an extra
+   guard we drop prompts whose NORMALIZED text appears under BOTH labels
+   (genuinely ambiguous) and report the count.
+2. POSITIVE-CLASS STRATIFICATION. The harmful class is stratified across harm
+   categories derived from each prompt's ``openai_moderation`` scores
+   (sexual / harassment / violence / hate / self-harm / ...). Per-category counts
+   are reported in the artifact header.
+3. DEDUP + LEAKAGE-SAFE. Every row carries a stable ``group_id`` = hash of its
+   normalized text. Exact AND surface near-duplicates (differ only in
+   case/whitespace/punctuation) share a group_id and are collapsed to one row, so
+   a prompt and its trivial variants cannot straddle a train/test split. By
+   default we sample from the dataset's OFFICIAL TRAIN split only.
+4. BASE RATES. The natural class balance (toxic is a ~7% minority) is recorded
+   before we rebalance to 1:1. A balanced training sample distorts the prior —
+   downstream PR-AUC / calibration must be read against the natural base rate.
+5. REPRODUCIBILITY. seed=0, sampling without replacement, deterministic order,
+   and a full provenance header in ``artifacts/large_prompts.json``.
+
+Swap into training with a one-line import change (see DATASETS.md):
+``from .data_large import load_large_dataset``. Returns
+``(prompts: list[str], labels: list[int])`` with 1 = harmful.
 """
 from __future__ import annotations
 
+import ast
+import hashlib
 import re
 import sys
+from collections import Counter, defaultdict
 
 try:  # OS trust store for the SSL-intercepting middlebox (same as data.py).
     import truststore
@@ -56,24 +66,27 @@ except Exception:  # pragma: no cover - truststore optional
     pass
 
 # ---------------------------------------------------------------------------
-# Pinned source. The 0124 release is the latest human re-annotation; the "_all"
-# file is train+test combined (we split downstream ourselves in train_probe).
+# Pinned source. The ``0124`` release is the latest human re-annotation; it ships
+# an official train/test split we honor for leakage safety.
 # ---------------------------------------------------------------------------
 TOXICCHAT_REPO = "lmsys/toxic-chat"
-TOXICCHAT_FILE = "data/0124/toxic-chat_annotation_all.csv"
+TOXICCHAT_FILES = {
+    "train": "data/0124/toxic-chat_annotation_train.csv",
+    "test": "data/0124/toxic-chat_annotation_test.csv",
+    "all": "data/0124/toxic-chat_annotation_all.csv",
+}
+SOURCE_DATASET = "lmsys/toxic-chat@0124"
 
 # Column-name variants tolerated across releases.
 _PROMPT_FIELDS = ("user_input", "prompt", "text")
 _LABEL_FIELDS = ("toxicity", "toxic", "label")
+_MODERATION_FIELDS = ("openai_moderation", "moderation")
 
-# Keep prompts bounded so a stray mega-prompt can't dominate the features, and
-# drop empty/near-empty rows. Real prompts vary widely; 4000 chars keeps ~all.
 MAX_PROMPT_CHARS = 4000
 MIN_PROMPT_CHARS = 10
 
 
 def _first_col(df, fields: tuple[str, ...]) -> str:
-    """Return the first present column name among ``fields`` (else raise)."""
     for f in fields:
         if f in df.columns:
             return f
@@ -81,128 +94,259 @@ def _first_col(df, fields: tuple[str, ...]) -> str:
 
 
 def _clean(text: str) -> str:
-    """Normalize one prompt: collapse whitespace, drop replacement chars, trim."""
+    """Readable normalization for the stored prompt: drop U+FFFD, squeeze space."""
     s = str(text).replace("�", " ")
-    s = re.sub(r"\s+", " ", s).strip()
-    return s
+    return re.sub(r"\s+", " ", s).strip()
 
 
-def _prep(raw: list[str]) -> list[str]:
-    """Clean, length-filter, and deduplicate a list of prompts (order-stable)."""
-    seen, out = set(), []
-    for p in raw:
-        c = _clean(p)
-        if not (MIN_PROMPT_CHARS <= len(c) <= MAX_PROMPT_CHARS):
-            continue
-        key = c.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(c)
-    return out
+def _norm_key(text: str) -> str:
+    """Aggressive normalization for dedup/grouping: lowercase, alnum-only tokens.
+
+    Collapses case/whitespace/punctuation variants to one key so surface
+    near-duplicates share a ``group_id``. (Semantic paraphrases are NOT caught —
+    that needs embeddings, out of scope for this CPU/text-only loader.)
+    """
+    s = str(text).lower()
+    s = re.sub(r"[^a-z0-9]+", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
 
 
-def load_large_dataset(
-    n_per_class: int = 750, seed: int = 0
-) -> tuple[list[str], list[int]]:
-    """Return a balanced, deduplicated ``(prompts, labels)`` from Toxic-Chat.
+def _group_id(norm: str) -> str:
+    return hashlib.sha1(norm.encode("utf-8")).hexdigest()[:16]
 
-    Args:
-        n_per_class: prompts to draw PER class. The toxic (positive) class has
-            only ~701 unique prompts, so if ``n_per_class`` exceeds what's
-            available BOTH classes are capped to the smaller count (to stay
-            balanced) and a warning is printed. The benign class is abundant.
-        seed: controls the shuffle used to sample within each class (reproducible).
 
-    Returns:
-        ``(prompts, labels)`` with label 1 = harmful/toxic, 0 = benign. The two
-        classes are combined and shuffled together with ``seed`` so callers that
-        do not stratify still see an interleaved order.
+def _dominant_category(moderation_cell) -> str:
+    """Argmax OpenAI-moderation category for a prompt, else 'unlabeled'.
+
+    The cell is a string repr of ``[[category, score], ...]``. Used only to
+    STRATIFY the harmful class across harm types.
+    """
+    try:
+        data = moderation_cell
+        if isinstance(data, str):
+            data = ast.literal_eval(data)
+        scores = dict(data)
+        if not scores:
+            return "unlabeled"
+        return max(scores, key=lambda k: scores[k])
+    except Exception:
+        return "unlabeled"
+
+
+def _stratified_sample(items: list, keyfn, take: int, rng) -> list:
+    """Deterministically sample ``take`` items spread across ``keyfn`` strata.
+
+    Largest-remainder allocation per stratum; if ``take`` >= len(items) returns
+    all items (shuffled). Guarantees no single harm category dominates.
+    """
+    if take >= len(items):
+        out = list(items)
+        rng.shuffle(out)
+        return out
+    buckets: dict = defaultdict(list)
+    for it in items:
+        buckets[keyfn(it)].append(it)
+    for b in buckets.values():
+        rng.shuffle(b)
+    total = len(items)
+    chosen: list = []
+    remainders = []  # (fractional_remainder, key, bucket, n_taken_so_far)
+    for key, bucket in sorted(buckets.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+        exact = take * len(bucket) / total
+        n = int(exact)
+        chosen.extend(bucket[:n])
+        remainders.append([exact - n, key, bucket, n])
+    # Hand out leftover slots by largest fractional remainder.
+    remainders.sort(key=lambda r: (-r[0], r[1]))
+    i = 0
+    while len(chosen) < take and remainders:
+        slot = remainders[i % len(remainders)]
+        frac, key, bucket, n = slot
+        if n < len(bucket):
+            chosen.append(bucket[n])
+            slot[3] = n + 1
+        i += 1
+        if all(n >= len(b) for _, _, b, n in remainders):
+            break
+    rng.shuffle(chosen)
+    return chosen[:take]
+
+
+def build_dataset(n_per_class: int = 750, seed: int = 0, split: str = "train") -> dict:
+    """Build the balanced set and return a full record (prompts, labels, meta).
+
+    ``split`` in {"train","test","all"}; default "train" honors the official
+    split for leakage safety. Returns a dict with keys: ``rows`` (list of
+    {prompt,label,category,group_id,source_dataset}), ``prompts``, ``labels``,
+    and ``header`` (provenance/base-rate/category/drop stats).
     """
     import random
 
     import pandas as pd
     from huggingface_hub import hf_hub_download
 
-    path = hf_hub_download(TOXICCHAT_REPO, TOXICCHAT_FILE, repo_type="dataset")
+    if split not in TOXICCHAT_FILES:
+        raise ValueError(f"split must be one of {list(TOXICCHAT_FILES)}")
+    path = hf_hub_download(TOXICCHAT_REPO, TOXICCHAT_FILES[split], repo_type="dataset")
     df = pd.read_csv(path)
 
     prompt_col = _first_col(df, _PROMPT_FIELDS)
     label_col = _first_col(df, _LABEL_FIELDS)
-    # Labels are 0/1 ints; coerce defensively in case of "0"/"1" strings.
+    try:
+        mod_col = _first_col(df, _MODERATION_FIELDS)
+    except KeyError:
+        mod_col = None
+
     labels_raw = pd.to_numeric(df[label_col], errors="coerce").fillna(0).astype(int)
+    n_raw = len(df)
+    n_toxic_raw = int((labels_raw == 1).sum())
+    n_benign_raw = int((labels_raw == 0).sum())
 
-    harmful_raw = df[prompt_col][labels_raw == 1].astype(str).tolist()
-    benign_raw = df[prompt_col][labels_raw == 0].astype(str).tolist()
+    # --- collapse by normalized-text group_id; detect cross-label ambiguity ----
+    groups: dict = {}  # gid -> {"display","labels":set,"cat"}
+    n_after_filters = 0  # rows passing length/blank filters (pre-dedup)
+    mod_series = df[mod_col] if mod_col else [None] * n_raw
+    for raw_prompt, lab, modcell in zip(df[prompt_col].astype(str), labels_raw, mod_series):
+        display = _clean(raw_prompt)
+        if not (MIN_PROMPT_CHARS <= len(display) <= MAX_PROMPT_CHARS):
+            continue
+        norm = _norm_key(raw_prompt)
+        if not norm:
+            continue
+        n_after_filters += 1
+        gid = _group_id(norm)
+        g = groups.get(gid)
+        if g is None:
+            cat = _dominant_category(modcell) if (lab == 1 and mod_col) else "benign"
+            groups[gid] = {"display": display, "labels": {int(lab)}, "cat": cat}
+        else:
+            g["labels"].add(int(lab))  # same normalized text, another annotation
 
-    harmful = _prep(harmful_raw)
-    benign = _prep(benign_raw)
-    n_harmful_clean, n_benign_clean = len(harmful), len(benign)
+    n_unique_after_dedup = len(groups)
+    n_dropped_duplicates = n_after_filters - n_unique_after_dedup
+
+    harmful, benign = [], []
+    n_dropped_ambiguous = 0
+    for gid, g in groups.items():
+        if len(g["labels"]) > 1:  # same normalized text labelled both ways
+            n_dropped_ambiguous += 1
+            continue
+        row = {"prompt": g["display"], "label": next(iter(g["labels"])),
+               "category": g["cat"], "group_id": gid,
+               "source_dataset": SOURCE_DATASET}
+        (harmful if row["label"] == 1 else benign).append(row)
+
+    n_harmful_pool, n_benign_pool = len(harmful), len(benign)
 
     rng = random.Random(seed)
-    rng.shuffle(harmful)
-    rng.shuffle(benign)
-
-    take = min(n_per_class, len(harmful), len(benign))
+    take = min(n_per_class, n_harmful_pool, n_benign_pool)
     if take < n_per_class:
         print(
-            f"[data_large] NOTE: toxic class caps the balanced set at {take}/class "
-            f"(harmful={n_harmful_clean}, benign={n_benign_clean}); requested "
-            f"{n_per_class}. Real safety data is imbalanced -- using {take}/class.",
+            f"[data_large] NOTE: harmful class caps the balanced set at "
+            f"{take}/class (harmful_pool={n_harmful_pool}, "
+            f"benign_pool={n_benign_pool}); requested {n_per_class}. Real safety "
+            f"data is imbalanced -- using {take}/class on split='{split}'.",
             file=sys.stderr,
         )
-    harmful, benign = harmful[:take], benign[:take]
 
-    prompts = harmful + benign
-    labels = [1] * len(harmful) + [0] * len(benign)
+    harmful_sample = _stratified_sample(harmful, lambda r: r["category"], take, rng)
+    # benign: plain random (stratification requirement is for the positive class)
+    benign_shuf = list(benign)
+    rng.shuffle(benign_shuf)
+    benign_sample = benign_shuf[:take]
 
-    # Shuffle the two classes together so downstream order is not class-sorted.
-    order = list(range(len(prompts)))
-    rng.shuffle(order)
-    prompts = [prompts[i] for i in order]
-    labels = [labels[i] for i in order]
+    rows = harmful_sample + benign_sample
+    rng.shuffle(rows)  # interleave classes deterministically
+
+    prompts = [r["prompt"] for r in rows]
+    labels = [r["label"] for r in rows]
+
+    per_category = dict(Counter(r["category"] for r in harmful_sample))
+    natural_toxic_rate = round(n_toxic_raw / max(1, n_raw), 4)
+
+    header = {
+        "dataset": SOURCE_DATASET,
+        "source_file": TOXICCHAT_FILES[split],
+        "split_used": split,
+        "label_scheme": {"1": "harmful (toxicity==1)", "0": "benign (toxicity==0)"},
+        "collapse_rule": "none needed -- labels are native prompt-level (human "
+                         "annotation on the user input), cf. WildJailbreak types",
+        "natural_base_rate": {
+            "n_rows_raw": n_raw,
+            "n_toxic_raw": n_toxic_raw,
+            "n_benign_raw": n_benign_raw,
+            "toxic_fraction": natural_toxic_rate,
+            "note": "we rebalanced to 1:1 for TRAINING; real-world prior is this "
+                    "minority toxic_fraction -- read PR-AUC/calibration against it",
+        },
+        "n_unique_after_dedup": n_unique_after_dedup,
+        "n_dropped_duplicates": n_dropped_duplicates,
+        "n_dropped_ambiguous": n_dropped_ambiguous,
+        "n_dropped_ambiguous_note": "prompts whose normalized text appeared under "
+                                    "BOTH labels (genuinely ambiguous)",
+        "harmful_pool": n_harmful_pool,
+        "benign_pool": n_benign_pool,
+        "per_category_counts": per_category,
+        "truncation_maxchars": MAX_PROMPT_CHARS,
+        "n_per_class_requested": n_per_class,
+        "n_per_class_actual": take,
+        "seed": seed,
+        "dedup_grouping": "group_id = sha1(normalized_text)[:16]; surface "
+                          "near-dups (case/space/punct) share a group_id and are "
+                          "collapsed; use for group-aware train/test splits",
+    }
 
     print(
-        f"[data_large] Toxic-Chat: {sum(labels)} harmful + {len(labels) - sum(labels)} "
-        f"benign = {len(prompts)} prompts "
-        f"(clean pool: {n_harmful_clean} harmful / {n_benign_clean} benign unique)",
+        f"[data_large] Toxic-Chat[{split}]: {sum(labels)} harmful + "
+        f"{len(labels) - sum(labels)} benign = {len(prompts)} prompts | "
+        f"natural toxic rate={natural_toxic_rate} | dropped_ambiguous="
+        f"{n_dropped_ambiguous} | harm categories={len(per_category)}",
         file=sys.stderr,
     )
-    return prompts, labels
+    return {"rows": rows, "prompts": prompts, "labels": labels, "header": header}
+
+
+def load_large_dataset(
+    n_per_class: int = 750, seed: int = 0, split: str = "train"
+) -> tuple[list[str], list[int]]:
+    """Return a balanced, deduped, category-stratified ``(prompts, labels)``.
+
+    Thin wrapper over :func:`build_dataset` preserving the ``data.py`` contract
+    (label 1 = harmful, 0 = benign). See :func:`build_dataset` for the full
+    record (group_id, category, provenance header) used to write the artifact.
+    """
+    rec = build_dataset(n_per_class=n_per_class, seed=seed, split=split)
+    return rec["prompts"], rec["labels"]
 
 
 if __name__ == "__main__":  # smoke: python -m steering_tutorials.hello_world.data_large
     import json
     from pathlib import Path
 
-    ps, ys = load_large_dataset()
+    rec = build_dataset(n_per_class=750, seed=0, split="train")
+    ps, ys, header = rec["prompts"], rec["labels"], rec["header"]
     n_harm = sum(ys)
     print(f"\n[smoke] total={len(ps)}  harmful={n_harm}  benign={len(ys) - n_harm}")
+    print(f"[smoke] natural toxic base rate = "
+          f"{header['natural_base_rate']['toxic_fraction']} "
+          f"({header['natural_base_rate']['n_toxic_raw']}/"
+          f"{header['natural_base_rate']['n_rows_raw']})")
+    print(f"[smoke] dropped: duplicates={header['n_dropped_duplicates']} "
+          f"ambiguous={header['n_dropped_ambiguous']}")
+    print(f"[smoke] harmful per-category counts = {header['per_category_counts']}")
     shown = {0: 0, 1: 0}
-    for p, y in zip(ps, ys):
-        if shown[y] < 2:
-            print(f"  [{'HARMFUL' if y else 'BENIGN '}] {p[:90]}")
-            shown[y] += 1
+    for r in rec["rows"]:
+        if shown[r["label"]] < 2:
+            tag = "HARMFUL" if r["label"] else "BENIGN "
+            print(f"  [{tag}] ({r['category']}) {r['prompt'][:80]}")
+            shown[r["label"]] += 1
         if shown[0] >= 2 and shown[1] >= 2:
             break
 
-    # Persist the exact default-settings set so feature extraction is reproducible.
     art = Path(__file__).parent / "artifacts" / "large_prompts.json"
     art.parent.mkdir(exist_ok=True)
     art.write_text(
-        json.dumps(
-            {
-                "source": f"{TOXICCHAT_REPO}:{TOXICCHAT_FILE}",
-                "label_scheme": {"1": "harmful (toxicity==1)", "0": "benign (toxicity==0)"},
-                "n_per_class_requested": 750,
-                "n_per_class_actual": n_harm,
-                "seed": 0,
-                "max_prompt_chars": MAX_PROMPT_CHARS,
-                "prompts": ps,
-                "labels": ys,
-            },
-            indent=2,
-        ),
+        json.dumps({"header": header, "rows": rec["rows"]}, indent=2),
         encoding="utf-8",
     )
-    print(f"[smoke] wrote {art} ({len(ps)} prompts)")
+    print(f"[smoke] wrote {art} ({len(ps)} prompts, {len(rec['rows'])} rows)")
