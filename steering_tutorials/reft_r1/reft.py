@@ -198,20 +198,25 @@ class ReftContext:
 # ---------------------------------------------------------------------------
 # 4. The learned direction as a concept detector
 # ---------------------------------------------------------------------------
-def detector_score(reft: ReftR1, h_vec: "np.ndarray | torch.Tensor") -> float:
-    """AxBench's detection readout: the projection ``r_unit · h`` for one ``h``.
+def detector_score(reft: ReftR1, h_vec: "np.ndarray | torch.Tensor"):
+    """AxBench's detection readout: the projection ``r_unit · h``.
 
     The same learned direction that STEERS the model also DETECTS the concept:
     a high projection of a hidden state onto ``r_unit`` means the concept is
-    present. Accepts a ``[hidden]`` numpy array or tensor; returns a python float.
+    present. Accepts EITHER a single ``[hidden]`` vector (returns a python float)
+    OR a ``[n, hidden]`` batch (returns a ``[n]`` numpy array of per-row scores),
+    so callers can score a whole eval set in one shot.
     """
     if isinstance(h_vec, np.ndarray):
         h = torch.from_numpy(h_vec)
     else:
         h = h_vec
-    h = h.detach().reshape(-1).float()
+    h = h.detach().float()
     r_unit = reft.r_unit.detach().reshape(-1).float().to(h.device)
-    return float(torch.dot(r_unit, h).item())
+    if h.ndim == 1:
+        return float(torch.dot(r_unit, h).item())
+    # [n, hidden] batch -> per-row projection [n]
+    return (h.reshape(h.shape[0], -1) @ r_unit).cpu().numpy()
 
 
 # ---------------------------------------------------------------------------

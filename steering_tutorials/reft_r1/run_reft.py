@@ -370,8 +370,15 @@ def main() -> dict:
         data = load_train_eval()
     train_harmful, train_benign = _split(data, "train")
     eval_harmful, eval_benign = _split(data, "eval")
+    # Optional REFT_EVAL_N cap: on a RAM-starved box a full 30+30 eval pages to
+    # disk and crawls; set REFT_EVAL_N to run a smaller (honestly-labelled) eval.
+    import os
+    _cap = int(os.environ.get("REFT_EVAL_N", "0") or "0")
+    if _cap > 0:
+        eval_harmful, eval_benign = eval_harmful[:_cap], eval_benign[:_cap]
     print(f"[data] train {len(train_harmful)}h/{len(train_benign)}b   "
-          f"eval {len(eval_harmful)}h/{len(eval_benign)}b", file=sys.stderr)
+          f"eval {len(eval_harmful)}h/{len(eval_benign)}b"
+          f"{' (REFT_EVAL_N cap)' if _cap else ''}", file=sys.stderr)
 
     # --- The DiffMean baseline vector: lesson 2's method on the TRAIN split ----
     # Same contrast the ReFT edit was trained against, so the comparison is fair:
