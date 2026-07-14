@@ -173,7 +173,18 @@ def main() -> None:
         file=sys.stderr,
     )
 
+    # The two-term loss (refusal CE vs benign KL) is stiff on this tiny data, so
+    # plain SGD OSCILLATES between the two objectives (we observed total bouncing
+    # 0.4 <-> 6+ across steps). Two standard stabilizers make the run reliable:
+    #   1. gradient clipping — caps the size of each update so a single stiff step
+    #      can't fling the vector into a benign-wrecking region;
+    #   2. BEST-CHECKPOINTING — we keep the params that achieved the LOWEST loss
+    #      seen, not whatever the last step happened to land on. This is ordinary
+    #      early-stopping practice; without it the saved vector is a coin flip.
     losses: list[float] = []
+    best_total = float("inf")
+    best_state = None
+    best_step = -1
     for step in range(C.STEPS):
         # Regenerate v every step: as H's params update, so does the vector.
         v = net(concept_emb)  # [hidden], differentiable in H's params
@@ -190,17 +201,31 @@ def main() -> None:
 
         total = refusal_ce + LAMBDA_KL * benign_kl
 
+        # snapshot the params that produced this loss (current, pre-update) if best
+        total_val = float(total.detach())
+        if total_val < best_total:
+            best_total = total_val
+            best_step = step
+            best_state = {k: t.detach().cpu().clone() for k, t in net.state_dict().items()}
+
         opt.zero_grad()
         total.backward()
+        torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=1.0)
         opt.step()
 
-        losses.append(float(total.detach()))
+        losses.append(total_val)
         if step % 10 == 0 or step == C.STEPS - 1:
             print(
-                f"[train] step {step:4d}/{C.STEPS}  total={float(total):.4f}  "
+                f"[train] step {step:4d}/{C.STEPS}  total={total_val:.4f}  "
                 f"refusal_ce={float(refusal_ce):.4f}  benign_kl={float(benign_kl):.4f}",
                 file=sys.stderr,
             )
+
+    # restore the best checkpoint before saving (not the last, oscillating one)
+    if best_state is not None:
+        net.load_state_dict(best_state)
+        print(f"[train] restored BEST checkpoint: step {best_step} total={best_total:.4f}",
+              file=sys.stderr)
 
     # ---- persist the trained hypernetwork + provenance ----------------------
     save_hypernet(
