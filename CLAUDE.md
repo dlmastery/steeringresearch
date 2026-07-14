@@ -343,3 +343,38 @@ self-grading). Skill: `skills/steering-multi-agent-dispatch`,
 *All inherited Gemma-specific numbers from `corpus/` are `[NEEDS VERIFICATION]`
 until reproduced on our 4090 ladder. The harness confirms or falsifies every
 pre-registered threshold — it does not assume them.*
+
+---
+
+## 17. The `steering_tutorials/` pedagogical track (auxiliary deliverable)
+
+Parallel to the autoresearch program, `steering_tutorials/` is a **standalone,
+progressively harder tutorial series** that teaches activation steering from
+scratch — self-contained code a newcomer can run, deliberately **independent of
+the research harness** (`src/steering`). Lessons and design rules:
+
+- **`hello_world/`** — lesson 1, the **READ** side: a 3-layer MLP probe on frozen
+  Gemma-3-1B (the abliterated `DavidAU/…-heretic-…` build) layer-12 mean-pooled
+  activations, classifying harmful vs benign (JailbreakBench; scaled up with the
+  principled `lmsys/toxic-chat` loader). Kept **minimal** — one fixed layer, one
+  fixed MLP. Rigor that *validates* the result lives here (full 12-metric suite,
+  5-fold CV with 95% CIs, leakage/confound audit, OOD transfer). **Optimization
+  does not** — a sweep is no longer "hello world."
+- **`probe_tuning/`** — the **layer sweep** and **MLP hyperparameter sweep** live
+  here, shelled out of `hello_world`. Model/config selection is by
+  cross-validation, never test-set peeking.
+- **`hello_world_steering/`** — lesson 2, the **WRITE** side: a CAA / diff-of-means
+  refusal steering vector, applied **conditionally** via lesson-1's probe as the
+  gate (CAST-style), validated by the **same Gemma** as a REFUSAL/COMPLIANCE/
+  GIBBERISH judge. This is the READ→WRITE composition.
+
+**Track standards (elite-data-scientist bar):** principled dataset sampling
+(prompt-level labels not response-level; harm-category stratification; dedup +
+group-aware splits; natural base rate reported), the full classification suite
+with CIs, a leakage/length-confound audit on every dataset, honest OOD reporting
+(degradations stated as prominently as wins), calibration/reliability curves, and
+fixed seeds with the scaler fit on train only. Built by **disjoint-scope parallel
+agent teams**; the single 4090 **serializes all GPU work** (one GPU agent at a
+time) while docs/data/audit/code agents parallelize. Binary artifacts
+(`probe.pt`, `features.npz`) are force-added so each lesson reproduces from the
+repo.
