@@ -22,20 +22,20 @@ learning.
 
 | # | Lesson (dir) | Stage | Teaches | Compute | Status |
 |---|---|---|---|---|---|
-| 1 | `hello_world` | READ | linear/shallow probing of activations for a concept (harm) | light | **done** |
-| — | `probe_tuning` | READ+ | layer sweep + MLP hyperparameter search (CV, no test peeking) | light | **done** |
-| 2 | `hello_world_steering` | WRITE | CAA/diff-of-means steering vector, conditional gating, an LLM judge | med | **done** (code); GPU validation in progress |
-| 3 | `reft_r1` | GENERATE | AxBench's learned rank-1 ReFT intervention; ReFT-r1 vs DiffMean vs prompting bake-off | med | **done** (code); GPU eval queued |
-| 3b | `flas` | GENERATE+ | flow-based steering: a concept-conditioned velocity field; flow-time = strength dial | med | **next (in build)** |
+| 1 | `hello_world` | READ | linear/shallow probing of activations for a concept (harm) | light | ✅ built + validated |
+| — | `probe_tuning` | READ+ | layer sweep + MLP hyperparameter search (CV, no test peeking) | light | ✅ built + validated |
+| 2 | `hello_world_steering` | WRITE | CAA/diff-of-means steering vector, conditional gating, an LLM judge | med | ✅ built + validated |
+| 3 | `reft_r1` | GENERATE | AxBench's learned rank-1 ReFT intervention; ReFT-r1 vs DiffMean vs prompting bake-off | med | ✅ built + validated |
+| 3b | `flas` | GENERATE+ | flow-based steering: a concept-conditioned velocity field; flow-time = strength dial | med | ✅ built + validated |
 | 4 | `displacement_budget` | CONTROL | the coherence cliff; bound off-manifold displacement | light | planned |
 | 5 | `operations` | CONTROL | add vs project-out (ablation) vs rotate (norm-preserving) | light | planned |
 | 6 | `fungibility_null` | CONTROL | direction controls: shuffled/random/orthogonal — is the vector special? | light | planned |
 | 7 | `conformal_gate` | CERTIFY | conformal prediction → a provable benign over-refusal bound | light | planned |
 | 8 | `sae_gate` | CERTIFY | interpretable SAE-feature gates with human-readable firing reasons | med | planned |
-| 9 | `multi_intent` | CONTROL | steer K concepts at once; orthogonalization; the norm budget | med | **next (in build)** |
-| 10 | `rogue_scalpel` | DEFEND | red-team the guard: the universal attack + the five-layer defense | med | **next (in build)** |
-| 11 | `realignment` | DEFEND | restore refusal in an abliterated model by transplanting a direction | med | **next (in build)** |
-| 12 | `stacking` | PROVE | which priors stack (orthogonal sites) vs compete (same site) | med | **next (in build)** |
+| 9 | `multi_intent` | CONTROL | steer K concepts at once; orthogonalization; the norm budget | med | ✅ built + validated |
+| 10 | `rogue_scalpel` | DEFEND | red-team the guard: the universal attack + the five-layer defense | med | ✅ built + validated |
+| 11 | `realignment` | DEFEND | restore refusal in an abliterated model by transplanting a direction | med | ✅ built + validated |
+| 12 | `stacking` | PROVE | which priors stack (orthogonal sites) vs compete (same site) | med | ✅ built + validated |
 | 13 | `composite_metric` | PROVE | the Goodhart-resistant multi-objective score; Pareto fronts | light | planned |
 | 14 | `stat_rigor` | PROVE | screening vs evaluation; Wilcoxon + bootstrap + Holm-Bonferroni; HARKing | light | planned |
 | 15 | `scale_fungibility` | PROVE | does the direction start to matter at 9B? endogenous steering resistance | heavy (A100) | planned |
@@ -43,6 +43,32 @@ learning.
 
 Prereqs cascade: each lesson assumes the ones before it, but every package runs
 on its own (it re-derives or imports what it needs from earlier lessons).
+
+---
+
+## Status & validated results (2026-07-15)
+
+All nine built lessons are code-complete **and validated with real runs** on the
+uncensored **Gemma-3-1B** (`DavidAU/…-heretic-…-abliterated`), committed + pushed.
+Results are **screening-tier** (small `n`, honestly labelled); the benign
+over-refusal figures are dominated by the base model + the weak 1B self-judge
+(the measurement instrument), not the method — stated per lesson.
+
+| Lesson | Stage | Validated headline result |
+|---|---|---|
+| `hello_world` | READ | probe: 5-fold CV **0.87 ± 0.03**; leakage audit clean; XSTest OOD AUC **0.89**; toxic-chat scale-up CV **0.95** |
+| `probe_tuning` | READ+ | 23-config sweep → the simple default wins (no config beats it beyond the CV noise band) |
+| `hello_world_steering` | WRITE | conditional CAA: refusal **0.50 → 0.70**; **gate accuracy 0.975** |
+| `reft_r1` (AxBench) | GENERATE | ReFT-r1 **0.60 > DiffMean 0.40** steering; detection AUC tie **0.68** (matches AxBench: DiffMean is a strong detector) |
+| `flas` | GENERATE+ | flow-time behaves as a smooth strength dial; **zero-shot to an unseen concept: refusal 0.67** |
+| `multi_intent` (L9) | CONTROL | Gram-Schmidt orthogonalization beats raw-sum as K grows (K=2: **0.30 vs 0.10**) |
+| `rogue_scalpel` (L10) | DEFEND | steering attack cuts refusal **0.95 → 0.45**; the **norm-clamp guard restores 0.95** |
+| `realignment` (L11) | DEFEND | transplanted base-model refusal direction cuts **ASR 0.38 → 0.25** (at a coherence cost) |
+| `stacking` (L12) | PROVE | additive ladder; over-stacking raises gibberish — the stack/compete rule is only *directional* at 1B (reported honestly, not assumed) |
+
+Each row links to its lesson `README.md` (method, code walkthrough, run
+commands, caveats) and `artifacts/results.json` + plots. Repo:
+<https://github.com/dlmastery/steeringresearch/tree/master/steering_tutorials>
 
 ---
 

@@ -389,3 +389,37 @@ agent teams**; the single 4090 **serializes all GPU work** (one GPU agent at a
 time) while docs/data/audit/code agents parallelize. Binary artifacts
 (`probe.pt`, `features.npz`) are force-added so each lesson reproduces from the
 repo.
+
+**Operational playbook (hard-won on this host — follow these):**
+
+1. **Build a lesson with a ~5-agent team on a shared interface contract.** One
+   agent per file-group (core / train / eval / README / app), each CPU-only
+   ("write + import-check, do NOT load the model"), disjoint scopes. The lead
+   (you) defines the exact function signatures + the `results.json` schema in
+   every prompt, relays signatures between blocked agents via `SendMessage`,
+   import-checks the whole package, reconciles interface drift, and does ALL
+   commits centrally (agents never run git). Reuse lesson-2
+   `model_utils`/`judge`/`gate` and lesson-1 `probe.py` rather than re-writing.
+2. **Host RAM is the real bottleneck, not VRAM.** Chrome routinely holds ~28 GB
+   of the 32 GB; when free RAM < ~4 GB a bf16 Gemma-1B load OOM-dies and
+   generation pages to disk (~36 s/gen vs ~2 s). Check free RAM before a GPU run;
+   if low, ask the user to close tabs. **Background GPU jobs get reaped under RAM
+   pressure — run model jobs in the FOREGROUND**, or background only when RAM is
+   healthy. Every `run_*.py` takes an env cap (e.g. `REFT_EVAL_N`,
+   `REALIGN_N_EVAL`/`REALIGN_ALPHAS`) to shrink an eval into one foreground
+   window; results are screening-tier and labelled as such.
+3. **Windows cp1252 console kills unicode.** Never print `α`, `Δ`, `‖`, etc. to
+   stdout in a runnable script — the summary print crashes with
+   `UnicodeEncodeError` (use `alpha`/`Delta`/`||`). `results.json` + plots are
+   always saved BEFORE the summary print, so a late crash still leaves the data.
+4. **Load gated Gemma from the LOCAL path** `models/google/gemma-3-1b-it` (the HF
+   id 401s without a token); the abliterated model is `DavidAU/…-heretic-…`.
+5. **Training the stiff two-term loss** (refusal-CE + benign-KL) oscillates —
+   always use gradient clipping + best-checkpointing (save the lowest-loss step,
+   not the last). A single unconditional vector cannot both refuse-harmful and
+   spare-benign; that tension is why steering is applied through the gate.
+6. **Report honestly:** benign over-refusal here is dominated by the base
+   abliterated model + the weak 1B self-judge (the instrument), not the method —
+   say so. `n` is screening (§7); never call a screening result a "win".
+7. Latest-developments requests → `WebSearch` and filter by the arXiv `YYMM`
+   prefix (`26MM` = 2026); do not cite from training memory without a date.
