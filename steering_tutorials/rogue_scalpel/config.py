@@ -27,7 +27,9 @@ from pathlib import Path
 # model from lessons 1-3 there would be nothing to strip. If you only have the
 # abliterated checkpoint, first re-install refusal with lesson 2's +v steering
 # and treat THAT as the protected baseline (see README, "Honest caveats").
-MODEL_ID = "google/gemma-3-1b-it"
+# Local path to the ALIGNED base (cached; the HF id "google/gemma-3-1b-it" is
+# gated and 401s without a token, so we load from the local snapshot instead).
+MODEL_ID = "models/google/gemma-3-1b-it"
 
 # Residual-stream layer we read the refusal direction from AND attack/guard at.
 # Middle layers carry the cleanest "refuse this" direction (same layer lesson 2
