@@ -35,6 +35,37 @@ builds a defense and measures whether it holds.
 
 ---
 
+## Dataset
+
+The prompts are **JailbreakBench harmful behaviours** (Chao et al. 2024,
+arXiv:2404.01318), pulled through lesson 2's loader
+(`hello_world_steering.data.load_harmful_benign`, the `Goal` column via
+`hf_hub_download`). `config.N_PER_CLASS = 60` harmful prompts are drawn;
+`N_EXTRACT = 40` build the refusal direction (diff-of-means at layer 12), the
+rest are **held out** to score the attack. A matched benign set backs the
+**collateral** check (the always-on guard must not turn harmless prompts into
+refusals).
+
+The model choice is the load-bearing detail: this lesson loads the **aligned
+base** Gemma-3-1B from the local path `models/google/gemma-3-1b-it` (**not** the
+abliterated model of lessons 1–3), because "strip refusal" is only a meaningful
+attack against a model that refuses by default. The same Gemma also acts as the
+Guard D judge.
+
+| item | value |
+|---|---|
+| source / loader | JailbreakBench `Goal` via `hello_world_steering.data.load_harmful_benign` |
+| size | 60 harmful/class; 40 extract (build direction) / rest held out for ASR; benign for collateral |
+| labels | prompt-level harmful vs benign |
+| model + judge | **aligned** `models/google/gemma-3-1b-it` (local), self-graded (Guard D) |
+
+**What the lesson uses it for:** red-team the intervention — invert / project out
+the refusal direction to jailbreak the aligned model — then ablate a layered
+guard (norm clamp, projection lock, dual-forward verdict) and measure the
+attack-success-rate falling back toward baseline.
+
+---
+
 ## 1. The dual-use idea
 
 Arditi et al. 2024 (*Refusal in LLMs is Mediated by a Single Direction*,

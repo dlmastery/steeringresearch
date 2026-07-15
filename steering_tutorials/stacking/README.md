@@ -34,6 +34,33 @@ discipline)** and the mechanism analysis in
 
 ---
 
+## Dataset
+
+The data is **JailbreakBench harmful vs benign** (Chao et al. 2024,
+arXiv:2404.01318), pulled through lesson 2's loader
+(`hello_world_steering.data.load_harmful_benign`, the `Goal` column via
+`hf_hub_download`). `config.N_PER_CLASS = 40` splits into `N_EXTRACT = 24` (per
+class, build the vector) and `N_EVAL = 12` held-out **harmful** prompts the
+ladder is judged on. Labels are **prompt-level** harmful vs benign. From this
+one contrast we build a **single refusal diff-of-means direction** and reuse it
+everywhere — the three priors (A, B, B′) differ only in *site* (layer) and
+*operation*, so the ladder isolates stack-vs-compete without a concept-overlap
+confound.
+
+| item | value |
+|---|---|
+| source / loader | JailbreakBench `Goal` via `hello_world_steering.data.load_harmful_benign` |
+| size | 40/class → 24 extract (build direction) / 12 held-out harmful (judged) |
+| direction | one shared refusal diff-of-means, reused at layers 12 & 8, ops `relative_add`/`add` |
+| model + judge | abliterated `DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated`, self-graded |
+
+**What the lesson uses it for:** walk an additive 2→N ladder to see which priors
+**stack** (disjoint sites → gains add) vs **compete** (same site, incompatible
+operation → the second cancels/degrades the first), reading refusal, gibberish,
+and the N5 norm budget per rung.
+
+---
+
 ## 1. The one-paragraph idea
 
 Two steering interventions **stack cleanly** when they act on **different sites**

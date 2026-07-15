@@ -6,6 +6,19 @@ it can be read top-to-bottom without distraction. This lesson asks the natural
 follow-up question a practitioner asks next: *is the deployed default actually the
 best head, or can we do better?* — and answers it honestly.
 
+## Dataset
+
+This lesson has **no dataset of its own**. Model selection needs the *features*,
+not the raw text, so it **reads lesson-1's cached activations** at
+`../hello_world/artifacts/features.npz` — the **200 JailbreakBench prompts**
+(100 harmful + 100 benign, prompt-level `1 = harmful` / `0 = safe`) already run
+once through the frozen Gemma-3-1B and stored as their layer-12 mean-pooled
+vectors: an `X` matrix of shape `[200, 1152]` with the matching label vector `y`.
+Because the expensive forward pass was done in lesson 1, this lesson is
+**CPU-only — the Gemma model is never loaded**. It uses those features purely to
+do **layer / MLP-head model selection by 5-fold cross-validation**, never by
+peeking at lesson-1's held-out test slice.
+
 ## What lives here
 
 - `sweep_mlp.py` — an MLP head hyperparameter sweep (width, depth, dropout, lr,

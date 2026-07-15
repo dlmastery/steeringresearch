@@ -40,6 +40,30 @@ actual runs need the same ~2-3 GB Gemma-3-1B models as the earlier lessons.
 
 ---
 
+## Dataset
+
+The data is **JailbreakBench harmful vs benign** (Chao et al. 2024,
+arXiv:2404.01318), loaded by `data.load_harmful_benign` (the `Goal` column via
+`hf_hub_download`, returning a matched `{"harmful": [...], "benign": [...]}`
+split). `config.N_PER_CLASS = 60` per class splits into `N_EXTRACT = 40` (build
+the refusal direction, phase 1) and `N_EVAL = 20` (held out for measurement,
+phase 2). **Both phases call the same loader with the same seed**, so the two
+processes see byte-identical splits without passing data between them. Labels are
+**prompt-level** harmful vs benign.
+
+Two models of the same family appear — the reason there are two phases:
+
+| phase | model | role |
+|---|---|---|
+| 1 (extract) | aligned base `models/google/gemma-3-1b-it` (local) | refusal intact → read the Arditi refusal direction (diff-of-means, layer 12) |
+| 2 (steer) | abliterated `DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated` | refusal removed → transplant the direction, sweep α, self-judge |
+
+**What the lesson uses it for:** measure whether an external steering vector can
+**restore refusal** in the abliterated model (ASR ↓) and at what cost to benign
+helpfulness (over-refusal) and coherence, across the α sweep.
+
+---
+
 ## 1. The three concepts
 
 **Abliteration.** A weight-editing technique that removes a model's ability to

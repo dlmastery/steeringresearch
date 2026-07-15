@@ -28,6 +28,32 @@ implementation is a minimal, laptop-scale reimplementation of that idea
 
 ---
 
+## Dataset
+
+**JailbreakBench** harm **categories**, loaded by `data.py`'s `load_concepts`.
+Where lessons 1–3 used JBB's harmful/benign split as one behaviour, FLAS reads
+JBB's `Category` field and treats **each category as a distinct concept** — the
+thing the velocity field must learn to steer toward when conditioned on that
+concept's code. From the harmful CSV (`Goal` prompts, `Category` labels) we take
+three categories to **train** the flow and hold **one out entirely** for the
+zero-shot test, plus a shared benign baseline as the common contrast origin.
+
+| concept | JBB category | trained? | per-concept prompts (exemplars/steer · eval) |
+|---|---|---|---|
+| Malware/Hacking | Malware/Hacking | yes | 7 · 3 |
+| Fraud/Deception | Fraud/Deception | yes | 7 · 3 |
+| Harassment/Discrimination | Harassment/Discrimination | yes | 7 · 3 |
+| **Physical harm** | Physical harm | **no (held-out)** | 7 · 3 (eval only) |
+
+Each category caps at 10 prompts (`N_PER_CONCEPT`); the last 3 are held out for
+grading and the rest do double duty as exemplars (encode → the concept code `c`)
+and steer prompts (the harmful side of the diff-of-means target). A shared pool
+of 40 benign prompts is the neutral contrast for every concept. The goal: **one**
+field, conditioned on a concept, that steers all three trained concepts and
+generalizes **zero-shot** to the held-out "Physical harm" it never saw.
+
+---
+
 ## Table of contents
 
 1. [What you'll build](#1-what-youll-build)

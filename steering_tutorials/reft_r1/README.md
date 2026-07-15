@@ -20,6 +20,30 @@ training and generation need the same ~2 GB abliterated Gemma-3-1B as lessons
 
 ---
 
+## Dataset
+
+**JailbreakBench** (Chao et al. 2024, arXiv:2404.01318) — the same
+harmful-vs-benign prompt families as lessons 1–2, loaded by `data.py`'s
+`load_train_eval`. It pulls two matched CSVs, `harmful-behaviors.csv` (100
+harmful requests) and `benign-behaviors.csv` (100 benign), both keyed on the
+`Goal` column. Labels are **prompt-level** (one intent per row), and the two
+classes are topically matched, so the signal separating them is **intent, not
+vocabulary**. We shuffle with a fixed seed and take `n_per_class` (default 60)
+per class, then split each class down the middle into a nested
+`{"train": {...}, "eval": {...}}` dict.
+
+| split | harmful | benign | role |
+|---|---|---|---|
+| `train` | 30 | 30 | trains **both** the rank-1 ReFT intervention (refusal CE + benign KL) **and** the DiffMean baseline vector (`mean(harm) − mean(benign)`) |
+| `eval` | 30 | 30 | disjoint held-out; measures steering (ReFT-r1 vs DiffMean vs prompting) and concept-detection AUC |
+
+The point is the comparison: ReFT-r1 and the DiffMean baseline learn from the
+**same** train contrast, so the head-to-head on the disjoint eval split is fair —
+this is exactly the AxBench framing (Wu et al. 2025, arXiv:2501.17148), which
+exists to compare steering methods on identical data.
+
+---
+
 ## Table of contents
 
 1. [What you'll build](#1-what-youll-build)

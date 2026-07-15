@@ -59,6 +59,26 @@ safe from that cliff. (Numbers are populated by the validation run — see
 
 ---
 
+## Dataset
+
+Same source as lesson 1: **JailbreakBench** (`JailbreakBench/JBB-Behaviors`,
+Chao et al. 2024, arXiv:2404.01318 — [UNVERIFIED]) — 100 harmful + 100 benign
+requests, both from a `Goal` column, labeled at the **prompt level** by *intent*
+(harmful vs. benign), and topically matched so the difference between the classes
+is intent rather than surface vocabulary. That clean intent contrast is exactly
+what makes their **diff-of-means a "refuse this" steering direction**.
+
+`data.py`'s `load_harmful_benign(n_per_class=60)` returns the two classes **kept
+separate** — `{"harmful": [...], "benign": [...]}`, 60 each (shuffled, seed 0) —
+rather than one interleaved list, because lesson 2 *contrasts* the classes. The
+60/class is then split disjointly (`config.py: N_EXTRACT = 40`): the first **40
+per class build the refusal vector**, and the held-out **20 per class grade** the
+gated steering, so the vector is never evaluated on the prompts that defined it.
+The same Gemma judges every response. (The gate itself is lesson-1's probe,
+trained on the same JBB set.)
+
+---
+
 ## 2. Concepts: probing (READ) vs steering (WRITE)
 
 Both operations live in the **same residual stream**, at the **same layer**.

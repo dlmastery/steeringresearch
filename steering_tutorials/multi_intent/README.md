@@ -20,6 +20,33 @@ vector.
 
 ---
 
+## Dataset
+
+We treat **JailbreakBench harm categories as the K concepts** (`data.py`,
+`load_multi_intent`). JailbreakBench (Chao et al. 2024, arXiv:2404.01318) ships
+`harmful-behaviors.csv` with a `Category` column — 10 categories × 10 prompts.
+We pick **four** distinct categories as concepts (`config.CONCEPTS`):
+Malware/Hacking, Fraud/Deception, Harassment/Discrimination, Physical harm.
+Every concept is contrasted against **one shared benign baseline** (40 prompts
+from `benign-behaviors.csv`) so the K raw directions share an origin and their
+cosine overlap measures *concept* similarity, not baseline drift. Labels are
+**prompt-level** (the `Goal` column), never response-level.
+
+| item | value |
+|---|---|
+| source / loader | JailbreakBench `Goal`/`Category` via `hf_hub_download` (`data.load_multi_intent`) |
+| K concepts | 4 JBB harm categories, ordered most-distinct-first |
+| per concept | 10 prompts → 5 extract (build the vector) / 5 eval (disjoint, held out) |
+| shared baseline | 40 benign prompts (common contrast origin) |
+| model + judge | abliterated `DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated`, self-graded |
+
+**What the lesson uses it for:** steer all K "refuse this category" directions at
+once and measure **interference** — naive raw-sum vs Gram-Schmidt
+orthogonalization — while tracking the N5 **norm budget** to see how many
+concepts can be composed before coherence breaks.
+
+---
+
 ## 1. Why summing steering vectors goes wrong
 
 A steering vector is a direction in activation space (a diff-of-means; lesson 2).

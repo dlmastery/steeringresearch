@@ -194,18 +194,29 @@ the scaler statistics and the MLP weights are *learned*, and they are tiny.
 
 ## 4. The dataset
 
-The training data is **JailbreakBench** (Chao et al. 2024, arXiv:2404.01318 —
-[UNVERIFIED]), which ships two matched CSV files:
+This lesson ships **two** training datasets: a tiny **default** that keeps the
+hello-world minimal and legible, and a larger **scale-up** that shows the result
+holds on real, in-the-wild data. Both label the **prompt's intent**
+(1 = harmful, 0 = safe) — never a response — so the probe must read *intent*, not
+vocabulary. Two more datasets are used only for *evaluation* (never training).
+See **`DATASETS.md`** for the full survey behind these choices.
 
-- `data/harmful-behaviors.csv` — 100 harmful requests → label **1** (harmful)
-- `data/benign-behaviors.csv` — 100 benign requests → label **0** (safe)
+| Role | Dataset (loader) | Size | Label scheme | What it shows |
+|---|---|---|---|---|
+| **Default (train)** | **JailbreakBench** `JBB-Behaviors` (`data.py`) | 100 harmful + 100 benign = **200** | prompt-level, `Goal` column | the probe reads harm from activations on a clean, topically-matched set |
+| **Scale-up (train)** | **lmsys/toxic-chat** `@0124` (`data_large.py`) | ~374/class ≈ **748** balanced | human toxicity label on the *user input* | the signal survives on real, messy, in-the-wild prompts |
+| OOD test | **XSTest** (`eval_ood.py`) | 300 | prompt-level | honest zero-shot transfer (safe-but-scary prompts) |
+| Adversarial eval | **JailBreakV-28K + XSTest** (`data_hard.py`) | sampled | prompt-level | a harder red-team stress test |
 
-Both use a `Goal` column for the prompt text. The two sets are **topically
-matched** — for many harmful goals there is a benign twin on a similar subject.
-This matters enormously: it means a classifier *cannot cheat* by keying on
-surface words. If the harmful set were all about "bombs" and the benign set all
-about "recipes", a dumb bag-of-words model would ace the task without any real
-understanding. Topical matching forces the probe to read *intent*, not vocabulary.
+**Default — JailbreakBench** (Chao et al. 2024, arXiv:2404.01318 —
+[UNVERIFIED]) ships two matched CSVs, `data/harmful-behaviors.csv` (label **1**)
+and `data/benign-behaviors.csv` (label **0**), both using a `Goal` column. The
+two sets are **topically matched** — for many harmful goals there is a benign
+twin on a similar subject. This matters enormously: a classifier *cannot cheat*
+by keying on surface words. If the harmful set were all about "bombs" and the
+benign set all about "recipes", a dumb bag-of-words model would ace the task
+without any real understanding. Topical matching forces the probe to read
+*intent*, not vocabulary.
 
 ```python
 # data.py
@@ -217,10 +228,21 @@ PROMPT_COLUMN = "Goal"
 
 200 prompts is small — perfect for a fast, legible hello-world, but small enough
 that a single train/test split is noisy (which is why we cross-validate in
-[Section 8](#8-did-we-cheat-rigor--honesty)). To scale up to a larger, realistic,
-in-the-wild set, this folder also ships `data_large.py` (the Toxic-Chat loader,
-~700 prompts/class) as a drop-in replacement — see **`DATASETS.md`** in this
-directory for the full survey of why Toxic-Chat was chosen over the alternatives.
+[Section 8](#8-did-we-cheat-rigor--honesty)).
+
+**Scale-up — Toxic-Chat.** 200 toy prompts is not proof a probe works in the
+wild, so `data_large.py` is a drop-in loader (same `(prompts, labels)` contract)
+for **lmsys/toxic-chat** `@0124` (Lin et al. 2023, arXiv:2310.17389 —
+[UNVERIFIED]): genuine user inputs from a live chatbot demo, each **hand-labeled
+by humans** for toxicity on the *prompt itself* — already prompt-level, so no
+response→prompt collapse is needed. Toxic is a **~7% natural minority**, so the
+loader records that base rate, then rebalances to 1:1 for training — capping the
+balanced set at ~374/class (**≈748 prompts**) because the smaller harmful pool is
+the limiter. It is built to an elite-data-scientist bar: category-stratified
+harmful sampling, group-aware dedup (surface near-duplicates share a `group_id`
+so they can't straddle a split), and honest base-rate reporting. `train_large.py`
+reaches **test accuracy 0.875 / 5-fold CV 0.95** with the length-confound audit
+passing.
 
 ---
 
