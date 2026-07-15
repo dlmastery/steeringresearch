@@ -5,7 +5,7 @@ reused from lesson 2), assembles the three archetypal priors, then walks the
 additive ladder — rung 1 = A alone; rung 2a = A + B (disjoint site); rung 2b =
 A + B' (same site, incompatible op); rung 3 = all-on hybrid — measuring at each
 rung the target behavior (judge refusal rate), coherence (gibberish rate), and
-the cumulative norm budget (N5: cumulative ||Δh||/||h||). The MARGINAL effect of
+the cumulative norm budget (N5: cumulative ||Deltah||/||h||). The MARGINAL effect of
 each added prior is the whole point: it distinguishes stacking from competing.
 
 Everything that touches the model lives under ``main()`` so ``import
@@ -89,7 +89,7 @@ def _summary_table(results: dict) -> str:
              f"alpha={results['stack_alpha']:.2f}",
              f"refusal vec  : layer={results['refusal_vector']['layer']} "
              f"norm={results['refusal_vector']['norm']:.3f}", "",
-             f"  {'rung':<28} {'refusal':>8} {'gibber':>8} {'budget':>8} {'Δrefus':>8}"]
+             f"  {'rung':<28} {'refusal':>8} {'gibber':>8} {'budget':>8} {'Deltarefus':>8}"]
     for r in results["rungs"]:
         lines.append(f"  {r['label']:<28} {r['refusal_rate']:>8.2f} "
                      f"{r['gibberish_rate']:>8.2f} {r['norm_budget']:>8.3f} "
@@ -97,7 +97,7 @@ def _summary_table(results: dict) -> str:
     d = results["decision"]
     lines += ["", f"stack marginal (2a-1)   : {d['stack_marginal']:+.2f}",
               f"compete marginal (2b-1) : {d['compete_marginal']:+.2f}",
-              f"over-stack gibberish Δ  : {d['overstack_gibberish_delta']:+.2f}",
+              f"over-stack gibberish Delta  : {d['overstack_gibberish_delta']:+.2f}",
               f"verdict : {d['verdict']}", "=" * 68, ""]
     return "\n".join(lines)
 
@@ -136,7 +136,7 @@ def _plot_ladder(rungs: list[dict], path) -> None:
     axR.bar(labels, budget, color=colors, edgecolor="black", linewidth=0.6)
     for i, b in enumerate(budget):
         axR.text(i, b + 0.005, f"{b:.3f}", ha="center", va="bottom", fontsize=9)
-    axR.set_ylabel("cumulative  ||Δh|| / ||h||   (norm budget, N5)")
+    axR.set_ylabel("cumulative  ||Deltah|| / ||h||   (norm budget, N5)")
     axR.set_title("Norm budget spent per rung\n(over-stack spends the most)")
     axR.grid(axis="y", alpha=0.3)
 
@@ -149,11 +149,11 @@ def _plot_ladder(rungs: list[dict], path) -> None:
 # Norm budget (N5) — measured directly with two forward passes.
 # --------------------------------------------------------------------------- #
 def _measure_norm_budget(model, tok, prompt, priors) -> float:
-    """Cumulative ||Δh||/||h|| across the priors' layers for one prompt.
+    """Cumulative ||Deltah||/||h|| across the priors' layers for one prompt.
 
     Baseline forward captures the residual at each prior's layer; a second
     forward with the whole stack active captures the steered residual there. For
-    each prior layer we take the mean over positions of ||Δh||/||h|| and sum
+    each prior layer we take the mean over positions of ||Deltah||/||h|| and sum
     across the (unique) layers — the leading indicator N5 in CLAUDE.md sec. 3.
     """
     import torch
@@ -282,7 +282,7 @@ def main() -> dict:
         if baseline_refusal is None:
             baseline_refusal = rates["refusal_rate"]
 
-        # Norm budget: average cumulative ||Δh||/||h|| over a few prompts.
+        # Norm budget: average cumulative ||Deltah||/||h|| over a few prompts.
         budget = float(np.mean([
             _measure_norm_budget(model, tok, p, spec["priors"])
             for p in eval_harmful[:C.N_NORM_BUDGET_PROMPTS]
