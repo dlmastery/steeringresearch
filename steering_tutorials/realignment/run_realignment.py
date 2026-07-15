@@ -90,7 +90,7 @@ def _plot_sweep(rows: list[dict], path) -> None:
             color="#2a7")
     ax.axhline(C.COHERENCE_FLOOR, ls=":", color="#2a7", alpha=0.5)
     ax.axhline(C.OVER_REFUSAL_TOLERANCE, ls=":", color="#c93", alpha=0.5)
-    ax.set_xlabel("steering strength  α  (fraction of residual norm)")
+    ax.set_xlabel("steering strength  alpha  (fraction of residual norm)")
     ax.set_ylabel("rate")
     ax.set_title("Re-alignment: transplanting refusal into an abliterated model\n"
                  "(want ASR down, over-refusal low, coherence high)")
@@ -115,15 +115,15 @@ def _summary_table(results: dict) -> str:
                      f"{r['over_refusal']:>9.2f} {r['coherence']:>10.2f}")
     base_asr = results["baseline_asr"]
     best = results["best"]
-    lines += ["", f"baseline ASR (α=0) = {base_asr:.2f}"]
+    lines += ["", f"baseline ASR (alpha=0) = {base_asr:.2f}"]
     if best is not None:
         lines.append(
-            f"best re-alignment  : α={best['alpha']:.2f}  "
+            f"best re-alignment  : alpha={best['alpha']:.2f}  "
             f"ASR {base_asr:.2f} -> {best['asr']:.2f} "
             f"(drop {base_asr - best['asr']:+.2f})  "
             f"over_refusal {best['over_refusal']:.2f}  coherence {best['coherence']:.2f}")
     else:
-        lines.append("best re-alignment  : NONE — no α cut ASR while keeping "
+        lines.append("best re-alignment  : NONE — no alpha cut ASR while keeping "
                      "over_refusal <= "
                      f"{C.OVER_REFUSAL_TOLERANCE:.2f} and coherence >= "
                      f"{C.COHERENCE_FLOOR:.2f}")
@@ -173,14 +173,20 @@ def main() -> dict:
 
     # --- Data: the eval halves — the SAME split phase 1 held out --------------
     data = load_harmful_benign(C.N_PER_CLASS, C.SEED)
-    eval_harmful = data["harmful"][C.N_EXTRACT: C.N_EXTRACT + C.N_EVAL]
-    eval_benign = data["benign"][C.N_EXTRACT: C.N_EXTRACT + C.N_EVAL]
+    # Optional caps for a RAM/time-constrained host (defaults = full config):
+    #   REALIGN_N_EVAL  -> prompts per class; REALIGN_ALPHAS -> comma list.
+    import os
+    n_eval = int(os.environ.get("REALIGN_N_EVAL", "0") or C.N_EVAL)
+    eval_harmful = data["harmful"][C.N_EXTRACT: C.N_EXTRACT + n_eval]
+    eval_benign = data["benign"][C.N_EXTRACT: C.N_EXTRACT + n_eval]
+    alphas = ([float(x) for x in os.environ["REALIGN_ALPHAS"].split(",")]
+              if os.environ.get("REALIGN_ALPHAS") else C.ALPHAS)
     print(f"[eval] {len(eval_harmful)} harmful / {len(eval_benign)} benign "
-          f"held-out prompts @ layer {layer}", file=sys.stderr)
+          f"held-out prompts @ layer {layer}; alphas={alphas}", file=sys.stderr)
 
     # --- Sweep alpha ----------------------------------------------------------
     rows: list[dict] = []
-    for alpha in C.ALPHAS:
+    for alpha in alphas:
         # Harmful side: generate, judge, then ASR = fraction that COMPLIED.
         h_verdicts: list[str] = []
         h_coh: list[float] = []
@@ -193,7 +199,7 @@ def main() -> dict:
             h_verdicts.append(judge.verdict(prompt, resp))
             h_coh.append(_distinct_ratio(resp))
             if (i + 1) % 5 == 0:
-                print(f"[α={alpha:.2f} harmful] {i + 1}/{len(eval_harmful)}",
+                print(f"[alpha={alpha:.2f} harmful] {i + 1}/{len(eval_harmful)}",
                       file=sys.stderr)
 
         # Benign side: over_refusal = fraction of benign prompts REFUSED.
@@ -206,7 +212,7 @@ def main() -> dict:
             )
             b_verdicts.append(judge.verdict(prompt, resp))
             if (i + 1) % 5 == 0:
-                print(f"[α={alpha:.2f} benign] {i + 1}/{len(eval_benign)}",
+                print(f"[alpha={alpha:.2f} benign] {i + 1}/{len(eval_benign)}",
                       file=sys.stderr)
 
         row = {
@@ -218,7 +224,7 @@ def main() -> dict:
             "n_benign": len(eval_benign),
         }
         rows.append(row)
-        print(f"[α={alpha:.2f}] ASR={row['asr']:.2f} "
+        print(f"[alpha={alpha:.2f}] ASR={row['asr']:.2f} "
               f"over_refusal={row['over_refusal']:.2f} "
               f"coherence={row['coherence']:.2f}", file=sys.stderr)
 
