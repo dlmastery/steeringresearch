@@ -212,6 +212,28 @@ main()   # writes artifacts/results.json + success_vs_k.png
 
 ---
 
+## Results — measured vs. the claim
+
+The screening run (`artifacts/results.json`, K = 1..4, one abliterated 1B target
+self-graded, ~5 held-out prompts per concept) walks the ladder for both arms:
+
+| Claim | What we measured (screening) | Verdict |
+|---|---|---|
+| Naive summation interferes — raw-sum success collapses as K grows | raw success 0.40 (K=1) → 0.10 (K=2) → 0.13 (K=3) → 0.15 (K=4); gibberish 0.60 → 0.90 → 0.87 → 0.85 | Supported — raw-sum success falls and gibberish dominates once K > 1 |
+| Gram-Schmidt orthogonalization cuts the interference | ortho success 0.40 / 0.30 / 0.00 / 0.40 vs raw 0.40 / 0.10 / 0.13 / 0.15 | Directionally supported — ortho beats raw at K=2 (0.30 vs 0.10) and K=4 (0.40 vs 0.15); K=3 lands the wrong way (0.00) |
+| The N5 norm budget bounds how many concepts you can stack | budget = sqrt(Σα²) climbs 0.060 → 0.085 → 0.104 → 0.120, monotone in K | Supported — the budget grows exactly as the quadrature formula predicts |
+
+Read this as a smoke-grade signal, not a result: with K held-out sets of ~5
+prompts and a 1B self-judge, single rungs swing on noise — the K=3 orthogonalized
+arm collapsing to 0.00 success (below the raw arm) is the clearest sign of it. The
+*shape* the claim predicts is visible — raw-sum interference rising with K,
+orthogonalization spending the budget more efficiently at most rungs, and the norm
+budget climbing as sqrt(Σα²) — but the separation is neither clean nor monotone at
+1B. A publication claim needs a stronger off-family judge, larger eval sets, and
+n≥7 seeds with the rigor contract.
+
+---
+
 ## 7. Honest caveats
 
 - **1B model + 1B self-judge.** Pedagogical, not publication-grade. A real

@@ -54,8 +54,10 @@ refusal from the outside with a single activation vector, and we do it
 **selectively**, only when the prompt trips the gate. The headline plots
 (`rates_vs_alpha.png`, `conditional.png`) show refusal rising with steering
 strength until coherence falls off a cliff — and the gate keeping benign prompts
-safe from that cliff. (Numbers are populated by the validation run — see
-`artifacts/results.json`.)
+safe from that cliff. In the validation run (abliterated Gemma-3-1B, layer 12,
+n=20/arm) refusal rises **0.50 → 0.70** as α goes 0.0 → 0.10, and the probe gate
+separates harmful from benign at **0.975** accuracy — full numbers in
+[Section 8](#8-the-three-experiment-arms--results) and `artifacts/results.json`.
 
 ---
 
@@ -412,6 +414,28 @@ steers harmful), but a headline number can still be dominated by the
 measurement instrument, not the method. Fix in later lessons: a stronger/
 calibrated judge (L7) and a proper over-refusal baseline subtraction. Read the
 raw numbers and side-by-side examples in `artifacts/results.json`.
+
+---
+
+## Results — measured vs. the claim
+
+| Claim | What we measured (n=20/arm, screening-tier) | Verdict |
+|---|---|---|
+| A diff-of-means vector steers behavior (ActAdd 2308.10248 / CAA 2312.06681 / Arditi 2406.11717) | unconditional refusal **0.50 → 0.70** at α=0.10 on held-out harmful prompts | **Steering works** |
+| Push too hard and coherence breaks | gibberish spikes to **0.25** at α=0.05, then settles — the cliff is real | **Confirmed** |
+| The lesson-1 probe can gate the steer (CAST 2409.05907) | gate accuracy **0.975**; conditional harmful-refusal **0.65** | **Gate works** |
+| Conditional gating avoids benign over-refusal | benign over-refusal **0.50** — but the gate leaves benign prompts *unsteered* | **Instrument-limited (see below)** |
+
+**Honest read.** Every number here is **screening-tier** (n=20 per arm, a single
+seed). Steering genuinely re-installs refusal on the abliterated model
+(0.50 → 0.70 at α=0.10), and the gate separates harmful from benign
+near-perfectly (0.975). The one cell that looks bad — benign over-refusal 0.50 —
+is **not** caused by the method: because the gate is 97.5% accurate it almost
+never steers a benign prompt, so that 0.50 is the *baseline* behavior of the
+abliterated model plus a weak 1B self-judge over-flagging JBB "benign" prompts,
+not our intervention. The measurement instrument, not the steer, dominates that
+number; the fix (a stronger/calibrated judge, a proper over-refusal baseline
+subtraction) lands in later lessons.
 
 ---
 

@@ -645,6 +645,35 @@ prediction moves accuracy by 2.5 points, so *always* report a confidence interva
 
 ---
 
+## Results — measured vs. the claim
+
+The lesson's central claim is a **linear-probing** one: a concept like "is this
+prompt harmful?" is **largely linearly decodable** from a mid-layer residual
+stream (the lineage of Alain & Bengio 2016, "Understanding intermediate layers
+using linear classifier probes", arXiv:1610.01644 — [UNVERIFIED]). Here is what
+the artifacts actually show, claim by claim.
+
+| Claim | What we measured | Verdict |
+|---|---|---|
+| Harm is decodable from layer-12 activations | 5-fold CV **accuracy 0.870 ± 0.026**, **ROC-AUC 0.941 ± 0.014** (n=200); single split 0.950 / 0.980 (n=40) | **Reproduced** |
+| The signal is *linearly* decodable (not an MLP artifact) | logreg linear probe **accuracy 0.860, ROC-AUC 0.944** — ~matches the MLP | **Reproduced** |
+| The score is real, not a text/leak artifact | shuffled-label **0.425** (chance); length-only **0.650**; TF-IDF **0.575** — all far below 0.87 | **Clean** |
+| The direction generalizes out-of-domain | XSTest zero-shot **ROC-AUC 0.888** (n=300), but **recall 0.427** at the 0.5 threshold | **Ranks, miscalibrated** |
+| It holds on real in-the-wild data | Toxic-Chat scale-up **test accuracy 0.875, ROC-AUC 0.965** (n=748), 5-fold CV **0.95** | **Reproduced** |
+
+**Honest read.** This is **screening-tier** evidence (n=200 for the headline; a
+single seed, not the n≥7 the project reserves the word "winner" for), and the
+lucky single-split 0.950 sits *above* the cross-validated 95% CI — quote the
+**CV mean 0.870 ± 0.026**, not the point estimate. The load-bearing result is
+that the plain logistic-regression linear probe (0.860 / 0.944) essentially ties
+the MLP: the harm concept really is largely *linear* at layer 12, exactly what
+the Alain-Bengio lineage predicts, and the MLP is not overfitting quirks. The
+one honest failure is calibration — the probe **ranks** harm well on XSTest
+(AUC 0.888) but its fixed 0.5 boundary misses more than half the harmful prompts
+there (recall 0.427); the direction transfers, the threshold does not.
+
+---
+
 ## 9. Reproducible install
 
 ### Step 1 — create a virtual environment and install deps

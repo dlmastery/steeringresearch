@@ -244,27 +244,28 @@ imports cleanly for tests.
 
 ---
 
-## 7. Results
+## 7. Results — measured vs. the claim
 
-Artifacts come from the GPU run, which happens **after** this doc is written — so
-the values below are placeholders until `results.json` populates them.
+Artifacts come from the GPU run (`artifacts/results.json`, n = 20 held-out
+harmful prompts per rung, aligned Gemma-3-1B, self-graded). The load-bearing
+surprise: on this aligned base the attack never produces *compliance* — it
+produces **gibberish** — so **ASR stays 0.0 at every rung** and the readable
+safety axis is the **refusal rate**, not ASR.
 
-**`artifacts/asr_ladder.png`** — a bar per rung. The expected shape is a low
-`baseline`, a tall red `attacked` peak (the jailbreak works), then a staircase
-back down as `+clamp`, `+lock`, `+dual` each remove attack success.
-
-| Rung | ASR (fraction complying) | Read as |
+| Claim | What we measured | Verdict |
 |---|---|---|
-| baseline | (see `results.json`) | model's default refusal |
-| attacked | (see `results.json`) | how well the scalpel jailbreaks it |
-| +clamp | (see `results.json`) | marginal effect of the manifold clamp |
-| +lock | (see `results.json`) | marginal effect of the projection lock |
-| +dual | (see `results.json`) | residual leaks caught at the output |
+| Activation steering can compromise safety — invert the refusal direction to strip refusal | refusal rate 0.95 (baseline) → 0.45 (attacked); the lost 0.50 turns into gibberish (0.05 → 0.55), not compliance (ASR stays 0.0) | Supported — the scalpel halves refusal, but it breaks the model rather than jailbreaking it |
+| Guard B (norm / manifold clamp) defends | +clamp restores refusal to 0.95 and gibberish back to 0.05 — full recovery | Supported — the clamp fully neutralizes this attack |
+| Stacking Guards A (projection lock) and D (dual-forward) defends further | +lock refusal 0.35 (gibberish 0.65); +dual unchanged at 0.35 — both *worse* than clamp alone | Not supported here — the later rungs did not help; the lock over-writes and degrades |
+| The always-on guard doesn't over-block benign prompts | benign refusal 0.25 (baseline) → 0.15 (guarded) — collateral did not rise | Supported — no over-refusal cost |
 
-The headline is the **delta**: `attacked` ASR minus `+dual` ASR is how much
-attack success the guard removed. The guard "passes" this toy demo if `+dual`
-returns ASR to roughly the `baseline` level **without** raising benign
-over-refusal.
+The honest read: the attack + clamp-defense pair reproduces cleanly (refusal 0.95
+→ 0.45 → 0.95), but not every guard rung earns its place — adding the projection
+lock *lowered* refusal to 0.35, the opposite of the additive ladder's hope. And
+because ASR is pinned at 0.0 (the attack yields gibberish on an aligned 1B, never
+compliance), the ASR staircase this ladder was designed around is uninformative
+here; watch the refusal rate instead. Screening tier, n=20, 1B self-judge — a
+directional demo, not a hardened result.
 
 ---
 

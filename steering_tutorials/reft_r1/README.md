@@ -82,8 +82,7 @@ simpler baselines:
 answers "how do I pick a lock?". Lesson 2 re-installed refusal with a constant
 vector. Here we *learn* the edit — and then ask the question AxBench asks: does
 the fancier learned method actually beat the dead-simple baseline? We report
-whatever we see. (Numbers are populated by the GPU run — see
-`artifacts/results.json`.)
+whatever we see, in Section 7 (raw numbers in `artifacts/results.json`).
 
 ---
 
@@ -333,29 +332,53 @@ generation samples. Serves on **port 8004** (lessons 1–2 use their own ports).
 
 ## 7. Results
 
-Populated by the GPU run; the harness writes `results.json` and two plots. The
-two questions the lesson exists to answer:
+The GPU run wrote `artifacts/results.json` and two plots. Numbers below are the
+**measured** values on a small held-out set (n=5 harmful, n=5 benign per arm) —
+screening tier, not evaluation tier.
 
 **Q1 — Steering: which arm refuses most at matched coherence?**
-`steering_compare.png` + the table in `results.json`.
+`steering_compare.png` + `results.json`.
 
-| arm | refusal | comply | gibberish | (populated by the GPU run) |
-|---|---|---|---|---|
-| Prompting | — | — | — | the "just ask" baseline |
-| DiffMean (L2) | — | — | — | the simple fixed vector |
-| ReFT-r1 | — | — | — | the learned rank-1 edit |
+| arm | harmful refusal | benign over-refusal | gibberish |
+|---|---|---|---|
+| Prompting | 0.60 | 0.80 | 0.10 |
+| DiffMean (L2) | 0.40 | 0.60 | 0.10 |
+| ReFT-r1 | 0.60 | 0.60 | 0.20 |
+
+ReFT-r1 and Prompting tie on harmful refusal (0.60), both above DiffMean (0.40).
+But Prompting is **unconditional** — it over-refuses benign prompts at 0.80, the
+highest of the three, because "just ask it to refuse" fires regardless of intent.
+ReFT-r1 matches Prompting's harmful refusal with less benign over-refusal (0.60).
 
 **Q2 — Detection: which direction reads the concept best (AUC)?**
 `detection_auc.png` + `results.json`.
 
-| direction | ROC-AUC | (populated by the GPU run) |
-|---|---|---|
-| DiffMean · h | — | fixed-vector detector |
-| r_unit · h (ReFT-r1) | — | learned-direction detector |
+| direction | ROC-AUC |
+|---|---|
+| DiffMean · h | 0.68 |
+| r_unit · h (ReFT-r1) | 0.68 |
 
-Read the outcome **as measured**. If the simple baselines match or beat ReFT-r1
-here — the AxBench finding — that is a result worth reporting, not a bug to hide.
-Raw numbers and side-by-side generations live in `artifacts/results.json`.
+The learned direction and the fixed diff-of-means **tie** as detectors (AUC 0.68
+each) — exactly AxBench's "the simple baseline is strong" point.
+
+### Results — measured vs. the claim
+
+| Claim (AxBench, Wu et al. 2025, arXiv:2501.17148) | What we measured (n=5/class, screening) | Verdict |
+|---|---|---|
+| Simple baselines are strong; prompting is a strong steerer | Prompting refusal 0.60, tied for best — but over-refuses benign at 0.80 | Reproduced |
+| DiffMean is a strong **detector** | DiffMean AUC 0.68 == ReFT-r1 AUC 0.68 | Reproduced |
+| Learned ReFT-r1 is competitive + interpretable | ReFT-r1 refusal 0.60 (best), detector AUC 0.68 (tied) | Reproduced |
+| SAEs underperform | not tested (no SAE arm at this scale) | Out of scope |
+
+**Honest read.** This partially reproduces AxBench at 1B: ReFT-r1 is competitive
+on steering (harmful refusal 0.60, matching prompting and beating DiffMean's
+0.40), and DiffMean matches ReFT-r1 as a detector (AUC 0.68 each) — the paper's
+"a simple baseline is hard to beat" finding. Treat all of this as **screening**,
+not a verdict: n=5 per class is far too small for significance, the DiffMean step
+size is fixed at 0.08 (not tuned per prompt), and the benign over-refusal numbers
+are partly instrument-driven — the 1B self-judge is a weak grader, so the
+gibberish (0.10–0.20) and over-refusal rates carry its noise, not just the
+method's. Raw numbers and side-by-side generations live in `artifacts/results.json`.
 
 ---
 

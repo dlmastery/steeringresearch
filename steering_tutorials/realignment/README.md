@@ -199,6 +199,29 @@ run them in one process — see [§2](#2-why-two-processes).
 
 ---
 
+## Results — measured vs. the claim
+
+The screening sweep (`artifacts/results.json`, n = 8 harmful + 8 benign held-out,
+α ∈ {0.0, 0.15, 0.25}, abliterated 1B self-graded) transplants the aligned base
+model's refusal direction and measures the cost:
+
+| Claim | What we measured (screening) | Verdict |
+|---|---|---|
+| Transplanting the aligned model's refusal direction restores refusal (ASR ↓) | ASR 0.375 (α=0) → 0.25 (α=0.15) → 0.25 (α=0.25) | Directionally supported — the transplant lowers compliance on harmful prompts |
+| The restoration has a coherence / over-refusal cost | coherence 0.93 → 0.80 → 0.56; over-refusal 0.25 → 0.50 → 0.12 | Supported — coherence falls toward the 0.55 floor as α rises; over-refusal is noisy and non-monotone |
+| Some α cleanly restores refusal within budget | best = **null**: no α cleared both gates (over-refusal ≤ 0.10 **and** coherence ≥ 0.55) at once | Not cleared — α=0.25 gets closest (over-refusal 0.125, coherence 0.564) but misses the over-refusal gate |
+
+The transplant works in the intended *direction* — external refusal steering does
+lower ASR on the abliterated model — but it walks straight into the coherence
+cliff: by α=0.25 the harmful generations sit just above the 0.55 gibberish floor,
+and no swept α satisfies the pre-registered over-refusal-and-coherence contract,
+so `best` is null. With ~8 prompts per class and the abliterated model self-judging,
+this is a screening-tier shape (ASR-vs-α), not a significance claim; the honest
+headline is "directionally yes, at a coherence cost, with no clean operating point
+at this scale."
+
+---
+
 ## 7. Honest caveats
 
 - **The judge is weak, and it is the abliterated model itself.** Phase 2 reuses

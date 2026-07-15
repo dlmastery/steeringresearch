@@ -53,3 +53,19 @@ Model selection is where it is easiest to fool yourself, so the rules are strict
 
 CPU-only: the Gemma model is never loaded here; we reuse lesson 1's cached
 activations.
+
+## Results — measured vs. the claim
+
+| Claim | What we measured | Verdict |
+|---|---|---|
+| Model selection is by CV, never test-set peeking | 23 MLP-head configs, each scored by StratifiedKFold(k=5) mean ROC-AUC; lesson-1's held-out slice never consulted | **Held** |
+| A better head must clear the noise band, not just top the leaderboard | top config (64→64) CV ROC-AUC **0.945 ± 0.015** vs. the deployed default (128→32) **0.9415 ± 0.0157** — a margin of **+0.0035**, well inside the default's own 1-std band (**0.0157**) | **KEEP the default** |
+
+**Honest read.** The 23-config sweep does surface a nominal "winner" (64→64),
+but its edge over the shipped default is **+0.0035 CV ROC-AUC — about a fifth of
+the noise band** (0.0157), so `beats_default_by_more_than_1std` is `false`. On a
+200-row set scored by 5-fold CV this is exactly the leaderboard-noise trap this
+lesson exists to warn about: the top row is not a real improvement, and even if
+it were it would need confirmation at n≥7 seeds before deployment. The
+disciplined call is to **keep the simple default** and not buy capacity the
+cross-validation cannot justify.
