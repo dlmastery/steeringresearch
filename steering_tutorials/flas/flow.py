@@ -214,7 +214,7 @@ def integrate_flow(
         v = vfield(x, t_norm, c)                  # velocity at current state
         # Euler step; cast v to x's dtype so x keeps h's dtype (e.g. bf16 on GPU
         # even though the field's params are fp32).
-        x = x + dt * v.to(x.dtype)
+        x = x + dt * v.to(device=x.device, dtype=x.dtype)
     return x
 
 
@@ -271,6 +271,8 @@ class FlowContext:
         # to the field's param dtype. reshape(-1) -> a [concept_dim] vector that
         # the field broadcasts over every token position.
         self._c = v.detach().reshape(-1).to(device=device).float()
+        # the field must live on the same device as the residual stream it edits
+        self.vfield = self.vfield.to(device)
 
         target = residual_layers(self.model)[self.layer]
         self._handles.append(target.register_forward_hook(self._hook, prepend=True))
