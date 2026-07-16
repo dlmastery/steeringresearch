@@ -422,7 +422,10 @@ Then, from the **repo root** (`steeringresearch/`):
 # 1) Train the velocity field by rectified flow (frozen Gemma; ~minutes on a 4090)
 python -m steering_tutorials.flas.train_flas
 
-# 2) Run the three payoffs: T-sweep, per-concept, zero-shot
+# 2) Run the three payoffs: T-sweep, per-concept, zero-shot.
+#    Grade with an OFF-FAMILY judge (recommended): a 1B target self-judging is
+#    unreliable, so point STEER_JUDGE_MODEL at an independent model.
+STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
 python -m steering_tutorials.flas.run_flas
 
 # 3) Steer a single prompt from the terminal (gate decides; you pick concept + T)

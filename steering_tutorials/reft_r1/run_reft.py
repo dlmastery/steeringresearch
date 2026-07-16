@@ -364,8 +364,8 @@ def main() -> dict:
         reft = reft[0]
     print(f"[reft] loaded {C.REFT_PATH}", file=sys.stderr)
 
-    try:  # tolerate load_train_eval(seed=...) or load_train_eval()
-        data = load_train_eval(seed=C.SEED)
+    try:  # tolerate load_train_eval(n_per_class=..., n_eval=..., seed=...) or bare
+        data = load_train_eval(n_per_class=C.N_PER_CLASS, n_eval=C.N_EVAL, seed=C.SEED)
     except TypeError:
         data = load_train_eval()
     train_harmful, train_benign = _split(data, "train")

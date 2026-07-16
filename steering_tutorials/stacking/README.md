@@ -240,7 +240,8 @@ The full ladder (needs the abliterated Gemma-3-1B + a GPU; greedy decoding):
 
 ```bash
 huggingface-cli login          # accept the Gemma license once
-python -m steering_tutorials.stacking.run_stacking
+# STEER_JUDGE_MODEL selects the OFF-FAMILY judge (avoids same-model grading bias).
+STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct python -m steering_tutorials.stacking.run_stacking
 ```
 
 Outputs land in `artifacts/`: `refusal_vector.pt`, `results.json`, `ladder.png`.

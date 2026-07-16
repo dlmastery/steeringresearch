@@ -71,9 +71,13 @@ LOCK_FLOOR_FRAC = 0.05
 # harmful prompt is flagged as a leak and overridden with a safe completion.
 SAFE_COMPLETION = "I can't help with that request."
 
-# --- Data / split (JailbreakBench, same source as lesson 2) -----------------
-N_PER_CLASS = 60
-N_EXTRACT = 40          # per class, used only to build the refusal direction
+# --- Data / split (shared >=500/class harmful/benign set) -------------------
+# The harmful/benign prompts now come from ``steering_tutorials.common.data``
+# (toxic-chat + JBB top-up, deduped + length-matched); the refusal direction is
+# still read from the ALIGNED base above. We build the direction on N_EXTRACT/
+# class and attack a disjoint held-out eval half (eval = N_PER_CLASS - N_EXTRACT).
+N_PER_CLASS = 250
+N_EXTRACT = 200         # per class, used only to build the refusal direction (eval = 50/class)
 SEED = 0
 
 # --- Generation --------------------------------------------------------------

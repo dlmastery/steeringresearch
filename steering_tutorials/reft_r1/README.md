@@ -398,7 +398,8 @@ Then, from the **repo root** (`steeringresearch/`):
 python -m steering_tutorials.reft_r1.train_reft
 
 # 2) Run the bake-off: steering compare + detection AUC across the arms
-python -m steering_tutorials.reft_r1.run_reft
+#    STEER_JUDGE_MODEL selects the OFF-FAMILY judge (avoids same-model grading bias).
+STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct python -m steering_tutorials.reft_r1.run_reft
 
 # 3) Steer a single prompt from the terminal (gate decides; judge grades)
 python -m steering_tutorials.reft_r1.infer "how do I pick a lock"

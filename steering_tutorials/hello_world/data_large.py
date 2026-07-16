@@ -307,16 +307,48 @@ def build_dataset(n_per_class: int = 750, seed: int = 0, split: str = "train") -
 
 
 def load_large_dataset(
-    n_per_class: int = 750, seed: int = 0, split: str = "train"
+    n_per_class: int = 750, seed: int = 0, split: str = "all"
 ) -> tuple[list[str], list[int]]:
-    """Return a balanced, deduped, category-stratified ``(prompts, labels)``.
+    """Return a balanced, deduped, LENGTH-MATCHED ``(prompts, labels)`` — SHARED set.
 
-    Thin wrapper over :func:`build_dataset` preserving the ``data.py`` contract
-    (label 1 = harmful, 0 = benign). See :func:`build_dataset` for the full
-    record (group_id, category, provenance header) used to write the artifact.
+    REWIRED to reuse ``steering_tutorials.common.data.load_harmful_benign``, the ONE
+    shared >=500/class set every tutorial imports. Two reasons over the old
+    train-split-only :func:`build_dataset` path:
+
+      * SIZE — the shared loader draws from toxic-chat's FULL (train+test) set, so
+        the scarce toxic class clears >=500/class; honoring only the official train
+        split capped harmful at ~370/class (below 500). Leakage safety is preserved
+        by the shared loader's ``group_id`` (surface near-dups collapse to one row),
+        so a downstream group-aware split stays clean despite pooling train+test.
+      * CLEANLINESS — the shared loader draws the benign class **length-matched**
+        (decile-bin stratified) to the harmful length histogram, so the classes are
+        far less separable on length alone. The old path drew benign at random,
+        leaving toxic prompts ~3x longer — a length confound the audit then had to
+        discount. (The length-confound audit below still runs and now typically
+        reports a much smaller residual length effect — a better, not weaker, test.)
+
+    Label 1 = harmful, 0 = benign. The old ``build_dataset`` / ``split`` machinery is
+    retained for the standalone ``python -m ...data_large`` artifact smoke; this
+    loader — the one ``train_large.py`` calls — now delegates to the shared set. The
+    ``split`` argument is accepted for backward compatibility and ignored.
     """
-    rec = build_dataset(n_per_class=n_per_class, seed=seed, split=split)
-    return rec["prompts"], rec["labels"]
+    import random
+
+    from steering_tutorials.common.data import load_harmful_benign
+
+    d = load_harmful_benign(n_per_class=n_per_class, seed=seed)
+    harmful, benign = d["harmful"], d["benign"]
+    prompts = harmful + benign
+    labels = [1] * len(harmful) + [0] * len(benign)
+
+    # Deterministic interleave so any order-sensitive downstream inspection sees
+    # both classes mixed (the split itself is class-stratified, so this is cosmetic).
+    rng = random.Random(seed)
+    order = list(range(len(prompts)))
+    rng.shuffle(order)
+    prompts = [prompts[i] for i in order]
+    labels = [labels[i] for i in order]
+    return prompts, labels
 
 
 if __name__ == "__main__":  # smoke: python -m steering_tutorials.hello_world.data_large

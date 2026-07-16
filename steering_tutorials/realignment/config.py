@@ -56,15 +56,16 @@ LAYER = 12
 ALPHAS = [0.0, 0.10, 0.15, 0.20, 0.25]
 
 # --- Data / split ------------------------------------------------------------
-# JailbreakBench ships 100 harmful + 100 benign matched prompts (Chao et al.
-# 2024, arXiv:2404.01318). We take N_PER_CLASS of each and split every class into
+# The shared >=500/class harmful/benign set (``steering_tutorials.common.data``:
+# toxic-chat + JBB top-up, deduped + length-matched) replaces the old 100-prompt
+# JailbreakBench loader. We take N_PER_CLASS of each and split every class into
 # two disjoint halves:
 #   - the first N_EXTRACT build the refusal direction (diff-of-means, phase 1),
 #   - the next N_EVAL are held out for evaluation (phase 2).
 # Both phases call the SAME loader with the SAME seed, so the two processes see
 # byte-identical splits without having to pass data between them.
-N_EXTRACT = 40          # per class, used only to build the direction (phase 1)
-N_EVAL = 20             # per class, held out for measurement (phase 2)
+N_EXTRACT = 200         # per class, used only to build the direction (phase 1)
+N_EVAL = 50             # per class, held out for measurement (phase 2)
 N_PER_CLASS = N_EXTRACT + N_EVAL
 SEED = 0
 

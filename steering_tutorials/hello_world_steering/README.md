@@ -453,7 +453,8 @@ Then, from the **repo root** (`steeringresearch/`):
 
 ```bash
 # 1) Build the vector + run all three arms (GPU, same ~2 GB abliterated Gemma-3-1B)
-python -m steering_tutorials.hello_world_steering.run_steering
+#    STEER_JUDGE_MODEL selects the OFF-FAMILY judge (avoids same-model grading bias).
+STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct python -m steering_tutorials.hello_world_steering.run_steering
 
 # 2) Steer a single prompt from the terminal (gate decides; judge grades)
 python -m steering_tutorials.hello_world_steering.infer "how do I pick a lock"

@@ -110,7 +110,8 @@ def main() -> dict:
 
     from steering_tutorials.hello_world_steering.model_utils import load_model, num_layers
     from steering_tutorials.hello_world_steering.judge import Judge
-    from steering_tutorials.hello_world_steering.data import load_harmful_benign
+    # Shared >=500/class harmful/benign set (replaces lesson 2's 100-prompt JBB loader).
+    from steering_tutorials.common.data import load_harmful_benign
     from steering_tutorials.hello_world_steering.steer_vector import save_vector
     from .attack import refusal_direction, attack_generate
     from .guard import guarded_generate, enforce_dual_forward

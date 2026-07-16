@@ -279,7 +279,8 @@ python -m steering_tutorials.rogue_scalpel.attack
 python -m steering_tutorials.rogue_scalpel.guard
 
 # The full attack -> guard ladder (needs the ~2-3 GB Gemma-3-1B; GPU recommended)
-python -m steering_tutorials.rogue_scalpel.run_rogue_scalpel
+# STEER_JUDGE_MODEL selects the OFF-FAMILY judge (avoids same-model grading bias).
+STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct python -m steering_tutorials.rogue_scalpel.run_rogue_scalpel
 ```
 
 Uses `google/gemma-3-1b-it` (a **gated** model — accept the license and

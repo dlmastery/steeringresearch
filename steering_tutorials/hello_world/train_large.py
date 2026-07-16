@@ -54,7 +54,8 @@ from .cross_validate import (K_FOLDS, METRIC_NAMES, aggregate, compute_metrics,
 from .audit_leakage import _fit_lr_report, _label_balance
 
 # --- Run configuration ------------------------------------------------------
-N_PER_CLASS = 750           # loader caps at ~695/class (toxic class is scarce)
+N_PER_CLASS = 750           # shared loader: ~693 toxic-chat toxic + JBB top-up,
+                            #                length-matched benign (>=500/class)
 TEST_FRACTION = 0.15        # task-mandated 70/15/15 split
 VAL_FRACTION = 0.15         # carved from the training portion for early stopping
 NATURAL_BASE_RATE = 0.07    # ~7% of real Toxic-Chat traffic is toxic (imbalanced)

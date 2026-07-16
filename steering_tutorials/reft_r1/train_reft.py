@@ -148,7 +148,7 @@ def main() -> None:
     device = next(model.parameters()).device
 
     # ---- data ---------------------------------------------------------------
-    data = load_train_eval(seed=C.SEED)
+    data = load_train_eval(n_per_class=C.N_PER_CLASS, n_eval=C.N_EVAL, seed=C.SEED)
     harmful_train = data["train"]["harmful"]
     benign_train = data["train"]["benign"]
 

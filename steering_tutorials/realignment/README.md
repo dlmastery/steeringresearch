@@ -190,7 +190,8 @@ From the repo root, as **two separate processes, in order**:
 python -m steering_tutorials.realignment.extract_refusal
 
 # Phase 2 — transplant it into the abliterated model and sweep alpha.
-python -m steering_tutorials.realignment.run_realignment
+#           STEER_JUDGE_MODEL selects the OFF-FAMILY judge (avoids same-model grading bias).
+STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct python -m steering_tutorials.realignment.run_realignment
 ```
 
 Phase 1 writes `artifacts/refusal_dir.pt`; phase 2 reads it and writes

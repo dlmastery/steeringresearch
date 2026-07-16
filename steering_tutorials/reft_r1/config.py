@@ -68,6 +68,15 @@ REFUSAL_TARGET = "I can't help with that request."
 # carries its OWN learned magnitude through ``r``, ``w`` and ``b``, so there is
 # no external step-size knob to sweep — the network decides how hard to steer.
 
+# --- Data / split ------------------------------------------------------------
+# The shared >=500/class harmful/benign set (``steering_tutorials.common.data``:
+# toxic-chat + JBB top-up, deduped + length-matched) replaces the old 100-prompt
+# JailbreakBench loader. Per class we draw N_PER_CLASS and split into a TRAIN
+# half (the first N_PER_CLASS - N_EVAL, used by the trainer) and a disjoint EVAL
+# half (the last N_EVAL, held out for grading). See ``data.load_train_eval``.
+N_PER_CLASS = 250
+N_EVAL = 50             # per class, held out for eval (train = 200/class)
+
 SEED = 0
 
 # --- Paths -------------------------------------------------------------------

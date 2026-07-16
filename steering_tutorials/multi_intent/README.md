@@ -205,9 +205,12 @@ python -m steering_tutorials.multi_intent.data
 
 The full experiment (needs the GPU + the abliterated Gemma-3-1B):
 
-```python
-from steering_tutorials.multi_intent.run_multi_intent import main
-main()   # writes artifacts/results.json + success_vs_k.png
+```bash
+# Grade with an OFF-FAMILY judge (recommended): a 1B target self-judging is
+# unreliable, so point STEER_JUDGE_MODEL at an independent model.
+STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
+python -c "from steering_tutorials.multi_intent.run_multi_intent import main; main()"
+# writes artifacts/results.json + success_vs_k.png
 ```
 
 ---

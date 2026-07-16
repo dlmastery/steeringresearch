@@ -40,26 +40,32 @@ MODEL_ID = "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"
 STEER_LAYER = 12
 
 # --- The K concepts we compose ----------------------------------------------
-# Each concept is one JailbreakBench harm CATEGORY. We steer "refuse THIS
-# category" for each, contrasting that category's harmful prompts against a
-# SHARED benign baseline. Using the same baseline for all K is what makes the K
-# raw directions comparable (they share an origin), so their overlap is a clean
-# measure of concept similarity rather than of baseline drift.
+# Each concept is one coarse harm category from the SHARED dataset
+# (``steering_tutorials.common.data``): toxic-chat's ``openai_moderation`` flags
+# folded to five buckets. We steer "refuse THIS category" for each, contrasting
+# that category's harmful prompts against a SHARED benign baseline. Using the same
+# baseline for all K is what makes the K raw directions comparable (they share an
+# origin), so their overlap is a clean measure of concept similarity rather than
+# of baseline drift.
 #
-# Ordered most-distinct-first so the additive K=1..N ladder adds the least
-# redundant concept last — the honest stress test for interference.
+# Ordered largest-pool-first (sexual is the richest toxic-chat harm category,
+# hate the smallest), so the additive K=1..N ladder adds the smallest, least
+# stable concept last — the honest stress test for interference. The two smallest
+# categories (self_harm, hate) carry only ~20-30 prompts each, so their eval split
+# is small; this is reported honestly at load time.
 CONCEPTS = [
-    "Malware/Hacking",
-    "Fraud/Deception",
-    "Harassment/Discrimination",
-    "Physical harm",
+    "sexual",
+    "harassment",
+    "violence",
+    "self_harm",
+    "hate",
 ]
 
-# How many exemplar prompts per concept to average into its diff-of-means, and
-# how many benign prompts form the shared baseline. JBB ships 10 harmful prompts
-# per category, so we cap the harmful side at 10; the benign baseline is larger
-# for a lower-variance origin.
-N_PER_CONCEPT = 10
+# Prompts to draw PER concept before the shared loader's 40/30/30 exemplars/steer/
+# eval split (``extract`` = exemplars + steer; ``eval`` = the disjoint 30%). 150
+# gives ~40-45 eval prompts for the big concepts; small categories return what
+# they have. The benign baseline is a shared, larger, lower-variance origin.
+N_PER_CONCEPT = 150
 N_BENIGN_BASELINE = 40
 
 # --- Steering strengths ------------------------------------------------------
@@ -74,9 +80,10 @@ PER_CONCEPT_ALPHA = 0.06     # the alpha used in the K=1..N stacking ladder
 
 # --- Evaluation --------------------------------------------------------------
 # Held-out prompts per concept used to measure steering success and cross-talk
-# (disjoint from the exemplars that built each vector). We keep the extraction
-# and eval halves disjoint so we never grade a vector on the prompts that
-# defined it.
+# (disjoint from the extract prompts that built each vector). NOTE: the shared
+# loader now owns the extract/eval split (its disjoint 30% eval share, larger than
+# this old fixed 5), so this value is passed through but IGNORED — kept only for
+# backward-compatible call sites.
 N_EVAL_PER_CONCEPT = 5
 SEED = 0
 MAX_NEW_TOKENS = 48

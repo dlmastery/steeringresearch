@@ -44,14 +44,16 @@ STEER_LAYER = 12
 ALPHAS = [0.0, 0.05, 0.10, 0.15]
 
 # --- Data / split ------------------------------------------------------------
-# JailbreakBench ships 100 harmful + 100 benign matched prompts. We take
-# N_PER_CLASS of each, then split every class into two disjoint halves:
+# The shared >=500/class harmful/benign set (``steering_tutorials.common.data``)
+# replaces the old 100-prompt JailbreakBench loader, so we can build the vector
+# on a real sample and still hold out a credible eval split. We take N_PER_CLASS
+# of each, then split every class into two disjoint halves:
 #   - the first N_EXTRACT go into building the steering vector (diff-of-means),
 #   - the rest are held out for EVALUATION (never seen during extraction).
 # Keeping extraction and evaluation disjoint is what stops us from grading the
 # vector on the very prompts that defined it.
-N_PER_CLASS = 60
-N_EXTRACT = 40          # per class, used only to build the vector
+N_PER_CLASS = 250
+N_EXTRACT = 200         # per class, used only to build the vector (eval = 50/class)
 SEED = 0
 
 # --- Generation --------------------------------------------------------------

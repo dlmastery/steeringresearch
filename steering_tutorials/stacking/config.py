@@ -59,12 +59,13 @@ STACK_ALPHA = 0.08
 COMPETE_ADD_FRACTION = 0.08
 
 # --- Data / split ------------------------------------------------------------
-# JailbreakBench ships 100 harmful + 100 benign matched prompts (lesson 2 data
-# loader, reused). We extract the refusal direction from a disjoint EXTRACT half
-# and read the ladder on a held-out EVAL half of harmful prompts.
-N_PER_CLASS = 40
-N_EXTRACT = 24          # per class, used only to build the vector
-N_EVAL = 12             # held-out harmful prompts the ladder is judged on
+# The shared >=500/class harmful/benign set (``steering_tutorials.common.data``:
+# toxic-chat + JBB top-up, deduped + length-matched) replaces the old 100-prompt
+# JailbreakBench loader. We extract the refusal direction from a disjoint EXTRACT
+# half and read the ladder on a held-out EVAL half of harmful prompts.
+N_PER_CLASS = 250
+N_EXTRACT = 200         # per class, used only to build the vector
+N_EVAL = 50             # held-out harmful prompts the ladder is judged on
 SEED = 0
 
 # --- Generation --------------------------------------------------------------

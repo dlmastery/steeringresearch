@@ -1,4 +1,4 @@
-"""data.py — the train / eval prompts for ReFT-r1 (lesson 3), from JailbreakBench.
+"""data.py — the train / eval prompts for ReFT-r1 (lesson 3), from the shared set.
 
 Lesson 2 needed two *contrast* sets (harmful vs benign) to build ONE fixed
 diff-of-means vector, splitting each class into extract/eval halves. Lesson 3
@@ -21,77 +21,48 @@ The train/eval halves are nested one level down (read them as
 ``data["train"]["harmful"]`` / ``data["eval"]["benign"]``) so the trainer and the
 separate eval/infer modules share exactly this structure.
 
-JailbreakBench (Chao et al. 2024, arXiv:2404.01318) ships two matched CSVs:
-  - data/harmful-behaviors.csv : 100 harmful requests
-  - data/benign-behaviors.csv  : 100 benign  requests
-both keyed on a ``Goal`` column and topically matched, so the difference between
-the classes is *intent*, not vocabulary. We download the raw CSVs directly with
-``hf_hub_download`` (works behind the SSL middlebox where ``datasets.load_dataset``
-fails) and cache them, so after the first run this is instant and offline.
+The harmful/benign prompts come from the SHARED >=500/class set
+(``steering_tutorials.common.data``: toxic-chat + JBB top-up, deduped and
+length-matched), replacing this lesson's old 100-prompt JailbreakBench loader.
+We pull ``n_per_class`` of each and cut a disjoint TRAIN (first
+``n_per_class - n_eval``) / EVAL (last ``n_eval``) split, deterministically.
 
 This module is DELIBERATELY standalone and CPU-only: it never loads the model,
 so the smoke test below runs in seconds with no GPU.
 """
 from __future__ import annotations
 
-import random
 import sys
 
-try:  # Some networks sit behind an SSL-intercepting proxy; use the OS trust store.
-    import truststore
-
-    truststore.inject_into_ssl()
-except Exception:  # pragma: no cover - optional
-    pass
-
-JBB_REPO = "JailbreakBench/JBB-Behaviors"
-HARMFUL_CSV = "data/harmful-behaviors.csv"
-BENIGN_CSV = "data/benign-behaviors.csv"
-PROMPT_COLUMN = "Goal"
+from steering_tutorials.common.data import load_harmful_benign
 
 
-def _load_class(csv_name: str, n: int, rng: random.Random) -> list[str]:
-    """Download one JBB CSV, shuffle with ``rng``, return the first ``n`` prompts.
-
-    Shuffling before truncating makes the subset reproducible (fixed seed) but not
-    just "the first N rows" — the CSVs are ordered by category, so the head would
-    over-sample a few topics.
-    """
-    import pandas as pd
-    from huggingface_hub import hf_hub_download
-
-    path = hf_hub_download(JBB_REPO, csv_name, repo_type="dataset")
-    prompts = pd.read_csv(path)[PROMPT_COLUMN].dropna().astype(str).tolist()
-    rng.shuffle(prompts)
-    return prompts[:n]
-
-
-def load_train_eval(n_per_class: int = 60, seed: int = 0) -> dict:
+def load_train_eval(n_per_class: int = 250, seed: int = 0, n_eval: int = 50) -> dict:
     """Return the ReFT-r1 data splits as a NESTED dict.
 
     Shape
     -----
         {
-          "train": {"harmful": [str], "benign": [str]},   # first half of each class
-          "eval":  {"harmful": [str], "benign": [str]},   # disjoint held-out half
+          "train": {"harmful": [str], "benign": [str]},   # first n_per_class-n_eval
+          "eval":  {"harmful": [str], "benign": [str]},   # disjoint last n_eval
         }
 
-    Each class is shuffled with its OWN fixed-seed RNG (offset per class so the
-    harmful and benign shuffles are independent), truncated to ``n_per_class``,
-    then split down the middle into train/eval.
+    The shared loader already shuffles each class deterministically with ``seed``,
+    so we simply cut the first ``n_per_class - n_eval`` prompts of each class into
+    TRAIN and the last ``n_eval`` into EVAL — disjoint by construction.
     """
-    # Independent per-class RNGs so the two shuffles don't accidentally correlate.
-    harmful = _load_class(HARMFUL_CSV, n_per_class, random.Random(seed))
-    benign = _load_class(BENIGN_CSV, n_per_class, random.Random(seed + 1))
+    d = load_harmful_benign(n_per_class=n_per_class, seed=seed)
+    harmful, benign = d["harmful"], d["benign"]
 
-    half = n_per_class // 2
-    train = {"harmful": harmful[:half], "benign": benign[:half]}
-    eval_ = {"harmful": harmful[half:], "benign": benign[half:]}
+    n_train = max(0, min(len(harmful), len(benign)) - n_eval)
+    train = {"harmful": harmful[:n_train], "benign": benign[:n_train]}
+    eval_ = {"harmful": harmful[n_train:n_train + n_eval],
+             "benign": benign[n_train:n_train + n_eval]}
 
     print(
         f"[data] train: {len(train['harmful'])} harmful + {len(train['benign'])} benign | "
         f"eval: {len(eval_['harmful'])} harmful + {len(eval_['benign'])} benign "
-        f"(n_per_class={n_per_class}, seed={seed})",
+        f"(n_per_class={n_per_class}, n_eval={n_eval}, seed={seed})",
         file=sys.stderr,
     )
     return {"train": train, "eval": eval_}

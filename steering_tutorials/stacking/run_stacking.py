@@ -216,7 +216,8 @@ def main() -> dict:
         extract_caa_vector, save_vector,
     )
     from steering_tutorials.hello_world_steering.judge import Judge
-    from steering_tutorials.hello_world_steering.data import load_harmful_benign
+    # Shared >=500/class harmful/benign set (replaces lesson 2's 100-prompt JBB loader).
+    from steering_tutorials.common.data import load_harmful_benign
 
     random.seed(C.SEED)
     np.random.seed(C.SEED)

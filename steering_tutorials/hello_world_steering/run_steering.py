@@ -180,7 +180,9 @@ def main() -> dict:
     from .steer_vector import extract_caa_vector, save_vector
     from .gate import HarmGate
     from .judge import Judge
-    from .data import load_harmful_benign
+    # The shared >=500/class harmful/benign set (toxic-chat + JBB top-up,
+    # deduped + length-matched) replaces the lesson's old 100-prompt JBB loader.
+    from steering_tutorials.common.data import load_harmful_benign
 
     # Reproducibility: pin every RNG before anything stochastic happens.
     random.seed(C.SEED)
