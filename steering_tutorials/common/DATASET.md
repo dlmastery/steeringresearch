@@ -21,13 +21,18 @@ c = load_concepts(n_per_concept=120)       # per-harm-category concept sets + ba
 
 | Role | Dataset | Label unit | Ungated? |
 |---|---|---|---|
-| **Primary (all 500 harmful + all 500 benign)** | `lmsys/toxic-chat` @ `0124` | `toxicity` (0/1), **human, on the user input** | yes |
-| Harmful top-up (1st, only if `n_per_class` > toxic pool) | `JailbreakBench/JBB-Behaviors` `data/harmful-behaviors.csv` (`Goal`) | curated harmful behaviors | yes |
-| Harmful top-up (2nd, only if still short) | `TrustAIRLab/in-the-wild-jailbreak-prompts` (`jailbreak_2023_12_25`, `prompt`) | real in-the-wild jailbreak prompts | yes |
+| **Primary (all 500 harmful + all 500 benign)** | `lmsys/toxic-chat` @ `0124`, config `toxicchat0124`, **train + test** | `toxicity` (0/1), **human, on the user input** | yes |
+| Harmful top-up (ONLY if `n_per_class` > toxic pool) | `JailbreakBench/JBB-Behaviors` `data/harmful-behaviors.csv` (`Goal`) | curated, **short** harmful behaviors | yes |
 
 In the default `n_per_class=500` config **both classes come 100 % from toxic-chat**
-— the top-up sources do not run. They exist only as a length-windowed fallback if
-you request more harmful prompts than toxic-chat's ~693 unique toxic pool holds.
+— the JBB top-up does not run. It exists only as a length-windowed fallback if you
+request more harmful prompts than toxic-chat's ~693 unique toxic pool holds.
+
+> **`TrustAIRLab/in-the-wild-jailbreak-prompts` is deliberately NOT used.** Those
+> are long DAN/roleplay templates; mixing them into a short-prompt harmful class
+> lets a probe separate on **length/style, not intent**. An earlier draft blended
+> them in and produced exactly that confound — it was removed. The loader has no
+> code path to them.
 
 **Why toxic-chat is primary.** A prompt classifier / a steering-contrast set needs a
 label on the **prompt's intent**. Toxic-chat's `toxicity` flag is annotated by humans
@@ -46,14 +51,15 @@ This is the same reasoning documented in `hello_world/data_large.py`.)
 
 | Source | Count in the 500 harmful |
 |---|---|
-| `lmsys/toxic-chat@0124` (primary) | **500** |
-| top-up sources | 0 (not needed) |
+| `lmsys/toxic-chat@0124` (`toxicity==1`) | **500** |
+| JBB top-up | 0 (not needed) |
 
-We use the **full toxic-chat set** (train + test, `..._all.csv`). The toxic class is
-a ~7 % minority, so honoring only the official *train* split would cap the unique
-toxic pool at ~300 (< 500) and force a jailbreak top-up. The full set yields **~693
-unique toxic** prompts after dedup, so the harmful class is drawn entirely from
-toxic-chat — no long-DAN-template top-up, no length confound.
+We use the **full toxic-chat set** (train + test, `..._all.csv` = config
+`toxicchat0124` both splits, ~10 165 rows / 746 toxic). The toxic class is a ~7 %
+minority, so honoring only the official *train* split would cap the unique toxic
+pool at ~300 (< 500) and force a top-up. The full set yields **~693 unique toxic**
+prompts after dedup, so the harmful class is **toxic-chat toxic ONLY** — no top-up,
+no long-DAN-template, no length confound.
 
 Leakage safety is not lost by merging train+test: every row carries a `group_id`
 (§3), so any **group-aware** train/eval split a lesson makes still keeps a prompt and
@@ -88,17 +94,19 @@ The header saved to `artifacts/dataset_500.json` records `primary_source`,
 
 A probe must read **intent, not length**. We therefore draw the benign class
 **length-matched** to the harmful class: harmful lengths are binned into deciles and
-the benign sample is allocated across those same bins (`_length_matched_sample`). Any
-future jailbreak top-up is additionally **length-windowed** to the 5th–95th
-percentile of the toxic-chat toxic length range. Result (seed 0):
+the benign sample is allocated across those same bins (`_length_matched_sample`). The
+JBB top-up (if it ever runs) is additionally **length-windowed** to the [10th,90th]
+percentile of the toxic-chat toxic length range. The classes end up statistically
+inseparable on length across the WHOLE distribution, not just the median (seed 0):
 
-| Class | Median char length |
-|---|---|
-| harmful | 165 |
-| benign | 166 |
+| Class | mean | median | p10 | p90 | max |
+|---|---|---|---|---|---|
+| harmful | 382 | 165 | 28 | 1292 | 1536 |
+| benign  | 382 | 166 | 28 | 1295 | 1536 |
 
-The near-identical medians (in `header.median_char_length`) let the leakage/length
-audit confirm the classes are **not** separable on length alone.
+**Length-AUC = 0.501** (0.5 = length carries zero class signal; a Mann–Whitney/AUC
+of "predict class from char length"). `header.median_char_length` records the two
+medians so the leakage/length audit can re-check the confound at a glance.
 
 ---
 
