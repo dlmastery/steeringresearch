@@ -227,7 +227,10 @@ def main() -> dict:
     ext_benign = data["benign"][:C.N_EXTRACT]
 
     # Optional caps for a RAM/time-constrained host (defaults = full config):
-    n_eval = int(os.environ.get("FG_N_EVAL", "0") or C.N_EVAL)
+    # NOTE: get() with no default returns None when unset, so `None or C.N_EVAL`
+    # falls through to the config value. (Using "0" as the default would be a
+    # non-empty *string* == truthy, wrongly forcing n_eval=0 and an EMPTY split.)
+    n_eval = int(os.environ.get("FG_N_EVAL") or C.N_EVAL)
     sparsity = ([float(x) for x in os.environ["FG_SPARSITY"].split(",")]
                 if os.environ.get("FG_SPARSITY") else C.SPARSITY_LEVELS)
     alpha = float(os.environ.get("FG_ALPHA", "") or C.STEER_ALPHA)
