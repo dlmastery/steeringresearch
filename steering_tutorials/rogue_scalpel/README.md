@@ -295,7 +295,7 @@ those import cleanly; no lesson-2 artifacts are required.
 
 - **This is a 1B toy demo, not a hardened guardrail.** The guards are defensible
   and the math is exact, but a real universal attack — the 20-vector Rogue
-  Scalpel (Korznikov et al. 2026, arXiv:2509.22067), which averages many
+  Scalpel (Korznikov et al. 2025, arXiv:2509.22067), which averages many
   individually-weak steering vectors into one that flips the safety verdict — is
   far stronger than the single-direction attack shown here. Do not read `+dual ≈
   baseline` as "solved".

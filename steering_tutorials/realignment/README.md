@@ -74,7 +74,7 @@ publicly published abliterated Gemma-3-1B as a stand-in for a model an attacker
 has stripped of its guardrails.
 
 **The refusal direction (Arditi et al. 2024,
-[arXiv:2406.11717](https://arxiv.org/abs/2406.11717) [UNVERIFIED]).** Refusal in
+[arXiv:2406.11717](https://arxiv.org/abs/2406.11717)).** Refusal in
 a chat model is mediated to first order by a *single direction* in the residual
 stream. You can recover it as a diff-of-means: run a batch of harmful prompts and
 a batch of benign ones, take the last-token activation of each at some middle
@@ -238,8 +238,6 @@ at this scale."
 - **Small N, screening tier.** With ~20 held-out prompts per class this is
   SCREENING, not EVALUATION (per `CLAUDE.md` §7): enough to see the shape of the
   ASR-vs-α curve, not enough for a significance claim.
-- **`arXiv:2406.11717` is marked `[UNVERIFIED]`** pending a citation check, per
-  corpus discipline.
 
 ---
 
@@ -255,6 +253,6 @@ at this scale."
   version of this experiment (off-family Qwen judge, harness data/eval), which
   this lesson mirrors in miniature.
 - Arditi et al. 2024, *Refusal in LLMs is Mediated by a Single Direction*
-  ([arXiv:2406.11717](https://arxiv.org/abs/2406.11717)) `[UNVERIFIED]`.
+  ([arXiv:2406.11717](https://arxiv.org/abs/2406.11717)).
 - Chao et al. 2024, *JailbreakBench*
   ([arXiv:2404.01318](https://arxiv.org/abs/2404.01318)).

@@ -29,7 +29,7 @@ attacker saw). Guard D is applied to the generated text.
 Order matters: CLAMP first (bound the adversarial delta), then LOCK (guarantee a
 positive refusal floor on the clamped state). Honest about limits: on a 1B toy
 model these are demonstrations, not a hardened guardrail — real universal attacks
-(the 20-vector Rogue Scalpel, Korznikov et al. 2026, arXiv:2509.22067) are
+(the 20-vector Rogue Scalpel, Korznikov et al. 2025, arXiv:2509.22067) are
 stronger. See the README caveats.
 """
 from __future__ import annotations

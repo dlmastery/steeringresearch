@@ -14,11 +14,12 @@ concept, depending on sign and which behavior the contrast isolates); subtractin
 it does the opposite. No training, no gradients — just two forward passes' worth
 of means.
 
-  Rimsky et al. 2023, 'Steering Llama 2 via Contrastive Activation Addition'
-    (arXiv:2312.06681) — CAA: the diff-of-means direction added at inference.
+  Panickssery (formerly Rimsky) et al. 2023, 'Steering Llama 2 via Contrastive
+    Activation Addition' (arXiv:2312.06681) — CAA: diff-of-means added at inference.
   Arditi et al. 2024, 'Refusal in LLMs is Mediated by a Single Direction'
     (arXiv:2406.11717) — a single diff-of-means direction mediates refusal.
-  Turner et al. 2023, 'Activation Addition' (arXiv:2308.10248) — ActAdd.
+  Turner et al. 2023, 'Steering Language Models With Activation Engineering'
+    (arXiv:2308.10248) — ActAdd.
 
 Depends only on ``model_utils.last_token_activations`` (same package).
 """

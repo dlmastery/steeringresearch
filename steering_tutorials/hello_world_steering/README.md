@@ -135,14 +135,14 @@ h  ←  h + alpha * ||h|| * unit(v)
 **Why diff-of-means is the right first method:** it is one subtraction, needs no
 training, and is the technique behind the foundational steering papers:
 
-- Turner et al. 2023, *Activation Addition (ActAdd)* — add a fixed activation
-  vector to the residual stream at inference to steer generation
-  (arXiv:2308.10248 — [UNVERIFIED]).
-- Rimsky et al. 2023, *Contrastive Activation Addition* — build the vector by
-  averaging contrastive pairs (arXiv:2312.06681 — [UNVERIFIED]).
+- Turner et al. 2023, *Steering Language Models With Activation Engineering
+  (ActAdd)* — add a fixed activation vector to the residual stream at inference
+  to steer generation (arXiv:2308.10248).
+- Panickssery (formerly Rimsky) et al. 2023, *Contrastive Activation Addition* —
+  build the vector by averaging contrastive pairs (arXiv:2312.06681).
 - Arditi et al. 2024, *Refusal in LLMs is mediated by a single direction* — the
   refusal behavior is one direction you can add (force refusal) or ablate
-  (bypass it) (arXiv:2406.11717 — [UNVERIFIED]).
+  (bypass it) (arXiv:2406.11717).
 
 This is the *simplest* steering method, not the state of the art — see
 [caveats](#10-honest-caveats).
@@ -168,9 +168,10 @@ else:
     generate normally (no steering)
 ```
 
-This is the **CAST** recipe (Conditional Activation Steering; Lee, Kim, Wang,
-et al. 2024, *Programming Refusal with Conditional Activation Steering*,
-arXiv:2409.05907 — [UNVERIFIED]). In CAST the condition is a learned projection;
+This is the **CAST** recipe (Conditional Activation Steering; Lee, Padhi,
+Ramamurthy, Miehling, Dognin, Nagireddy, Dhurandhar 2024, *Programming Refusal
+with Conditional Activation Steering*, arXiv:2409.05907). In CAST the condition
+is a learned projection;
 here it is our MLP probe. Either way the meta-idea is the same: **read a
 condition, then conditionally write.** The gate is deliberately thin — one
 forward pass to pull the layer-12 activation, one probe evaluation, one

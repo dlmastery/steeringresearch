@@ -10,7 +10,7 @@ the classifier that learned "is this harmful?" becomes the gate that decides
 
 This is the CAST recipe (Conditional Activation Steering): read a concept
 direction, and only apply the steering vector when a lightweight condition
-fires. See Lee, Kim, Wang, et al. 2024 'Programming Refusal with Conditional
+fires. See Lee, et al. 2024 'Programming Refusal with Conditional
 Activation Steering' (arXiv:2409.05907) — the condition there is a learned
 projection; here it is our MLP probe. [UNVERIFIED arXiv id — confirm before
 citing externally.]

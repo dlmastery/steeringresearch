@@ -20,10 +20,10 @@ out that lesson 2's fixed vector cannot give:
   * the learned direction doubles as a *concept detector*: ``r_unit·h`` is a readout.
 
   Wu et al. 2025, 'AxBench: Steering LLMs? Even Simple Baselines Outperform
-    Sparse Autoencoders' (arXiv:2501.17148) [UNVERIFIED] — the ReFT-r1 steering
+    Sparse Autoencoders' (arXiv:2501.17148) — the ReFT-r1 steering
     method (and the DiffMean baseline it is contrasted with).
   Wu et al. 2024, 'ReFT: Representation Finetuning for Language Models'
-    (arXiv:2404.03592) [UNVERIFIED] — LoReFT, whose rank-1 case this is.
+    (arXiv:2404.03592) — LoReFT, whose rank-1 case this is.
 
 This module owns three moving parts:
 

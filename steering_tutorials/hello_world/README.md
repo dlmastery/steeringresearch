@@ -119,7 +119,7 @@ concept is *linearly present* in the representation — the model already comput
 it. This is the classic technique introduced by Alain & Bengio, who attached
 linear classifiers to a frozen network's layers to see what each layer had
 learned (Alain & Bengio 2016, "Understanding intermediate layers using linear
-classifier probes", arXiv:1610.01644 — [UNVERIFIED]).
+classifier probes", arXiv:1610.01644).
 
 Our probe is a hair fancier than linear — a 3-layer MLP — but the spirit is
 identical, and we include a plain logistic-regression *linear* probe as a
@@ -650,7 +650,7 @@ prediction moves accuracy by 2.5 points, so *always* report a confidence interva
 The lesson's central claim is a **linear-probing** one: a concept like "is this
 prompt harmful?" is **largely linearly decodable** from a mid-layer residual
 stream (the lineage of Alain & Bengio 2016, "Understanding intermediate layers
-using linear classifier probes", arXiv:1610.01644 — [UNVERIFIED]). Here is what
+using linear classifier probes", arXiv:1610.01644). Here is what
 the artifacts actually show, claim by claim.
 
 | Claim | What we measured | Verdict |

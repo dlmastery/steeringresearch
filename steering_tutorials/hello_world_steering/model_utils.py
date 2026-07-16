@@ -19,10 +19,10 @@ scales the step by the *local* hidden-state norm, so a single ``alpha`` (a
 fraction of ||h||) behaves consistently across layers and exposes the coherence
 cliff cleanly.
 
-  Rimsky et al. 2023, 'Steering Llama 2 via Contrastive Activation Addition'
-    (arXiv:2312.06681) — the CAA add-a-diff-of-means recipe.
-  Turner et al. 2023, 'Activation Addition: Steering Language Models Without
-    Optimization' (arXiv:2308.10248) — ActAdd, add a vector at inference.
+  Panickssery (formerly Rimsky) et al. 2023, 'Steering Llama 2 via Contrastive
+    Activation Addition' (arXiv:2312.06681) — the CAA add-a-diff-of-means recipe.
+  Turner et al. 2023, 'Steering Language Models With Activation Engineering'
+    (arXiv:2308.10248) — ActAdd, add a vector at inference.
   Arditi et al. 2024, 'Refusal in LLMs is Mediated by a Single Direction'
     (arXiv:2406.11717) — the refusal/harm direction as a diff-of-means.
 

@@ -6,7 +6,7 @@ from its layer-12 last-token activations, writes that single vector to disk, and
 exits — freeing the base model before phase 2 ever loads the abliterated model.
 
 The refusal direction, following Arditi et al. 2024 ('Refusal in LLMs is
-Mediated by a Single Direction', arXiv:2406.11717 [UNVERIFIED]):
+Mediated by a Single Direction', arXiv:2406.11717):
 
     r = unit( mean_lasttok(harmful) - mean_lasttok(benign) )
 
