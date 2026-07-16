@@ -363,22 +363,27 @@ each) — exactly AxBench's "the simple baseline is strong" point.
 
 ### Results — measured vs. the claim
 
-| Claim (AxBench, Wu et al. 2025, arXiv:2501.17148) | What we measured (n=5/class, screening) | Verdict |
+| Claim (AxBench, Wu et al. 2025, arXiv:2501.17148) | What we measured (n=50/class, screening, off-family Qwen-3B judge, 500/class toxic-chat) | Verdict |
 |---|---|---|
-| Simple baselines are strong; prompting is a strong steerer | Prompting refusal 0.60, tied for best — but over-refuses benign at 0.80 | Reproduced |
-| DiffMean is a strong **detector** | DiffMean AUC 0.68 == ReFT-r1 AUC 0.68 | Reproduced |
-| Learned ReFT-r1 is competitive + interpretable | ReFT-r1 refusal 0.60 (best), detector AUC 0.68 (tied) | Reproduced |
+| A **learned** intervention beats a fixed vector at **steering** | ReFT-r1 harmful-refusal **0.54** > DiffMean **0.26** > Prompting **0.18** | **Reproduced** |
+| A simple diff-of-means is the stronger **detector** | DiffMean AUC **0.71** > ReFT-r1 AUC **0.61** | **Reproduced** |
+| The fixed diff-of-means vector is genuinely weak at steering | DiffMean refusal **0.26** — identical to lesson 2's honest 0.26 | **Consistent across lessons** |
 | SAEs underperform | not tested (no SAE arm at this scale) | Out of scope |
 
-**Honest read.** This partially reproduces AxBench at 1B: ReFT-r1 is competitive
-on steering (harmful refusal 0.60, matching prompting and beating DiffMean's
-0.40), and DiffMean matches ReFT-r1 as a detector (AUC 0.68 each) — the paper's
-"a simple baseline is hard to beat" finding. Treat all of this as **screening**,
-not a verdict: n=5 per class is far too small for significance, the DiffMean step
-size is fixed at 0.08 (not tuned per prompt), and the benign over-refusal numbers
-are partly instrument-driven — the 1B self-judge is a weak grader, so the
-gibberish (0.10–0.20) and over-refusal rates carry its noise, not just the
-method's. Raw numbers and side-by-side generations live in `artifacts/results.json`.
+**Honest read.** This faithfully reproduces AxBench's central split at 1B, graded
+by an **off-family Qwen-3B judge** on the shared 500/class toxic-chat set
+(n=50/class, **screening**). The **learned** rank-1 ReFT-r1 edit wins *steering*
+(harmful-refusal **0.54**, roughly 2× the fixed DiffMean vector's **0.26** and 3×
+prompting's **0.18**), because it is *trained* to install refusal rather than
+reusing one untrained subtraction. But the simple diff-of-means wins *detection*
+(AUC **0.71** vs ReFT-r1's **0.61**): the linear harm direction is a better
+probe than a better steer — exactly AxBench's "the simple baseline is hard to
+beat *as a detector*" point. Note DiffMean's 0.26 here **matches lesson 2's
+honest 0.26 exactly** — cross-lesson evidence that the fixed vector is really
+that weak, not a per-lesson artifact. **Why the change from old numbers?** All
+three arms previously clustered near 0.60 under the 1B self-judge, which flattened
+the ordering; the off-family judge separates them and reveals the true ranking.
+Raw numbers and side-by-side generations live in `artifacts/results.json`.
 
 ---
 

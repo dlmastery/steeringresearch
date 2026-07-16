@@ -215,36 +215,41 @@ shift.
 
 ## 6. Results — measured vs. the claim
 
-> **Status: pending the GPU run.** This lesson was authored CPU-only (all modules
-> import and their self-tests pass without loading a model). The steering
-> measurement is the lead's GPU run; the table below is filled from
-> `artifacts/results.json` once it exists. It is stated here as the **design +
-> prediction**, not a claimed result.
+First honest run: abliterated Gemma-3-1B, layer 12, matched α = 0.08, n = 40
+held-out harmful prompts/direction, screening tier (off-family Qwen-3B judge is
+the harness default; note this lesson's `results.json` does not record a
+`judge_id` field). Numbers below are read directly from `artifacts/results.json`.
 
-| Claim (arXiv:2602.06801) | What we measured | Verdict |
+| Claim (arXiv:2602.06801, Venkatesh & Kurapath) | What we measured | Verdict |
 |---|---|---|
-| A steering vector is **not unique** — several low-cosine directions produce the same behavior | pairwise cosine among the effective directions vs. their refusal-rate spread on 40 held-out harmful prompts (`nonident.min_cosine_effective`, `nonident.refusal_spread`) | _pending run_ — supported iff ≥2 directions with min cosine well below ~0.9 reach within 80% of the best refusal rate |
-| The effect is a **family**, not any-direction-whatsoever | the `random_in_pcspan` control's refusal rate | _pending run_ — the control should refuse **much less** than the contrast recipes (otherwise the effect is not specific to "refuse") |
+| A steering vector is **not unique** — several low-cosine directions reach the same behavior | refusal of each recipe vs. the effective threshold (80% of the best = 0.24); how many recipes clear it | **NOT SUPPORTED (screening).** Only **1** recipe (`pca_top1`, refusal 0.30) cleared the 0.24 bar; `min_cosine_effective = null` (a family needs ≥2 effective directions). |
+| The effect is a **family**, not any-direction | the `random_in_pcspan` control's refusal vs. the contrast recipes | Inconclusive — the control refused **0.125**, but so did the contrast recipes (`diffmean_meanpool` 0.10), because steering barely moved refusal at all. |
 
-**Prediction (pre-registered here).** The three diff-of-means variants
-(`halfA`, `halfB`, `full`) will sit at high mutual cosine (they are the same
-estimator); `pca_top1` and `diffmean_meanpool` will have **noticeably lower**
-cosine to the anchor (~0.3–0.7) yet still refuse at a comparable rate — the
-non-identifiability payoff. The random control should refuse near the baseline.
-If instead only the diff-of-means cluster steers and every off-recipe direction
-fails, the claim is **not supported** on this model and the honest read is
-"the refusal direction is (here) fairly well-identified".
+**The numbers.** Baseline refusal = 0.25. Per recipe: `diffmean_halfA` 0.20,
+`diffmean_halfB` 0.225, `pca_top1` 0.30, `diffmean_full` 0.225,
+`diffmean_meanpool` 0.10, `random_in_pcspan` 0.125. The refusal **spread across
+the contrast recipes is 0.10–0.30** — as wide as the effect itself — and most
+recipes sit **at or below** the unsteered 0.25. At α = 0.08 the refusal direction
+is essentially **not being driven**, so there is no stable effect to be
+"non-identified" across recipes.
 
-**Honest framing.** This is a **screening-tier** demonstration (single 1B model,
-n = 40 eval prompts, one layer, one alpha) — not an evaluation-grade result
-(which needs n ≥ 7 seeds and the CLAUDE.md rigor contract). It is a directional
-illustration of a phenomenon, and the `verdict` string in `results.json` says so.
+**Why (mechanism + honest read).** Non-identifiability is a claim *about a real
+effect* — that many directions reproduce it. Here the effect never materialized:
+matched α = 0.08 is too small (or layer-12/1B too weak) to reliably raise
+refusal, so recipe-to-recipe differences are dominated by judge noise, not by a
+shared steering axis. The recipes ARE geometrically distinguishable as designed —
+`diffmean_meanpool` sits at cosine ~0.29–0.46 to the last-token diff-of-means
+cluster, `pca_top1` at ~0.84 to the CAA anchor, and the random control is
+near-orthogonal (cosine ≈ −0.08 to −0.18) — so the *setup* is sound; what is
+missing is a behavioral signal strong enough to test whether they converge. The
+honest verdict string in `results.json` says exactly this: *"fewer than two
+effective directions — the effect did not reproduce across recipes."* The path to
+a real test is a stronger α sweep (or a non-abliterated base with a higher refusal
+ceiling), not a change to the claim.
 
-**Off-family judge caveat.** By default the judge is the **same 1B Gemma**, which
-is weak and can misread hedged compliance as refusal. Set
-`STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct` to grade with an **independent,
-off-family** model (strongly recommended) — the refusal rates below should be
-read with that judge, not the self-judge.
+**Screening-tier framing.** Single 1B model, n = 40 eval prompts, one layer, one
+alpha — not an evaluation-grade result (which needs n ≥ 7 seeds and the CLAUDE.md
+rigor contract). A 3B off-family judge on 1B outputs is pedagogy, not publication.
 
 ---
 

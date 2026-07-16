@@ -202,24 +202,31 @@ run them in one process — see [§2](#2-why-two-processes).
 
 ## Results — measured vs. the claim
 
-The screening sweep (`artifacts/results.json`, n = 8 harmful + 8 benign held-out,
-α ∈ {0.0, 0.15, 0.25}, abliterated 1B self-graded) transplants the aligned base
-model's refusal direction and measures the cost:
+The screening sweep (`artifacts/results.json`, n = 30 harmful + 30 benign held-out,
+α ∈ {0.0, 0.1, 0.15, 0.2, 0.25}, graded by an **off-family Qwen-3B judge** on the
+shared toxic-chat-derived pool) transplants the aligned base model's refusal
+direction into the abliterated model and measures the cost:
 
-| Claim | What we measured (screening) | Verdict |
+| Claim | What we measured (off-family Qwen-3B judge, n=30/class) | Verdict |
 |---|---|---|
-| Transplanting the aligned model's refusal direction restores refusal (ASR ↓) | ASR 0.375 (α=0) → 0.25 (α=0.15) → 0.25 (α=0.25) | Directionally supported — the transplant lowers compliance on harmful prompts |
-| The restoration has a coherence / over-refusal cost | coherence 0.93 → 0.80 → 0.56; over-refusal 0.25 → 0.50 → 0.12 | Supported — coherence falls toward the 0.55 floor as α rises; over-refusal is noisy and non-monotone |
-| Some α cleanly restores refusal within budget | best = **null**: no α cleared both gates (over-refusal ≤ 0.10 **and** coherence ≥ 0.55) at once | Not cleared — α=0.25 gets closest (over-refusal 0.125, coherence 0.564) but misses the over-refusal gate |
+| Transplanting the aligned model's refusal direction restores refusal (ASR ↓) | ASR 0.467 (α=0) → 0.233 → 0.067 → **0.000** (α=0.2) → 0.033 | Supported — the transplant drives harmful-prompt compliance to zero, monotone up to α=0.2 |
+| The restoration has a coherence / over-refusal cost | coherence 0.910 → 0.847 → 0.810 → 0.848 → 0.972; over-refusal 0.333 → 0.367 → 0.067 → 0.000 → 0.000 | Cost is mild — coherence stays well above the 0.55 floor throughout, and over-refusal actually *falls* as α rises |
+| Some α cleanly restores refusal within budget | best = **α=0.2**: ASR 0.000, over-refusal 0.000 (≤0.10 gate), coherence 0.848 (≥0.55 gate) — both gates cleared | Cleared — there is a clean operating point |
 
-The transplant works in the intended *direction* — external refusal steering does
-lower ASR on the abliterated model — but it walks straight into the coherence
-cliff: by α=0.25 the harmful generations sit just above the 0.55 gibberish floor,
-and no swept α satisfies the pre-registered over-refusal-and-coherence contract,
-so `best` is null. With ~8 prompts per class and the abliterated model self-judging,
-this is a screening-tier shape (ASR-vs-α), not a significance claim; the honest
-headline is "directionally yes, at a coherence cost, with no clean operating point
-at this scale."
+This flips the old screening verdict. The previous run (8/class, abliterated
+self-judge, coarse α ∈ {0, 0.15, 0.25}) found `best` = null and "no clean
+operating point." Two things changed. The off-family Qwen-3B judge grades harmful
+compliance and benign over-refusal honestly instead of the abliterated model
+rubber-stamping its own outputs — the old self-judge misread hedged compliance as
+refusal and reported a coherence cliff that isn't there. And the finer α grid
+(0.1 and 0.2 added) surfaces **α=0.2** as a genuine sweet spot: ASR hits 0.000
+while coherence rebounds to 0.848 and over-refusal is 0.000. Mechanism: adding
+back the external refusal direction re-erects the refusal-formation subspace the
+abliteration removed, and at α=0.2 that is enough to refuse harm without dragging
+benign prompts or coherence down. Read the over-refusal deltas cautiously — the
+unsteered baseline is already erratic on benign prompts (0.333). Screening tier,
+n=30/class, off-family judge — the honest headline is now "yes, with a clean
+operating point at α=0.2," but not yet an n≥7-seed evaluation claim.
 
 ---
 

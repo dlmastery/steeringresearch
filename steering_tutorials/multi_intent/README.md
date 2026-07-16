@@ -217,23 +217,28 @@ python -c "from steering_tutorials.multi_intent.run_multi_intent import main; ma
 
 ## Results — measured vs. the claim
 
-The screening run (`artifacts/results.json`, K = 1..4, one abliterated 1B target
-self-graded, ~5 held-out prompts per concept) walks the ladder for both arms:
+The screening run (`artifacts/results.json`, K = 1..5, one abliterated 1B target
+graded by an **off-family Qwen-3B judge** on the shared toxic-chat-derived concept
+prompts) walks the ladder for both arms:
 
-| Claim | What we measured (screening) | Verdict |
+| Claim | What we measured (off-family Qwen-3B judge, K=1..5) | Verdict |
 |---|---|---|
-| Naive summation interferes — raw-sum success collapses as K grows | raw success 0.40 (K=1) → 0.10 (K=2) → 0.13 (K=3) → 0.15 (K=4); gibberish 0.60 → 0.90 → 0.87 → 0.85 | Supported — raw-sum success falls and gibberish dominates once K > 1 |
-| Gram-Schmidt orthogonalization cuts the interference | ortho success 0.40 / 0.30 / 0.00 / 0.40 vs raw 0.40 / 0.10 / 0.13 / 0.15 | Directionally supported — ortho beats raw at K=2 (0.30 vs 0.10) and K=4 (0.40 vs 0.15); K=3 lands the wrong way (0.00) |
-| The N5 norm budget bounds how many concepts you can stack | budget = sqrt(Σα²) climbs 0.060 → 0.085 → 0.104 → 0.120, monotone in K | Supported — the budget grows exactly as the quadrature formula predicts |
+| Naive summation interferes — raw-sum success collapses as K grows | raw success **0.00 at every K**; gibberish 1.00 / 0.99 / 0.99 / 1.00 / 0.99 | Vacuously consistent — raw-sum never succeeds, but it already fails at K=1, so there is no collapse *curve* to read |
+| Gram-Schmidt orthogonalization cuts the interference | ortho success **0.00 at every K**, gibberish ~1.00 — identical to raw | Not shown — with both arms pinned at 0 success, orthogonalization cannot be seen to beat raw-sum here |
+| The N5 norm budget bounds how many concepts you can stack | budget = sqrt(Σα²) climbs 0.060 → 0.085 → 0.104 → 0.120 → 0.134, monotone in K | Supported — the budget grows exactly as the quadrature formula predicts |
 
-Read this as a smoke-grade signal, not a result: with K held-out sets of ~5
-prompts and a 1B self-judge, single rungs swing on noise — the K=3 orthogonalized
-arm collapsing to 0.00 success (below the raw arm) is the clearest sign of it. The
-*shape* the claim predicts is visible — raw-sum interference rising with K,
-orthogonalization spending the budget more efficiently at most rungs, and the norm
-budget climbing as sqrt(Σα²) — but the separation is neither clean nor monotone at
-1B. A publication claim needs a stronger off-family judge, larger eval sets, and
-n≥7 seeds with the rigor contract.
+This is the most deflationary re-run. The old self-judge numbers showed a raw arm
+at 0.40 success at K=1 decaying with K and an ortho arm beating it at most rungs.
+Under the off-family Qwen-3B judge on the harder toxic-chat-derived prompts,
+*every* steered generation at per-concept α=0.06 is graded gibberish — success is
+0.00 for both arms at all K. The honest reading: at this α and 1B scale the summed
+refusal-category vectors push the residual stream off-manifold even at K=1, so the
+interference-vs-orthogonalization contrast the lesson is built around never gets a
+chance to appear — you cannot separate two arms that both score zero. The 1B
+self-judge had been crediting hedged/degenerate outputs as "success"; the honest
+judge does not. Only the budget-grows-as-sqrt(Σα²) prediction survives. Recovering
+any signal needs a lower α or a larger/stronger model. Screening tier, off-family
+judge, tiny per-concept sets — noise (here, uniform collapse) dominates.
 
 ---
 

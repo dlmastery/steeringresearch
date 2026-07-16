@@ -126,11 +126,23 @@ Host-constrained overrides: `FG_N_EVAL` (prompts/class), `FG_SPARSITY`
 
 ## Results — measured vs. the claim
 
+First honest run: abliterated Gemma-3-1B, layer 12, α = 0.1, off-family Qwen-3B
+judge (`Qwen/Qwen2.5-3B-Instruct`), from `artifacts/results.json`.
+
 | | |
 |---|---|
 | **Claim** (inspired by AUSteer, arXiv:2602.04428) | A sparse edit keeping ~5–10% of the steering vector's coordinates **matches** dense refusal at matched strength, with **lower** benign over-refusal and gibberish. (Our top-k magnitude mask is a simplification of the paper's activation-momentum AU selection with adaptive per-input strength.) |
-| **Measured** | **Pending GPU run.** This lesson is code-complete and CPU-validated (the `sparsify` unit passes: exact top-k support, matched norm, dense passthrough). The steering/judge sweep has **not yet been run** on the 4090 (host RAM wall gates GPU work); `results.json` + `sparsity_frontier.png` are produced by `run_fine_grained.py` on the first run. |
-| **Verdict** | **UNTESTED (screening design ready).** When run, a win = some sparse row matches dense refusal within `REFUSAL_MATCH_TOL=0.05` while holding over-refusal and gibberish ≤ dense. A null (`best_sparse = None`) is reported just as prominently. |
+| **Measured** | **Degenerate run — no data.** Every sweep row (keep-frac 1.0 → 0.02) reports refusal 0.0, over-refusal 0.0, gibberish 0.0 with **`n_harmful = 0` and `n_benign = 0`**. The evaluation split came back empty, so all rates are 0/0 = 0 and carry no information. The vector itself built fine (norm ≈ 347.5; top-k support 1152 → 23 coords). |
+| **Verdict** | **INCONCLUSIVE (run invalid).** `best_sparse` is reported at keep-frac 0.02, but only because every row ties at zero over an empty eval set. Sparse-vs-dense cannot be compared until the run scores a non-empty split. Re-run required; this null is **not** evidence of a null. |
+
+**Why (what went wrong, honestly).** All-zero rates with `n = 0` per class are
+the signature of an **empty evaluation batch**, not a real finding — the judge
+scored no prompts, so the frontier plot is flat by construction, not because
+sparsity is free. This is a plumbing failure to fix (populate the held-out eval
+split in `run_fine_grained.py`), after which the intended screening comparison —
+does a top-k% mask hold refusal within `REFUSAL_MATCH_TOL = 0.05` of dense while
+keeping over-refusal and gibberish ≤ dense — becomes testable. Reporting it as a
+"win at 2% sparsity" would be Goodharting an empty measurement, so we do not.
 
 **Caveats (read before quoting any number this produces):**
 

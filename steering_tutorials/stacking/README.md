@@ -269,24 +269,29 @@ stack → compete → over-stack progression reads at a glance.
 
 ## Results — measured vs. the claim
 
-The screening ladder (`artifacts/results.json`, n = 12 held-out harmful prompts,
-abliterated 1B self-graded) walks A → A+B → A+B′ → all-on:
+The screening ladder (`artifacts/results.json`, n = 50 held-out harmful prompts
+per rung, graded by an **off-family Qwen-3B judge** on the shared 500/class
+toxic-chat-derived pool) walks A → A+B → A+B′ → all-on:
 
-| Claim | What we measured (screening) | Verdict |
+| Claim | What we measured (off-family Qwen-3B judge, n=50/rung) | Verdict |
 |---|---|---|
-| Disjoint sites STACK — gains add | rung 1 [A] refusal 0.667 → rung 2a [A+B @ L8] refusal **0.333** (marginal −0.333) | Not shown here — the disjoint-site add *lowered* refusal instead of stacking |
-| Same site + same direction COMPETES — no gain over the best single | rung 2b [A+B′ @ L12] refusal 0.667 (marginal 0.0) — flat | Consistent with "compete" (no gain), but indistinguishable from "no effect" at this n |
-| The all-on hybrid OVER-STACKS — gibberish rises | rung 3 refusal 0.50, gibberish **0.167** (0.0 at every earlier rung); norm budget highest at 0.277 | Supported — the only rung to produce gibberish is the all-on hybrid, exactly as predicted |
-| The N5 norm budget grows with the stack | budget 0.077 → 0.225 → 0.136 → 0.277 across the rungs | Supported — the disjoint and all-on stacks spend the most budget |
+| Disjoint sites STACK — gains add | rung 1 [A] refusal 0.12 → rung 2a [A+B @ L8] refusal **0.02** (marginal −0.10), gibberish 0.64 → 0.80 | Not shown here — the disjoint-site add *lowered* refusal instead of stacking |
+| Same site + same direction COMPETES — no gain over the best single | rung 2b [A+B′ @ L12] refusal 0.12 (marginal 0.0) — flat vs A alone | Consistent with "compete" (no gain), but indistinguishable from "no effect" at this n |
+| The all-on hybrid OVER-STACKS — gibberish rises | rung 3 gibberish **0.92** (highest of the ladder), refusal 0.02; norm budget highest at 0.277; over-stack gibberish delta +0.28 | Supported — the all-on hybrid is the most degenerate rung, most gibberish + most budget spent |
+| The N5 norm budget grows with the stack | budget 0.077 → 0.220 → 0.141 → 0.277 across the rungs | Supported — the disjoint and all-on stacks spend the most budget |
 
-The one prediction that survives at 1B/n=12 is the **over-stack**: piling all
-three priors on is the only configuration that breaks into gibberish, with the
-highest norm budget — the collapse-as-budget-story the lesson promises. The clean
-stack-vs-compete *separation* does not: the disjoint-site rung actually lost
-refusal (marginal −0.333) rather than gaining, so `decision.verdict` is logged
-honestly as "INCONCLUSIVE at this scale". This is a screening demo where single
-rungs swing on seed noise; the mechanism is the lesson, and the numbers here
-measure rather than confirm it.
+The clean stack-vs-compete *separation* still does not appear, so
+`decision.verdict` is logged honestly as **"INCONCLUSIVE at this scale."** What
+changed under the harder, length-matched toxic-chat pool + off-family Qwen judge
+is the *floor*: even the single-prior rung 1 now sits at 0.64 gibberish (the old
+1B self-judge stayed coherent until the all-on rung and read refusal at 0.667).
+The tougher prompts plus the honest judge expose that this 1B target is already
+near collapse at these alphas, so the disjoint-site "stack" loses refusal
+(marginal −0.10) rather than adding. The one prediction that survives is the
+**over-stack**: rung 3 spends the most norm budget (0.277) and is the most
+gibberish (0.92, +0.28 over rung 1) — the collapse-as-budget-story the lesson
+promises. Screening demo, n=50, single seed; marginal effects swing on noise, so
+the mechanism is the lesson and the numbers here measure rather than confirm it.
 
 ---
 

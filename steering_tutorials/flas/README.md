@@ -390,19 +390,24 @@ exemplars alone: zero-shot transfer holds at 1B.
 
 ### Results — measured vs. the claim
 
-| Claim (FLAS, github.com/flas-ai/FLAS [UNVERIFIED]) | What we measured (n=3/concept, screening) | Verdict |
+| Claim (FLAS, github.com/flas-ai/FLAS [UNVERIFIED]) | What we measured (n=36/T-step, n=7–36/concept, screening, off-family Qwen-3B judge, 500/class toxic-chat) | Verdict |
 |---|---|---|
-| Flow-time `T` is a continuous strength dial | refusal 0.00 (T=0) → 0.67 (T=2), gibberish past the useful band | Reproduced (with a coherence cliff) |
-| One conditioned field steers many concepts | one field steers 3 concepts: refusal 0.33 / 0.67 / 1.00 | Reproduced |
-| Generalizes zero-shot to an unseen concept | held-out "Physical harm" refusal 0.67 from exemplars alone | Reproduced |
+| Flow-time `T` dials **up the target behavior** | refusal *falls* 0.25 (T=0) → 0.11 (T=2); gibberish rises to **0.50–0.58** | **Not supported — `T` dials up incoherence, not refusal** |
+| One conditioned field steers many concepts | per-concept refusal: sexual **0.31** / violence **0.41** / hate **0.14** (n=7) / self-harm **0.13** (n=8) | **Uneven; tiny n on hate/self-harm** |
+| Generalizes zero-shot to an unseen concept | held-out "harassment": refusal **0.25**, compliance **0.50**, gibberish **0.25** | **Weak** |
 
-**Honest read.** All three qualitative payoffs of FLAS reproduce at 1B: `T` acts
-as a strength dial (with a visible gibberish cliff outside the useful range), one
-velocity field steers three distinct concepts, and it transfers zero-shot to a
-held-out concept at 0.67 refusal. Read this as **screening**, not a verdict: n=3
-per concept is tiny, our transport targets are cheap diff-of-means shifts (a
-simplification of full FLAS), and the grader is the same 1B model doing the
-steering — a weak, self-referential judge. Raw numbers and side-by-side
+**Honest read.** Graded by an **off-family Qwen-3B judge** on the shared 500/class
+toxic-chat set (**screening**, n=36 per T-step / per concept where available),
+the FLAS payoffs do **not** hold up the way the earlier self-judged run claimed.
+Flow-time `T` is a strength dial, but it dials the *wrong* axis: as `T` climbs,
+refusal *drops* (0.25 → 0.11) while gibberish climbs past 0.5 — the same mechanism
+as lesson 2, because the field transports toward cheap diff-of-means endpoints and
+pushing `T` further just drives activations off-manifold into word salad, not
+refusal. **Why the change from the old zero-shot 0.67?** The audit found the 1B
+self-judge was grading softened-but-compliant text as REFUSAL; the off-family
+Qwen-3B judge scores those as COMPLIANCE/GIBBERISH, dropping held-out refusal to
+**0.25**. The honest picture matches lesson 2: fixed-target flow steering breaks
+coherence more than it induces the behavior. Raw numbers and side-by-side
 generations live in `artifacts/results.json`.
 
 ---
