@@ -44,16 +44,30 @@ import numpy as np
 # --------------------------------------------------------------------------- #
 # Pure schedule math — no model, unit-tested on CPU below.
 # --------------------------------------------------------------------------- #
-def cosine_projection(pooled: np.ndarray, v_unit: np.ndarray) -> float:
-    """cos(pooled, v_unit) — the alignment of a mean-pooled state with ``v``.
+def cosine_projection(
+    pooled: np.ndarray, v_unit: np.ndarray, center: "np.ndarray | None" = None
+) -> float:
+    """cos(pooled − center, v_unit) — alignment of a mean-pooled state with ``v``.
 
     ``v_unit`` is already L2-normalized (it comes from ``extract_caa_vector``),
     so we only need to normalize ``pooled``. Returns a scalar in ``[-1, 1]``:
     positive ⇒ the input points TOWARD the harm/refusal direction, negative ⇒
     away from it. A zero-norm pooled vector (degenerate) yields 0.0.
+
+    ``center`` (recommended: the extract **benign mean** pooled activation) is
+    subtracted first. This matters on Gemma: the raw mean-pooled state is
+    dominated by a huge, prompt-independent common component (high-norm
+    attention-sink dimensions), so ``cos(pooled, v_unit)`` is nearly the SAME
+    constant for every prompt (~−0.82 here) and the harmful/benign contrast is
+    swamped. Centering by the benign mean removes that common component so the
+    projection becomes a real "distance from benign toward harm" signal — the
+    same trick ``gavel`` uses ((h − benign_mean)·direction). With ``center=None``
+    the old raw cosine is preserved (kept for the CPU unit test).
     """
     pooled = np.asarray(pooled, dtype=np.float64).reshape(-1)
     v_unit = np.asarray(v_unit, dtype=np.float64).reshape(-1)
+    if center is not None:
+        pooled = pooled - np.asarray(center, dtype=np.float64).reshape(-1)
     n = np.linalg.norm(pooled)
     if n == 0.0:
         return 0.0
@@ -160,6 +174,7 @@ class ContextualSteerer:
         tau: float,
         ref: float = 1.0,
         cap: float = 1.0,
+        center: "np.ndarray | None" = None,
     ) -> None:
         self.model = model
         self.tok = tok
@@ -169,16 +184,19 @@ class ContextualSteerer:
         self.tau = float(tau)
         self.ref = float(ref)
         self.cap = float(cap)
+        # Benign-mean center for the projection (see cosine_projection). Must be
+        # the SAME center used to calibrate tau/ref, or the schedule is meaningless.
+        self.center = None if center is None else np.asarray(center, dtype=np.float32).reshape(-1)
 
     # -- the per-prompt context signal ------------------------------------- #
     def projection(self, prompt: str) -> float:
-        """cos(mean_pool(hidden @ layer), v_unit) for one prompt (a forward pass)."""
+        """cos(mean_pool(hidden @ layer) − center, v_unit) for one prompt (a forward pass)."""
         from steering_tutorials.hello_world_steering.model_utils import (
             mean_pool_activation,
         )
 
         pooled = mean_pool_activation(self.model, self.tok, prompt, self.layer)
-        return cosine_projection(pooled, self.v_unit)
+        return cosine_projection(pooled, self.v_unit, self.center)
 
     def alpha_for(self, proj: float) -> float:
         """The contextual strength for a given projection (the schedule)."""

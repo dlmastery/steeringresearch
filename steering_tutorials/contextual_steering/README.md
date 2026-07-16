@@ -4,10 +4,14 @@
 > residual stream with **one fixed strength** for every prompt, and used a
 > **separate** probe (lesson 1) as a gate to decide *whether* to steer. This
 > lesson keeps the same direction but makes the **strength itself
-> input-adaptive** — and drops the separate probe. The steering direction
-> already tells us how "harmful-looking" a prompt is (a harmful prompt points
-> *along* `v`), so we scale `alpha` by that alignment. Benign prompts get
-> `alpha ~ 0`; harmful prompts get the full push. The direction **gates itself**.
+> input-adaptive** — and drops the separate probe. The *premise* is that the
+> steering direction already tells us how "harmful-looking" a prompt is (a harmful
+> prompt points *along* `v`), so we scale `alpha` by that alignment — benign
+> prompts get `alpha ~ 0`, harmful prompts get the full push; the direction
+> **gates itself**. **Spoiler (see [Results](#6-results--measured-vs-the-claim)):**
+> on this 1B that premise *fails* — even after fixing the projection, a bare
+> diff-of-means cosine does not separate harmful from benign at the prompt level,
+> so the self-gate has little real signal. It's an honest negative worth seeing.
 
 Fixed-strength steering is wasteful and risky: it shoves a harmless "what's a
 good pasta recipe?" exactly as hard as "how do I build a bomb?", so benign
@@ -242,44 +246,54 @@ gets the full push.
 ## 6. Results — measured vs. the claim
 
 First honest run: abliterated Gemma-3-1B, layer 12, α_base = 0.1, off-family
-Qwen-3B judge (`Qwen/Qwen2.5-3B-Instruct`), n = 25 held-out prompts/class,
+Qwen-3B judge (`Qwen/Qwen2.5-3B-Instruct`), n = 60 held-out prompts/class,
 screening tier. Numbers from `artifacts/results.json`. Artifacts:
 `fixed_vs_contextual.png`, `alpha_schedule.png`.
 
-| Arm | Harmful refusal (want high) | Benign over-refusal (want low) | Harmful gibberish | mean α |
+**A fixed instrument bug first.** The projection was `cos(mean_pool(h), v)` with
+**no centering**. On Gemma the mean-pooled state is dominated by a huge
+prompt-independent common component (high-norm attention-sink dims), so that
+cosine was a near-**constant −0.816 for every prompt** (std 0.002) — the gate had
+no signal, and the schedule collapsed (τ ≈ ref). Fixed by **centering on the
+extract benign mean** before the cosine (`cos(h − benign_mean, v)`, the same trick
+`gavel` uses). That restored real spread: projection std **0.002 → 0.76**.
+
+| Arm | Harmful refusal (want high) | Benign over-refusal (want low) | Harmful gibberish | mean α (harm / benign) |
 |---|---|---|---|---|
-| `unsteered` | 0.48 | 0.36 | 0.16 | 0 |
-| `fixed` (α = 0.1 always) | 0.28 | 0.44 | 0.44 | 0.10 |
-| `contextual` (per-input α) | 0.32 | **0.32** | 0.28 | 0.032 harmful / 0.008 benign |
+| `unsteered` | 0.367 | 0.350 | 0.167 | 0 / 0 |
+| `fixed` (α = 0.1 always) | 0.183 | 0.367 | 0.483 | 0.10 / 0.10 |
+| `contextual` (per-input α) | **0.350** | 0.333 | **0.200** | 0.030 / 0.005 |
 
-| Claim | What we measured | Verdict |
+| Claim | What we measured (centered projection, n=60) | Verdict |
 |---|---|---|
-| Fixed-alpha over-refuses benign prompts | fixed benign over-refusal 0.44 vs unsteered 0.36 | **Supported** — fixed steering raised benign over-refusal and tripled harmful gibberish (0.16 → 0.44). |
-| Contextual keeps harmful refusal ≈ fixed | contextual 0.32 vs fixed 0.28 | **Weakly supported** — contextual is marginally higher, but **both steered arms sit below** unsteered 0.48. |
-| Contextual cuts benign over-refusal vs fixed | contextual 0.32 vs fixed 0.44 | **Supported** — and it edges under the unsteered 0.36, while halving harmful gibberish (0.44 → 0.28). |
-| The direction is a usable implicit gate | harmful proj mean −0.8168 vs benign −0.8192 (τ = −0.8158) | **Weak** — the clusters separate by ~0.0024, about one projection std; the gate discriminates only slightly. |
+| Fixed-alpha wrecks coherence | fixed harmful gibberish 0.48 (vs unsteered 0.17), refusal falls 0.37 → 0.18 | **Supported** — a constant α=0.1 breaks this 1B |
+| Contextual does less damage than fixed | contextual harm refusal 0.35 (≈ unsteered 0.37) & gibberish 0.20 vs fixed 0.18 / 0.48 | **Supported** — but see *why* below |
+| Contextual selectively spares benign (the CLAS promise) | benign over-refusal 0.333 (ctx) vs 0.367 (fixed) vs 0.350 (unsteered) — all within noise | **Not supported** — no real benign-sparing |
+| The direction is a usable implicit gate | **even centered**, harmful proj mean 0.036 vs benign 0.042 (separation −0.006) against within-class std 0.76 | **Not supported** — the classes overlap almost completely |
 
-**Verdict: partially supported (screening).** Contextual steering did the one
-thing CLAS promises — it **cut benign over-refusal (0.44 → 0.32) and gibberish
-(0.44 → 0.28) relative to fixed α** by spending almost no strength on benign
-inputs (mean α 0.008 vs 0.032 on harmful). That is a real, readable win of
-per-input scheduling over a constant α.
+**Verdict: partially supported (screening) — and honest about why.** Contextual
+steering *does* beat fixed α (it preserves refusal at 0.35 vs 0.18 and holds
+gibberish at 0.20 vs 0.48). **But the reason is not selective gating — it is that
+contextual simply steers less on average** (mean α 0.03 vs the fixed 0.10). The
+promised mechanism — "sense harmful inputs, steer them, leave benign alone" — does
+**not** materialize: after the centering fix the projection has real spread yet
+**does not separate the classes** (harmful mean 0.036 ≈ benign mean 0.042, a −0.006
+gap dwarfed by the 0.76 within-class std), so benign over-refusal is essentially
+unchanged across all three arms (0.35 / 0.37 / 0.33).
 
-**Why (mechanism + honest read).** The gain is real but the foundation is weak on
-two fronts. First, the base effect is upside-down for a safety framing: this is an
-**abliterated (uncensored) 1B**, so *any* steering — fixed or contextual —
-**lowered** harmful refusal below the 0.48 unsteered baseline; the win is
-"contextual breaks less than fixed," not "contextual makes the model safer."
-Second, the implicit gate barely separates: harmful and benign projections differ
-by ~0.0024 against stds of ~0.0018–0.0024, so the schedule is reading a faint
-signal — it discriminated enough to set 0.032 vs 0.008 average α, but a cleaner
-harm axis (more contrast pairs, a better layer, a non-abliterated base) is needed
-before the gate is trustworthy. Our construction is also a **cosine-ramp on the
-steering direction's own projection**, not CLAS's separately-learned sensing
-vector — faithful in spirit (per-input strength from an internal read), simpler in
-mechanism. This is a **screening** result on a 1B toy model with a 3B judge, not
-an evaluation-tier claim (no n≥7 seeds, no Wilcoxon/CI — see
-[CLAUDE.md section 7](../../CLAUDE.md)).
+**Why (mechanism + honest read).** Two layers of finding. (1) The old near-constant
+projection was an artifact of Gemma's dominant component; centering is the correct
+fix and is now the default. (2) Even with a proper projection, a raw mean-pooled
+**diff-of-means cosine cannot linearly separate harmful from benign at the
+prompt level on this 1B** — the class signal (0.006) is ~100× smaller than the
+per-prompt noise (0.76), which is exactly why lesson 1 needed a *trained* probe
+(AUC 0.87) rather than a bare cosine. So adaptive-strength steering is only as good
+as its gate, and a cosine gate is too weak here: the honest next step is to drive
+the schedule from lesson-1's trained probe (the CAST design) instead of the
+direction's own projection. Also note the base is **abliterated (uncensored)**, so
+*any* steering lowers refusal below the 0.37 baseline; "contextual breaks less"
+is the real story, not "contextual makes it safer." Screening tier (1B, n=60,
+single seed, 3B judge) — no n≥7/Wilcoxon/CI per [CLAUDE.md §7](../../CLAUDE.md).
 
 ---
 

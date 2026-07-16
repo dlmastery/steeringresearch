@@ -54,7 +54,12 @@ import sys
 import numpy as np
 
 from . import config as C
-from .contextual import ContextualSteerer, calibrate_schedule, contextual_alpha
+from .contextual import (
+    ContextualSteerer,
+    calibrate_schedule,
+    contextual_alpha,
+    cosine_projection,
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -203,29 +208,32 @@ def main() -> dict:
     # --- 2. Calibrate the contextual schedule on the EXTRACT split ------------
     #     (never the eval split — that would leak). Read each extract prompt's
     #     projection onto v_unit, then set tau above benign and ref at harmful.
+    # Pool each extract prompt ONCE (cache the vectors; the old code forwarded
+    # twice per prompt). The benign-mean pooled activation is the projection
+    # CENTER: subtracting it removes Gemma's huge prompt-independent common
+    # component so cos(pooled - center, v) actually separates harmful from benign
+    # (without it every prompt projects to ~the same constant and the gate has no
+    # signal). The SAME center is used to calibrate tau/ref and inside the steerer.
     if C.CALIBRATE:
-        ex_harm_proj = [
-            float(np.dot(mean_pool_activation(model, tok, p, layer), v_unit)
-                  / (np.linalg.norm(mean_pool_activation(model, tok, p, layer)) + 1e-9))
-            for p in ex_harm
-        ]
-        ex_ben_proj = [
-            float(np.dot(mean_pool_activation(model, tok, p, layer), v_unit)
-                  / (np.linalg.norm(mean_pool_activation(model, tok, p, layer)) + 1e-9))
-            for p in ex_ben
-        ]
+        pooled_harm = [mean_pool_activation(model, tok, p, layer) for p in ex_harm]
+        pooled_ben = [mean_pool_activation(model, tok, p, layer) for p in ex_ben]
+        center = np.mean(np.stack(pooled_ben), axis=0) if pooled_ben else None
+        ex_harm_proj = [cosine_projection(ph, v_unit, center) for ph in pooled_harm]
+        ex_ben_proj = [cosine_projection(pb, v_unit, center) for pb in pooled_ben]
         sched = calibrate_schedule(ex_harm_proj, ex_ben_proj, C.TAU_BENIGN_PERCENTILE)
         tau, ref = sched["tau"], sched["ref"]
     else:
+        center = None
         tau, ref = C.TAU_FALLBACK, C.REF_FALLBACK
         sched = {"tau": tau, "ref": ref, "benign_percentile": None,
                  "harmful_proj_mean": None, "benign_proj_mean": None}
     sched["cap"] = C.CAP_MULT
-    print(f"[schedule] tau={tau:.3f} ref={ref:.3f} cap={C.CAP_MULT}", file=sys.stderr)
+    print(f"[schedule] tau={tau:.3f} ref={ref:.3f} cap={C.CAP_MULT} "
+          f"(benign-mean centered)", file=sys.stderr)
 
     steerer = ContextualSteerer(
         model, tok, v_unit, layer,
-        alpha_base=C.ALPHA_BASE, tau=tau, ref=ref, cap=C.CAP_MULT,
+        alpha_base=C.ALPHA_BASE, tau=tau, ref=ref, cap=C.CAP_MULT, center=center,
     )
 
     # --- 3. Evaluate the three arms on the mixed held-out eval ----------------
