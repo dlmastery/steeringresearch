@@ -27,6 +27,9 @@ learning.
 | 2 | `hello_world_steering` | WRITE | CAA/diff-of-means steering vector, conditional gating, an LLM judge | med | ✅ built + validated |
 | 3 | `reft_r1` | GENERATE | AxBench's learned rank-1 ReFT intervention; ReFT-r1 vs DiffMean vs prompting bake-off | med | ✅ built + validated |
 | 3b | `flas` | GENERATE+ | flow-based steering: a concept-conditioned velocity field; flow-time = strength dial | med | ✅ built + validated |
+| — | `non_identifiability` | 2026 | steering vectors aren't unique — many low-cosine directions, same effect (arXiv:2602.06801) | med | ✅ built + validated |
+| — | `fine_grained` | 2026 | sparse (top-k%) edits vs dense — "steering less" (inspired by AUSteer, arXiv:2602.04428) | med | ✅ built + validated |
+| — | `contextual_steering` | 2026 | per-input adaptive steering strength (inspired by CLAS, arXiv:2604.24693) | med | ✅ built + validated |
 | 4 | `displacement_budget` | CONTROL | the coherence cliff; bound off-manifold displacement | light | planned |
 | 5 | `operations` | CONTROL | add vs project-out (ablation) vs rotate (norm-preserving) | light | planned |
 | 6 | `fungibility_null` | CONTROL | direction controls: shuffled/random/orthogonal — is the vector special? | light | planned |
@@ -46,28 +49,46 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 
 ---
 
-## Status & validated results (2026-07-15)
+## Rigor & honesty (the measurement stack)
 
-All nine built lessons are code-complete **and validated with real runs** on the
-uncensored **Gemma-3-1B** (`DavidAU/…-heretic-…-abliterated`), committed + pushed.
-Results are **screening-tier** (small `n`, honestly labelled); the benign
-over-refusal figures are dominated by the base model + the weak 1B self-judge
-(the measurement instrument), not the method — stated per lesson.
+Every steering lesson is validated the same, honest way:
 
-| Lesson | Stage | Validated headline result |
+- **Data:** a shared **≥500 harmful + ≥500 benign** set (`common/data.py`) — 100%
+  lmsys/toxic-chat, deduped, **length-matched (length-AUC 0.501** — the classes
+  carry *zero* length signal, so a probe/vector can't cheat on length).
+- **Judge:** an **off-family Qwen2.5-3B** grades REFUSAL/COMPLIANCE/GIBBERISH
+  (`STEER_JUDGE_MODEL`). The tutorials' tiny **1B self-judge inflates refusal** —
+  it mislabels softened/hedged compliance as REFUSAL — so results judged by it are
+  *not* trustworthy. All headline numbers below use the Qwen judge.
+- **Papers:** an independent auditor per lesson (`AUDIT.md`) WebFetch-**verified
+  every cited arXiv ID as real** and fixed attribution errors.
+- Numbers are **screening-tier** (`n ≈ 50/class`), labelled as such.
+
+## Status & validated results (2026-07-16, honest re-run)
+
+The honest through-line the re-runs revealed: **learned interventions survive a
+real judge on hard data; simple fixed diff-of-means vectors largely don't** — and
+the earlier rosy numbers were inflated by the 1B self-judge + easy in-distribution
+JailbreakBench. Reported as they landed, negatives included.
+
+| Lesson | Stage | Honest result (Qwen judge, 500/class toxic-chat) |
 |---|---|---|
-| `hello_world` | READ | probe: 5-fold CV **0.87 ± 0.03**; leakage audit clean; XSTest OOD AUC **0.89**; toxic-chat scale-up CV **0.95** |
-| `probe_tuning` | READ+ | 23-config sweep → the simple default wins (no config beats it beyond the CV noise band) |
-| `hello_world_steering` | WRITE | conditional CAA: refusal **0.50 → 0.70**; **gate accuracy 0.975** |
-| `reft_r1` (AxBench) | GENERATE | ReFT-r1 **0.60 > DiffMean 0.40** steering; detection AUC tie **0.68** (matches AxBench: DiffMean is a strong detector) |
-| `flas` | GENERATE+ | flow-time behaves as a smooth strength dial; **zero-shot to an unseen concept: refusal 0.67** |
-| `multi_intent` (L9) | CONTROL | Gram-Schmidt orthogonalization beats raw-sum as K grows (K=2: **0.30 vs 0.10**) |
-| `rogue_scalpel` (L10) | DEFEND | steering attack cuts refusal **0.95 → 0.45**; the **norm-clamp guard restores 0.95** |
-| `realignment` (L11) | DEFEND | transplanted base-model refusal direction cuts **ASR 0.38 → 0.25** (at a coherence cost) |
-| `stacking` (L12) | PROVE | additive ladder; over-stacking raises gibberish — the stack/compete rule is only *directional* at 1B (reported honestly, not assumed) |
+| `hello_world` | READ | probe 5-fold CV **0.87 ± 0.03**; leakage clean; XSTest OOD AUC 0.89 (a *probe*, no judge involved — unaffected) |
+| `probe_tuning` | READ+ | 23-config sweep → simple default wins (no config beats the CV noise band) |
+| `hello_world_steering` | WRITE | **fixed steering barely works**: refusal *falls* 0.26→0.10 as α rises, gibberish 0.20→**0.74**; JBB gate transfers poorly (**0.68**). Old 0.70/0.975 was self-judge + JBB inflation. |
+| `reft_r1` (AxBench) | GENERATE | **reproduces AxBench**: learned **ReFT-r1 0.54 > DiffMean 0.26 > prompting 0.18** (steering); DiffMean wins **detection** (AUC 0.71 vs 0.61) |
+| `flas` | GENERATE+ | **payoffs don't hold** under an honest judge: zero-shot 0.67→**0.25**; higher T adds gibberish, not refusal |
+| `non_identifiability` | 2026 | **not supported at this α** — the effect is too weak for a "family" to form (setup sound; needs a stronger α sweep) |
+| `fine_grained` | 2026 | **"steering less" holds** (2%-sparse as coherent as dense, gibberish 0.00) but **"achieving more" doesn't** (refusal 0.00 — the fixed vector it thins is weak) |
+| `contextual_steering` | 2026 | **partial win**: per-input α cuts benign over-refusal **0.44→0.32** (the CLAS idea), though on an abliterated model it "breaks less" rather than "refuses more" |
+| `multi_intent` (L9) | CONTROL | **fully deflates**: raw == ortho == **0.00** refusal, gibberish ~1.0 — the honest judge no longer credits degenerate output |
+| `rogue_scalpel` (L10) | DEFEND | attack strips refusal **0.52→0.00**; the **norm-clamp guard recovers it (0.60)**; lock/dual guards don't help |
+| `realignment` (L11) | DEFEND | **works** — clean operating point α=0.2: **ASR 0.47→0.00**, over-refusal 0.00, coherence 0.85 |
+| `stacking` (L12) | PROVE | **inconclusive** — disjoint-site stack doesn't cleanly beat a single prior; over-stacking raises gibberish to 0.92 |
 
-Each row links to its lesson `README.md` (method, code walkthrough, run
-commands, caveats) and `artifacts/results.json` + plots. Repo:
+Each row links to its lesson `README.md` (method, walkthrough, `## Results —
+measured vs. the claim`, caveats), its `AUDIT.md`, and `artifacts/results.json` +
+plots. Repo:
 <https://github.com/dlmastery/steeringresearch/tree/master/steering_tutorials>
 
 ---
