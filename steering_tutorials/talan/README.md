@@ -126,18 +126,34 @@ decision is **shared** across methods, so any difference is the method's own.
 
 ## Results — measured vs. the claim
 
-**[PENDING RUN]** — the tables/plots below fill in after a GPU run of
-`train_talan.py` then `run_talan.py`. This lesson makes **no external claim**; it
-is screening-scale (n small — see CLAUDE.md Sec. 7), so it reports rates and a
-blunt verdict, not a "winner."
+First honest run: abliterated Gemma-3-1B, layer 12, adapter memory 16 + GELU
+mixer, 300 train steps (best-checkpointed at step 275), off-family Qwen2.5-3B
+judge, n = 40 held-out/class, screening tier. From `artifacts/results.json`.
 
-What we are testing, stated so it can fail honestly: *does the higher-capacity
-learned adapter buy a better steering trade-off — more harmful-refusal at
-equal-or-lower over-refusal + gibberish — than the fixed vector and the rank-1
-edit, or does the extra capacity just add over-refusal / incoherence on this tiny
-data?* `run_talan.py`'s printed `VERDICT:` line says which of the three points won
-and reads the outcome against the AxBench-style expectation that **simple
-baselines are strong** (more capacity needs more supervision).
+| Method (capacity) | Harmful refusal (want high) | Benign over-refusal (want low) | Gibberish (want low) |
+|---|---|---|---|
+| **TALAN** (learned adapter, mem 16) | **0.55** | 0.35 | **0.14** |
+| ReFT-r1 (learned rank-1) | 0.50 | 0.35 | 0.15 |
+| DiffMean (fixed vector, α=0.08) | 0.225 | 0.35 | 0.21 |
+
+**Verdict — the capacity spectrum orders as predicted (screening).** Harmful
+refusal climbs monotonically with edit capacity: fixed DiffMean **0.225** →
+learned rank-1 **0.50** → learned adapter **0.55**, and TALAN also has the *lowest*
+gibberish (0.14). So on this data the extra capacity *paid off* — the learned
+interventions roughly **double** the fixed vector's refusal, and the higher-capacity
+adapter edges the rank-1 edit. This echoes the `reft_r1` lesson (ReFT-r1 0.54 >
+DiffMean 0.26) and AxBench's finding that *learned* beats *fixed* — while here the
+even-higher-capacity adapter is marginally best.
+
+**Honest reads.** (1) **Over-refusal is identical (0.35) across all three arms**,
+including the low-capacity DiffMean — so the benign cost is dominated by the shared
+gate + the abliterated base + the judge, **not** by the steering method; no method
+is "more selective" here. (2) The TALAN-over-ReFT margin (0.55 vs 0.50) is **one
+prompt at n=40** — inside screening noise; the honest claim is "learned ≫ fixed,"
+not "adapter > rank-1." (3) **Provenance:** this TALAN is our *inference-time*
+analogue (frozen LLM, adapter-only, no backbone LoRA) of a *post-training* paper
+(arXiv:2606.06902); it is **not** a reproduction. Screening tier (n=40, single
+seed) — see [CLAUDE.md §7](../../CLAUDE.md); no n≥7/Wilcoxon/CI.
 
 Artifacts produced by a run: `artifacts/talan.pt` (trained adapter),
 `artifacts/training_curve.png`, `artifacts/results.json`,
