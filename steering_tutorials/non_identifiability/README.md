@@ -273,6 +273,13 @@ ceiling), not a change to the claim.
 **Screening-tier framing.** Single 1B model, n = 40 eval prompts, one layer, one
 alpha — not an evaluation-grade result (which needs n ≥ 7 seeds and the CLAUDE.md
 rigor contract). A 3B off-family judge on 1B outputs is pedagogy, not publication.
+The n = 40 numbers above **reproduce exactly** on re-run (deterministic, seed 0).
+A cautionary note on how fragile screening tier is: shrinking the eval to
+`NONIDENT_N_EVAL=20` flips the verdict to *SUPPORTED* (3 recipes within 80% of the
+best, min-cosine 0.58) — because at n = 20 a single prompt swings a rate by 0.05,
+which is the whole width of the effect here. The n = 40 verdict is the one to
+trust of the two, and even it is screening, not evaluation. This is exactly why
+CLAUDE.md forbids calling an n ≤ 3–40 result a "winner."
 
 ---
 
