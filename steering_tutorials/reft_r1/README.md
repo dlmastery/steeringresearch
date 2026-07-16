@@ -20,6 +20,26 @@ training and generation need the same ~2 GB abliterated Gemma-3-1B as lessons
 
 ---
 
+## The key idea in code
+
+Replace lesson 2's fixed vector with a learned direction `r` and an affine
+readout `(w, b)`. The edit swaps `h`'s component along `r` for the learned
+readout — and `r`, `w`, `b` all train by gradient descent while the LLM is frozen:
+
+```python
+# ReftR1.intervention (reft.py) — a rank-1 LoReFT edit of the residual h [..., hidden]:
+r_unit  = r / r.norm()                        # unit direction, learnable
+proj    = (h * r_unit).sum(-1, keepdim=True)  # r_unit·h  — h's current component along r
+readout = (h * w).sum(-1, keepdim=True) + b   # w·h + b   — the LEARNED, input-dependent value
+h = h + r_unit * (readout - proj)             # replace the r-component with the readout
+```
+
+Three things a fixed vector cannot give fall out: the edit is *input-dependent*
+(it reads `h` through `w`), it is *trained end-to-end*, and the same `r_unit·h`
+projection doubles as a *concept detector*. Full file-by-file walkthrough below.
+
+---
+
 ## Dataset
 
 **JailbreakBench** (Chao et al. 2024, arXiv:2404.01318) — the same

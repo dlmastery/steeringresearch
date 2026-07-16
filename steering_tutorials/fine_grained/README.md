@@ -17,6 +17,25 @@ steering on the target behavior while doing less collateral damage**.
 
 ---
 
+## The key idea in code
+
+The entire method is one transform on lesson 2's steering vector — keep its
+largest-magnitude coordinates, zero the rest, and rescale so the edit's
+*strength* is unchanged and only its *support* shrinks (`sparse.py`):
+
+```python
+def sparsify(v, keep_frac):
+    k = max(1, round(keep_frac * v.size))               # how many coordinates survive
+    keep = np.argpartition(np.abs(v), v.size - k)[-k:]  # indices of the top-k by |magnitude|
+    out = np.zeros_like(v)
+    out[keep] = v[keep]                                 # zero every small coordinate
+    return out * (np.linalg.norm(v) / np.linalg.norm(out))  # renorm -> matched strength
+```
+
+Full file-by-file walkthrough below.
+
+---
+
 ## The idea
 
 Lesson 2 builds a refusal direction `v = mean(act|harmful) − mean(act|benign)`

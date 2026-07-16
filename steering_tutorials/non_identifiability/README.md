@@ -19,6 +19,29 @@ whole equivalence family. Calling it *the* refusal direction over-claims.
 
 ---
 
+## The key idea in code
+
+From the **same** harmful/benign contrast at **one** layer, build K directions a
+practitioner might each reasonably call "the refusal direction" — then *measure*
+that they are not the same vector:
+
+```python
+# build_candidate_directions (vectors.py) — K recipes on the SAME activations:
+v_full     = unit(diff_of_means(H_last, B_last))              # (d) CAA anchor: mean(harm)-mean(benign)
+v_halfA    = unit(diff_of_means(H_last[:half], B_last[:half]))# (a) same recipe, data half A
+v_halfB    = unit(diff_of_means(H_last[half:m], B_last[half:m]))# (b) ...disjoint half B
+v_pca      = pca_top1(H_last[:m] - B_last[:m])                # (c) top PC of paired diffs (variance axis)
+v_meanpool = unit(diff_of_means(H_mean, B_mean))             # (e) mean-pooled, not last-token
+v_random   = random_in_span(top_pcs(stack, n_pc))           # (f) control: random dir in the active subspace
+cos = cosine_matrix([v_full, v_halfA, v_halfB, v_pca, ...])  # MEASURE: pairwise cosine as low as ~0.3-0.6
+```
+
+Recipes (a)-(e) are sign-aligned to the anchor (d) so a positive alpha pushes the
+same way; (f) is the control. The punchline is the low off-diagonal cosine at a
+*similar* behavioral effect. Full file-by-file walkthrough below.
+
+---
+
 ## Table of contents
 
 1. [The idea: identifiability](#1-the-idea-identifiability)

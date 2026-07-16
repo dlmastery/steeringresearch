@@ -17,6 +17,28 @@ generation needs the same ~2 GB abliterated Gemma-3-1B as lesson 1.
 
 ---
 
+## The key idea in code
+
+The WRITE side is three lines: build a direction with no training, add it back
+during generation scaled by the local norm, and only do so when the gate fires.
+
+```python
+# 1. The steering direction — diff-of-means, no gradients (steer_vector.py).
+v = acts_harmful.mean(axis=0) - acts_benign.mean(axis=0)   # points benign -> harmful/refusal
+
+# 2. Add it to the residual, scaled by each position's own norm, so ONE alpha
+#    transfers across layers (model_utils.py, relative_add):
+h = h + alpha * h.norm(dim=-1, keepdim=True) * unit(v)
+
+# 3. Conditional: steer only when lesson-1's probe (the gate) says "harmful" (gate.py).
+fired, prob = gate.is_harmful(prompt)                      # prob >= threshold -> steer; else untouched
+```
+
+`v` re-installs refusal from the outside; `relative_add` keeps a single strength
+dial portable; the gate makes it selective. Full file-by-file walkthrough below.
+
+---
+
 ## Table of contents
 
 1. [What you'll build](#1-what-youll-build)

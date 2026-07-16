@@ -6,6 +6,29 @@ it can be read top-to-bottom without distraction. This lesson asks the natural
 follow-up question a practitioner asks next: *is the deployed default actually the
 best head, or can we do better?* — and answers it honestly.
 
+## The key idea in code
+
+Score every candidate head by 5-fold cross-validation — never the held-out test
+set — then keep the deployed default unless something beats it by more than the
+fold-to-fold noise:
+
+```python
+# Each config: 5-fold CV, StandardScaler fit per-fold on TRAIN ONLY (no leakage).
+skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+for tr, te in skf.split(X, y):
+    scaler = StandardScaler().fit(X[tr])                  # never sees the held-out fold
+    probe  = train_one(scaler.transform(X[tr]), y[tr], ..., cfg)
+    aucs.append(roc_auc_score(y[te], proba(probe, scaler.transform(X[te]))))
+
+# Selection rule: only a margin BIGGER than the default's own CV noise band counts.
+margin = winner_auc - default_auc
+beats  = (not is_default(winner)) and (margin > default_auc_std)   # 1 std = CV noise
+```
+
+On ~200 rows over ~23 configs the top of any leaderboard is mostly luck, so the
+`> 1 std` gate is what stops a noise winner from displacing a good default. Full
+file-by-file walkthrough below.
+
 ## Dataset
 
 This lesson has **no dataset of its own**. Model selection needs the *features*,

@@ -13,6 +13,30 @@ audit, cross-validation, and an out-of-domain stress test.
 
 ---
 
+## The key idea in code
+
+The whole READ side is one frozen forward pass into one vector, then a tiny head
+that turns that vector into `P(harmful)`. That is the entire method:
+
+```python
+# 1. Read the concept out: mean-pool the layer-12 residual over tokens -> one [1152] vector.
+vec = h.mean(0) if pooling == "mean" else h[-1]      # from extract_features (model_utils.py)
+
+# 2. A 3-layer MLP head on that frozen activation is all the "learning" there is.
+class MLPProbe(nn.Module):
+    def __init__(self, in_dim, h1=128, h2=32, dropout=0.3):
+        self.net = nn.Sequential(
+            nn.Linear(in_dim, h1), nn.ReLU(), nn.Dropout(dropout),  # 1152 -> 128
+            nn.Linear(h1, h2),     nn.ReLU(), nn.Dropout(dropout),  # 128  -> 32
+            nn.Linear(h2, 1),                                       # 32   -> 1 harmful-logit
+        )
+```
+
+The LLM did the hard representational work; a small, heavily-regularized head is
+plenty to read a decision surface off it. Full file-by-file walkthrough below.
+
+---
+
 ## Table of contents
 
 1. [What you'll build](#1-what-youll-build)

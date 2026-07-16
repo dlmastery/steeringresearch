@@ -28,6 +28,28 @@ implementation is a minimal, laptop-scale reimplementation of that idea
 
 ---
 
+## The key idea in code
+
+Don't add a vector — *transport* the activation along a learned velocity field by
+integrating a flow. Flow-time `T` is the strength dial; `T = 0` is the identity:
+
+```python
+# integrate_flow (flow.py) — explicit Euler integration of dx/dt = v(x, t, c):
+x  = h
+dt = T / n_steps                        # T = distance travelled = strength dial
+for k in range(n_steps):
+    t_norm = (k * dt) / T               # canonical clock in [0, 1), T-agnostic
+    v = vfield(x, t_norm, c)            # VelocityField at state x, time t, concept c
+    x = x + dt * v                      # step along the learned trajectory
+h = x                                   # residual transported toward concept c
+```
+
+Because the field is conditioned on a concept embedding `c` (the mean activation
+of a few exemplars), one trained `vfield` steers toward *any* concept you can
+encode — including held-out ones. Full file-by-file walkthrough below.
+
+---
+
 ## Dataset
 
 **JailbreakBench** harm **categories**, loaded by `data.py`'s `load_concepts`.

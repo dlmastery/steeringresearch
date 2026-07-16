@@ -27,6 +27,24 @@ actual runs need the same ~2-3 GB Gemma-3-1B models as the earlier lessons.
 
 ---
 
+## The key idea in code
+
+Abliteration only breaks one model, so read the refusal axis from the aligned
+base (it still refuses cleanly) and transplant it into the abliterated one
+(`extract_refusal.py` + `run_realignment.py`):
+
+```python
+# PHASE 1 — read the refusal axis from the ALIGNED base (extract_refusal.py)
+r = unit(mean_lasttok(harmful) - mean_lasttok(benign))   # Arditi single direction
+
+# PHASE 2 — transplant r into the ABLITERATED model, steer at generation (run_realignment.py)
+h = h + alpha * norm(h) * r     # relative-add re-installs refusal; sweep alpha for the cost
+```
+
+Full file-by-file walkthrough below.
+
+---
+
 ## Table of contents
 
 1. [The three concepts](#1-the-three-concepts)

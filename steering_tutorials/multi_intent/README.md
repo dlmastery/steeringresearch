@@ -20,6 +20,29 @@ vector.
 
 ---
 
+## The key idea in code
+
+Two moves let K concepts coexist: Gram-Schmidt gives each concept its own axis
+so they stop fighting, then all K fold into a single relative-add (`multi_intent.py`):
+
+```python
+def gram_schmidt(vectors):                    # turn K overlapping concepts into K clean axes
+    basis = []
+    for v in vectors:
+        w = v.copy()
+        for u in basis:
+            w = w - (w @ u) * u               # subtract v's shadow on each earlier axis
+        basis.append(w / np.linalg.norm(w))   # keep only what is NEW to this concept
+    return basis
+
+# fold the K orthogonal axes into ONE vector, injected in a single relative-add hook:
+V = sum(alpha_i * unit(v_i) for v_i, alpha_i in zip(vectors, alphas))
+```
+
+Full file-by-file walkthrough below.
+
+---
+
 ## Dataset
 
 We treat **JailbreakBench harm categories as the K concepts** (`data.py`,

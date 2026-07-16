@@ -20,6 +20,28 @@ builds a defense and measures whether it holds.
 
 ---
 
+## The key idea in code
+
+Steering is dual-use in one sign flip: the same refusal direction lesson 2
+*adds* can be *removed* to jailbreak the model — and a norm clamp bounds that
+edit back toward the manifold (`attack.py` + `guard.py`):
+
+```python
+# ATTACK — strip refusal out of the residual stream (attack.py)
+def suppress_refusal_delta(h, u, mode):
+    if mode == "project_out":
+        return -(h @ u) * u          # delete the refusal component entirely
+    return -alpha * norm(h) * u      # or push AGAINST it: lesson 2's add, sign-flipped
+
+# GUARD — clamp the adversarial edit back toward the manifold (guard.py)
+factor = min(1, budget * norm(h_clean) / norm(delta))   # bound ||Δh|| <= budget·||h||
+h = h_clean + delta * factor
+```
+
+Full file-by-file walkthrough below.
+
+---
+
 ## Table of contents
 
 1. [The dual-use idea](#1-the-dual-use-idea)

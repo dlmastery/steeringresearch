@@ -23,6 +23,22 @@ steering for?* — and dials the strength accordingly.
 
 ---
 
+## The key idea in code
+
+The steering direction doubles as its own gate: a harmful prompt's mean-pooled
+state points *along* `v`, so we read that alignment as a cosine and scale the
+push by it — no separate probe needed (`contextual.py`):
+
+```python
+proj_i  = cos(mean_pool(h_i @ layer), v_unit)               # how "harmful" the input looks, in [-1, 1]
+frac_i  = clip(relu((proj_i - tau) / (ref - tau)), 0, cap)  # 0 below tau (benign), 1 at ref (harmful)
+alpha_i = alpha_base * frac_i                               # benign -> ~0 push, harmful -> full alpha_base
+```
+
+Full file-by-file walkthrough below.
+
+---
+
 ## Table of contents
 
 1. [Dataset](#dataset)

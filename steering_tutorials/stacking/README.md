@@ -19,6 +19,29 @@ discipline)** and the mechanism analysis in
 
 ---
 
+## The key idea in code
+
+Composing priors is just opening one lesson-2 steering hook per prior at once;
+disjoint layers stack, a same-layer collision competes (`stacking.py`):
+
+```python
+@contextmanager
+def stack_contexts(model, priors):
+    with ExitStack() as es:
+        for p in priors:                     # one steering hook per prior...
+            es.enter_context(
+                SteeringContext(model, p.vector, p.layer, p.alpha, p.operation))
+        yield                                # ...all live at once during one forward pass
+
+def apply_stack(model, tok, prompt, priors):
+    with stack_contexts(model, priors):      # disjoint layers -> gains add (STACK)
+        return generate(model, tok, prompt)  # same layer + incompatible op -> COMPETE
+```
+
+Full file-by-file walkthrough below.
+
+---
+
 ## Table of contents
 
 1. [The one-paragraph idea](#1-the-one-paragraph-idea)
