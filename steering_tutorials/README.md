@@ -74,7 +74,11 @@ flowchart TD
         F1["non_identifiability"]:::built
         F2["fine_grained"]:::built
         F3["contextual_steering"]:::built
-        F4["+ GAVEL · duality · decomposing"]:::plan
+        F4["gavel"]:::built
+        F5["prompt_activation_duality"]:::built
+        F6["decomposing_prompting"]:::built
+        F7["talan"]:::built
+        F8["curveball"]:::built
     end
     FRONT --> FRONT_S
 
@@ -91,6 +95,11 @@ flowchart TD
     click F1 "non_identifiability/README.md"
     click F2 "fine_grained/README.md"
     click F3 "contextual_steering/README.md"
+    click F4 "gavel/README.md"
+    click F5 "prompt_activation_duality/README.md"
+    click F6 "decomposing_prompting/README.md"
+    click F7 "talan/README.md"
+    click F8 "curveball/README.md"
 ```
 
 Prereqs cascade — each lesson assumes the ones before it — but every package runs
@@ -114,10 +123,14 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 
 | Lesson | Teaches | Status |
 |---|---|---|
-| [`non_identifiability`](non_identifiability/README.md) | steering vectors aren't unique — many low-cosine directions, same effect (arXiv:2602.06801) | ✅ built + validated |
-| [`fine_grained`](fine_grained/README.md) | sparse (top-k%) edits vs dense — "steering less" (inspired by AUSteer, arXiv:2602.04428) | ✅ built + validated |
-| [`contextual_steering`](contextual_steering/README.md) | per-input adaptive steering strength (inspired by CLAS, arXiv:2604.24693) | ✅ built + validated |
-| `GAVEL · prompt_activation_duality · decomposing_prompting` | planned frontier cluster | ⏳ planned |
+| [`non_identifiability`](non_identifiability/README.md) | steering vectors aren't unique — many low-cosine directions, same effect (arXiv:2602.06801) | ✅ built |
+| [`fine_grained`](fine_grained/README.md) | sparse (top-k%) edits vs dense — "steering less" (inspired by AUSteer, arXiv:2602.04428) | ✅ built |
+| [`contextual_steering`](contextual_steering/README.md) | per-input adaptive steering strength (inspired by CLAS, arXiv:2604.24693) | ✅ built |
+| [`gavel`](gavel/README.md) | vocabulary-projection concept selection for steering directions (arXiv:2601.19768) | ✅ built |
+| [`prompt_activation_duality`](prompt_activation_duality/README.md) | when a prompt and an activation edit are interchangeable — and when they aren't (arXiv:2605.10664) | ✅ built |
+| [`decomposing_prompting`](decomposing_prompting/README.md) | splitting a prompt's effect into additive activation components (arXiv:2606.03093) | ✅ built |
+| [`talan`](talan/README.md) | labelled inference-time bottleneck-adapter analogue of a post-training method (arXiv:2606.06902) | ✅ built |
+| [`curveball`](curveball/README.md) | curved (great-circle geodesic) vs straight-chord steering at matched budget (arXiv:2603.09313) | ✅ built |
 
 ### 🎛 Control — when, how far, and how to steer
 
