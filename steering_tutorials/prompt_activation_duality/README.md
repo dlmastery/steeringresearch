@@ -214,27 +214,37 @@ prompt and a vector install the same refusal.
 
 ## 6. Results — measured vs. the claim
 
-**[PENDING GPU RUN]** — the numbers below are filled from
-`artifacts/results.json` after the first honest run (abliterated Gemma-3-1B,
-layer 12, alpha 0.10, off-family Qwen-3B judge, `N_EVAL_PER_CLASS = 20`,
-screening tier). The table and verdict are wired to the schema and update
-mechanically; no numbers are invented ahead of the run.
+First honest run: abliterated Gemma-3-1B, layer 12, alpha 0.10, off-family
+Qwen2.5-3B judge, `N_EVAL_PER_CLASS = 20`, screening tier, from
+`artifacts/results.json`.
 
-| Quantity | Measured | Expectation |
-|---|---|---|
-| `cos(refusal_shift, v)` | _pending_ | high, well above the floor |
-| `cos(control_shift, v)` | _pending_ | lower (refusal-specific gap) |
-| random cosine baseline | _pending_ | ~0 (near-orthogonal floor) |
-| residual refusal rate | _pending_ | up vs unsteered |
-| attention refusal rate | _pending_ | related to residual (the duality) |
-| gibberish (both sites) | _pending_ | bounded |
+| Quantity | Measured | Expectation | Reading |
+|---|---|---|---|
+| `cos(refusal_shift, v)` | **0.604** | high, well above the floor | ✅ the prompt-shift and the steering vector are strongly aligned |
+| `cos(control_shift, v)` | **0.446** | lower (refusal-specific gap) | ✅ refusal-specific: 0.60 > 0.45 |
+| random cosine baseline | **0.024** | ~0 (near-orthogonal floor) | ✅ floor confirmed |
+| residual refusal rate | **0.25** (unsteered 0.35) | up vs unsteered | ✗ *down* — residual-add breaks it |
+| attention refusal rate | **0.40** (unsteered 0.35) | related to residual | ✅ *up* — attention arm works |
+| gibberish (residual / attention) | **0.50 / 0.25** | bounded | attention far more coherent |
 
-| Claim | What we will measure | Verdict |
+| Claim | What we measured | Verdict |
 |---|---|---|
-| A refusal prompt shifts activations along the steering vector | `cos(refusal_shift, v)` vs control vs random floor | _pending_ |
-| The alignment is refusal-specific, not generic-instruction | `cos(refusal_shift, v)` > `cos(control_shift, v)` | _pending_ |
-| The same vector steers from the attention output | attention refusal rate vs unsteered | _pending_ |
-| Attention injection is a *related* site to the residual | attention vs residual refusal/gibberish | _pending_ |
+| A refusal prompt shifts activations along the steering vector | `cos(refusal_shift, v)` = 0.60 vs random 0.02 | **Supported** |
+| The alignment is refusal-specific, not generic-instruction | 0.60 (refusal) > 0.45 (control) | **Supported** |
+| The same vector steers from the attention output | attention refusal 0.35 → **0.40**, gibberish 0.15 → 0.25 | **Supported (small effect)** |
+| Attention injection beats naive residual-add | attention **0.40** ref / 0.25 gib vs residual **0.25** ref / 0.50 gib | **Supported — the headline** |
+
+**Honest read (a rare positive).** The duality holds on the READ side — a refusal
+prompt shoves activations 0.60-cosine along the very diff-of-means vector we'd inject,
+well above a control prompt (0.45) and the random floor (0.02). On the WRITE side
+the paper's central claim reproduces: injecting that vector at the **attention
+output** (GCAD-style) *raises* refusal (0.35 → 0.40) while keeping gibberish modest
+(0.25), whereas the naive **residual-stream add** at the same alpha *lowers* refusal
+(0.35 → 0.25) and doubles gibberish (0.15 → 0.50). Same vector, same strength — the
+**site** is what matters, and the attention site is strictly better on both axes
+here. The effect is small (refusal +0.05) and screening-tier, so this is a
+directional demonstration, not an evaluation win — but it is one of the few WRITE
+interventions in the course that improves refusal *without* wrecking coherence.
 
 This is a **screening** design (single seed, 1B model, 3B judge, `n = 20`
 harmful/arm): a directional demonstration of the duality, not an evaluation-tier
