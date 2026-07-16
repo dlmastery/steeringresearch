@@ -4,10 +4,12 @@
 > refusal direction back into the residual stream. This lesson asks a question
 > that sits underneath both: **why is plain prompting such a strong steering
 > baseline?** AxBench (arXiv:2501.17148) found that a well-written instruction
-> often matches a learned intervention. We reproduce the mechanistic explanation:
-> a prompt's effect on the activation stream is, in large part, a **single shared
+> often matches a learned intervention. The paper's proposed explanation: a
+> prompt's effect on the activation stream is, in large part, a **single shared
 > translation** — and a translation of the residual stream is exactly what an
-> activation-steering vector *is*.
+> activation-steering vector *is*. We **test** that explanation at 1B — and find it
+> only *partly* holds (the translation tier recovers **0%** of the refusal gain
+> here; the effect lives in the higher affine tier). See [Results](#5-results).
 
 We take the activation change a **refusal instruction** induces per prompt,
 decompose it against the diff-of-means refusal direction, and then test — by
@@ -161,26 +163,34 @@ only the decomposition math, not new steering machinery.
 
 ## 5. Results
 
-**[PENDING RUN]** — this lesson is CPU-authored and import-checked; the GPU run
-is gated on host RAM (see the tutorial track's RAM note). The table below states
-**what the paper's mechanism predicts** for each measured quantity; fill the
-"measured" column from `artifacts/results.json` after a run, and only then remove
-the `[PENDING RUN]` banner.
+First honest run: abliterated Gemma-3-1B, layer 12, off-family Qwen2.5-3B judge,
+N_DECOMP=80 deltas, N_WRITE=20 judged/condition, from `artifacts/results.json`.
 
-| quantity | predicted (per arXiv:2606.03093) | measured |
+| quantity | predicted (per arXiv:2606.03093) | **measured** |
 |---|---|---|
-| on-direction energy fraction | **moderate–high** — a real chunk of prompting is the refusal axis | _pending_ |
-| cross-prompt consistency | **high but < 1** — mostly a shared translation, with input-dependent spread | _pending_ |
-| shared-translation fraction | **high** — the common shift dominates the averaged delta | _pending_ |
-| `recovery_proj` (WRITE) | **substantial (well above 0)** — a steering vector reproduces much of prompting's refusal gain | _pending_ |
-| `recovery_shared` vs `recovery_proj` | `shared >= proj` — the off-direction residual adds a little | _pending_ |
+| on-direction energy fraction | moderate–high — a real chunk of prompting is the refusal axis | **0.175** — *low*; ~82% of the prompt's delta is off the refusal axis |
+| cross-prompt consistency | high but < 1 — mostly a shared translation | **0.364** — *moderate*; the shift is substantially input-dependent |
+| shared-translation fraction | high — the common shift dominates the averaged delta | **0.377** — *moderate*; under half survives averaging |
+| `recovery_proj` (WRITE) | substantial (well above 0) — a steering vector reproduces prompting's gain | **0.00** — re-applying the on-direction translation *lowers* refusal (0.25 → 0.15) |
+| `recovery_shared` vs `recovery_proj` | `shared >= proj` — the residual adds a little | both **0.00**; shared 0.20 > proj 0.15 but *both below the 0.25 baseline* |
 
-The claim under test: **prompting is a strong steering baseline because a large
-fraction of its activation footprint is a single translation that a steering
-vector can copy.** The falsifier: if `on_direction_frac` is near zero and
-`recovery_proj ~ 0` while prompting still refuses, then prompting's effect is
-*not* steering-vector-like at this layer, and the AxBench parity has another
-cause. Report whichever way the numbers fall.
+**Verdict — the falsifier triggers.** The prompt does raise refusal
+(baseline **0.25** → prompting **0.35**, a +0.10 gain), but that gain is **not**
+reproduced by the translation-tier steering vector: `recovery_proj` and
+`recovery_shared` are both **0.00** (in fact both steered arms sit *below*
+baseline, at 0.15 and 0.20). With `on_direction_frac = 0.175` and `recovery ≈ 0`
+*while prompting still refuses*, this is exactly the pre-registered falsifier:
+**at 1B layer 12, prompting's effect is not translation-tier-steering-vector-like.**
+
+**Honest read.** Only ~18% of the prompt's activation footprint lies along the
+refusal direction; the residual (norm 322 of the 367 total delta) dominates, and a
+constant shift extracted from it doesn't carry the behavior. This is consistent
+with the paper's own hierarchy — the headline mechanism is the **affine** tier
+(cross-dimensional scaling + rotation), not the plain **translation** this lesson
+implements. So the lesson honestly demonstrates the *lower bound*: the simplest
+(translation) component of "prompting as steering" is insufficient here, which is
+itself the point — decomposing prompting shows the effect is richer than one
+additive vector. Screening-tier (single 1B, n=20/condition, one layer/seed).
 
 ---
 
