@@ -48,7 +48,14 @@ POOLING = "mean"
 # self_harm). A category needs at least this many extract examples to earn a CE;
 # sparser categories are folded into a catch-all "other_harm" CE so nothing is
 # left uncovered.
-MIN_CE_EXAMPLES = 8
+# DATA SUFFICIENCY: a diff-of-means direction from a handful of examples is noise
+# (an 8-example CE is meaningless). 30 is a defensible floor for a stable direction
+# plus a disjoint calibration, and it aligns with the shared loader's own concept
+# gate (MIN_CONCEPT_AVAILABLE=100 keeps sexual/harassment/violence, drops the tiny
+# hate/self_harm pools). With N_EXTRACT=200 the kept categories are harassment
+# (~43), sexual (~105), violence (~36); hate/self_harm (~8 each) are correctly
+# dropped rather than given a noise CE.
+MIN_CE_EXAMPLES = 30
 
 # Per-CE benign false-positive budget. Each CE's threshold tau is calibrated on
 # the EXTRACT benign activations so that only ~TARGET_FPR of benign prompts trip
