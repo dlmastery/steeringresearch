@@ -22,23 +22,23 @@ learning.
 
 | # | Lesson (dir) | Stage | Teaches | Compute | Status |
 |---|---|---|---|---|---|
-| 1 | `hello_world` | READ | linear/shallow probing of activations for a concept (harm) | light | ✅ built + validated |
-| — | `probe_tuning` | READ+ | layer sweep + MLP hyperparameter search (CV, no test peeking) | light | ✅ built + validated |
-| 2 | `hello_world_steering` | WRITE | CAA/diff-of-means steering vector, conditional gating, an LLM judge | med | ✅ built + validated |
-| 3 | `reft_r1` | GENERATE | AxBench's learned rank-1 ReFT intervention; ReFT-r1 vs DiffMean vs prompting bake-off | med | ✅ built + validated |
-| 3b | `flas` | GENERATE+ | flow-based steering: a concept-conditioned velocity field; flow-time = strength dial | med | ✅ built + validated |
-| — | `non_identifiability` | 2026 | steering vectors aren't unique — many low-cosine directions, same effect (arXiv:2602.06801) | med | ✅ built + validated |
-| — | `fine_grained` | 2026 | sparse (top-k%) edits vs dense — "steering less" (inspired by AUSteer, arXiv:2602.04428) | med | ✅ built + validated |
-| — | `contextual_steering` | 2026 | per-input adaptive steering strength (inspired by CLAS, arXiv:2604.24693) | med | ✅ built + validated |
+| 1 | [`hello_world`](hello_world/README.md) | READ | linear/shallow probing of activations for a concept (harm) | light | ✅ built + validated |
+| — | [`probe_tuning`](probe_tuning/README.md) | READ+ | layer sweep + MLP hyperparameter search (CV, no test peeking) | light | ✅ built + validated |
+| 2 | [`hello_world_steering`](hello_world_steering/README.md) | WRITE | CAA/diff-of-means steering vector, conditional gating, an LLM judge | med | ✅ built + validated |
+| 3 | [`reft_r1`](reft_r1/README.md) | GENERATE | AxBench's learned rank-1 ReFT intervention; ReFT-r1 vs DiffMean vs prompting bake-off | med | ✅ built + validated |
+| 3b | [`flas`](flas/README.md) | GENERATE+ | flow-based steering: a concept-conditioned velocity field; flow-time = strength dial | med | ✅ built + validated |
+| — | [`non_identifiability`](non_identifiability/README.md) | 2026 | steering vectors aren't unique — many low-cosine directions, same effect (arXiv:2602.06801) | med | ✅ built + validated |
+| — | [`fine_grained`](fine_grained/README.md) | 2026 | sparse (top-k%) edits vs dense — "steering less" (inspired by AUSteer, arXiv:2602.04428) | med | ✅ built + validated |
+| — | [`contextual_steering`](contextual_steering/README.md) | 2026 | per-input adaptive steering strength (inspired by CLAS, arXiv:2604.24693) | med | ✅ built + validated |
 | 4 | `displacement_budget` | CONTROL | the coherence cliff; bound off-manifold displacement | light | planned |
 | 5 | `operations` | CONTROL | add vs project-out (ablation) vs rotate (norm-preserving) | light | planned |
 | 6 | `fungibility_null` | CONTROL | direction controls: shuffled/random/orthogonal — is the vector special? | light | planned |
 | 7 | `conformal_gate` | CERTIFY | conformal prediction → a provable benign over-refusal bound | light | planned |
 | 8 | `sae_gate` | CERTIFY | interpretable SAE-feature gates with human-readable firing reasons | med | planned |
-| 9 | `multi_intent` | CONTROL | steer K concepts at once; orthogonalization; the norm budget | med | ✅ built + validated |
-| 10 | `rogue_scalpel` | DEFEND | red-team the guard: the universal attack + the five-layer defense | med | ✅ built + validated |
-| 11 | `realignment` | DEFEND | restore refusal in an abliterated model by transplanting a direction | med | ✅ built + validated |
-| 12 | `stacking` | PROVE | which priors stack (orthogonal sites) vs compete (same site) | med | ✅ built + validated |
+| 9 | [`multi_intent`](multi_intent/README.md) | CONTROL | steer K concepts at once; orthogonalization; the norm budget | med | ✅ built + validated |
+| 10 | [`rogue_scalpel`](rogue_scalpel/README.md) | DEFEND | red-team the guard: the universal attack + the five-layer defense | med | ✅ built + validated |
+| 11 | [`realignment`](realignment/README.md) | DEFEND | restore refusal in an abliterated model by transplanting a direction | med | ✅ built + validated |
+| 12 | [`stacking`](stacking/README.md) | PROVE | which priors stack (orthogonal sites) vs compete (same site) | med | ✅ built + validated |
 | 13 | `composite_metric` | PROVE | the Goodhart-resistant multi-objective score; Pareto fronts | light | planned |
 | 14 | `stat_rigor` | PROVE | screening vs evaluation; Wilcoxon + bootstrap + Holm-Bonferroni; HARKing | light | planned |
 | 15 | `scale_fungibility` | PROVE | does the direction start to matter at 9B? endogenous steering resistance | heavy (A100) | planned |
@@ -73,18 +73,18 @@ JailbreakBench. Reported as they landed, negatives included.
 
 | Lesson | Stage | Honest result (Qwen judge, 500/class toxic-chat) |
 |---|---|---|
-| `hello_world` | READ | probe 5-fold CV **0.87 ± 0.03**; leakage clean; XSTest OOD AUC 0.89 (a *probe*, no judge involved — unaffected) |
-| `probe_tuning` | READ+ | 23-config sweep → simple default wins (no config beats the CV noise band) |
-| `hello_world_steering` | WRITE | **fixed steering barely works**: refusal *falls* 0.26→0.10 as α rises, gibberish 0.20→**0.74**; JBB gate transfers poorly (**0.68**). Old 0.70/0.975 was self-judge + JBB inflation. |
-| `reft_r1` (AxBench) | GENERATE | **reproduces AxBench**: learned **ReFT-r1 0.54 > DiffMean 0.26 > prompting 0.18** (steering); DiffMean wins **detection** (AUC 0.71 vs 0.61) |
-| `flas` | GENERATE+ | **payoffs don't hold** under an honest judge: zero-shot 0.67→**0.25**; higher T adds gibberish, not refusal |
-| `non_identifiability` | 2026 | **not supported at this α** — the effect is too weak for a "family" to form (setup sound; needs a stronger α sweep) |
-| `fine_grained` | 2026 | **"steering less" holds** (2%-sparse as coherent as dense, gibberish 0.00) but **"achieving more" doesn't** (refusal 0.00 — the fixed vector it thins is weak) |
-| `contextual_steering` | 2026 | **partial win**: per-input α cuts benign over-refusal **0.44→0.32** (the CLAS idea), though on an abliterated model it "breaks less" rather than "refuses more" |
-| `multi_intent` (L9) | CONTROL | **fully deflates**: raw == ortho == **0.00** refusal, gibberish ~1.0 — the honest judge no longer credits degenerate output |
-| `rogue_scalpel` (L10) | DEFEND | attack strips refusal **0.52→0.00**; the **norm-clamp guard recovers it (0.60)**; lock/dual guards don't help |
-| `realignment` (L11) | DEFEND | **works** — clean operating point α=0.2: **ASR 0.47→0.00**, over-refusal 0.00, coherence 0.85 |
-| `stacking` (L12) | PROVE | **inconclusive** — disjoint-site stack doesn't cleanly beat a single prior; over-stacking raises gibberish to 0.92 |
+| [`hello_world`](hello_world/README.md) | READ | probe 5-fold CV **0.87 ± 0.03**; leakage clean; XSTest OOD AUC 0.89 (a *probe*, no judge involved — unaffected) |
+| [`probe_tuning`](probe_tuning/README.md) | READ+ | 23-config sweep → simple default wins (no config beats the CV noise band) |
+| [`hello_world_steering`](hello_world_steering/README.md) | WRITE | **fixed steering barely works**: refusal *falls* 0.26→0.10 as α rises, gibberish 0.20→**0.74**; JBB gate transfers poorly (**0.68**). Old 0.70/0.975 was self-judge + JBB inflation. |
+| [`reft_r1`](reft_r1/README.md) (AxBench) | GENERATE | **reproduces AxBench**: learned **ReFT-r1 0.54 > DiffMean 0.26 > prompting 0.18** (steering); DiffMean wins **detection** (AUC 0.71 vs 0.61) |
+| [`flas`](flas/README.md) | GENERATE+ | **payoffs don't hold** under an honest judge: zero-shot 0.67→**0.25**; higher T adds gibberish, not refusal |
+| [`non_identifiability`](non_identifiability/README.md) | 2026 | **not supported at this α** — the effect is too weak for a "family" to form (setup sound; needs a stronger α sweep) |
+| [`fine_grained`](fine_grained/README.md) | 2026 | **"steering less" holds** (2%-sparse as coherent as dense, gibberish 0.00) but **"achieving more" doesn't** (refusal 0.00 — the fixed vector it thins is weak) |
+| [`contextual_steering`](contextual_steering/README.md) | 2026 | **partial win**: per-input α cuts benign over-refusal **0.44→0.32** (the CLAS idea), though on an abliterated model it "breaks less" rather than "refuses more" |
+| [`multi_intent`](multi_intent/README.md) (L9) | CONTROL | **fully deflates**: raw == ortho == **0.00** refusal, gibberish ~1.0 — the honest judge no longer credits degenerate output |
+| [`rogue_scalpel`](rogue_scalpel/README.md) (L10) | DEFEND | attack strips refusal **0.52→0.00**; the **norm-clamp guard recovers it (0.60)**; lock/dual guards don't help |
+| [`realignment`](realignment/README.md) (L11) | DEFEND | **works** — clean operating point α=0.2: **ASR 0.47→0.00**, over-refusal 0.00, coherence 0.85 |
+| [`stacking`](stacking/README.md) (L12) | PROVE | **inconclusive** — disjoint-site stack doesn't cleanly beat a single prior; over-stacking raises gibberish to 0.92 |
 
 Each row links to its lesson `README.md` (method, walkthrough, `## Results —
 measured vs. the claim`, caveats), its `AUDIT.md`, and `artifacts/results.json` +
