@@ -177,7 +177,7 @@ def main() -> dict:
     # Optional caps for a RAM/time-constrained host (defaults = full config):
     #   REALIGN_N_EVAL  -> prompts per class; REALIGN_ALPHAS -> comma list.
     import os
-    n_eval = int(os.environ.get("REALIGN_N_EVAL", "0") or C.N_EVAL)
+    n_eval = int(os.environ.get("REALIGN_N_EVAL") or C.N_EVAL)
     eval_harmful = data["harmful"][C.N_EXTRACT: C.N_EXTRACT + n_eval]
     eval_benign = data["benign"][C.N_EXTRACT: C.N_EXTRACT + n_eval]
     alphas = ([float(x) for x in os.environ["REALIGN_ALPHAS"].split(",")]

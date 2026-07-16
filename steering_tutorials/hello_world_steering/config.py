@@ -52,8 +52,8 @@ ALPHAS = [0.0, 0.05, 0.10, 0.15]
 #   - the rest are held out for EVALUATION (never seen during extraction).
 # Keeping extraction and evaluation disjoint is what stops us from grading the
 # vector on the very prompts that defined it.
-N_PER_CLASS = 250
-N_EXTRACT = 200         # per class, used only to build the vector (eval = 50/class)
+N_PER_CLASS = 350
+N_EXTRACT = 175         # per class, used only to build the vector (eval = 175/class)
 SEED = 0
 
 # --- Generation --------------------------------------------------------------

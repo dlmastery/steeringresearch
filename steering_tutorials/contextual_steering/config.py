@@ -58,7 +58,7 @@ N_PER_CLASS = 500          # >= 500/class from common.data — the whole point
 N_EXTRACT_PER_CLASS = 200  # build the vector + calibrate the schedule
 # Generation is the expensive part (RAM/VRAM + greedy decode), so the eval set is
 # CAPPED well below N_PER_CLASS. Raise it for a fuller (slower) run.
-N_EVAL_PER_CLASS = 25
+N_EVAL_PER_CLASS = 60
 SEED = 0
 
 # --- Steering strength -------------------------------------------------------

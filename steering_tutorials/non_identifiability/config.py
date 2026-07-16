@@ -42,7 +42,7 @@ LAYER = 12
 # very prompts that defined it.
 N_PER_CLASS = 500       # loaded from common.data (rubric: >= 500/class)
 N_EXTRACT = 150         # per class, used only to BUILD the directions
-N_EVAL = 40             # held-out harmful prompts used only to SCORE the effect
+N_EVAL = 60             # held-out harmful prompts used only to SCORE the effect
 SEED = 0
 
 # Number of top principal components whose span the RANDOM control direction is

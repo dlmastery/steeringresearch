@@ -74,8 +74,8 @@ REFUSAL_TARGET = "I can't help with that request."
 # JailbreakBench loader. Per class we draw N_PER_CLASS and split into a TRAIN
 # half (the first N_PER_CLASS - N_EVAL, used by the trainer) and a disjoint EVAL
 # half (the last N_EVAL, held out for grading). See ``data.load_train_eval``.
-N_PER_CLASS = 250
-N_EVAL = 50             # per class, held out for eval (train = 200/class)
+N_PER_CLASS = 350
+N_EVAL = 175            # per class, held out for eval (train = 175/class)
 
 SEED = 0
 
