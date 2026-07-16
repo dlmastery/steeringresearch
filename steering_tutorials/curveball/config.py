@@ -84,10 +84,14 @@ SEED = _env_int("CURVEBALL_SEED", 0)
 # straight-vs-curved geometry:
 #   * straight arm: displacement magnitude = ALPHA * ||h||  (a chord along v_unit)
 #   * curved  arm: total rotation angle   = ALPHA radians  (an equal-length arc)
-# 0.6 is deliberately large enough to actually install refusal — and, for the
-# straight chord, large enough to inflate ||h|| and risk gibberish. That risk is
-# the whole point: the curved arc spends the SAME budget without leaving the shell.
-ALPHA = _env_float("CURVEBALL_ALPHA", 0.6)
+# CALIBRATED on the abliterated Gemma-3-1B at layer 12: alpha=0.6 (the original
+# default) drives BOTH arms to 100% gibberish — far past this 1B's coherence cliff
+# (hello_world_steering already hits 0.69 gibberish at 0.15) — so it measures
+# nothing. alpha=0.10 is the informative regime where the straight chord only
+# partially breaks (harm gibberish ~0.58), leaving headroom to see whether the
+# norm-preserving curved arc is more or less coherent. (Measured: it is *worse* —
+# see README "Results". The off-shell metric does not predict gibberish here.)
+ALPHA = _env_float("CURVEBALL_ALPHA", 0.10)
 
 # Number of great-circle sub-steps used to integrate the curved path. At each
 # sub-step the effective push direction is re-aimed at the tangent toward v, so the

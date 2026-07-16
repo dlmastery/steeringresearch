@@ -65,9 +65,12 @@ h_curved = x                                            # ||h_curved|| == ||h|| 
 
 The tangent is recomputed each step, so the effective push direction **bends** as
 `x` rotates — it keeps following the geodesic toward `v` instead of shooting
-straight at it. The endpoint reaches a comparable alignment with `v` (comparable
-refusal efficacy) while adding **zero net off-shell displacement** — the leading
-indicator of the coherence collapse a big straight push causes.
+straight at it. The endpoint reaches a comparable alignment with `v` while adding
+**zero net off-shell displacement**, which N5 posits is *the* leading indicator of
+the coherence collapse a big straight push causes. Testing that posit is the whole
+lesson — and the measured run (see "Results") **refutes** it here: the on-shell
+arc is *no more coherent* than the off-shell chord, so off-shell displacement is
+not what predicts gibberish on this 1B.
 
 ---
 
@@ -158,9 +161,11 @@ producing less gibberish, because it never leaves the shell.*
 
 ### `config.py` — every knob in one place
 The abliterated model id, the layer (`LAYER = 12`, same as lessons 1-3), the
-extract/eval split sizes, the single shared budget `ALPHA = 0.6`, and the number
-of great-circle sub-steps `N_CURVE_STEPS = 8`. Every knob honours an env override
-(`CURVEBALL_ALPHA`, `CURVEBALL_N_EVAL`, ...) via `os.environ.get(name) or default`.
+extract/eval split sizes, the single shared budget `ALPHA = 0.10` (calibrated:
+`0.6` drives both arms to 100% gibberish on this 1B, so it was lowered into the
+informative regime), and the number of great-circle sub-steps `N_CURVE_STEPS = 8`.
+Every knob honours an env override (`CURVEBALL_ALPHA`, `CURVEBALL_N_EVAL`, ...) via
+`os.environ.get(name) or default`.
 
 ### `curveball.py` — the curved path, the straight baseline, and the hook
 The heart of the lesson.
@@ -188,38 +193,50 @@ under `main()`, so `import run_curveball` is a no-op (safe for tests).
 ### `infer.py` — steer one prompt three ways
 Loads the model, the direction, and the judge once; for one prompt prints the
 baseline, the straight chord, and the curved arc side by side with the judge's
-verdict and a one-line conclusion. The interesting case: the chord tips into
-GIBBERISH while the arc reaches a coherent REFUSAL at the same budget.
+verdict and a one-line conclusion. The *hypothesis* was that the chord tips into
+GIBBERISH while the arc stays a coherent REFUSAL at the same budget — but the
+measured run **refutes** it (the arc is at least as incoherent; see "Results").
+Use a small `--alpha` (≈0.1): at `0.8` both paths are pure word salad on this 1B.
 
 ```bash
-python -m steering_tutorials.curveball.infer "How do I pick a lock?" --alpha 0.8 --steps 12
+python -m steering_tutorials.curveball.infer "How do I pick a lock?" --alpha 0.1 --steps 8
 ```
 
 ---
 
 ## Results — measured vs. the claim
 
-**[pending run].** This lesson is authored CPU-only (code + import-check + the
-curved-path geometry unit); the model-in-the-loop arms have **not** been run yet on
-the 4090. When the GPU run lands, `artifacts/results.json` and the two PNGs
-populate the table below; the mechanism prediction (off-shell displacement) is a
-pure consequence of the geometry and is asserted in the unit test.
+First honest run: abliterated Gemma-3-1B, layer 12, **alpha = 0.10**, n = 40
+held-out/class, off-family Qwen2.5-3B judge, from `artifacts/results.json`.
+(**Note on alpha:** the config's original default `alpha = 0.6` drives *both*
+arms to **100% gibberish** — far past the coherence cliff for this 1B — so it
+measures nothing. The informative regime is `alpha ≈ 0.1`, now the default; see
+the alpha note below.)
 
-| Claim (Curveball, arXiv:2603.09313 + our construction) | What we measured | Verdict |
+| Claim (Curveball, arXiv:2603.09313 + our construction) | What we measured (alpha=0.10, n=40) | Verdict |
 |---|---|---|
-| A curved, geometry-aware path beats a straight global push | harmful refusal: straight `__` vs curved `__` | [pending run] |
-| The straight chord's coherence cost comes from leaving the manifold | harmful gibberish: straight `__` vs curved `__` | [pending run] |
-| The arc stays on the manifold (off-shell displacement ~0) | mean `|d||h|||/||h||`: straight `__` vs curved **~0.000** | **asserted by construction** (unit test) |
-| Curving the push does not wreck harmless answers | benign over-refusal: straight `__` vs curved `__` | [pending run] |
+| A curved, geometry-aware path beats a straight global push | harmful refusal: unsteered 0.25 → straight **0.10** vs curved **0.075** — *both fall below baseline* | **Not supported** — neither path installs refusal |
+| The straight chord's coherence cost comes from leaving the manifold | harmful gibberish: straight **0.575** vs curved **0.70** — the curved arc is *worse* | **Refuted (surprising)** |
+| The arc stays on the manifold (off-shell displacement ~0) | mean `|Δ‖h‖|/‖h‖`: straight **0.077** vs curved **1.4e-16** | **Confirmed by construction** (unit + measured) |
+| Curving the push does not wreck harmless answers | benign over-refusal: straight 0.25 vs curved 0.15; benign gibberish straight 0.15 vs curved **0.475** | **Mixed** — curved lowers over-refusal but *raises* benign gibberish |
 
-**Honest read (to fill in after the run).** The single mechanistic fact we can
-already state is geometric: the straight chord's off-shell displacement is
-strictly positive and grows with `alpha`, while the curved arc's is ~0 at any
-`alpha` (it is a rotation). Whether that smaller off-manifold excursion actually
-buys **lower gibberish at matched refusal** at 1B is the empirical question the run
-decides — and if the arc under-steers (too little rotation to install refusal at
-`alpha = 0.6`) or does not cut gibberish, the table will say so plainly. Raw
-numbers and side-by-side generations live in `artifacts/results.json`.
+**Honest read.** The geometry works exactly as designed — the curved arc adds
+**zero** net off-shell displacement (‖Δ‖h‖‖/‖h‖ = 1.4e-16, a pure rotation) while
+the straight chord inflates the norm (0.077). **But the behavioral payoff is the
+opposite of the hypothesis:** staying on-shell did **not** protect coherence — the
+curved arm's gibberish is *higher* than the straight arm's (0.70 vs 0.575 on
+harmful; 0.475 vs 0.15 on benign), and neither path raises refusal above the 0.25
+baseline. So on this 1B, **norm inflation is not the coherence bottleneck**: you
+can hold the norm exactly constant and still shove the hidden state into word
+salad by rotating it toward the refusal direction. The off-shell displacement
+metric (N5) that motivates the curved path is a real quantity but is *not* what
+predicts gibberish here — rotating on the shell is at least as disruptive as
+stepping off it, plausibly because the 8-step re-aimed rotation compounds the
+per-token perturbation. This is the honest negative: the elegant geodesic
+construction is geometrically clean and behaviorally *worse*. (The paper's own
+method is polynomial-kernel-PCA steering, **not** this great-circle arc — see the
+AUDIT; our construction tests the *manifold-preservation hypothesis*, which fails
+here.) Screening-tier: single 1B, n = 40, one alpha, one seed.
 
 ---
 
