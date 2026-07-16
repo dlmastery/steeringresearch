@@ -123,14 +123,14 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 
 | Lesson | Teaches | Status |
 |---|---|---|
-| [`non_identifiability`](non_identifiability/README.md) | steering vectors aren't unique — many low-cosine directions, same effect (arXiv:2602.06801) | ✅ built |
-| [`fine_grained`](fine_grained/README.md) | sparse (top-k%) edits vs dense — "steering less" (inspired by AUSteer, arXiv:2602.04428) | ✅ built |
-| [`contextual_steering`](contextual_steering/README.md) | per-input adaptive steering strength (inspired by CLAS, arXiv:2604.24693) | ✅ built |
-| [`gavel`](gavel/README.md) | vocabulary-projection concept selection for steering directions (arXiv:2601.19768) | ✅ built |
-| [`prompt_activation_duality`](prompt_activation_duality/README.md) | when a prompt and an activation edit are interchangeable — and when they aren't (arXiv:2605.10664) | ✅ built |
-| [`decomposing_prompting`](decomposing_prompting/README.md) | splitting a prompt's effect into additive activation components (arXiv:2606.03093) | ✅ built |
-| [`talan`](talan/README.md) | labelled inference-time bottleneck-adapter analogue of a post-training method (arXiv:2606.06902) | ✅ built |
-| [`curveball`](curveball/README.md) | curved (great-circle geodesic) vs straight-chord steering at matched budget (arXiv:2603.09313) | ✅ built |
+| [`non_identifiability`](non_identifiability/README.md) | steering vectors aren't unique — many low-cosine directions, same effect (arXiv:2602.06801) | ✅ built + validated |
+| [`fine_grained`](fine_grained/README.md) | sparse (top-k%) edits vs dense — "steering less" (inspired by AUSteer, arXiv:2602.04428) | ✅ built + validated |
+| [`contextual_steering`](contextual_steering/README.md) | per-input adaptive steering strength (inspired by CLAS, arXiv:2604.24693) | ✅ built + validated |
+| [`gavel`](gavel/README.md) | rule-based activation **monitoring**: composable per-category detectors (arXiv:2601.19768) | ✅ built + validated |
+| [`prompt_activation_duality`](prompt_activation_duality/README.md) | when a prompt and an activation edit are interchangeable — and when they aren't (arXiv:2605.10664) | ✅ built + validated |
+| [`decomposing_prompting`](decomposing_prompting/README.md) | splitting a prompt's effect into additive activation components (arXiv:2606.03093) | ✅ built + validated |
+| [`talan`](talan/README.md) | labelled inference-time bottleneck-adapter analogue of a post-training method (arXiv:2606.06902) | ✅ built + validated |
+| [`curveball`](curveball/README.md) | curved (great-circle geodesic) vs straight-chord steering at matched budget (arXiv:2603.09313) | ✅ built + validated |
 
 ### 🎛 Control — when, how far, and how to steer
 
@@ -181,15 +181,25 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 | Lesson | Honest result |
 |---|---|
 | [`reft_r1`](reft_r1/README.md) · GENERATE | **reproduces AxBench**: learned **ReFT-r1 0.54 > DiffMean 0.26 > prompting 0.18** steering; DiffMean wins detection (AUC 0.71 vs 0.61) |
+| [`talan`](talan/README.md) · 2026 | **capacity spectrum orders as predicted**: harmful refusal DiffMean **0.23** → ReFT-r1 **0.50** → learned adapter **0.55**; learned ≫ fixed |
+| [`prompt_activation_duality`](prompt_activation_duality/README.md) · 2026 | **site matters**: same vector at the **attention** output raises refusal 0.35→**0.40** (gib 0.25) while residual-add *lowers* it 0.35→0.25 (gib 0.50) |
 | [`realignment`](realignment/README.md) · DEFEND | **works** — clean α=0.2 operating point: **ASR 0.47→0.00**, over-refusal 0.00, coherence 0.85 |
 | [`rogue_scalpel`](rogue_scalpel/README.md) · DEFEND | attack strips refusal **0.52→0.00**; the **norm-clamp guard recovers it (0.60)**; lock/dual guards don't |
 | [`hello_world`](hello_world/README.md) · READ | probe 5-fold CV **0.87 ± 0.03**; leakage clean; XSTest OOD AUC 0.89 |
 | [`hello_world_steering`](hello_world_steering/README.md) · WRITE | **fixed steering barely works** (n=175/arm): refusal *falls* 0.33→0.07 as α rises, gibberish 0.21→**0.69** — the honest negative |
 
-The remaining built lessons (`flas`, `non_identifiability`, `fine_grained`,
-`contextual_steering`, `multi_intent`, `stacking`, `probe_tuning`) each report
-their measured-vs-claimed verdict in their own `README.md` — including the ones
-that deflated under the honest judge. See per-lesson pages for the full picture.
+**Honest 2026-frontier negatives** (reported as prominently as the wins): `gavel`
+— an `any_of` compositional monitor blocks harmful and benign at the *same* rate
+(0.26/0.26): a union of per-CE 5%-FPR budgets over-blocks; `curveball` — a
+norm-preserving geodesic is *no more coherent* than the off-shell chord (off-shell
+displacement doesn't predict gibberish here); `decomposing_prompting` &
+`contextual_steering` — both pre-registered **falsifiers trigger** (a translation
+component recovers 0% of prompting's gain; a bare diff-of-means cosine can't
+separate harmful from benign at the prompt level even after fixing the projection).
+
+The remaining lessons (`flas`, `non_identifiability`, `fine_grained`,
+`multi_intent`, `stacking`, `probe_tuning`) each report their measured-vs-claimed
+verdict in their own `README.md`. See per-lesson pages for the full picture.
 
 ---
 
