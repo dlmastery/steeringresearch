@@ -173,7 +173,8 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 > *simple fixed* diff-of-means vectors largely don't — and the earlier rosy numbers
 > were inflated by a tiny 1B self-judge + easy in-distribution JailbreakBench.
 > Reported as they landed, negatives included. Numbers are **screening-tier**
-> (n ≈ 50/class), Qwen judge, 500/class toxic-chat (2026-07-16 honest re-run).
+> (n ≈ 50–175/class depending on lesson), Qwen judge, 500/class toxic-chat
+> (2026-07-16 honest re-run).
 
 **Strongest rows:**
 
@@ -183,7 +184,7 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 | [`realignment`](realignment/README.md) · DEFEND | **works** — clean α=0.2 operating point: **ASR 0.47→0.00**, over-refusal 0.00, coherence 0.85 |
 | [`rogue_scalpel`](rogue_scalpel/README.md) · DEFEND | attack strips refusal **0.52→0.00**; the **norm-clamp guard recovers it (0.60)**; lock/dual guards don't |
 | [`hello_world`](hello_world/README.md) · READ | probe 5-fold CV **0.87 ± 0.03**; leakage clean; XSTest OOD AUC 0.89 |
-| [`hello_world_steering`](hello_world_steering/README.md) · WRITE | **fixed steering barely works**: refusal *falls* 0.26→0.10 as α rises, gibberish 0.20→**0.74** — the honest negative |
+| [`hello_world_steering`](hello_world_steering/README.md) · WRITE | **fixed steering barely works** (n=175/arm): refusal *falls* 0.33→0.07 as α rises, gibberish 0.21→**0.69** — the honest negative |
 
 The remaining built lessons (`flas`, `non_identifiability`, `fine_grained`,
 `contextual_steering`, `multi_intent`, `stacking`, `probe_tuning`) each report

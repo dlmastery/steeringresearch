@@ -1,5 +1,12 @@
 """data.py — the harmful vs. benign prompts we steer against, from JailbreakBench.
 
+SUPERSEDED (kept for the standalone ``__main__`` demo only). The actual lesson
+run (``run_steering.py``) now imports ``load_harmful_benign`` from the course's
+shared foundation ``steering_tutorials.common.data`` — the >=500/class,
+length-matched (length-AUC 0.501) toxic-chat set — NOT this JailbreakBench
+loader. This file remains so ``python -m ...hello_world_steering.data`` still runs
+a quick JBB smoke, but nothing in the pipeline depends on it.
+
 JailbreakBench (Chao et al. 2024, arXiv:2404.01318) ships two matched CSVs:
   - data/harmful-behaviors.csv : 100 harmful requests
   - data/benign-behaviors.csv  : 100 benign  requests
