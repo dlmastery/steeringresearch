@@ -132,17 +132,19 @@ judge (`Qwen/Qwen2.5-3B-Instruct`), from `artifacts/results.json`.
 | | |
 |---|---|
 | **Claim** (inspired by AUSteer, arXiv:2602.04428) | A sparse edit keeping ~5–10% of the steering vector's coordinates **matches** dense refusal at matched strength, with **lower** benign over-refusal and gibberish. (Our top-k magnitude mask is a simplification of the paper's activation-momentum AU selection with adaptive per-input strength.) |
-| **Measured** | **Degenerate run — no data.** Every sweep row (keep-frac 1.0 → 0.02) reports refusal 0.0, over-refusal 0.0, gibberish 0.0 with **`n_harmful = 0` and `n_benign = 0`**. The evaluation split came back empty, so all rates are 0/0 = 0 and carry no information. The vector itself built fine (norm ≈ 347.5; top-k support 1152 → 23 coords). |
-| **Verdict** | **INCONCLUSIVE (run invalid).** `best_sparse` is reported at keep-frac 0.02, but only because every row ties at zero over an empty eval set. Sparse-vs-dense cannot be compared until the run scores a non-empty split. Re-run required; this null is **not** evidence of a null. |
+| **Measured** (n=60/class, Qwen judge) | Across every sparsity level (keep-frac 1.0 → 0.02): **harmful-refusal = 0.00, gibberish = 0.00**, benign over-refusal ≈ 0.28–0.33. The dense vector and the 2%-sparse vector behave identically — *neither induces refusal*. |
+| **Verdict** | **PARTIAL / honest null on refusal.** "Steering **less**" holds — a 2%-sparse edit is **as coherent** as dense (gibberish 0.00 throughout, and it doesn't add over-refusal). But "achieving **more**" does **not**: on the abliterated model under the honest Qwen judge, *no* magnitude of this diff-of-means edit — dense or sparse — moves refusal off 0.00. So sparsification is free (no coherence cost), but the underlying fixed-vector steering it sparsifies simply doesn't work here — the same fixed-vector weakness lessons 2 and `flas` show. |
 
-**Why (what went wrong, honestly).** All-zero rates with `n = 0` per class are
-the signature of an **empty evaluation batch**, not a real finding — the judge
-scored no prompts, so the frontier plot is flat by construction, not because
-sparsity is free. This is a plumbing failure to fix (populate the held-out eval
-split in `run_fine_grained.py`), after which the intended screening comparison —
-does a top-k% mask hold refusal within `REFUSAL_MATCH_TOL = 0.05` of dense while
-keeping over-refusal and gibberish ≤ dense — becomes testable. Reporting it as a
-"win at 2% sparsity" would be Goodharting an empty measurement, so we do not.
+**Why.** The earlier committed run was a plumbing bug — an env-default made the
+eval split empty (`n=0`), giving meaningless 0/0 rates; that is now fixed (n=60/
+class). With a populated split the honest picture is clear: the top-k mask
+preserves coherence at every level (gibberish stays 0.00 even keeping 2% of
+coordinates — the paper's "steering less" claim about *collateral* holds), but
+the fixed diff-of-means refusal direction it operates on does not induce refusal
+on this abliterated 1B under an off-family judge (refusal 0.00 dense OR sparse).
+Sparsification can only be as good as the vector it thins — and here that vector
+is weak. (Our top-k magnitude mask is also a simplification of AUSteer's
+activation-momentum selection, which may pick more discriminative units.)
 
 **Caveats (read before quoting any number this produces):**
 
