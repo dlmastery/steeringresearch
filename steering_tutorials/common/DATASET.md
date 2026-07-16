@@ -12,7 +12,7 @@ lists of strings. It never loads an LLM.
 from steering_tutorials.common.data import load_harmful_benign, load_concepts
 
 d = load_harmful_benign(n_per_class=500)   # {"harmful": [str], "benign": [str]}
-c = load_concepts(n_per_concept=120)       # per-harm-category concept sets + baseline
+c = load_concepts()                        # 3 well-populated concept sets + baseline
 ```
 
 ---
@@ -112,32 +112,49 @@ medians so the leakage/length audit can re-check the confound at a glance.
 
 ## 4. Concepts (`load_concepts`)
 
-For the multi-intent / stacking lessons, `load_concepts` derives **K harm concepts**
+For the multi-intent / stacking lessons, `load_concepts` derives **harm concepts**
 from each toxic-chat prompt's `openai_moderation` scores, folded from OpenAI's fine
-categories into five coarse buckets:
+categories into five coarse buckets, then assigns each toxic prompt to its **argmax
+coarse bucket**. Each kept concept is split into disjoint **`exemplars` (40 %) /
+`steer` (30 %) / `eval` (30 %)** so a steering vector is never graded on the prompts
+that built it. A single shared **benign baseline** (the common contrast origin) is
+returned once.
 
-`sexual` · `harassment` · `violence` · `hate` · `self_harm`
+### Data-sufficiency gate — the `>= 100 available` rule
 
-Each toxic prompt is assigned to its **argmax coarse bucket**. Each concept is split
-into disjoint **`exemplars` (40 %) / `steer` (30 %) / `eval` (30 %)** so a steering
-vector is never graded on the prompts that built it. A single shared **benign
-baseline** (the common contrast origin) is returned once.
+The five coarse categories are naturally imbalanced (seed 0, full set):
 
-Per-concept availability is **honestly capped** and reported — the harm categories
-are naturally imbalanced (seed 0, full set):
+| Concept | Available (unique, deduped) | Status |
+|---|---|---|
+| `sexual` | 388 | **kept** |
+| `harassment` | 143 | **kept** |
+| `violence` | 111 | **kept** |
+| `self_harm` | 27 | dropped (< 100) |
+| `hate` | 24 | dropped (< 100) |
 
-| Concept | Available (unique, deduped) |
-|---|---|
-| `sexual` | 388 |
-| `harassment` | 143 |
-| `violence` | 111 |
-| `self_harm` | 27 |
-| `hate` | 24 |
+A concept needs ~100 prompts to yield an adequate disjoint split (**≥ 40 exemplar /
+≥ 30 steer / ≥ 30 eval**). `hate` (~24) and `self_harm` (~27) are far too small to
+build a stable diff-of-means **and** grade it on held-out prompts, so `load_concepts`
+**EXCLUDES any concept whose pool is below `MIN_CONCEPT_AVAILABLE` (= 100)**. Only
+the three well-populated concepts are returned; `concept_names` lists exactly those,
+and the excluded pools are reported in the return value's `dropped` map and printed
+at load time. **K therefore goes 1..3, not 1..5** — we do not invent data to fill
+the small categories.
 
-`sexual` is by far the largest; `hate` and `self_harm` are small — treat their eval
-numbers as low-power. The **held-out concept for zero-shot transfer** defaults to the
-**second-largest pool** (`harassment` here): large enough to evaluate, while keeping
-the richest concept available for training. Override with `held_out=`.
+With `n_per_concept = 150` (the new default; the big categories are capped there so
+they yield ~45 eval), the per-concept split is (seed 0):
+
+| Concept | exemplars | steer | eval |
+|---|---|---|---|
+| `sexual` | 60 | 45 | 45 |
+| `harassment` | 57 | 43 | 43 |
+| `violence` | 44 | 33 | 34 |
+
+Every kept concept clears **≥ 40 exemplar / ≥ 30 steer / ≥ 30 eval**. The **held-out
+concept for zero-shot transfer** defaults to the **second-largest kept pool**
+(`harassment` here): large enough to evaluate, while keeping the richest concept
+(`sexual`) available for training. Override with `held_out=` (passing a dropped
+concept raises `ValueError`).
 
 ---
 

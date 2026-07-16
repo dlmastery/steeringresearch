@@ -10,11 +10,14 @@ REWIRED to the shared loader ``steering_tutorials.common.data.load_concepts``
 This lesson used to carve K concepts from JailbreakBench's ``Category`` column
 (10 prompts/category — far too few for a stable diff-of-means AND a disjoint eval
 split). It now draws them from the ONE shared dataset every tutorial imports:
-toxic-chat's ``openai_moderation`` harm categories folded to five coarse concepts
-(``sexual`` / ``harassment`` / ``violence`` / ``self_harm`` / ``hate``), deduped,
-group-id'd and length-controlled. Each concept is much larger than JBB's 10, so
-the eval split (used to measure steering success and cross-talk) is big enough to
-read honestly — see the per-concept counts printed at load time.
+toxic-chat's ``openai_moderation`` harm categories folded to coarse concepts,
+deduped, group-id'd and length-controlled. The shared loader's data-sufficiency
+gate (``MIN_CONCEPT_AVAILABLE`` = 100) keeps only the well-populated concepts —
+``sexual`` (~388), ``harassment`` (~143), ``violence`` (~111) — and drops the tiny
+``hate`` (~24) and ``self_harm`` (~27) pools, so the K-ladder runs K=1..3. Each
+kept concept is much larger than JBB's 10, so the eval split (used to measure
+steering success and cross-talk) is big enough to read honestly — see the
+per-concept counts printed at load time.
 
 We return a nested structure:
 
@@ -58,8 +61,8 @@ def load_multi_intent(
         must exist among the shared loader's concepts.
     n_per_concept : prompts to draw PER concept before the shared loader's 40/30/30
         exemplars/steer/eval split. ``extract`` = exemplars + steer (~70%); ``eval``
-        = the disjoint 30%. Larger categories give more; small ones return what they
-        have. 150 yields ~40-45 eval prompts for the big concepts.
+        = the disjoint 30%. 150 yields ~45 eval prompts for the big concepts and ~34
+        for violence (the smallest KEPT concept; the loader drops any pool < 100).
     n_eval_per_concept : ACCEPTED for backward compatibility but IGNORED — the shared
         loader owns the split, and its disjoint eval share is larger than the old
         fixed 5, which is the point of this rewiring.

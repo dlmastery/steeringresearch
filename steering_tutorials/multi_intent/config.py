@@ -48,17 +48,18 @@ STEER_LAYER = 12
 # origin), so their overlap is a clean measure of concept similarity rather than
 # of baseline drift.
 #
-# Ordered largest-pool-first (sexual is the richest toxic-chat harm category,
-# hate the smallest), so the additive K=1..N ladder adds the smallest, least
-# stable concept last — the honest stress test for interference. The two smallest
-# categories (self_harm, hate) carry only ~20-30 prompts each, so their eval split
-# is small; this is reported honestly at load time.
+# Ordered largest-pool-first (sexual is the richest toxic-chat harm category), so
+# the additive K=1..N ladder adds the smallest, least stable concept last — the
+# honest stress test for interference. Only the WELL-POPULATED concepts survive the
+# shared loader's data-sufficiency gate (>=100 available, ``MIN_CONCEPT_AVAILABLE``):
+# ``hate`` (~24) and ``self_harm`` (~27) are too small for a stable diff-of-means
+# and a disjoint >=30-prompt eval split, so they are EXCLUDED and the ladder runs
+# K=1..3 (sexual -> +harassment -> +violence), not K=1..5. Every name below must
+# be one the shared loader returns.
 CONCEPTS = [
     "sexual",
     "harassment",
     "violence",
-    "self_harm",
-    "hate",
 ]
 
 # Prompts to draw PER concept before the shared loader's 40/30/30 exemplars/steer/

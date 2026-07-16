@@ -11,15 +11,19 @@ REWIRED to the shared loader ``steering_tutorials.common.data.load_concepts``
 This lesson used to carve its concepts from JailbreakBench's ``Category`` column
 (10 prompts/category — far too few to hold out a real eval split). It now draws
 them from the ONE shared dataset every tutorial imports: toxic-chat's
-``openai_moderation`` harm categories folded to five coarse concepts
-(``sexual`` / ``harassment`` / ``violence`` / ``self_harm`` / ``hate``), deduped,
-group-id'd and length-controlled. Each concept is far larger than JBB's 10, so
-the disjoint ``eval`` split is big enough to read honestly (see the per-concept
-counts printed at load time).
+``openai_moderation`` harm categories folded to coarse concepts, deduped,
+group-id'd and length-controlled. The shared loader applies a data-sufficiency
+gate (``MIN_CONCEPT_AVAILABLE`` = 100), so only the WELL-POPULATED concepts come
+through — ``sexual`` (~388), ``harassment`` (~143) and ``violence`` (~111); the
+tiny ``hate`` (~24) and ``self_harm`` (~27) pools are dropped because they cannot
+yield a stable field or a disjoint >=30-prompt eval split. Each kept concept is
+far larger than JBB's 10, so its ``eval`` split reads honestly (see the
+per-concept counts printed at load time).
 
-The shared loader reserves ONE concept for zero-shot transfer (its default
-held-out = the second-largest pool, ``harassment``); we train on the rest and
-carry the held-out concept through untouched for the payoff-3 zero-shot test.
+The shared loader reserves ONE kept concept for zero-shot transfer (its default
+held-out = the second-largest kept pool, ``harassment``); we train on the rest
+(``sexual`` + ``violence``) and carry the held-out concept through untouched for
+the payoff-3 zero-shot test.
 
 Per concept we return three DISJOINT prompt sets:
 
@@ -44,8 +48,9 @@ import sys
 from steering_tutorials.common.data import load_concepts as _load_common_concepts
 
 # How many prompts to draw PER concept before the shared loader's 40/30/30
-# exemplars/steer/eval split. 120 gives ~36 eval prompts for the larger harm
-# categories (small categories return everything they have — reported honestly).
+# exemplars/steer/eval split. 120 gives ~36 eval prompts for the big categories and
+# ~34 for violence (the smallest KEPT concept); the loader already drops any concept
+# with < 100 available, so every returned concept clears a >=30-prompt eval split.
 N_PER_CONCEPT = 120
 # Size of the shared benign baseline (contrast origin + unsteered h0 pool). Bounded
 # so the selectivity arm's per-prompt gate+generate stays fast on a laptop GPU.

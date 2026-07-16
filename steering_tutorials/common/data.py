@@ -134,6 +134,14 @@ _COARSE = {
 _FINE_TO_COARSE = {fine: coarse for coarse, fines in _COARSE.items() for fine in fines}
 CONCEPT_NAMES = list(_COARSE)  # ["sexual","harassment","violence","hate","self_harm"]
 
+# DATA-SUFFICIENCY GATE for load_concepts. A concept whose deduped toxic-chat pool
+# is below this is DROPPED, not returned: it cannot yield an adequate disjoint
+# 40/30/30 exemplar/steer/eval split (>=40 exemplar, >=30 steer, >=30 eval need
+# ~100 available). On seed-0 toxic-chat this keeps sexual (~388), harassment
+# (~143), violence (~111) and drops hate (~24) and self_harm (~27), which are far
+# too small to steer or grade on. See DATASET.md §4.
+MIN_CONCEPT_AVAILABLE = 100
+
 
 # --------------------------------------------------------------------------- #
 # Text normalization / grouping helpers (self-contained; no cross-lesson import)
@@ -484,30 +492,38 @@ def load_harmful_benign(n_per_class: int = 500, seed: int = 0) -> dict:
 # --------------------------------------------------------------------------- #
 # PUBLIC API 2 — per-harm-category concepts (for multi_intent / stacking lessons)
 # --------------------------------------------------------------------------- #
-def load_concepts(n_per_concept: int = 120, seed: int = 0, split: str = "all",
-                  held_out: str | None = None) -> dict:
-    """Derive K harm concepts from toxic-chat moderation flags + a benign baseline.
+def load_concepts(n_per_concept: int = 150, seed: int = 0, split: str = "all",
+                  held_out: str | None = None,
+                  min_available: int = MIN_CONCEPT_AVAILABLE) -> dict:
+    """Derive the WELL-POPULATED harm concepts from toxic-chat + a benign baseline.
 
     Each concept is the toxic-chat toxic prompts whose dominant coarse harm
     category is that concept, split into disjoint ``exemplars`` / ``steer`` /
     ``eval`` (40/30/30) so a vector is never graded on the prompts that built it.
     A shared benign baseline (the common contrast origin) is returned once.
 
-    Returns::
+    DATA-SUFFICIENCY GATE: a concept whose deduped pool is below ``min_available``
+    (default :data:`MIN_CONCEPT_AVAILABLE` = 100) is EXCLUDED, because it cannot
+    give an adequate split (>=40 exemplar / >=30 steer / >=30 eval needs ~100
+    prompts). On seed-0 toxic-chat this returns ``sexual`` (~388), ``harassment``
+    (~143) and ``violence`` (~111) and drops ``hate`` (~24) and ``self_harm``
+    (~27) — too small to steer or grade on. So K goes 1..3, not 1..5.
+
+    Returns (``concept_names`` lists ONLY the kept concepts)::
 
         {
           "concepts": {name: {"exemplars":[...], "steer":[...], "eval":[...],
                               "n_available": int}, ...},
           "baseline": [...benign...],
-          "held_out": <concept name reserved for zero-shot transfer>,
-          "concept_names": [...],
+          "held_out": <kept concept reserved for zero-shot transfer>,
+          "concept_names": [...kept concept names...],
+          "dropped": {name: available_count, ...},   # excluded, for transparency
         }
 
-    Per-concept counts are reported honestly — some harm categories are small
-    (self-harm is typically the smallest, sexual the largest); each concept is
-    capped at ``min(n_per_concept, available)``. ``held_out`` (default: the
-    SECOND-largest pool — big enough to evaluate, kept out of training) names the
-    concept reserved for zero-shot generalization tests.
+    Each kept concept is capped at ``min(n_per_concept, available)`` (default 150,
+    so the big categories give ~45 eval). ``held_out`` (default: the SECOND-largest
+    KEPT pool — big enough to evaluate, kept out of training) names the concept
+    reserved for zero-shot generalization tests.
     """
     rng = random.Random(seed)
     toxic_rows, benign_rows, _, _ = _load_toxicchat(split)
@@ -517,12 +533,20 @@ def load_concepts(n_per_concept: int = 120, seed: int = 0, split: str = "all",
         if r["category"] in _COARSE:  # skip 'unlabeled'
             by_concept[r["category"]].append(r)
 
+    # Measure every candidate pool first, THEN keep only well-populated concepts.
+    pool_sizes: dict[str, int] = {name: len(by_concept.get(name, []))
+                                  for name in CONCEPT_NAMES}
+    kept = [name for name in CONCEPT_NAMES if pool_sizes[name] >= min_available]
+    dropped = {name: pool_sizes[name]
+               for name in CONCEPT_NAMES if pool_sizes[name] < min_available}
+    if not kept:
+        raise RuntimeError(
+            f"no concept has >= {min_available} available prompts: {pool_sizes}")
+
     concepts: dict[str, dict] = {}
-    pool_sizes: dict[str, int] = {}
-    for name in CONCEPT_NAMES:
+    for name in kept:
         rows = list(by_concept.get(name, []))
         rng.shuffle(rows)
-        pool_sizes[name] = len(rows)
         rows = rows[:n_per_concept]
         prompts = [r["prompt"] for r in rows]
         n = len(prompts)
@@ -535,25 +559,33 @@ def load_concepts(n_per_concept: int = 120, seed: int = 0, split: str = "all",
             "n_available": pool_sizes[name],
         }
 
-    # Default held-out = second-largest pool: enough eval prompts, and holding out
-    # the very largest would waste the richest training concept.
+    # Default held-out = second-largest KEPT pool: enough eval prompts, and holding
+    # out the very largest would waste the richest training concept.
     if held_out is None:
-        ranked = sorted(CONCEPT_NAMES, key=lambda k: -pool_sizes[k])
+        ranked = sorted(kept, key=lambda k: -pool_sizes[k])
         held_out = ranked[1] if len(ranked) > 1 else ranked[0]
+    elif held_out not in kept:
+        raise ValueError(
+            f"held_out={held_out!r} was dropped (pool {pool_sizes.get(held_out, 0)} "
+            f"< {min_available} available); kept concepts are {kept}")
 
     rng.shuffle(benign_rows)
     baseline = [r["prompt"] for r in benign_rows[:max(n_per_concept, 40)]]
 
-    for name in CONCEPT_NAMES:
+    for name in kept:
         s = concepts[name]
         print(f"[common.data] concept {name:12s} available={s['n_available']:4d}  "
               f"exemplars={len(s['exemplars'])} steer={len(s['steer'])} "
               f"eval={len(s['eval'])}", file=sys.stderr)
+    if dropped:
+        print(f"[common.data] DROPPED (< {min_available} available, insufficient "
+              f"to split): " + ", ".join(f"{n}={c}" for n, c in dropped.items()),
+              file=sys.stderr)
     print(f"[common.data] held_out(zero-shot)={held_out}  baseline={len(baseline)}",
           file=sys.stderr)
 
     return {"concepts": concepts, "baseline": baseline,
-            "held_out": held_out, "concept_names": CONCEPT_NAMES}
+            "held_out": held_out, "concept_names": kept, "dropped": dropped}
 
 
 # --------------------------------------------------------------------------- #
@@ -592,8 +624,20 @@ if __name__ == "__main__":
                   f"{r['prompt'][:76]}")
 
     # --- concepts smoke ---------------------------------------------------------
-    con = load_concepts(n_per_concept=120, seed=0)
+    con = load_concepts(seed=0)
     print(f"[smoke] concepts={con['concept_names']}  held_out={con['held_out']}")
+    print(f"[smoke] dropped (< {MIN_CONCEPT_AVAILABLE} available) = {con['dropped']}")
+    for name, s in con["concepts"].items():
+        print(f"[smoke]   {name:12s} available={s['n_available']:4d} "
+              f"exemplars={len(s['exemplars'])} steer={len(s['steer'])} "
+              f"eval={len(s['eval'])}")
+        assert s["n_available"] >= MIN_CONCEPT_AVAILABLE, f"{name} kept below threshold"
+        assert len(s["exemplars"]) >= 40, f"{name} exemplars {len(s['exemplars'])} < 40"
+        assert len(s["steer"]) >= 30, f"{name} steer {len(s['steer'])} < 30"
+        assert len(s["eval"]) >= 30, f"{name} eval {len(s['eval'])} < 30"
+    assert con["held_out"] in con["concept_names"], "held_out not among kept concepts"
+    print(f"[smoke] OK: {len(con['concept_names'])} concepts kept, each >=40 exemplar "
+          f"/ >=30 steer / >=30 eval")
 
     # --- write the artifact -----------------------------------------------------
     art = Path(__file__).parent / "artifacts" / "dataset_500.json"
