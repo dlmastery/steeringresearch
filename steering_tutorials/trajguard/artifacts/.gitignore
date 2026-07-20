@@ -1,0 +1,3 @@
+# regenerable token-trajectory cache (rebuild from data.py + trajectory.py)
+*.npz
+*.json

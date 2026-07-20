@@ -18,10 +18,10 @@ the **reused** learned sequence classifiers from `multiturn_jailbreak`. The
 headline extra is an **early-detection curve**: AUC as a function of how few
 generated tokens we have seen.
 
-> **The claim under test.** Liu, Liu, Li, Xin, Ding 2026, *TrajGuard: Training-free
-> Streaming Detection of Jailbroken Generations via Decoding-time Hidden-state
-> Trajectories* (arXiv:2604.07727, ACL 2026 Findings) [UNVERIFIED] — this lesson
-> operationalizes the paper's decoding-time-trajectory framing with a
+> **The claim under test.** Cheng Liu, Xiaolei Liu, Xingyu Li, Bangzhou Xin,
+> Kangyi Ding 2026, *TrajGuard: Streaming Hidden-state Trajectory Detection for
+> Decoding-time Jailbreak Defense* (arXiv:2604.07727, ACL 2026 Findings) — this
+> lesson operationalizes the paper's decoding-time-trajectory framing with a
 > sliding-window harm-projection detector plus reused sequence models.
 
 ---
@@ -316,39 +316,52 @@ lessons does not apply (`results.json` records `"judge": null`).
 
 ## 9. Results — measured vs. the claim
 
-**[PENDING GPU RUN]** — the tables below are the pre-registered schema; the
-numbers are filled from `artifacts/results.json` after the first honest run on the
-4090.
+First honest run: abliterated Gemma-3-1B, layer 12, 80 harmful + 80 benign
+completions (max 32 generated tokens), window=4, 5-fold stratified CV, bootstrap
+95% CIs, from `artifacts/results.json`.
 
-**The claim under test.** A jailbroken generation is separable from a benign one
-by its decoding-time hidden-state trajectory, *before* the completion is finished
-— so both a training-free projection detector and a learned sequence model score
-above chance, and the AUC is already useful from the first few tokens (the
-streaming value).
-
-Detection (5-fold CV, bootstrap 95% CIs), from `artifacts/results.json`:
+Detection (full trajectory):
 
 | method | AUC | F1 | TPR@FPR=0.10 |
 |---|---|---|---|
-| `threshold_freeform` (training-free) | _pending_ | _pending_ | _pending_ |
-| `per_turn_max` (stateless baseline) | _pending_ | _pending_ | _pending_ |
-| `trajectory_mlp` | _pending_ | _pending_ | _pending_ |
-| `seq_gru` | _pending_ | _pending_ | _pending_ |
+| `threshold_freeform` (training-free, the paper's method) | **0.665** [.58,.75] | 0.24 | 0.20 |
+| `per_turn_max` (learned per-token, stateless) | **0.977** [.95,.99] | 0.84 | 0.97 |
+| `trajectory_mlp` | 0.961 [.93,.99] | 0.90 | 0.90 |
+| `seq_gru` | 0.924 [.88,.96] | 0.86 | 0.84 |
 
-Early detection — AUC using only the first K generated tokens (the streaming
-value: how early can we flag?):
+Early detection — AUC using only the first K generated tokens (the streaming value):
 
 | method | K=2 | K=4 | K=8 | K=16 | K=32 |
 |---|---|---|---|---|---|
-| `threshold_freeform` | _pending_ | _pending_ | _pending_ | _pending_ | _pending_ |
-| `seq_gru` | _pending_ | _pending_ | _pending_ | _pending_ | _pending_ |
+| `threshold_freeform` | 0.658 | 0.636 | 0.609 | 0.643 | 0.665 |
+| `seq_gru` | **0.911** | 0.878 | 0.891 | 0.932 | 0.924 |
 
-**Pre-registered falsifier.** If **both** the training-free `threshold_freeform`
-**and** the learned `seq_gru` score **≤ 0.60 AUC** on the full trajectory, then
-"the token trajectory carries the jailbreak signal" is **FALSE** for this model /
-layer / prompt set — the drift is not there to detect, and the lesson reports the
-negative. (A rising early-detection curve — AUC increasing with K — is the
-secondary confirmation that the signal is genuinely trajectory-borne.)
+**Verdict — the signal is real and detectable EARLY, but it lives in the tokens,
+not (here) in the trajectory shape.** The falsifier (both detectors ≤ 0.60) is
+**not** triggered: every method clears chance, and the learned models reach
+0.92–0.98. The streaming promise holds strongly — `seq_gru` flags the jailbreak at
+**AUC 0.91 from just the first 2 generated tokens**, and stays 0.88–0.93 across K.
+You do not need to wait for the harmful content to finish.
+
+**The instructive twist (and the honest complication of the paper's framing).**
+Unlike the turn-level sibling `multiturn_jailbreak` — where the stateless per-chunk
+probe *collapsed* to 0.57 because each turn looked benign — here the stateless
+**`per_turn_max` is the best method (0.977)**. A jailbroken completion is *actively
+emitting harmful-content tokens*, so each token's hidden state is individually
+separable from a benign token; the sequence structure adds little. And the paper's
+**training-free sliding-window projection is the weakest (0.665)** — a single
+diff-of-means direction, projected and windowed, throws away signal a learned
+per-token classifier keeps. The cross-lesson lesson: **trajectory modeling earns
+its keep when the individual chunks look benign (multi-turn escalation), and much
+less when the chunks already carry the signal (active harmful generation).** Both
+are true and worth knowing.
+
+**Why per-token is so strong here (a confound to name).** The abliterated model
+*complies immediately*, so a harmful-class completion is harmful from token 1 —
+there is no benign-looking preamble to hide the intent. The regime TrajGuard
+actually targets — a completion that *starts* benign and *drifts* into harm — would
+weaken the per-token signal and is where the sliding window would matter more; our
+immediate-compliance setup does not exercise that drift. Reported, not hidden.
 
 ---
 
@@ -387,9 +400,9 @@ secondary confirmation that the signal is genuinely trajectory-borne.)
 Source and full artifacts:
 <https://github.com/dlmastery/steeringresearch/tree/master/steering_tutorials/trajguard>
 
-Cited: TrajGuard (Liu, Liu, Li, Xin, Ding 2026, arXiv:2604.07727, ACL 2026
-Findings) [UNVERIFIED]; and the context-aware multi-turn sibling DeepContext
-(arXiv:2602.16935) [UNVERIFIED].
+Cited (both arXiv ids WebFetch-verified): TrajGuard (Liu et al. 2026,
+arXiv:2604.07727, ACL 2026 Findings); and the context-aware multi-turn sibling
+DeepContext (Albrethsen et al., arXiv:2602.16935).
 
 See also
 [the course map](../README.md),
