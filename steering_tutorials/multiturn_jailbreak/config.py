@@ -68,6 +68,12 @@ MIN_USER_TURNS = _env_int("MJ_MIN_TURNS", 3)   # a conversation needs >= this ma
 MAX_USER_TURNS = _env_int("MJ_MAX_TURNS", 8)   # cap sequence length (truncate the tail)
 SEED = _env_int("MJ_SEED", 0)
 
+# HARD condition: both classes are exactly this many turns (length-matched). Positive
+# = an attack's LAST HARD_WINDOW turns (contains the payload); negative = a DIFFERENT
+# attack's FIRST HARD_WINDOW turns (benign lead-up, excludes the payload). Attacks are
+# 4-5 turns, so 4 keeps essentially all of them while removing the turn-count confound.
+HARD_WINDOW = _env_int("MJ_HARD_WINDOW", 4)
+
 # --- Sequence classifiers (pure torch, CPU-trainable on embedded sequences) --
 # Screening-scale hyperparameters — enough to show the ordering, not tuned.
 N_FOLDS = _env_int("MJ_FOLDS", 5)          # group-aware CV folds (group = query_id / conv id)

@@ -143,16 +143,113 @@ def _load_negatives(n_neg: int, min_turns: int, max_turns: int,
     return convs, cats, scanned
 
 
+# --- HARD condition: benign-prefix negatives from a DISJOINT attack split -----
+def _load_all_attacks(min_turns: int, max_turns: int):
+    """Every Attack_600 conversation with its query_id + category (no n cap)."""
+    from datasets import load_dataset as hf_load
+
+    ds = hf_load(C.ATTACK_DATASET, C.ATTACK_CONFIG)[C.ATTACK_CONFIG]
+    rows = []
+    for row in ds:
+        turns = [_clean_turn(t) for t in (row.get("multi_turn_queries") or [])
+                 if _clean_turn(t)][:max_turns]
+        if len(turns) < min_turns:
+            continue
+        rows.append((turns, int(row.get("query_id", len(rows))),
+                     str(row.get("category", "general"))))
+    return rows
+
+
+def _build_hard(n_per_class, min_turns, max_turns, rng, window=None):
+    """LENGTH-MATCHED hard set. Both classes are EXACTLY `window` turns:
+      positive = the LAST `window` turns of an attack (contains the escalation/payload
+                 that lands at the final turn);
+      negative = the FIRST `window` turns of a DIFFERENT attack (the benign lead-up,
+                 which EXCLUDES the payload because the payload is the last turn).
+    So the ONLY systematic difference is whether the window contains the escalation --
+    NOT its length (turn-count is constant -> no length confound) and NOT the source
+    conversation (positive/negative query_ids are disjoint -> leakage-free). A per-turn
+    probe cannot separate them (each turn is an innocuous ActorAttack question); only a
+    sequence model that reads the trajectory can. Negatives need a source attack with
+    > window turns (so first-`window` truly excludes the last/payload turn).
+    """
+    W = int(window or getattr(C, "HARD_WINDOW", 4))
+    rows = _load_all_attacks(min_turns, max_turns)
+    by_qid = {}
+    for turns, qid, cat in rows:
+        by_qid.setdefault(qid, []).append((turns, cat))
+    qids = list(by_qid)
+    rng.shuffle(qids)
+    half = len(qids) // 2
+    pos_qids, neg_qids = set(qids[:half]), set(qids[half:])
+
+    pos, negs = [], []
+    for qid in pos_qids:
+        for turns, cat in by_qid[qid]:
+            if len(turns) >= W:
+                pos.append((turns[-W:], qid, cat))         # last W: includes payload
+    for qid in neg_qids:
+        for turns, cat in by_qid[qid]:
+            if len(turns) > W:                              # need > W so first-W drops payload
+                negs.append((turns[:W], qid, cat))          # first W: benign lead-up
+    rng.shuffle(pos)
+    rng.shuffle(negs)
+    pos = pos[:n_per_class]
+    negs = negs[:n_per_class]
+
+    conversations = [t for t, _, _ in pos] + [t for t, _, _ in negs]
+    labels = [1] * len(pos) + [0] * len(negs)
+    groups = [q for _, q, _ in pos] + [q for _, q, _ in negs]
+    categories = [c for _, _, c in pos] + [c for _, _, c in negs]
+    sources = ["attack_full"] * len(pos) + ["attack_prefix"] * len(negs)
+    return conversations, labels, groups, categories, sources, pos, negs
+
+
 # --- public API --------------------------------------------------------------
 def load_dataset(n_pos=C.N_POS, n_neg=C.N_NEG, min_turns=C.MIN_USER_TURNS,
-                 max_turns=C.MAX_USER_TURNS, seed=C.SEED) -> dict:
+                 max_turns=C.MAX_USER_TURNS, seed=C.SEED, condition="easy") -> dict:
     """Load the balanced multi-turn detection dataset.
 
+    condition="easy": positives = ActorAttack attacks; negatives = topic-matched
+        benign UltraChat conversations (stylistically distinct -> individually
+        separable; a cautionary "too-easy" set).
+    condition="hard": positives = FULL attacks; negatives = benign PREFIXES of a
+        DISJOINT attack split (same style, individually benign; only the final
+        escalation turn differs). This is the set that actually needs a sequence
+        model -- see README.
+
     Returns dict: conversations (List[List[str]] of user turns), labels (1=attack,
-    0=benign), groups (query_id for attacks; 10_000_000+i for benign), categories,
-    sources ('attack' | 'ultrachat'). All lists same length N.
+    0=benign), groups, categories, sources. All lists same length N.
     """
     rng = random.Random(seed)
+
+    if condition == "hard":
+        conversations, labels, groups, categories, sources, pos_convs, neg_raw = \
+            _build_hard(min(n_pos, n_neg), min_turns, max_turns, rng)
+        pos_only = [c for c, l in zip(conversations, labels) if l == 1]
+        neg_only = [c for c, l in zip(conversations, labels) if l == 0]
+        pos_tc = _turncount_dist(pos_only)
+        neg_tc_dist = _turncount_dist(neg_only)
+        idx = list(range(len(conversations)))
+        rng.shuffle(idx)
+        conversations = [conversations[i] for i in idx]
+        labels = [labels[i] for i in idx]
+        groups = [groups[i] for i in idx]
+        categories = [categories[i] for i in idx]
+        sources = [sources[i] for i in idx]
+        n_p, n_n = sum(labels), len(labels) - sum(labels)
+        _eprint("[data] HARD condition: N=%d  pos(full attack)=%d  neg(benign prefix)=%d"
+                % (len(labels), n_p, n_n))
+        _eprint("[data] turn-count dist (pos): "
+                + ", ".join("%d->%d" % (k, pos_tc[k]) for k in sorted(pos_tc)))
+        _eprint("[data] turn-count dist (neg): "
+                + ", ".join("%d->%d" % (k, neg_tc_dist[k]) for k in sorted(neg_tc_dist)))
+        _eprint("[data] NOTE: length-matched (both classes = HARD_WINDOW=%d turns); "
+                "positive=last-W (has payload), negative=first-W of a different attack "
+                "(benign lead-up). per_turn_max is the honest per-turn control."
+                % int(getattr(C, "HARD_WINDOW", 4)))
+        return {"conversations": conversations, "labels": labels, "groups": groups,
+                "categories": categories, "sources": sources}
 
     pos_convs, pos_groups, pos_cats = _load_positives(n_pos, min_turns, max_turns)
     pos_tc = _turncount_dist(pos_convs)

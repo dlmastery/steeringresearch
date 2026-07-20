@@ -16,6 +16,7 @@ Stdout is ASCII only (Windows cp1252).
 from __future__ import annotations
 
 import json
+import os
 import sys
 
 import numpy as np
@@ -248,50 +249,44 @@ def _embedder_list():
     return ["gemma", "minilm"]
 
 
-def main():
-    # Lazy sibling imports (guarded here, NOT at module top, so import-check passes
-    # even while data/embed/models are still stubs).
-    from . import data, embed, models
+def _condition_list():
+    sel = (os.environ.get("MJ_CONDITION") or "both").strip().lower()
+    if sel in ("easy", "hard"):
+        return [sel]
+    return ["easy", "hard"]
 
-    # 1. Load data + confound audit -----------------------------------------
-    ds = data.load_dataset()
+
+def _run_condition(condition, data, embed, models):
+    """Load one condition (easy|hard), embed, CV the four methods per embedder,
+    build demo trajectories + per-condition plots. Returns a result block."""
+    ds = data.load_dataset(condition=condition)
     convs = ds["conversations"]
     labels = list(ds["labels"])
     groups = list(ds["groups"])
     sources = ds.get("sources", ["?"] * len(convs))
-
     n_pos = int(sum(1 for y in labels if y == 1))
     n_neg = int(sum(1 for y in labels if y == 0))
-    print("[data] conversations=%d  pos=%d  neg=%d" % (len(convs), n_pos, n_neg))
+    print("[%s] conversations=%d  pos=%d  neg=%d" % (condition, len(convs), n_pos, n_neg))
 
     conf = data.length_confound_report(convs, labels)
-    print(
-        "[confound] turncount_auc=%.3f  totalchar_auc=%.3f  "
-        "turns_pos_mean=%.2f  turns_neg_mean=%.2f"
-        % (
-            conf.get("turncount_auc", float("nan")),
-            conf.get("totalchar_auc", float("nan")),
-            conf.get("turncount_pos_mean", float("nan")),
-            conf.get("turncount_neg_mean", float("nan")),
-        )
-    )
+    print("[%s/confound] turncount_auc=%.3f totalchar_auc=%.3f turns_pos=%.2f turns_neg=%.2f"
+          % (condition, conf.get("turncount_auc", float("nan")),
+             conf.get("totalchar_auc", float("nan")),
+             conf.get("turncount_pos_mean", float("nan")),
+             conf.get("turncount_neg_mean", float("nan"))))
 
-    # 2. Per-embedder CV over the four methods ------------------------------
     embedders_block = {}
-    roc_scores_gemma = {}  # method -> (y_true, y_score) for the ROC plot
-    dims = {}
-
+    roc_scores_gemma = {}
     for emb_name in _embedder_list():
-        cache = C.EMB_CACHE.get(emb_name, C.ARTIFACTS / ("seqs_%s.npz" % emb_name))
+        # Cache keyed by (condition, embedder) -- easy/hard have DIFFERENT convs.
+        cache = C.ARTIFACTS / ("seqs_%s_%s.npz" % (condition, emb_name))
         try:
             seqs = embed.load_or_build(convs, emb_name, cache)
             dim = int(seqs[0].shape[1]) if len(seqs) and seqs[0].ndim == 2 else 0
-        except Exception as exc:  # embedding failed -> record and skip its methods
+        except Exception as exc:
             embedders_block[emb_name] = {"error": str(exc)}
-            print("[embed:%s] FAILED: %s" % (emb_name, exc))
+            print("[%s/embed:%s] FAILED: %s" % (condition, emb_name, exc))
             continue
-
-        dims[emb_name] = dim
         cell_block = {"dim": dim}
         for method in C.METHODS:
             try:
@@ -300,63 +295,54 @@ def main():
                 if emb_name == "gemma":
                     roc_scores_gemma[method] = (yt, ys)
                 m = cell_block[method]
-                print(
-                    "[%s/%s] auc=%.3f ci=[%.3f,%.3f] f1=%.3f acc=%.3f tpr@fpr10=%.3f"
-                    % (
-                        emb_name,
-                        method,
-                        m["auc"],
-                        m["auc_ci"][0],
-                        m["auc_ci"][1],
-                        m["f1"],
-                        m["acc"],
-                        m["tpr_at_fpr10"],
-                    )
-                )
-            except Exception as exc:  # one cell failing must not kill the run
+                print("[%s/%s/%s] auc=%.3f ci=[%.3f,%.3f] f1=%.3f tpr@fpr10=%.3f"
+                      % (condition, emb_name, method, m["auc"], m["auc_ci"][0],
+                         m["auc_ci"][1], m["f1"], m["tpr_at_fpr10"]))
+            except Exception as exc:
                 cell_block[method] = {"error": str(exc)}
-                print("[%s/%s] FAILED: %s" % (emb_name, method, exc))
+                print("[%s/%s/%s] FAILED: %s" % (condition, emb_name, method, exc))
         embedders_block[emb_name] = cell_block
 
-    # 3. Demo trajectory examples (train one SeqGRU on all data) -------------
+    # Demo trajectories (train one SeqGRU on all of this condition's data).
     examples = []
     demo_emb = "gemma" if "gemma" in _embedder_list() else _embedder_list()[0]
     try:
-        cache = C.EMB_CACHE.get(demo_emb, C.ARTIFACTS / ("seqs_%s.npz" % demo_emb))
+        cache = C.ARTIFACTS / ("seqs_%s_%s.npz" % (condition, demo_emb))
         demo_seqs = embed.load_or_build(convs, demo_emb, cache)
         gru = models.SeqGRU()
         gru.fit(demo_seqs, np.asarray(labels))
-        # one attack + one benign conversation
         pos_i = next((i for i, y in enumerate(labels) if y == 1), None)
         neg_i = next((i for i, y in enumerate(labels) if y == 0), None)
         for i in (pos_i, neg_i):
             if i is None:
                 continue
             traj = np.asarray(gru.risk_trajectory(demo_seqs[i])).reshape(-1).tolist()
-            examples.append(
-                {
-                    "source": str(sources[i]),
-                    "label": int(labels[i]),
-                    "turns": list(convs[i]),
-                    "gru_risk_trajectory": [float(t) for t in traj],
-                }
-            )
+            examples.append({"source": str(sources[i]), "label": int(labels[i]),
+                             "turns": list(convs[i]),
+                             "gru_risk_trajectory": [float(t) for t in traj]})
     except Exception as exc:
-        print("[examples] FAILED: %s" % exc)
+        print("[%s/examples] FAILED: %s" % (condition, exc))
 
-    # 4. Assemble results.json (EXACT schema) -------------------------------
+    # Per-condition plots (best-effort).
     plots = []
-    results = {
-        "gemma_model_id": C.GEMMA_MODEL_ID,
-        "gemma_layer": int(C.GEMMA_LAYER),
-        "minilm_id": C.MINILM_ID,
-        "n_pos": n_pos,
-        "n_neg": n_neg,
-        "min_turns": int(C.MIN_USER_TURNS),
-        "max_turns": int(C.MAX_USER_TURNS),
-        "seed": int(C.SEED),
-        "n_folds": int(C.N_FOLDS),
-        "judge": None,
+    roc_png = C.ARTIFACTS / ("roc_%s.png" % condition)
+    bar_png = C.ARTIFACTS / ("auc_%s.png" % condition)
+    traj_png = C.ARTIFACTS / ("risk_trajectory_%s.png" % condition)
+    for fn, png, arg in (("roc", roc_png, roc_scores_gemma),
+                         ("bar", bar_png, embedders_block),
+                         ("traj", traj_png, examples)):
+        try:
+            if fn == "roc" and arg:
+                _plot_roc(arg, png); plots.append(str(png))
+            elif fn == "bar":
+                _plot_auc_bar(arg, png); plots.append(str(png))
+            elif fn == "traj" and arg:
+                _plot_trajectory(arg, png); plots.append(str(png))
+        except Exception as exc:
+            print("[%s/plot:%s] FAILED: %s" % (condition, fn, exc))
+
+    return {
+        "n_pos": n_pos, "n_neg": n_neg,
         "confound": {
             "turncount_auc": float(conf.get("turncount_auc", float("nan"))),
             "totalchar_auc": float(conf.get("totalchar_auc", float("nan"))),
@@ -368,32 +354,31 @@ def main():
         "plots": plots,
     }
 
-    # 5. Render plots (best-effort; a plot failure must not lose results) ----
-    try:
-        if roc_scores_gemma:
-            _plot_roc(roc_scores_gemma, C.ROC_PNG)
-            plots.append(str(C.ROC_PNG))
-    except Exception as exc:
-        print("[plot:roc] FAILED: %s" % exc)
-    try:
-        _plot_auc_bar(embedders_block, C.BAR_PNG)
-        plots.append(str(C.BAR_PNG))
-    except Exception as exc:
-        print("[plot:bar] FAILED: %s" % exc)
-    try:
-        if examples:
-            _plot_trajectory(examples, C.TRAJ_PNG)
-            plots.append(str(C.TRAJ_PNG))
-    except Exception as exc:
-        print("[plot:traj] FAILED: %s" % exc)
 
-    # Save results.json BEFORE the summary print (so a late crash keeps data).
+def main():
+    # Lazy sibling imports (guarded here, NOT at module top, so import-check passes
+    # even while data/embed/models are still stubs).
+    from . import data, embed, models
+
+    conditions = {}
+    for cond in _condition_list():
+        conditions[cond] = _run_condition(cond, data, embed, models)
+
+    results = {
+        "gemma_model_id": C.GEMMA_MODEL_ID,
+        "gemma_layer": int(C.GEMMA_LAYER),
+        "minilm_id": C.MINILM_ID,
+        "min_turns": int(C.MIN_USER_TURNS),
+        "max_turns": int(C.MAX_USER_TURNS),
+        "seed": int(C.SEED),
+        "n_folds": int(C.N_FOLDS),
+        "judge": None,
+        "conditions": conditions,
+    }
     C.ARTIFACTS.mkdir(exist_ok=True)
     with open(C.RESULTS_PATH, "w", encoding="utf-8") as fh:
         json.dump(results, fh, indent=2)
     print("[write] %s" % C.RESULTS_PATH)
-
-    # 6. ASCII summary table (LAST) -----------------------------------------
     _print_summary(results)
     return results
 
@@ -403,64 +388,38 @@ def _print_summary(results):
     print("")
     print(line)
     print("MULTI-TURN JAILBREAK DETECTION  (SCREENING TIER, group-aware CV)")
-    print(line)
-    print(
-        "pos=%d  neg=%d  folds=%d  seed=%d  min/max turns=%d/%d"
-        % (
-            results["n_pos"],
-            results["n_neg"],
-            results["n_folds"],
-            results["seed"],
-            results["min_turns"],
-            results["max_turns"],
-        )
-    )
-    c = results["confound"]
-    print(
-        "confound: turncount_auc=%.3f  totalchar_auc=%.3f  (~0.5 => no trivial signal)"
-        % (c["turncount_auc"], c["totalchar_auc"])
-    )
-    print(line)
-    header = "%-10s %-16s %7s %-16s %6s %6s %8s" % (
-        "embedder",
-        "method",
-        "AUC",
-        "95% CI",
-        "F1",
-        "ACC",
-        "TPR@10",
-    )
-    print(header)
-    print(line)
-    for emb_name, block in results["embedders"].items():
-        if not isinstance(block, dict) or "error" in block:
-            err = block.get("error", "?") if isinstance(block, dict) else "?"
-            print("%-10s [EMBEDDER FAILED] %s" % (emb_name, err))
-            continue
-        for method in C.METHODS:
-            cell = block.get(method)
-            if not isinstance(cell, dict):
+    print("folds=%d seed=%d min/max turns=%d/%d"
+          % (results["n_folds"], results["seed"], results["min_turns"],
+             results["max_turns"]))
+    for cond, block in results.get("conditions", {}).items():
+        c = block["confound"]
+        tag = "EASY (attack vs UltraChat benign)" if cond == "easy" \
+            else "HARD (full attack vs benign PREFIX -- same style, only escalation differs)"
+        print(line)
+        print("CONDITION: %s   pos=%d neg=%d" % (tag, block["n_pos"], block["n_neg"]))
+        print("confound: turncount_auc=%.3f totalchar_auc=%.3f  (~0.5 => no trivial signal)"
+              % (c["turncount_auc"], c["totalchar_auc"]))
+        print("%-9s %-15s %7s %-15s %6s %8s"
+              % ("embedder", "method", "AUC", "95% CI", "F1", "TPR@10"))
+        for emb_name, eb in block["embedders"].items():
+            if not isinstance(eb, dict) or "error" in eb:
+                print("%-9s [EMBEDDER FAILED]" % emb_name)
                 continue
-            if "error" in cell:
-                print("%-10s %-16s   [FAILED] %s" % (emb_name, method, cell["error"]))
-                continue
-            ci = "[%.3f,%.3f]" % (cell["auc_ci"][0], cell["auc_ci"][1])
-            print(
-                "%-10s %-16s %7.3f %-16s %6.3f %6.3f %8.3f"
-                % (
-                    emb_name,
-                    method,
-                    cell["auc"],
-                    ci,
-                    cell["f1"],
-                    cell["acc"],
-                    cell["tpr_at_fpr10"],
-                )
-            )
+            for method in C.METHODS:
+                cell = eb.get(method)
+                if not isinstance(cell, dict):
+                    continue
+                if "error" in cell:
+                    print("%-9s %-15s  [FAILED]" % (emb_name, method))
+                    continue
+                ci = "[%.2f,%.2f]" % (cell["auc_ci"][0], cell["auc_ci"][1])
+                print("%-9s %-15s %7.3f %-15s %6.2f %8.2f"
+                      % (emb_name, method, cell["auc"], ci, cell["f1"],
+                         cell["tpr_at_fpr10"]))
     print(line)
-    print("plots: %s" % ", ".join(results["plots"]) if results["plots"] else "plots: (none)")
-    print("NOTE: screening-tier n; per-turn-max is the stateless baseline the "
-          "multi-turn attack is designed to defeat.")
+    print("READ: per_turn_max is the STATELESS baseline. If it wins on EASY but the "
+          "sequence models (seq_gru/hier_attn) beat it on HARD, that is the lesson: "
+          "multi-turn attacks hide in the trajectory that per-turn cannot see.")
     print(line)
 
 
