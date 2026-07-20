@@ -53,7 +53,7 @@ flowchart TD
         D1["rogue_scalpel"]:::built
         D2["realignment"]:::built
         D3["multiturn_jailbreak"]:::built
-        D4["trajguard"]:::plan
+        D4["trajguard"]:::built
     end
     DEF --> DEF_S
 
@@ -94,6 +94,7 @@ flowchart TD
     click D1 "rogue_scalpel/README.md"
     click D2 "realignment/README.md"
     click D3 "multiturn_jailbreak/README.md"
+    click D4 "trajguard/README.md"
     click P1 "stacking/README.md"
     click F1 "non_identifiability/README.md"
     click F2 "fine_grained/README.md"
@@ -151,7 +152,7 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 | [`rogue_scalpel`](rogue_scalpel/README.md) · L10 | red-team the guard: the universal attack + the five-layer defense | ✅ built + validated |
 | [`realignment`](realignment/README.md) · L11 | restore refusal in an abliterated model by transplanting a direction | ✅ built + validated |
 | [`multiturn_jailbreak`](multiturn_jailbreak/README.md) | detect multi-turn (Crescendo/ActorAttack) jailbreaks: chunk-wise turn embedding + sequence classification; the attack is in the trajectory (DeepContext arXiv:2602.16935) | ✅ built + validated |
-| `trajguard` | streaming decoding-time detection: the hidden-state trajectory across generated tokens (arXiv:2604.07727) | ⏳ building |
+| [`trajguard`](trajguard/README.md) | streaming decoding-time detection: the hidden-state trajectory across generated tokens; flag the jailbreak early (TrajGuard, arXiv:2604.07727) | ✅ built + validated |
 
 ### 📜 Certify — provable guarantees
 
@@ -190,6 +191,7 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 | [`prompt_activation_duality`](prompt_activation_duality/README.md) · 2026 | **site matters**: same vector at the **attention** output raises refusal 0.35→**0.40** (gib 0.25) while residual-add *lowers* it 0.35→0.25 (gib 0.50) |
 | [`realignment`](realignment/README.md) · DEFEND | **works** — clean α=0.2 operating point: **ASR 0.47→0.00**, over-refusal 0.00, coherence 0.85 |
 | [`multiturn_jailbreak`](multiturn_jailbreak/README.md) · DEFEND | **trajectory matters**: on same-style hard negatives the stateless per-turn probe collapses to **0.57** while a sequence model reaches **0.96** (Gemma) — and a naive benchmark (easy negatives) is trivially 0.99, the cautionary half |
+| [`trajguard`](trajguard/README.md) · DEFEND | **streaming detection works early**: a learned detector flags the jailbroken generation at **AUC 0.91 from the first 2 tokens** — but here per-token already wins (0.98), the honest twist: trajectory helps most when chunks look benign, less under active generation |
 | [`rogue_scalpel`](rogue_scalpel/README.md) · DEFEND | attack strips refusal **0.52→0.00**; the **norm-clamp guard recovers it (0.60)**; lock/dual guards don't |
 | [`hello_world`](hello_world/README.md) · READ | probe 5-fold CV **0.87 ± 0.03**; leakage clean; XSTest OOD AUC 0.89 |
 | [`hello_world_steering`](hello_world_steering/README.md) · WRITE | **fixed steering barely works** (n=175/arm): refusal *falls* 0.33→0.07 as α rises, gibberish 0.21→**0.69** — the honest negative |
