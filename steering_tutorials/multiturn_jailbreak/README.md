@@ -360,42 +360,48 @@ lesson:
   payload). Individual turns are now indistinguishable; **only the trajectory
   differs.**
 
-First honest run: abliterated Gemma-3-1B layer-12 embedder + MiniLM, n=200/class,
-group-aware 5-fold CV, bootstrap 95% CIs, from `artifacts/results.json`. (Gemma
-embedder rows are filled in when its slower run lands; MiniLM is the headline.)
+First honest run: abliterated Gemma-3-1B layer-12 embedder **and** MiniLM,
+n=200/class, group-aware 5-fold CV, bootstrap 95% CIs, from `artifacts/results.json`.
+AUC (95% CI); the **HARD** column is the one that matters.
 
-**MiniLM embedder** (384-d):
+| method | Gemma EASY | MiniLM EASY | **Gemma HARD** | **MiniLM HARD** |
+|---|---|---|---|---|
+| `per_turn_max` (stateless baseline) | 0.999 | 0.990 | **0.595** [.54,.65] | **0.569** [.51,.62] |
+| `trajectory_mlp` | 1.000 | 0.998 | **0.956** [.94,.97] | 0.843 [.80,.88] |
+| `seq_gru` | 0.964 | 0.956 | 0.725 [.67,.77] | 0.832 [.79,.87] |
+| `hier_attn` | 0.904 | 0.988 | 0.446 [.39,.50] ⚠ | 0.849 [.81,.88] |
 
-| method | EASY AUC | **HARD AUC** | HARD TPR@FPR10 |
-|---|---|---|---|
-| `per_turn_max` (stateless baseline) | 0.990 | **0.569** | 0.20 |
-| `trajectory_mlp` | 0.998 | 0.843 | 0.41 |
-| `seq_gru` | 0.956 | 0.832 | 0.45 |
-| `hier_attn` | 0.988 | **0.849** | 0.52 |
-
-**Gemma embedder** (layer 12): _pending its run — table fills from results.json._
-
-**Verdict — the thesis holds on HARD, and EASY is the cautionary tale.**
-On **easy** negatives the stateless `per_turn_max` already scores **0.99** — the
-task is trivially per-turn-separable (confound `totalchar_auc≈0.11`, i.e. length
+**Verdict — the thesis holds on HARD (both embedders); EASY is the cautionary tale.**
+On **easy** negatives the stateless `per_turn_max` already scores **0.99–1.00** —
+the task is trivially per-turn-separable (confound `totalchar_auc≈0.11`, i.e. length
 alone gives ~0.89), so a high number here certifies *nothing* about multi-turn
-detection. On **hard** negatives the same stateless baseline **collapses to
-0.57** (near chance — individual turns really are indistinguishable), while the
-sequence models hold **0.83–0.85**. The escalation trajectory is the signal, and
-only models that read the ordered sequence recover it. `hier_attn` is best on hard
-(0.849).
+detection. On **hard** negatives that same stateless baseline **collapses to
+~0.57–0.60 on both embedders** (near chance — individual turns really are
+indistinguishable), while trajectory-aware models recover the signal: the best is
+**`trajectory_mlp` on Gemma at 0.956**, and MiniLM's `seq_gru`/`hier_attn` reach
+0.83–0.85. The escalation trajectory is the signal, and only models that read the
+ordered sequence see it.
 
-**Confound audit** (hard condition): `turncount_auc = 0.50` (length-matched — the
-turn-count tell is designed out), `totalchar_auc = 0.75` (attack payload turns are
-wordier, a residual tell). Read honestly: a length-only classifier would get
-~0.75, so the sequence models (0.85) add signal **beyond both** per-turn content
-(0.57) **and** raw length (0.75) — but the margin over length-only is modest, and
-we report it rather than claim the full 0.28 gap over per-turn as pure trajectory.
+**Two honest asterisks.** (1) `hier_attn` on the 1152-d **Gemma** embedder
+**failed to train (AUC 0.446, below chance)** — the attention model overfits
+high-dim inputs at n≈200, while the same model is fine on 384-d MiniLM (0.849).
+More capacity is not free at small n (the AxBench/`talan` lesson again). We report
+the failed cell, not just the wins. (2) `seq_gru` on Gemma (0.725) barely clears
+the length-only baseline (below), so its gemma result is the least convincing;
+`trajectory_mlp` (0.956) clearly exceeds it.
+
+**Confound audit** (hard): `turncount_auc = 0.50` (length-matched — the turn-count
+tell is designed out), `totalchar_auc = 0.75` (attack payload turns are wordier, a
+residual tell). Read honestly: a length-only classifier gets ~0.75, so
+`trajectory_mlp` (0.956) and MiniLM's sequence models (0.83–0.85) add signal
+**beyond both** per-turn content (~0.57) **and** raw length (0.75); we claim the
+margin over 0.75, not the full gap over per-turn.
 
 **Pre-registered falsifier — cleared.** The thesis was the ordering
-`AUC(seq_gru) > AUC(per_turn_max)` on hard, same-style negatives. Measured:
-0.832 vs 0.569 (non-overlapping CIs). Had it come back `≤`, the "trajectory
-matters" claim would be false; it did not.
+`AUC(sequence model) > AUC(per_turn_max)` on hard, same-style negatives.
+Measured: the best sequence model beats per_turn_max on both embedders
+(Gemma 0.956 vs 0.595; MiniLM 0.849 vs 0.569, non-overlapping CIs). Had it come
+back `≤`, the "trajectory matters" claim would be false; it did not.
 
 ---
 

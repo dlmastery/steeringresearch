@@ -1,0 +1,2 @@
+# regenerable embedding caches (rebuild from data.py + embed.py)
+*.npz
