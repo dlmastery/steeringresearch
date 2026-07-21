@@ -1,5 +1,7 @@
 # TALAN — a LEARNED latent-adapter steer (the third point on the capacity spectrum)
 
+> **Reference:** [TALAN: Task-Aligned Latent Adaptation Networks for Targeted Post-Training (arXiv:2606.06902)](https://arxiv.org/abs/2606.06902). Our lesson is a labelled inference-time analogue, not a reproduction.
+
 > Lesson 2 wrote a **fixed** diff-of-means vector into the residual stream to
 > re-install refusal. Lesson 3 replaced it with a **learned rank-1** edit
 > (ReFT-r1) — a linear readout along one direction. This lesson goes one step up

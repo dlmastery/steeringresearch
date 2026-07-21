@@ -1,5 +1,7 @@
 # fine_grained — steering less, achieving more (sparse activation steering)
 
+> **Reference:** [Fine-Grained Activation Steering: Steering Less, Achieving More / AUSteer (arXiv:2602.04428)](https://arxiv.org/abs/2602.04428).
+
 **Stage: CONTROL.** This lesson adds exactly one idea on top of lesson 2's
 diff-of-means steering (`hello_world_steering`): instead of adding the *whole*
 steering direction to the residual stream, add only a **sparse** slice of it —

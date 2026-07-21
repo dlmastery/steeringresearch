@@ -1,7 +1,6 @@
 # Re-alignment — putting refusal BACK into an abliterated model
 
-> **Reference:** refusal in language models is mediated by a single direction
-> (Arditi et al., arXiv:2406.11717). Data: JailbreakBench (arXiv:2404.01318).
+> **Reference:** [Refusal in Language Models Is Mediated by a Single Direction (arXiv:2406.11717)](https://arxiv.org/abs/2406.11717). Data: [JailbreakBench (arXiv:2404.01318)](https://arxiv.org/abs/2404.01318).
 
 > Lessons 1-3 read harm, wrote a fixed refusal vector, and learned to generate
 > one. This lesson (11) uses the same machinery for a pointed safety question:

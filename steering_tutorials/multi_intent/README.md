@@ -1,8 +1,6 @@
 # Lesson 9 — Multi-Intent Steering: composing K concepts without interference
 
-> **Reference:** contrastive activation addition / CAA (arXiv:2312.06681);
-> refusal-direction geometry (Arditi et al., arXiv:2406.11717). Data:
-> JailbreakBench (arXiv:2404.01318).
+> **Reference:** [Steering Llama 2 via Contrastive Activation Addition (arXiv:2312.06681)](https://arxiv.org/abs/2312.06681); [Refusal in LLMs Is Mediated by a Single Direction (arXiv:2406.11717)](https://arxiv.org/abs/2406.11717).
 
 > **One-line idea.** Lesson 2 steered ONE concept ("refuse this"). Real
 > deployments steer *several* at once — several harm categories, or "refuse

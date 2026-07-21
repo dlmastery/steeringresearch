@@ -1,8 +1,6 @@
 # FLAS — Flow-based Activation Steering, one field for many concepts
 
-> **Reference:** flow-based activation steering — an own construction inspired by
-> Flow Matching for generative modeling (arXiv:2210.02747) and
-> github.com/flas-ai/FLAS. Builds on lesson 3's learned rank-1 steer.
+> **Reference:** [Flow Matching for Generative Modeling (arXiv:2210.02747)](https://arxiv.org/abs/2210.02747) (the flow foundation); FLAS is an own construction inspired by it (github.com/flas-ai/FLAS). Builds on lesson 3.
 
 > Lesson 1 **read** a concept out of a frozen Gemma-3-1B. Lesson 2 **wrote** a
 > **fixed** diff-of-means vector back to re-install refusal. Lesson 3 (`reft_r1`)

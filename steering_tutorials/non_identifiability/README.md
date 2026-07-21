@@ -1,5 +1,7 @@
 # Non-Identifiability — "the refusal direction" is a family, not a vector
 
+> **Reference:** [On the Non-Identifiability of Steering Vectors in Large Language Models (arXiv:2602.06801)](https://arxiv.org/abs/2602.06801).
+
 > Lesson 1 built a probe that **reads** "is this harmful?" out of Gemma-3-1B.
 > Lesson 2 **writes** back: adding a diff-of-means refusal direction `+v` to the
 > residual stream *installs* refusal. Both lessons — and most of the literature —

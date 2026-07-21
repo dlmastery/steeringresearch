@@ -1,7 +1,6 @@
 # Contextual Steering — make the steering strength depend on the input
 
-> **Reference:** per-input adaptive steering strength, inspired by CLAS
-> (arXiv:2604.24693). Builds on lesson 2's diff-of-means vector.
+> **Reference:** [CLAS — contextual/adaptive per-input steering (arXiv:2604.24693)](https://arxiv.org/abs/2604.24693). Builds on lesson 2's diff-of-means vector.
 
 > Lesson 2 (`hello_world_steering`) added the refusal direction `+v` to the
 > residual stream with **one fixed strength** for every prompt, and used a

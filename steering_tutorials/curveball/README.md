@@ -1,5 +1,7 @@
 # Curveball — the right direction to steer isn't always a straight line
 
+> **Reference:** [Curveball Steering: The Right Direction To Steer Isn't Always Linear (arXiv:2603.09313)](https://arxiv.org/abs/2603.09313). Our great-circle path is an own construction inspired by it, not the paper's kernel-PCA method.
+
 > Lesson 2 **wrote** a fixed diff-of-means refusal vector back into the residual
 > stream as a single straight step, `h -> h + alpha*||h||*v`. That step is a
 > **chord**: it shoots off the local activation-norm shell (it inflates `||h||`),

@@ -1,7 +1,6 @@
 # Prompt-Activation Duality — a prompt and a steering vector are two handles on one axis
 
-> **Reference:** prompt-activation duality via attention-level interventions /
-> GCAD (arXiv:2605.10664).
+> **Reference:** [Prompt-Activation Duality via Attention-Level Interventions / GCAD (arXiv:2605.10664)](https://arxiv.org/abs/2605.10664).
 
 > Lesson 2 (`hello_world_steering`) installed refusal two separable ways it never
 > compared: you can **tell** the model to refuse (a prompt) or **edit** its

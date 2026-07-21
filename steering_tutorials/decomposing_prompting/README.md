@@ -1,5 +1,7 @@
 # Decomposing how prompting steers behavior
 
+> **Reference:** [Decomposing how prompting steers behavior (arXiv:2606.03093)](https://arxiv.org/abs/2606.03093).
+
 > Lesson 1 **read** "is this harmful?" out of Gemma-3-1B. Lesson 2 **wrote** a
 > refusal direction back into the residual stream. This lesson asks a question
 > that sits underneath both: **why is plain prompting such a strong steering

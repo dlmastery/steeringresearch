@@ -1,7 +1,6 @@
 # ReFT-r1 — a LEARNED rank-1 steer, and an honest bake-off
 
-> **Reference:** ReFT — representation finetuning (arXiv:2404.03592); the
-> ReFT-r1-vs-DiffMean-vs-prompting bake-off follows AxBench (arXiv:2501.17148).
+> **Reference:** [ReFT: Representation Finetuning for Language Models (arXiv:2404.03592)](https://arxiv.org/abs/2404.03592); the bake-off follows [AxBench (arXiv:2501.17148)](https://arxiv.org/abs/2501.17148).
 
 > Lesson 1 built a probe that **reads** "is this harmful?" out of a frozen
 > Gemma-3-1B. Lesson 2 built a **fixed** diff-of-means vector that **writes** to

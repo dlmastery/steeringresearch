@@ -1,7 +1,6 @@
 # GAVEL — rule-based safety through activation monitoring (the READ guardrail)
 
-> **Reference:** GAVEL — rule-based safety through activation monitoring
-> (arXiv:2601.19768). Data: toxic-chat (arXiv:2310.17389).
+> **Reference:** [GAVEL: Towards Rule-Based Safety Through Activation Monitoring (arXiv:2601.19768)](https://arxiv.org/abs/2601.19768). Data: [ToxicChat (arXiv:2310.17389)](https://arxiv.org/abs/2310.17389).
 
 > Every steering lesson so far **wrote** to the residual stream — add a refusal
 > vector, strip it, transplant it. GAVEL is the mirror image: it only **reads**. A

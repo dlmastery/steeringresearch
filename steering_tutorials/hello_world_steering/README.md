@@ -1,8 +1,6 @@
 # Hello-World Conditional Steering — from READ to WRITE
 
-> **Reference:** contrastive activation addition / CAA (arXiv:2312.06681) and
-> ActAdd (arXiv:2308.10248) for the steering vector; conditional gating a la CAST
-> (arXiv:2409.05907); refusal direction (Arditi et al., arXiv:2406.11717).
+> **Reference:** [Steering Llama 2 via Contrastive Activation Addition / CAA (arXiv:2312.06681)](https://arxiv.org/abs/2312.06681); conditional gating [Programming Refusal with Conditional Activation Steering / CAST (arXiv:2409.05907)](https://arxiv.org/abs/2409.05907).
 
 > Lesson 1 built a probe that **reads** "is this harmful?" out of a frozen
 > Gemma-3-1B's activations. Lesson 2 does the other half: it **writes** to the

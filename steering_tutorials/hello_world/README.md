@@ -1,9 +1,6 @@
 # Safety Probe — a hello-world activation classifier
 
-> **Reference:** linear classifier probes on intermediate activations (Alain &
-> Bengio, arXiv:1610.01644); refusal-direction / activation-steering context
-> (ActAdd arXiv:2308.10248, Arditi et al. arXiv:2406.11717). Data: JailbreakBench
-> (arXiv:2404.01318), XSTest (arXiv:2308.01263).
+> **Reference:** [Understanding intermediate layers using linear classifier probes (arXiv:1610.01644)](https://arxiv.org/abs/1610.01644); refusal-direction context [Refusal in LLMs Is Mediated by a Single Direction (arXiv:2406.11717)](https://arxiv.org/abs/2406.11717). Data: [JailbreakBench (arXiv:2404.01318)](https://arxiv.org/abs/2404.01318).
 
 > Read a **frozen** language model's internal activations for a prompt, and let a
 > tiny neural network decide whether that prompt is **harmful** or **safe**. No

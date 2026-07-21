@@ -1,5 +1,7 @@
 # TrajGuard — the jailbreak is in the decoding trajectory, before the words arrive
 
+> **Reference:** [TrajGuard: Streaming Hidden-state Trajectory Detection for Decoding-time Jailbreak Defense (arXiv:2604.07727)](https://arxiv.org/abs/2604.07727).
+
 > The sibling lesson (`multiturn_jailbreak`) caught an attack in the trajectory
 > across **conversation turns**. This lesson zooms all the way in: the attack is
 > already visible in the trajectory across **generated tokens**. As the
