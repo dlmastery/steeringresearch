@@ -61,27 +61,26 @@ Full file-by-file walkthrough below.
 
 ## Dataset
 
-The prompts are **JailbreakBench harmful behaviours** (Chao et al. 2024,
-arXiv:2404.01318), pulled through lesson 2's loader
-(`hello_world_steering.data.load_harmful_benign`, the `Goal` column via
-`hf_hub_download`). `config.N_PER_CLASS = 60` harmful prompts are drawn;
-`N_EXTRACT = 40` build the refusal direction (diff-of-means at layer 12), the
-rest are **held out** to score the attack. A matched benign set backs the
-**collateral** check (the always-on guard must not turn harmless prompts into
-refusals).
+The prompts are the shared **≥500/class harmful-vs-benign** set (`common.data`,
+toxic-chat, prompt-level intent labels, deduped + length-matched; built on
+JailbreakBench + `lmsys/toxic-chat`, arXiv:2404.01318 / arXiv:2310.17389).
+`config.N_PER_CLASS = 500`; `N_EXTRACT = 300` build the refusal direction
+(diff-of-means at layer 12), the held-out **200/class** score the attack. A matched
+benign set backs the **collateral** check (the always-on guard must not turn
+harmless prompts into refusals).
 
 The model choice is the load-bearing detail: this lesson loads the **aligned
 base** Gemma-3-1B from the local path `models/google/gemma-3-1b-it` (**not** the
 abliterated model of lessons 1–3), because "strip refusal" is only a meaningful
-attack against a model that refuses by default. The same Gemma also acts as the
-Guard D judge.
+attack against a model that refuses by default. The judge is the off-family
+**Qwen2.5-3B** (`STEER_JUDGE_MODEL`).
 
 | item | value |
 |---|---|
-| source / loader | JailbreakBench `Goal` via `hello_world_steering.data.load_harmful_benign` |
-| size | 60 harmful/class; 40 extract (build direction) / rest held out for ASR; benign for collateral |
+| source / loader | `common.data.load_harmful_benign` (toxic-chat, ≥500/class) |
+| size | 500/class; 300 extract (build direction) / 200 held out for ASR; benign for collateral |
 | labels | prompt-level harmful vs benign |
-| model + judge | **aligned** `models/google/gemma-3-1b-it` (local), self-graded (Guard D) |
+| model + judge | **aligned** `models/google/gemma-3-1b-it` (local); off-family Qwen2.5-3B judge |
 
 **What the lesson uses it for:** red-team the intervention — invert / project out
 the refusal direction to jailbreak the aligned model — then ablate a layered
@@ -277,23 +276,23 @@ load-bearing surprise stands: on this aligned base the project-out attack never
 produces *compliance* — it produces **gibberish** — so ASR *falls* rather than
 rises, and the readable safety axis is the **refusal rate**, not ASR.
 
-| Claim | What we measured (off-family Qwen-3B judge, n=50/rung) | Verdict |
+| Claim | What we measured (off-family Qwen-3B judge, **n=200/rung**) | Verdict |
 |---|---|---|
-| Activation steering can compromise safety — project out the refusal direction to strip refusal | refusal 0.52 (baseline) → 0.00 (attacked); the stripped refusal turns into gibberish (0.12 → 1.00), and compliance/ASR *drops* 0.36 → 0.00 | Partly supported — the attack destroys refusal, but on this aligned base it breaks the model into gibberish rather than jailbreaking it |
-| Guard B (norm / manifold clamp) defends | +clamp restores refusal 0.00 → 0.60 and pulls gibberish 1.00 → 0.20; ASR 0.20 | Supported — the clamp is the one guard that recovers a working, mostly-refusing model |
+| Activation steering can compromise safety — project out the refusal direction to strip refusal | refusal 0.70 (baseline) → 0.00 (attacked); the stripped refusal turns into gibberish (0.09 → 1.00), and compliance/ASR *drops* 0.21 → 0.00 | Partly supported — the attack destroys refusal, but on this aligned base it breaks the model into gibberish rather than jailbreaking it |
+| Guard B (norm / manifold clamp) defends | +clamp restores refusal 0.00 → **0.735** and pulls gibberish 1.00 → 0.165; ASR 0.10 | Supported — the clamp is the one guard that recovers a working, mostly-refusing model (refusal even edges above baseline) |
 | Stacking Guards A (projection lock) and D (dual-forward) defends further | +lock and +dual both collapse back to refusal 0.00, gibberish 1.00 — worse than clamp alone | Not supported — the later rungs re-break the model; lock/dual do not help here |
-| The always-on guard doesn't over-block benign prompts | benign refusal 0.40 (baseline) → 0.00 (guarded) | Supported — no over-refusal; if anything the guard under-refuses benign prompts |
+| The always-on guard doesn't over-block benign prompts | benign refusal 0.475 (baseline) → 0.01 (guarded) | Supported — no over-refusal; if anything the guard under-refuses benign prompts |
 
-The honest read: the attack + clamp-defense pair reproduces cleanly (refusal 0.52
-→ 0.00 → 0.60), but not every guard rung earns its place — adding the projection
-lock and dual-forward rungs pushes the residual stream back off-manifold and
-*re-breaks* the model to refusal 0.00 / gibberish 1.00. The baseline refusal is
-only 0.52 here, not the 0.95 the old 1B self-judge reported: that judge was
-reading its own hedged compliance as refusal and inflating it, and the off-family
-Qwen-3B judge corrects it. ASR stays ~0.0 for the reason the lesson already flags —
-the attack yields gibberish an aligned 1B, never compliance — so watch the
-refusal rate, not the ASR staircase. Screening tier, n=50, off-family judge — a
-directional demo, not a hardened result.
+The honest read (robust at 500/class, n=200/rung): the attack + clamp-defense pair
+reproduces cleanly (refusal **0.70 → 0.00 → 0.735**), but not every guard rung earns
+its place — adding the projection lock and dual-forward rungs pushes the residual
+stream back off-manifold and *re-breaks* the model to refusal 0.00 / gibberish 1.00.
+Baseline refusal is 0.70 (the old 1B self-judge inflated it toward 0.95; the
+off-family Qwen-3B judge corrects it). The finding held from the earlier n≈50 run
+(0.52 → 0.00 → 0.60) — same story, firmer numbers at the larger N. ASR stays ~0.0
+for the reason the lesson flags — the attack yields gibberish on an aligned 1B,
+never compliance — so watch the refusal rate, not the ASR staircase. Screening tier
+(n=200/rung, single seed).
 
 ---
 
