@@ -44,20 +44,17 @@ projection doubles as a *concept detector*. Full file-by-file walkthrough below.
 
 ## Dataset
 
-**JailbreakBench** (Chao et al. 2024, arXiv:2404.01318) — the same
-harmful-vs-benign prompt families as lessons 1–2, loaded by `data.py`'s
-`load_train_eval`. It pulls two matched CSVs, `harmful-behaviors.csv` (100
-harmful requests) and `benign-behaviors.csv` (100 benign), both keyed on the
-`Goal` column. Labels are **prompt-level** (one intent per row), and the two
-classes are topically matched, so the signal separating them is **intent, not
-vocabulary**. We shuffle with a fixed seed and take `n_per_class` (default 60)
-per class, then split each class down the middle into a nested
+The shared **≥500/class harmful-vs-benign** foundation,
+`steering_tutorials.common.data.load_harmful_benign` (toxic-chat, prompt-level
+intent labels, deduped and length-matched; built on JailbreakBench + `lmsys/toxic-chat`,
+arXiv:2404.01318 / arXiv:2310.17389), loaded by `data.py`'s `load_train_eval`. We
+take `N_PER_CLASS = 500` per class and split each class disjointly into a nested
 `{"train": {...}, "eval": {...}}` dict.
 
 | split | harmful | benign | role |
 |---|---|---|---|
-| `train` | 30 | 30 | trains **both** the rank-1 ReFT intervention (refusal CE + benign KL) **and** the DiffMean baseline vector (`mean(harm) − mean(benign)`) |
-| `eval` | 30 | 30 | disjoint held-out; measures steering (ReFT-r1 vs DiffMean vs prompting) and concept-detection AUC |
+| `train` | 300 | 300 | trains **both** the rank-1 ReFT intervention (refusal CE + benign KL) **and** the DiffMean baseline vector (`mean(harm) − mean(benign)`) |
+| `eval` | 200 | 200 | disjoint held-out; measures steering (ReFT-r1 vs DiffMean vs prompting) and concept-detection AUC |
 
 The point is the comparison: ReFT-r1 and the DiffMean baseline learn from the
 **same** train contrast, so the head-to-head on the disjoint eval split is fair —
@@ -315,8 +312,8 @@ class ReftR1(nn.Module):
 
 ### `data.py` — harmful / benign prompt splits
 
-Loads the same harmful-vs-benign prompt families as lessons 1–2 (JailbreakBench
-et al.), with a **disjoint train/eval split** so ReFT-r1 is never evaluated on
+Loads the shared ≥500/class harmful-vs-benign set (`common.data`, toxic-chat)
+via `load_train_eval`, with a **disjoint train/eval split** so ReFT-r1 is never evaluated on
 the prompts it trained on. Supplies the refusal CE targets and the benign KL
 batch.
 
@@ -385,27 +382,28 @@ each) — exactly AxBench's "the simple baseline is strong" point.
 
 ### Results — measured vs. the claim
 
-| Claim (AxBench, Wu et al. 2025, arXiv:2501.17148) | What we measured (n=50/class, screening, off-family Qwen-3B judge, 500/class toxic-chat) | Verdict |
+| Claim (AxBench, Wu et al. 2025, arXiv:2501.17148) | What we measured (train 300/class, **eval 200/class**, off-family Qwen-3B judge, 500/class toxic-chat) | Verdict |
 |---|---|---|
-| A **learned** intervention beats a fixed vector at **steering** | ReFT-r1 harmful-refusal **0.54** > DiffMean **0.26** > Prompting **0.18** | **Reproduced** |
-| A simple diff-of-means is the stronger **detector** | DiffMean AUC **0.71** > ReFT-r1 AUC **0.61** | **Reproduced** |
-| The fixed diff-of-means vector is genuinely weak at steering | DiffMean refusal **0.26** — identical to lesson 2's honest 0.26 | **Consistent across lessons** |
+| A **learned** intervention beats a fixed vector at **steering** | ReFT-r1 harmful-refusal **0.605** > Prompting **0.325** > DiffMean **0.285** | **Reproduced** |
+| A simple diff-of-means is the stronger **detector** | DiffMean AUC **0.748** > ReFT-r1 AUC **0.568** | **Reproduced** |
+| The fixed diff-of-means vector is genuinely weak at steering | DiffMean refusal **0.285** — close to lesson 2's honest ~0.10–0.33 range | **Consistent across lessons** |
 | SAEs underperform | not tested (no SAE arm at this scale) | Out of scope |
 
 **Honest read.** This faithfully reproduces AxBench's central split at 1B, graded
 by an **off-family Qwen-3B judge** on the shared 500/class toxic-chat set
-(n=50/class, **screening**). The **learned** rank-1 ReFT-r1 edit wins *steering*
-(harmful-refusal **0.54**, roughly 2× the fixed DiffMean vector's **0.26** and 3×
-prompting's **0.18**), because it is *trained* to install refusal rather than
-reusing one untrained subtraction. But the simple diff-of-means wins *detection*
-(AUC **0.71** vs ReFT-r1's **0.61**): the linear harm direction is a better
-probe than a better steer — exactly AxBench's "the simple baseline is hard to
-beat *as a detector*" point. Note DiffMean's 0.26 here **matches lesson 2's
-honest 0.26 exactly** — cross-lesson evidence that the fixed vector is really
-that weak, not a per-lesson artifact. **Why the change from old numbers?** All
-three arms previously clustered near 0.60 under the 1B self-judge, which flattened
-the ordering; the off-family judge separates them and reveals the true ranking.
-Raw numbers and side-by-side generations live in `artifacts/results.json`.
+(**train 300/class, eval 200/class** — the ≥500/class rubric; screening tier,
+single seed). The **learned** rank-1 ReFT-r1 edit wins *steering* (harmful-refusal
+**0.605**, ~2× the fixed DiffMean vector's **0.285** and ~2× prompting's **0.325**,
+with the lowest gibberish 0.09), because it is *trained* to install refusal rather
+than reusing one untrained subtraction. But the simple diff-of-means wins
+*detection* (AUC **0.748** vs ReFT-r1's **0.568**): the linear harm direction is a
+better probe than a better steer — exactly AxBench's "the simple baseline is hard
+to beat *as a detector*" point. The ordering is **robust to the larger N** (it held
+from the earlier n≈50 run: ReFT-r1 0.54 > DiffMean 0.26; DiffMean detection 0.71 >
+0.61), just firmer. One honest cost: benign over-refusal is high across all arms
+(~0.48–0.50 — ReFT-r1 slightly the highest at 0.495), dominated by the abliterated
+base + judge, so no arm is meaningfully *more selective* here. Raw numbers and
+side-by-side generations live in `artifacts/results.json`.
 
 ---
 
