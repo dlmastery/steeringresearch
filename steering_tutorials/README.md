@@ -115,61 +115,61 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 
 ### 🧭 Foundations — the READ → WRITE → GENERATE spine
 
-| Lesson | Teaches | Status |
-|---|---|---|
-| [`hello_world`](hello_world/README.md) · READ | linear/shallow probing of activations for a concept (harm) | ✅ built + validated |
-| [`probe_tuning`](probe_tuning/README.md) · READ+ | layer sweep + MLP hyperparameter search (CV, no test peeking) | ✅ built + validated |
-| [`hello_world_steering`](hello_world_steering/README.md) · WRITE | CAA/diff-of-means steering vector, conditional gating, an LLM judge | ✅ built + validated |
-| [`reft_r1`](reft_r1/README.md) · GENERATE | AxBench's learned rank-1 ReFT; ReFT-r1 vs DiffMean vs prompting bake-off | ✅ built + validated |
-| [`flas`](flas/README.md) · GENERATE+ | flow-based steering: a concept-conditioned velocity field; flow-time = strength dial | ✅ built + validated |
+| Lesson | Teaches | Reference paper | Status |
+|---|---|---|---|
+| [`hello_world`](hello_world/README.md) · READ | linear/shallow probing of activations for a concept (harm) | [Understanding intermediate layers using linear classifier probes](https://arxiv.org/abs/1610.01644) | ✅ built + validated |
+| [`probe_tuning`](probe_tuning/README.md) · READ+ | layer sweep + MLP hyperparameter search (CV, no test peeking) | [Understanding intermediate layers using linear classifier probes](https://arxiv.org/abs/1610.01644) | ✅ built + validated |
+| [`hello_world_steering`](hello_world_steering/README.md) · WRITE | CAA/diff-of-means steering vector, conditional gating, an LLM judge | [Steering Llama 2 via Contrastive Activation Addition](https://arxiv.org/abs/2312.06681) · [CAST](https://arxiv.org/abs/2409.05907) | ✅ built + validated |
+| [`reft_r1`](reft_r1/README.md) · GENERATE | AxBench's learned rank-1 ReFT; ReFT-r1 vs DiffMean vs prompting bake-off | [ReFT: Representation Finetuning](https://arxiv.org/abs/2404.03592) · [AxBench](https://arxiv.org/abs/2501.17148) | ✅ built + validated |
+| [`flas`](flas/README.md) · GENERATE+ | flow-based steering: a concept-conditioned velocity field; flow-time = strength dial | [Flow Matching for Generative Modeling](https://arxiv.org/abs/2210.02747) (foundation) | ✅ built + validated |
 
 ### ✨ 2026 Frontier — recent-paper reproductions
 
-| Lesson | Teaches | Status |
-|---|---|---|
-| [`non_identifiability`](non_identifiability/README.md) | steering vectors aren't unique — many low-cosine directions, same effect (arXiv:2602.06801) | ✅ built + validated |
-| [`fine_grained`](fine_grained/README.md) | sparse (top-k%) edits vs dense — "steering less" (inspired by AUSteer, arXiv:2602.04428) | ✅ built + validated |
-| [`contextual_steering`](contextual_steering/README.md) | per-input adaptive steering strength (inspired by CLAS, arXiv:2604.24693) | ✅ built + validated |
-| [`gavel`](gavel/README.md) | rule-based activation **monitoring**: composable per-category detectors (arXiv:2601.19768) | ✅ built + validated |
-| [`prompt_activation_duality`](prompt_activation_duality/README.md) | when a prompt and an activation edit are interchangeable — and when they aren't (arXiv:2605.10664) | ✅ built + validated |
-| [`decomposing_prompting`](decomposing_prompting/README.md) | splitting a prompt's effect into additive activation components (arXiv:2606.03093) | ✅ built + validated |
-| [`talan`](talan/README.md) | labelled inference-time bottleneck-adapter analogue of a post-training method (arXiv:2606.06902) | ✅ built + validated |
-| [`curveball`](curveball/README.md) | curved (great-circle geodesic) vs straight-chord steering at matched budget (arXiv:2603.09313) | ✅ built + validated |
+| Lesson | Teaches | Reference paper | Status |
+|---|---|---|---|
+| [`non_identifiability`](non_identifiability/README.md) | steering vectors aren't unique — many low-cosine directions, same effect | [On the Non-Identifiability of Steering Vectors in LLMs](https://arxiv.org/abs/2602.06801) | ✅ built + validated |
+| [`fine_grained`](fine_grained/README.md) | sparse (top-k%) edits vs dense — "steering less, achieving more" | [Fine-Grained Activation Steering (AUSteer)](https://arxiv.org/abs/2602.04428) | ✅ built + validated |
+| [`contextual_steering`](contextual_steering/README.md) | per-input adaptive steering strength | [CLAS — contextual/adaptive steering](https://arxiv.org/abs/2604.24693) | ✅ built + validated |
+| [`gavel`](gavel/README.md) | rule-based activation **monitoring**: composable per-category detectors | [GAVEL: Towards Rule-Based Safety Through Activation Monitoring](https://arxiv.org/abs/2601.19768) | ✅ built + validated |
+| [`prompt_activation_duality`](prompt_activation_duality/README.md) | when a prompt and an activation edit are interchangeable — and when they aren't | [Prompt-Activation Duality via Attention-Level Interventions (GCAD)](https://arxiv.org/abs/2605.10664) | ✅ built + validated |
+| [`decomposing_prompting`](decomposing_prompting/README.md) | splitting a prompt's effect into additive activation components | [Decomposing how prompting steers behavior](https://arxiv.org/abs/2606.03093) | ✅ built + validated |
+| [`talan`](talan/README.md) | labelled inference-time bottleneck-adapter analogue of a post-training method | [TALAN: Task-Aligned Latent Adaptation Networks](https://arxiv.org/abs/2606.06902) | ✅ built + validated |
+| [`curveball`](curveball/README.md) | curved (great-circle geodesic) vs straight-chord steering at matched budget | [Curveball Steering: The Right Direction To Steer Isn't Always Linear](https://arxiv.org/abs/2603.09313) | ✅ built + validated |
 
 ### 🎛 Control — when, how far, and how to steer
 
-| Lesson | Teaches | Status |
-|---|---|---|
-| [`multi_intent`](multi_intent/README.md) · L9 | steer K concepts at once; orthogonalization; the norm budget | ✅ built + validated |
-| `displacement_budget` · L4 | the coherence cliff; bound off-manifold displacement | ⏳ planned |
-| `operations` · L5 | add vs project-out (ablation) vs rotate (norm-preserving) | ⏳ planned |
-| `fungibility_null` · L6 | direction controls: shuffled/random/orthogonal — is the vector special? | ⏳ planned |
+| Lesson | Teaches | Reference paper | Status |
+|---|---|---|---|
+| [`multi_intent`](multi_intent/README.md) · L9 | steer K concepts at once; orthogonalization; the norm budget | [Steering Llama 2 via Contrastive Activation Addition](https://arxiv.org/abs/2312.06681) | ✅ built + validated |
+| `displacement_budget` · L4 | the coherence cliff; bound off-manifold displacement | — | ⏳ planned |
+| `operations` · L5 | add vs project-out (ablation) vs rotate (norm-preserving) | [Refusal in LLMs Is Mediated by a Single Direction](https://arxiv.org/abs/2406.11717) | ⏳ planned |
+| `fungibility_null` · L6 | direction controls: shuffled/random/orthogonal — is the vector special? | — | ⏳ planned |
 
 ### 🛡 Defend — adversarial robustness & safety
 
-| Lesson | Teaches | Status |
-|---|---|---|
-| [`rogue_scalpel`](rogue_scalpel/README.md) · L10 | red-team the guard: the universal attack + the five-layer defense | ✅ built + validated |
-| [`realignment`](realignment/README.md) · L11 | restore refusal in an abliterated model by transplanting a direction | ✅ built + validated |
-| [`multiturn_jailbreak`](multiturn_jailbreak/README.md) | detect multi-turn (Crescendo/ActorAttack) jailbreaks: chunk-wise turn embedding + sequence classification; the attack is in the trajectory (DeepContext arXiv:2602.16935) | ✅ built + validated |
-| [`trajguard`](trajguard/README.md) | streaming decoding-time detection: the hidden-state trajectory across generated tokens; flag the jailbreak early (TrajGuard, arXiv:2604.07727) | ✅ built + validated |
+| Lesson | Teaches | Reference paper | Status |
+|---|---|---|---|
+| [`rogue_scalpel`](rogue_scalpel/README.md) · L10 | red-team the guard: the universal attack + the five-layer defense | [Rogue Scalpel — red-teaming activation steering](https://arxiv.org/abs/2509.22067) | ✅ built + validated |
+| [`realignment`](realignment/README.md) · L11 | restore refusal in an abliterated model by transplanting a direction | [Refusal in LLMs Is Mediated by a Single Direction](https://arxiv.org/abs/2406.11717) | ✅ built + validated |
+| [`multiturn_jailbreak`](multiturn_jailbreak/README.md) | detect multi-turn (Crescendo/ActorAttack) jailbreaks: chunk-wise turn embedding + sequence classification | [DeepContext: Multi-Turn Intent-Drift Detection](https://arxiv.org/abs/2602.16935) · [Hierarchical Attention](https://arxiv.org/abs/2606.21082) · [ActorAttack](https://arxiv.org/abs/2410.10700) | ✅ built + validated |
+| [`trajguard`](trajguard/README.md) | streaming decoding-time detection: the hidden-state trajectory across generated tokens; flag the jailbreak early | [TrajGuard: Streaming Hidden-state Trajectory Detection for Decoding-time Jailbreak Defense](https://arxiv.org/abs/2604.07727) | ✅ built + validated |
 
 ### 📜 Certify — provable guarantees
 
-| Lesson | Teaches | Status |
-|---|---|---|
-| `conformal_gate` · L7 | conformal prediction → a provable benign over-refusal bound | ⏳ planned |
-| `sae_gate` · L8 | interpretable SAE-feature gates with human-readable firing reasons | ⏳ planned |
+| Lesson | Teaches | Reference paper | Status |
+|---|---|---|---|
+| `conformal_gate` · L7 | conformal prediction → a provable benign over-refusal bound | — | ⏳ planned |
+| `sae_gate` · L8 | interpretable SAE-feature gates with human-readable firing reasons | — | ⏳ planned |
 
 ### 🔬 Prove — rigor, composition & scale
 
-| Lesson | Teaches | Status |
-|---|---|---|
-| [`stacking`](stacking/README.md) · L12 | which priors stack (orthogonal sites) vs compete (same site) | ✅ built + validated |
-| `composite_metric` · L13 | the Goodhart-resistant multi-objective score; Pareto fronts | ⏳ planned |
-| `stat_rigor` · L14 | screening vs evaluation; Wilcoxon + bootstrap + Holm-Bonferroni; HARKing | ⏳ planned |
-| `scale_fungibility` · L15 | does the direction start to matter at 9B? endogenous steering resistance | ⏳ planned (A100) |
-| `certified_deployment` · L16 | certified gate vs a classifier-router under attack — the capstone | ⏳ planned |
+| Lesson | Teaches | Reference paper | Status |
+|---|---|---|---|
+| [`stacking`](stacking/README.md) · L12 | which priors stack (orthogonal sites) vs compete (same site) | [Steering Llama 2 via Contrastive Activation Addition](https://arxiv.org/abs/2312.06681) (composition) | ✅ built + validated |
+| `composite_metric` · L13 | the Goodhart-resistant multi-objective score; Pareto fronts | — | ⏳ planned |
+| `stat_rigor` · L14 | screening vs evaluation; Wilcoxon + bootstrap + Holm-Bonferroni; HARKing | — | ⏳ planned |
+| `scale_fungibility` · L15 | does the direction start to matter at 9B? endogenous steering resistance | — | ⏳ planned (A100) |
+| `certified_deployment` · L16 | certified gate vs a classifier-router under attack — the capstone | — | ⏳ planned |
 
 ---
 
