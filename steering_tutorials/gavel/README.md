@@ -100,11 +100,13 @@ harmful row carries a **coarse harm category** (from toxic-chat's
 `openai_moderation` flags) — that category is exactly what defines one cognitive
 element.
 
-`config.N_PER_CLASS = 250` per class splits into `N_EXTRACT = 200` (build +
-calibrate the CE library) and the held-out remainder (evaluate the monitor). A
-laptop cap `GAVEL_MAX_EVAL` (default 60/class) bounds the held-out scoring so the
-run fits in memory. Extraction and evaluation are **disjoint**, so no CE is graded
-on the prompts that built it.
+`config.N_PER_CLASS = 500` per class splits into `N_EXTRACT = 300` (build +
+calibrate the CE library) and the held-out remainder (evaluate the monitor,
+`DEFAULT_MAX_EVAL = 200`/class). Extraction and evaluation are **disjoint**, so no
+CE is graded on the prompts that built it. The larger extract matters: at 300/class
+the kept categories carry **harassment (73), sexual (158), violence (44)** examples
+— enough to calibrate each CE's threshold so it actually holds its benign FPR on
+held-out data (see Results; a 200-example extract under-calibrated it).
 
 ---
 
@@ -224,41 +226,38 @@ python -m steering_tutorials.gavel.monitor   # synthetic self-test (CE + rule ma
 ## Results — measured vs. the claim
 
 First honest run: abliterated Gemma-3-1B, layer 12, mean-pooled, target per-CE
-FPR = 0.05, n = 50/class held-out, from `artifacts/results.json`. CEs built only
-for well-populated categories (`MIN_CE_EXAMPLES = 30`): **harassment (43), sexual
-(105), violence (36)** — the tiny hate/self_harm pools (~8 each) are correctly
-dropped, not given a noise direction.
+FPR = 0.05, **n = 200/class held-out** (CEs built on 300/class), from
+`artifacts/results.json`. CEs built only for well-populated categories
+(`MIN_CE_EXAMPLES = 30`): **harassment (73), sexual (158), violence (44)** — the
+tiny hate/self_harm pools are correctly dropped, not given a noise direction.
 
-| Claim (from the paper, adapted) | What we measured (n=50/class) | Verdict |
+| Claim (from the paper, adapted) | What we measured (n=200/class) | Verdict |
 |---|---|---|
-| A compositional CE library blocks harm at low benign cost | GAVEL blocks **0.26** of harmful **and 0.26** of benign — identical | **Falsified** — no discrimination at this operating point |
-| Fine-grained CEs beat a single broad detector at matched FPR | GAVEL 0.26/0.26 vs. broad 0.10 harmful / 0.16 benign — *broad is anti-discriminative* (FPR>TPR) | **Neither monitor works**; "fine-grained beats broad" is moot |
-| Per-CE thresholds are interpretable & hold their FPR | held-out benign firing: harassment 0.10, sexual 0.08, violence **0.16** — all above the 0.05 target; `violence` fires *more* on benign (0.16) than harmful (0.10) | **Calibration does not transfer**; one CE is anti-discriminative |
-| A read-only monitor cuts leakage of an uncensored model | of 37 harmful that passed, compliance 0.11; system harmful-leak 0.08 | **Weak** — the monitor lets most harmful through |
+| A compositional CE library blocks harm at low benign cost | GAVEL blocks **0.135** of harmful vs. **0.085** of benign | **Weakly supported** — it discriminates (TPR>FPR, ~1.6×) but recall is low |
+| Fine-grained CEs beat a single broad detector at matched FPR | GAVEL 0.135/0.085 vs. broad 0.115 harmful / 0.055 benign | **~tie** — both weakly discriminate; fine-grained gets slightly more harm at slightly more benign cost |
+| Per-CE thresholds hold their FPR | held-out benign firing: harassment 0.05, sexual 0.05, violence 0.035 — **all at/under the 0.05 target** | **Calibration now holds** (the fix from 300-example extract) |
+| A read-only monitor cuts leakage of an uncensored model | of 173 harmful that passed, compliance 0.24; system harmful-leak 0.21 | **Weak** — the monitor still lets ~86% of harmful through |
 
-**Verdict — the pre-registered falsifier triggers.** The `any_of` compositional
-rule blocks **26% of harmful and 26% of benign** — the block decision is
-uncorrelated with the harmful/benign label (TPR = FPR). Two mechanisms explain it,
-and neither is a data-quantity artifact (the underpowered hate/self_harm CEs were
-dropped and the headline is unchanged):
+**Verdict — weak discrimination, and a lesson in why data size matters.** At
+adequate N the `any_of` monitor blocks **13.5% of harmful vs. 8.5% of benign** —
+it *does* discriminate now (harmful blocked at ~1.6× the benign rate), but recall
+is low and 86% of harmful prompts still slip past.
 
-1. **The per-CE FPR budget does not compose.** Each CE's `tau` is calibrated to
-   ~5% FPR on the *extract* benign split, but (a) it overfits — held-out benign
-   firing is 0.08–0.16, not 0.05 — and (b) even at a true 5% each, a union of *k*
-   independent CEs blocks ≈ 1−0.95ᵏ of benign (≈14% at k=3, ≈23% at k=5). A naive
-   `any_of` rule spends its false-positive budget *k* times over; it needs a
-   *joint* budget (Holm/Bonferroni across CEs), which this lesson deliberately
-   omits so the failure is visible.
-2. **The per-category directions barely discriminate on this 1B.** `violence`
-   fires *more* on benign than harmful — a mean-pooled layer-12 diff-of-means for
-   a coarse toxic-chat category is a weak detector, unlike lesson-1's *trained*
-   probe (AUC 0.87). Rule-based monitoring is only as good as its atoms.
-
-This is the honest negative the paper's rigor invites: compositional activation
-monitoring is not free — get the joint FPR budget or the per-CE detectors wrong
-and you block harmless traffic at exactly the rate you block harm. Screening tier
-(n = 50/class, single seed): enough to see the shape, not an n ≥ 7 evaluation
-claim per `CLAUDE.md` §7.
+**What changed from the small-N run (and why the ≥500/class fix mattered).** An
+earlier n=50/class run reported **0.26 / 0.26** (block-harmful = false-block-benign
+— *no* discrimination) and blamed a non-composing FPR budget. Most of that was a
+**calibration artifact of too little data**: with only ~200 extract examples the
+per-CE `tau` overfit, so held-out benign firing ballooned to 0.08–0.16 (vs the 0.05
+target) and the `any_of` union over-blocked. With **300 extract examples** each CE's
+threshold calibrates properly — held-out benign firing is now **0.035–0.05, at or
+under target** — the union FPR falls to 0.085, and the monitor separates weakly
+instead of not at all. The residual limits are real, not artifacts: (1) the per-CE
+FPR budget still composes only sub-additively (3 CEs at 5% → 8.5% union), and (2)
+the per-category mean-pooled diff-of-means atoms are **weak detectors** (harmful
+firing 0.04–0.08 vs benign 0.035–0.05 — small gaps), unlike lesson-1's *trained*
+probe (AUC 0.87). Rule-based monitoring is only as good as its atoms — but you need
+enough data to even calibrate the thresholds honestly, which is the point of the
+≥500/class rubric. Screening tier (n = 200/class, single seed).
 
 ---
 
