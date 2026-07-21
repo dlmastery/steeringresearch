@@ -62,14 +62,14 @@ Full file-by-file walkthrough below.
 
 ## Dataset
 
-The data is **JailbreakBench harmful vs benign** (Chao et al. 2024,
-arXiv:2404.01318), loaded by `data.load_harmful_benign` (the `Goal` column via
-`hf_hub_download`, returning a matched `{"harmful": [...], "benign": [...]}`
-split). `config.N_PER_CLASS = 60` per class splits into `N_EXTRACT = 40` (build
-the refusal direction, phase 1) and `N_EVAL = 20` (held out for measurement,
-phase 2). **Both phases call the same loader with the same seed**, so the two
-processes see byte-identical splits without passing data between them. Labels are
-**prompt-level** harmful vs benign.
+The data is the shared **≥500/class harmful-vs-benign** set (`common.data`,
+toxic-chat, prompt-level intent labels, deduped + length-matched; built on
+JailbreakBench + `lmsys/toxic-chat`, arXiv:2404.01318 / arXiv:2310.17389), loaded
+by `data.load_harmful_benign`. `config.N_PER_CLASS = 500` per class splits into
+`N_EXTRACT = 300` (build the refusal direction, phase 1) and `N_EVAL = 200` (held
+out for measurement, phase 2). **Both phases call the same loader with the same
+seed**, so the two processes see byte-identical splits without passing data between
+them. Labels are **prompt-level** harmful vs benign.
 
 Two models of the same family appear — the reason there are two phases:
 
@@ -141,7 +141,7 @@ evaluation set.
 ## 3. Data flow
 
 ```
-JailbreakBench (100 harmful + 100 benign, matched)
+common.data toxic-chat (>=500 harmful + >=500 benign, matched)
         │  load_harmful_benign(N_PER_CLASS, SEED)   ← same call in BOTH phases
         ▼
    ┌──────────────┬──────────────┐
@@ -222,31 +222,28 @@ run them in one process — see [§2](#2-why-two-processes).
 
 ## Results — measured vs. the claim
 
-The screening sweep (`artifacts/results.json`, n = 30 harmful + 30 benign held-out,
-α ∈ {0.0, 0.1, 0.15, 0.2, 0.25}, graded by an **off-family Qwen-3B judge** on the
-shared toxic-chat-derived pool) transplants the aligned base model's refusal
-direction into the abliterated model and measures the cost:
+The sweep (`artifacts/results.json`, **n = 200 harmful + 200 benign held-out**,
+extract 300/class, α ∈ {0.0, 0.1, 0.15, 0.2, 0.25}, graded by an **off-family
+Qwen-3B judge** on the shared ≥500/class toxic-chat pool) transplants the aligned
+base model's refusal direction into the abliterated model and measures the cost:
 
-| Claim | What we measured (off-family Qwen-3B judge, n=30/class) | Verdict |
+| Claim | What we measured (off-family Qwen-3B judge, n=200/class) | Verdict |
 |---|---|---|
-| Transplanting the aligned model's refusal direction restores refusal (ASR ↓) | ASR 0.467 (α=0) → 0.233 → 0.067 → **0.000** (α=0.2) → 0.033 | Supported — the transplant drives harmful-prompt compliance to zero, monotone up to α=0.2 |
-| The restoration has a coherence / over-refusal cost | coherence 0.910 → 0.847 → 0.810 → 0.848 → 0.972; over-refusal 0.333 → 0.367 → 0.067 → 0.000 → 0.000 | Cost is mild — coherence stays well above the 0.55 floor throughout, and over-refusal actually *falls* as α rises |
-| Some α cleanly restores refusal within budget | best = **α=0.2**: ASR 0.000, over-refusal 0.000 (≤0.10 gate), coherence 0.848 (≥0.55 gate) — both gates cleared | Cleared — there is a clean operating point |
+| Transplanting the aligned model's refusal direction restores refusal (ASR ↓) | ASR 0.46 (α=0) → 0.215 → 0.11 → 0.09 → **0.045** (α=0.25) — monotone down | Supported — the transplant drives harmful compliance from 0.46 toward zero |
+| The restoration has a coherence / over-refusal cost | coherence 0.91 → 0.86 → 0.82 → 0.79 → 0.88; over-refusal 0.455 → 0.285 → 0.07 → 0.05 → **0.01** | Cost is mild — coherence stays well above the 0.55 floor, and over-refusal *falls* sharply as α rises |
+| Some α cleanly restores refusal within budget | best = **α=0.25**: ASR 0.045, over-refusal 0.01 (≤0.10 gate), coherence 0.88 (≥0.55 gate) — both gates cleared | Cleared — clean operating point |
 
-This flips the old screening verdict. The previous run (8/class, abliterated
-self-judge, coarse α ∈ {0, 0.15, 0.25}) found `best` = null and "no clean
-operating point." Two things changed. The off-family Qwen-3B judge grades harmful
-compliance and benign over-refusal honestly instead of the abliterated model
-rubber-stamping its own outputs — the old self-judge misread hedged compliance as
-refusal and reported a coherence cliff that isn't there. And the finer α grid
-(0.1 and 0.2 added) surfaces **α=0.2** as a genuine sweet spot: ASR hits 0.000
-while coherence rebounds to 0.848 and over-refusal is 0.000. Mechanism: adding
-back the external refusal direction re-erects the refusal-formation subspace the
-abliteration removed, and at α=0.2 that is enough to refuse harm without dragging
-benign prompts or coherence down. Read the over-refusal deltas cautiously — the
-unsteered baseline is already erratic on benign prompts (0.333). Screening tier,
-n=30/class, off-family judge — the honest headline is now "yes, with a clean
-operating point at α=0.2," but not yet an n≥7-seed evaluation claim.
+**Honest read (a positive, robust at 500/class).** Re-alignment works: transplanting
+the aligned base model's refusal direction into the abliterated one drives harmful
+compliance from **ASR 0.46 → 0.045** at α=0.25, with benign over-refusal collapsing
+to **0.01** and coherence holding at **0.88**. Mechanism: adding back the external
+refusal direction re-erects the refusal-formation subspace the abliteration removed.
+The finding is **robust to the larger N** — the earlier n≈20 run put the clean point
+at α=0.2 (ASR≈0.00); at n=200 the sweet spot shifts slightly to α=0.25 and the ASR
+floor is a more honest 0.045 (not a small-sample 0.000). Note the baseline is
+erratic on benign prompts (over-refusal 0.455 at α=0), which the steering actually
+*improves*. Screening tier (n=200/class, single seed) — the honest headline is "yes,
+with a clean operating point at α=0.25," not yet an n≥7-seed evaluation claim.
 
 ---
 

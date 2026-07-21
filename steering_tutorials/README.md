@@ -189,7 +189,7 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 | [`reft_r1`](reft_r1/README.md) · GENERATE | **reproduces AxBench**: learned **ReFT-r1 0.54 > DiffMean 0.26 > prompting 0.18** steering; DiffMean wins detection (AUC 0.71 vs 0.61) |
 | [`talan`](talan/README.md) · 2026 | **capacity spectrum orders as predicted**: harmful refusal DiffMean **0.23** → ReFT-r1 **0.50** → learned adapter **0.55**; learned ≫ fixed |
 | [`prompt_activation_duality`](prompt_activation_duality/README.md) · 2026 | **site matters**: same vector at the **attention** output raises refusal 0.35→**0.40** (gib 0.25) while residual-add *lowers* it 0.35→0.25 (gib 0.50) |
-| [`realignment`](realignment/README.md) · DEFEND | **works** — clean α=0.2 operating point: **ASR 0.47→0.00**, over-refusal 0.00, coherence 0.85 |
+| [`realignment`](realignment/README.md) · DEFEND | **works** (n=200/class) — clean α=0.25 point: **ASR 0.46→0.045**, over-refusal 0.01, coherence 0.88 |
 | [`multiturn_jailbreak`](multiturn_jailbreak/README.md) · DEFEND | **trajectory matters**: on same-style hard negatives the stateless per-turn probe collapses to **0.57** while a sequence model reaches **0.96** (Gemma) — and a naive benchmark (easy negatives) is trivially 0.99, the cautionary half |
 | [`trajguard`](trajguard/README.md) · DEFEND | **streaming detection works early**: a learned detector flags the jailbroken generation at **AUC 0.91 from the first 2 tokens** — but here per-token already wins (0.98), the honest twist: trajectory helps most when chunks look benign, less under active generation |
 | [`rogue_scalpel`](rogue_scalpel/README.md) · DEFEND | attack strips refusal **0.52→0.00**; the **norm-clamp guard recovers it (0.60)**; lock/dual guards don't |
