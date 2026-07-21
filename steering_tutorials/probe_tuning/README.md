@@ -1,5 +1,8 @@
 # probe_tuning — layer & hyperparameter search for the safety probe
 
+> **Reference:** linear classifier probes on intermediate layers (Alain & Bengio,
+> arXiv:1610.01644) — the layer/hyperparameter search behind lesson 1's probe.
+
 This lesson is the **model-selection** work that was intentionally kept **out of
 `hello_world`**. Lesson 1 (`hello_world`) trains and ships ONE fixed probe head so
 it can be read top-to-bottom without distraction. This lesson asks the natural

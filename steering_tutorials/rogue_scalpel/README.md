@@ -1,5 +1,9 @@
 # Rogue Scalpel — red-teaming a steering intervention, and defending it
 
+> **Reference:** Rogue Scalpel — red-teaming activation steering
+> (arXiv:2509.22067); steering vector via CAA (arXiv:2312.06681), refusal axis
+> (Arditi et al., arXiv:2406.11717).
+
 > Lesson 1 built a probe that **reads** "is this harmful?" out of Gemma-3-1B.
 > Lesson 2 **writes** back: adding the refusal direction `+v` to the residual
 > stream *installs* refusal. Lesson 10 turns that scalpel around. The **same**

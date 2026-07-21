@@ -1,5 +1,9 @@
 # Hello-World Conditional Steering — from READ to WRITE
 
+> **Reference:** contrastive activation addition / CAA (arXiv:2312.06681) and
+> ActAdd (arXiv:2308.10248) for the steering vector; conditional gating a la CAST
+> (arXiv:2409.05907); refusal direction (Arditi et al., arXiv:2406.11717).
+
 > Lesson 1 built a probe that **reads** "is this harmful?" out of a frozen
 > Gemma-3-1B's activations. Lesson 2 does the other half: it **writes** to the
 > same activation space to *change behavior* — steering an uncensored model back

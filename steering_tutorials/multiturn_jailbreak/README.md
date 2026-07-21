@@ -1,5 +1,9 @@
 # Multi-turn Jailbreak Detection — the attack is in the trajectory, not the turn
 
+> **Reference:** DeepContext — stateful multi-turn intent-drift detection
+> (arXiv:2602.16935) and hierarchical-attention multi-turn detection
+> (arXiv:2606.21082); positives from ActorAttack (arXiv:2410.10700).
+
 > Lesson 1 read "is THIS prompt harmful?" from **one** activation. But the
 > strongest jailbreaks never put the harm in one prompt. A Crescendo /
 > ActorAttack conversation walks the model there over several innocent-looking

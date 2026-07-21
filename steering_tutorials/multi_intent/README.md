@@ -1,5 +1,9 @@
 # Lesson 9 — Multi-Intent Steering: composing K concepts without interference
 
+> **Reference:** contrastive activation addition / CAA (arXiv:2312.06681);
+> refusal-direction geometry (Arditi et al., arXiv:2406.11717). Data:
+> JailbreakBench (arXiv:2404.01318).
+
 > **One-line idea.** Lesson 2 steered ONE concept ("refuse this"). Real
 > deployments steer *several* at once — several harm categories, or "refuse
 > harm" + "be concise". Naively summing K diff-of-means vectors makes them

@@ -1,5 +1,8 @@
 # Lesson 12 — Stacking: which steering priors STACK vs COMPETE
 
+> **Reference:** a composition lesson over CAA (arXiv:2312.06681) and ActAdd
+> (arXiv:2308.10248); data JailbreakBench (arXiv:2404.01318).
+
 > Lessons 1–3 built single interventions: a probe that **reads** harm, one
 > refusal vector that **writes** it back, a hypernetwork that **generates**
 > vectors on demand. Real systems run **more than one** prior at once. This

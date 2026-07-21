@@ -1,5 +1,10 @@
 # Safety Probe — a hello-world activation classifier
 
+> **Reference:** linear classifier probes on intermediate activations (Alain &
+> Bengio, arXiv:1610.01644); refusal-direction / activation-steering context
+> (ActAdd arXiv:2308.10248, Arditi et al. arXiv:2406.11717). Data: JailbreakBench
+> (arXiv:2404.01318), XSTest (arXiv:2308.01263).
+
 > Read a **frozen** language model's internal activations for a prompt, and let a
 > tiny neural network decide whether that prompt is **harmful** or **safe**. No
 > fine-tuning, no steering, no magic — just a small, honest, end-to-end example
