@@ -48,13 +48,16 @@ import sys
 from steering_tutorials.common.data import load_concepts as _load_common_concepts
 
 # How many prompts to draw PER concept before the shared loader's 40/30/30
-# exemplars/steer/eval split. 120 gives ~36 eval prompts for the big categories and
-# ~34 for violence (the smallest KEPT concept); the loader already drops any concept
+# exemplars/steer/eval split. These concepts are POOL-LIMITED (sexual ~388,
+# harassment ~143, violence ~111), so a per-concept count cannot reach 500 — 120
+# just requests the available pool: ~36 eval prompts for the big categories and ~34
+# for violence (the smallest KEPT concept). The loader already drops any concept
 # with < 100 available, so every returned concept clears a >=30-prompt eval split.
 N_PER_CONCEPT = 120
-# Size of the shared benign baseline (contrast origin + unsteered h0 pool). Bounded
-# so the selectivity arm's per-prompt gate+generate stays fast on a laptop GPU.
-N_BENIGN_BASELINE = 40
+# Size of the shared benign baseline (contrast origin + unsteered h0 pool). Raised
+# to 120 to match the per-concept pool so the selectivity arm's benign contrast is
+# not the bottleneck; the concept pools above remain the binding limit.
+N_BENIGN_BASELINE = 120  # was 40
 
 
 def load_concepts(

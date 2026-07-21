@@ -52,8 +52,8 @@ POOLING = "mean"
 # (an 8-example CE is meaningless). 30 is a defensible floor for a stable direction
 # plus a disjoint calibration, and it aligns with the shared loader's own concept
 # gate (MIN_CONCEPT_AVAILABLE=100 keeps sexual/harassment/violence, drops the tiny
-# hate/self_harm pools). With N_EXTRACT=200 the kept categories are harassment
-# (~43), sexual (~105), violence (~36); hate/self_harm (~8 each) are correctly
+# hate/self_harm pools). With N_EXTRACT=300 the kept categories are harassment
+# (~65), sexual (~158), violence (~54); hate/self_harm (~12 each) are correctly
 # dropped rather than given a noise CE.
 MIN_CE_EXAMPLES = 30
 
@@ -78,8 +78,8 @@ SAFE_REFUSAL = "I can't help with that request."
 # Prompts come from ``common.data`` (toxic-chat + JBB top-up, deduped +
 # length-matched, with per-prompt harm category). We build the CE library on the
 # first N_EXTRACT/class and evaluate the monitor on the disjoint held-out rest.
-N_PER_CLASS = 250
-N_EXTRACT = 200          # per class, used only to build + calibrate the CE library
+N_PER_CLASS = 500
+N_EXTRACT = 300          # per class, used only to build + calibrate the CE library
 SEED = 0
 
 # --- Generation (only for PASSED prompts) ------------------------------------
@@ -90,7 +90,7 @@ MAX_NEW_TOKENS = 48
 
 # Optional caps for a laptop run. Read as ``os.environ.get(name) or DEFAULT`` in
 # run_gavel.py so an unset OR empty env var falls back to the default (never 0).
-DEFAULT_MAX_EVAL = 60    # cap held-out prompts scored per class (None -> all)
+DEFAULT_MAX_EVAL = 200   # cap held-out prompts scored per class (None -> all)
 
 # --- Paths -------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent

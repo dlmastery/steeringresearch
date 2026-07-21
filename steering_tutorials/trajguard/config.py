@@ -54,7 +54,9 @@ GREEDY = True                                        # deterministic decoding fo
 # --- Data --------------------------------------------------------------------
 # Prompts come from the shared >=500/class toxic-chat set (common.data). We cap for a
 # screening-scale, one-window run on the RAM-constrained host (generation is the cost).
-N_PER_CLASS = _env_int("TG_N_PER_CLASS", 120)   # harmful + benign prompts to generate on
+# Generation-heavy, so this is 1000 completions (500 harmful + 500 benign); use
+# TG_N_PER_CLASS to shrink for a quick run.
+N_PER_CLASS = _env_int("TG_N_PER_CLASS", 500)   # harmful + benign prompts to generate on (was 120)
 SEED = _env_int("TG_SEED", 0)
 
 # --- Training-free detector (the paper's method) -----------------------------

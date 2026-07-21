@@ -63,10 +63,13 @@ REFUSAL_INSTRUCTION = (
 #   - a held-out slice of harmful prompts is what we DECOMPOSE (n = N_DECOMP),
 #   - a small held-out slice drives the generate/judge WRITE check (n = N_WRITE).
 # Disjoint extract/analyse/write keeps us from grading a vector on its own inputs.
-N_PER_CLASS = int(os.environ.get("DECOMP_N_PER_CLASS") or 250)
-N_EXTRACT = int(os.environ.get("DECOMP_N_EXTRACT") or 150)   # per class -> u
-N_DECOMP = int(os.environ.get("DECOMP_N_DECOMP") or 80)      # harmful, deltas
-N_WRITE = int(os.environ.get("DECOMP_N_WRITE") or 24)        # harmful, judged
+# 600/class (>=500 rubric) so the THREE disjoint harmful slices below fit within
+# the pool: extract 300 + decomp 150 + write 100 = 550 <= 600 (the ~693 unique
+# toxic-chat pool clears 600). Benign only draws the extract slice.
+N_PER_CLASS = int(os.environ.get("DECOMP_N_PER_CLASS") or 600)
+N_EXTRACT = int(os.environ.get("DECOMP_N_EXTRACT") or 300)   # per class -> u
+N_DECOMP = int(os.environ.get("DECOMP_N_DECOMP") or 150)     # harmful, deltas
+N_WRITE = int(os.environ.get("DECOMP_N_WRITE") or 100)       # harmful, judged
 SEED = int(os.environ.get("DECOMP_SEED") or 0)
 
 # --- Generation --------------------------------------------------------------

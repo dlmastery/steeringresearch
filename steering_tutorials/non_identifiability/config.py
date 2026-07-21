@@ -42,11 +42,11 @@ LAYER = 12
 # Keeping build and eval disjoint is what stops us grading a direction on the
 # very prompts that defined it.
 N_PER_CLASS = 500       # loaded from common.data (rubric: >= 500/class)
-N_EXTRACT = 150         # per class, used only to BUILD the directions
+N_EXTRACT = 300         # per class, used only to BUILD the directions (was 150)
 # Held-out harmful prompts used only to SCORE the effect. On a RAM-constrained
 # host the eval is 6 recipes x len(ALPHAS) x N_EVAL generations, so NONIDENT_N_EVAL
 # lets a run be shrunk into one foreground window (screening-tier, labelled).
-N_EVAL = int(os.environ.get("NONIDENT_N_EVAL") or "60")
+N_EVAL = int(os.environ.get("NONIDENT_N_EVAL") or "150")  # was 60
 SEED = 0
 
 # Number of top principal components whose span the RANDOM control direction is

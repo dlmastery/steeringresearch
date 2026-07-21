@@ -64,9 +64,9 @@ ALPHAS = [0.0, 0.10, 0.15, 0.20, 0.25]
 #   - the next N_EVAL are held out for evaluation (phase 2).
 # Both phases call the SAME loader with the SAME seed, so the two processes see
 # byte-identical splits without having to pass data between them.
-N_EXTRACT = 175         # per class, used only to build the direction (phase 1)
-N_EVAL = 175            # per class, held out for measurement (phase 2)
-N_PER_CLASS = N_EXTRACT + N_EVAL   # = 350/class (<= 500 pool ceiling)
+N_EXTRACT = 300         # per class, used only to build the direction (phase 1)
+N_EVAL = 200            # per class, held out for measurement (phase 2)
+N_PER_CLASS = N_EXTRACT + N_EVAL   # = 500/class (<= 500 pool ceiling)
 SEED = 0
 
 # --- Generation --------------------------------------------------------------

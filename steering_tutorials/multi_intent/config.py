@@ -63,9 +63,11 @@ CONCEPTS = [
 ]
 
 # Prompts to draw PER concept before the shared loader's 40/30/30 exemplars/steer/
-# eval split (``extract`` = exemplars + steer; ``eval`` = the disjoint 30%). 150
-# gives ~40-45 eval prompts for the big concepts; small categories return what
-# they have. The benign baseline is a shared, larger, lower-variance origin.
+# eval split (``extract`` = exemplars + steer; ``eval`` = the disjoint 30%). These
+# concepts are POOL-LIMITED (sexual ~388, harassment ~143, violence ~111), so a
+# per-concept count cannot reach 500 — 150 just requests the available pool and the
+# loader returns what each concept has. The benign baseline is a shared, larger,
+# lower-variance origin.
 N_PER_CONCEPT = 150
 N_BENIGN_BASELINE = 40
 
@@ -83,9 +85,9 @@ PER_CONCEPT_ALPHA = 0.06     # the alpha used in the K=1..N stacking ladder
 # Held-out prompts per concept used to measure steering success and cross-talk
 # (disjoint from the extract prompts that built each vector). NOTE: the shared
 # loader now owns the extract/eval split (its disjoint 30% eval share, larger than
-# this old fixed 5), so this value is passed through but IGNORED — kept only for
+# this value), so this value is passed through but IGNORED — kept only for
 # backward-compatible call sites.
-N_EVAL_PER_CONCEPT = 5
+N_EVAL_PER_CONCEPT = 30  # was a trivially-tiny 5
 SEED = 0
 MAX_NEW_TOKENS = 48
 

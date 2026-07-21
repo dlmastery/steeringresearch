@@ -63,9 +63,9 @@ COMPETE_ADD_FRACTION = 0.08
 # toxic-chat + JBB top-up, deduped + length-matched) replaces the old 100-prompt
 # JailbreakBench loader. We extract the refusal direction from a disjoint EXTRACT
 # half and read the ladder on a held-out EVAL half of harmful prompts.
-N_PER_CLASS = 350
-N_EXTRACT = 175         # per class, used only to build the vector
-N_EVAL = 175            # held-out harmful prompts the ladder is judged on
+N_PER_CLASS = 500
+N_EXTRACT = 300         # per class, used only to build the vector
+N_EVAL = 200            # held-out harmful prompts the ladder is judged on
 SEED = 0
 
 # --- Generation --------------------------------------------------------------

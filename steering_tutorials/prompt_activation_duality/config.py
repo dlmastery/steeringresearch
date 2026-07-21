@@ -68,9 +68,9 @@ INSTRUCTION_SEP = "\n\n"  # between instruction and the user prompt
 #   - the first N_EXTRACT build the steering vector AND measure the prompt-shift,
 #   - a capped N_EVAL_PER_CLASS is held out for the judged steering comparison.
 # Generation is the expensive step, so the eval set is capped well below 500.
-N_PER_CLASS = int(os.environ.get("STEER_N_PER_CLASS") or 250)
-N_EXTRACT = int(os.environ.get("STEER_N_EXTRACT") or 150)   # per class, for v + shift
-N_EVAL_PER_CLASS = int(os.environ.get("STEER_N_EVAL") or 20)  # per class, judged
+N_PER_CLASS = int(os.environ.get("STEER_N_PER_CLASS") or 500)
+N_EXTRACT = int(os.environ.get("STEER_N_EXTRACT") or 300)   # per class, for v + shift
+N_EVAL_PER_CLASS = int(os.environ.get("STEER_N_EVAL") or 150)  # per class, judged
 SEED = int(os.environ.get("STEER_SEED") or 0)
 
 # --- Generation --------------------------------------------------------------

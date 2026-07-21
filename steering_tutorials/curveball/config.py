@@ -73,10 +73,10 @@ LAYER = _env_int("CURVEBALL_LAYER", 12)
 # from the held-out remainder is generated on and judged. Extraction and evaluation
 # stay disjoint so we never grade the vector on the prompts that defined it.
 N_PER_CLASS = _env_int("CURVEBALL_N_PER_CLASS", 500)
-N_EXTRACT_PER_CLASS = _env_int("CURVEBALL_N_EXTRACT", 150)
+N_EXTRACT_PER_CLASS = _env_int("CURVEBALL_N_EXTRACT", 300)  # was 150
 # Generation is the expensive part (RAM/VRAM + greedy decode), so the eval set is
-# CAPPED well below N_PER_CLASS. Raise CURVEBALL_N_EVAL for a fuller (slower) run.
-N_EVAL_PER_CLASS = _env_int("CURVEBALL_N_EVAL", 40)
+# CAPPED below N_PER_CLASS. Raise CURVEBALL_N_EVAL for a fuller (slower) run.
+N_EVAL_PER_CLASS = _env_int("CURVEBALL_N_EVAL", 150)  # was 40
 SEED = _env_int("CURVEBALL_SEED", 0)
 
 # --- Steering budget (the single shared knob) --------------------------------

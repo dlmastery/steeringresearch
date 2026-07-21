@@ -44,8 +44,8 @@ STEER_ALPHA = 0.10          # operating point for the sparsity frontier
 # disjoint held-out slice, so we never grade the vector on prompts that defined
 # it. N_PER_CLASS caps how many we pull per class.
 N_PER_CLASS = 500
-N_EXTRACT = 200             # per class, used only to build the dense vector
-N_EVAL = 60                 # per class, held-out, used only to measure
+N_EXTRACT = 300             # per class, used only to build the dense vector (was 200)
+N_EVAL = 150                # per class, held-out, used only to measure (was 60)
 SEED = 0
 
 # --- Generation --------------------------------------------------------------

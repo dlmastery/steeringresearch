@@ -87,8 +87,8 @@ MAX_NEW_TOKENS = 48
 # The shared >=500/class harmful/benign set (``steering_tutorials.common.data``:
 # toxic-chat + JBB top-up, deduped + length-matched). We draw N_PER_CLASS of each
 # and cut a disjoint TRAIN (first N_PER_CLASS - N_EVAL) / EVAL (last N_EVAL) split.
-N_PER_CLASS = 350
-N_EVAL = 175            # per class, held out for eval (train = 175/class)
+N_PER_CLASS = 500
+N_EVAL = 200            # per class, held out for eval (train = 300/class)
 
 SEED = 0
 
