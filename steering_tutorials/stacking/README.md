@@ -61,23 +61,22 @@ Full file-by-file walkthrough below.
 
 ## Dataset
 
-The data is **JailbreakBench harmful vs benign** (Chao et al. 2024,
-arXiv:2404.01318), pulled through lesson 2's loader
-(`hello_world_steering.data.load_harmful_benign`, the `Goal` column via
-`hf_hub_download`). `config.N_PER_CLASS = 40` splits into `N_EXTRACT = 24` (per
-class, build the vector) and `N_EVAL = 12` held-out **harmful** prompts the
-ladder is judged on. Labels are **prompt-level** harmful vs benign. From this
-one contrast we build a **single refusal diff-of-means direction** and reuse it
-everywhere — the three priors (A, B, B′) differ only in *site* (layer) and
-*operation*, so the ladder isolates stack-vs-compete without a concept-overlap
-confound.
+The data is the shared **≥500/class harmful-vs-benign** set (`common.data`,
+toxic-chat, prompt-level intent labels, deduped + length-matched; built on
+JailbreakBench + `lmsys/toxic-chat`, arXiv:2404.01318 / arXiv:2310.17389).
+`config.N_PER_CLASS = 500` splits into `N_EXTRACT = 300` (per class, build the
+vector) and a held-out **harmful** eval the ladder is judged on (`N_EVAL = 200`,
+capped by `STACK_N_EVAL` for a laptop run). From this one contrast we build a
+**single refusal diff-of-means direction** and reuse it everywhere — the three
+priors (A, B, B′) differ only in *site* (layer) and *operation*, so the ladder
+isolates stack-vs-compete without a concept-overlap confound.
 
 | item | value |
 |---|---|
-| source / loader | JailbreakBench `Goal` via `hello_world_steering.data.load_harmful_benign` |
-| size | 40/class → 24 extract (build direction) / 12 held-out harmful (judged) |
+| source / loader | `common.data.load_harmful_benign` (toxic-chat, ≥500/class) |
+| size | 500/class → 300 extract (build direction) / up to 200 held-out harmful (judged) |
 | direction | one shared refusal diff-of-means, reused at layers 12 & 8, ops `relative_add`/`add` |
-| model + judge | abliterated `DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated`, self-graded |
+| model + judge | abliterated `DavidAU/gemma-3-1b-it-heretic-...` (steered); off-family **Qwen2.5-3B** judge |
 
 **What the lesson uses it for:** walk an additive 2→N ladder to see which priors
 **stack** (disjoint sites → gains add) vs **compete** (same site, incompatible
@@ -294,36 +293,37 @@ stack → compete → over-stack progression reads at a glance.
 
 ## Results — measured vs. the claim
 
-The screening ladder (`artifacts/results.json`, n = 50 held-out harmful prompts
-per rung, graded by an **off-family Qwen-3B judge** on the shared 500/class
-toxic-chat-derived pool) walks A → A+B → A+B′ → all-on:
+The ladder (`artifacts/results.json`, **n = 150 held-out harmful prompts per
+rung**, extract 300/class, graded by an **off-family Qwen-3B judge** on the shared
+≥500/class toxic-chat pool) walks A → A+B → A+B′ → all-on:
 
-| Claim | What we measured (off-family Qwen-3B judge, n=50/rung) | Verdict |
+| Claim | What we measured (off-family Qwen-3B judge, n=150/rung) | Verdict |
 |---|---|---|
-| Disjoint sites STACK — gains add | rung 1 [A] refusal 0.12 → rung 2a [A+B @ L8] refusal **0.02** (marginal −0.10), gibberish 0.64 → 0.80 | Not shown here — the disjoint-site add *lowered* refusal instead of stacking |
-| Same site + same direction COMPETES — no gain over the best single | rung 2b [A+B′ @ L12] refusal 0.12 (marginal 0.0) — flat vs A alone | Consistent with "compete" (no gain), but indistinguishable from "no effect" at this n |
-| The all-on hybrid OVER-STACKS — gibberish rises | rung 3 gibberish **0.92** (highest of the ladder), refusal 0.02; norm budget highest at 0.277; over-stack gibberish delta +0.28 | Supported — the all-on hybrid is the most degenerate rung, most gibberish + most budget spent |
-| The N5 norm budget grows with the stack | budget 0.077 → 0.220 → 0.141 → 0.277 across the rungs | Supported — the disjoint and all-on stacks spend the most budget |
+| Disjoint sites STACK — gains add | rung 1 [A] refusal 0.20 → rung 2a [A+B @ L8] refusal **0.06**, gibberish 0.43 → 0.81 | Not shown here — the disjoint-site add *lowered* refusal instead of stacking |
+| Same site + same direction COMPETES — no gain over the best single | rung 2b [A+B′ @ L12] refusal 0.073 (vs A's 0.20) — no gain, worse coherence (gibberish 0.77) | Consistent with "compete" — no gain over the best single prior |
+| The all-on hybrid OVER-STACKS — gibberish rises | rung 3 gibberish **0.88** (highest), refusal **0.04** (lowest); norm budget highest at 0.274 | Supported — the all-on hybrid is the most degenerate rung, most gibberish + most budget spent |
+| The N5 norm budget grows with the stack | budget 0.079 → 0.218 → 0.141 → 0.274 across the rungs | Supported — the disjoint and all-on stacks spend the most budget |
 
-The clean stack-vs-compete *separation* still does not appear, so
-`decision.verdict` is logged honestly as **"INCONCLUSIVE at this scale."** What
-changed under the harder, length-matched toxic-chat pool + off-family Qwen judge
-is the *floor*: even the single-prior rung 1 now sits at 0.64 gibberish (the old
-1B self-judge stayed coherent until the all-on rung and read refusal at 0.667).
-The tougher prompts plus the honest judge expose that this 1B target is already
-near collapse at these alphas, so the disjoint-site "stack" loses refusal
-(marginal −0.10) rather than adding. The one prediction that survives is the
-**over-stack**: rung 3 spends the most norm budget (0.277) and is the most
-gibberish (0.92, +0.28 over rung 1) — the collapse-as-budget-story the lesson
-promises. Screening demo, n=50, single seed; marginal effects swing on noise, so
-the mechanism is the lesson and the numbers here measure rather than confirm it.
+**Honest read (robust at 500/class, n=150/rung).** The clean stack-vs-compete
+*separation* still does not appear, so `decision.verdict` stays honestly
+**"INCONCLUSIVE at this scale"** — but the mechanism it warns about is clearly
+visible. The base prior is already near the coherence cliff (rung 1: refusal 0.20,
+gibberish **0.43**), so *every* addition overspends the norm budget and tips into
+word salad: refusal falls **0.20 → 0.06 → 0.04** while gibberish climbs
+**0.43 → 0.81 → 0.88** and the budget grows 0.079 → 0.274. Even the nominally
+"stackable" disjoint-site add (2a) degrades, because there is no coherence headroom
+to add into. The surviving prediction is the **over-stack**: rung 3 spends the most
+budget and is the most gibberish — exactly the "all-on hybrid is forbidden"
+collapse (CLAUDE.md §9). The finding held from the earlier n≈50 run; the larger N
+just firms the numbers. Screening tier (n=150/rung, single seed) — the mechanism is
+the lesson; the numbers measure rather than certify it.
 
 ---
 
 ## 9. Honest caveats
 
-- **Small, noisy toy.** Gemma-3-1B with n≈12 held-out prompts and a 1B
-  self-judge is **screening**, not evaluation (CLAUDE.md §7: n≤3 seeds is
+- **Screening toy.** Gemma-3-1B with n=150 held-out prompts/rung and an
+  off-family Qwen-3B judge is **screening**, not evaluation (CLAUDE.md §7: n≤3 seeds is
   screening; a real claim needs n≥7 + the rigor contract). Marginal effects at
   this scale are directional illustrations, not statistics — a single rung can
   land the "wrong" way from seed noise. The mechanism is the lesson; the numbers
