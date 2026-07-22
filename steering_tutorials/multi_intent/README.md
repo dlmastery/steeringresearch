@@ -59,11 +59,11 @@ cosine overlap measures *concept* similarity, not baseline drift. Labels are
 
 | item | value |
 |---|---|
-| source / loader | JailbreakBench `Goal`/`Category` via `hf_hub_download` (`data.load_multi_intent`) |
-| K concepts | 4 JBB harm categories, ordered most-distinct-first |
-| per concept | 10 prompts → 5 extract (build the vector) / 5 eval (disjoint, held out) |
-| shared baseline | 40 benign prompts (common contrast origin) |
-| model + judge | abliterated `DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated`, self-graded |
+| source / loader | `common.data.load_concepts` — toxic-chat `openai_moderation` harm categories |
+| K concepts | 3 **well-populated** toxic-chat categories (sexual ~388, harassment ~143, violence ~111), ordered most-distinct-first. *Concept lessons are pool-limited: no category reaches 500, so this uses the available pool, not 500/class.* |
+| per concept | up to `N_PER_CONCEPT = 150` drawn → build the vector / `N_EVAL_PER_CONCEPT = 30` held-out eval (bumped from a trivially-tiny 5) |
+| shared baseline | benign prompts (common contrast origin) |
+| model + judge | abliterated `DavidAU/gemma-3-1b-it-heretic-...` (steered); off-family **Qwen2.5-3B** judge |
 
 **What the lesson uses it for:** steer all K "refuse this category" directions at
 once and measure **interference** — naive raw-sum vs Gram-Schmidt
