@@ -76,9 +76,9 @@ A complete conditional-steering pipeline that:
 removed, so at baseline it happily answers "how do I pick a lock?". The *goal* is
 to *re-install* refusal from the outside with a single activation vector, applied
 **selectively** only when the prompt trips the gate. But the honest measurement
-(off-family Qwen-3B judge, 500/class toxic-chat, n=175/arm) says this simple
+(off-family Qwen-3B judge, 500/class toxic-chat, n=200/arm) says this simple
 fixed vector **does not** install refusal on this model: as α rises 0 → 0.15,
-refusal *falls* **0.33 → 0.07** while gibberish *climbs* **0.21 → 0.69** — pushing
+refusal *falls* **0.33 → 0.07** while gibberish *climbs* **0.225 → 0.755** — pushing
 harder just shoves activations off-manifold into word salad. That negative is the
 whole point of the lesson: a one-subtraction vector is not a refusal switch, which
 is exactly why later lessons reach for *learned* interventions. Full numbers in
@@ -97,13 +97,13 @@ Labels are prompt-level *intent* (harmful vs. benign), which is what makes the
 **diff-of-means a clean "refuse this" steering direction**.
 
 The two classes are returned **kept separate** — `{"harmful": [...], "benign":
-[...]}` — because lesson 2 *contrasts* them. We take `N_PER_CLASS = 350`/class and
-split it disjointly (`config.py: N_EXTRACT = 175`): the first **175 per class
-build the refusal vector**, and the held-out **175 per class grade** the gated
+[...]}` — because lesson 2 *contrasts* them. We take `N_PER_CLASS = 500`/class and
+split it disjointly (`config.py: N_EXTRACT = 300`): the first **300 per class
+build the refusal vector**, and the held-out **200 per class grade** the gated
 steering, so the vector is never evaluated on the prompts that defined it. Grading
 uses the **off-family Qwen2.5-3B judge** (`STEER_JUDGE_MODEL`), not the 1B model
 grading itself. (The gate is lesson-1's probe, trained on JailbreakBench — hence
-its poor 0.67 transfer to toxic-chat, reported honestly in the results.)
+its poor 0.69 transfer to toxic-chat, reported honestly in the results.)
 
 > **Note:** the local `data.py` in this folder (a JailbreakBench CSV loader) is
 > **superseded** — kept only for its standalone `__main__` demo. The actual run
@@ -426,25 +426,27 @@ generations are in `artifacts/results.json`.)
 
 ## Results — measured vs. the claim
 
-| Claim | What we measured (n=175/arm, screening-tier, off-family Qwen-3B judge, 500/class toxic-chat) | Verdict |
+| Claim | What we measured (**n=200/arm**, screening-tier, off-family Qwen-3B judge, 500/class toxic-chat) | Verdict |
 |---|---|---|
-| A diff-of-means vector *installs* refusal (ActAdd 2308.10248 / CAA 2312.06681 / Arditi 2406.11717) | unconditional refusal **falls** 0.33 (α=0) → 0.28 → 0.18 → **0.07** (α=0.15); it never rises | **Not supported** |
-| Push harder and coherence breaks | gibberish climbs **0.21 → 0.29 → 0.47 → 0.69**; compliance collapses **0.47 → 0.23** | **Confirmed — this is the dominant effect** |
-| The lesson-1 probe can gate the steer (CAST 2409.05907) | gate accuracy **0.67** on toxic-chat (the probe was trained on JBB) | **Transfers poorly** |
-| Conditional gating recovers behavior | at α=0.05: harmful-refusal **0.34**, benign over-refusal **0.39**, gibberish **0.16** | **Weak** |
+| A diff-of-means vector *installs* refusal (ActAdd 2308.10248 / CAA 2312.06681 / Arditi 2406.11717) | unconditional refusal **falls** 0.33 (α=0) → 0.21 → 0.21 → **0.07** (α=0.15); it never rises | **Not supported** |
+| Push harder and coherence breaks | gibberish climbs **0.225 → 0.35 → 0.50 → 0.755**; compliance collapses **0.445 → 0.175** | **Confirmed — this is the dominant effect** |
+| The lesson-1 probe can gate the steer (CAST 2409.05907) | gate accuracy **0.69** on toxic-chat (the probe was trained on JBB) | **Transfers poorly** |
+| Conditional gating recovers behavior | at α=0.10: harmful-refusal **0.28**, benign over-refusal **0.48**, gibberish **0.205** | **Weak** |
 
-**Honest read.** Every number is **screening-tier** (n=175 per arm, single seed),
+**Honest read.** Every number is **screening-tier** (n=200 per arm, single seed),
 graded by an **off-family Qwen-3B judge** on the shared 500/class toxic-chat set —
 no self-grading. Under that honest instrument, **fixed diff-of-means refusal
 steering largely does not work here.** As α rises, refusal *drops* (0.33 → 0.07)
-while gibberish *more than triples* (0.21 → 0.69): the mechanism is not "add a
+while gibberish *more than triples* (0.225 → 0.755): the mechanism is not "add a
 refusal behavior" but "push activations off-manifold," and off-manifold text is
-word salad, not a coherent refusal. **Why the change from the old 0.50 → 0.70
-headline?** That number was inflated on *both* ends: the 1B self-judge mislabeled
-hedged-but-compliant text as REFUSAL, *and* the easy in-distribution JBB set was
-far more separable than toxic-chat. Swap in the off-family judge on harder data
-and the effect inverts. The JBB-trained gate also transfers poorly (accuracy
-0.67), so conditional steering inherits both problems. This is the honest,
+word salad, not a coherent refusal. The finding is **robust to the larger N** (it
+held from the earlier n=175 run: 0.33 → 0.07, gibberish 0.21 → 0.69). **Why the
+change from the old 0.50 → 0.70 headline?** That number was inflated on *both* ends:
+the 1B self-judge mislabeled hedged-but-compliant text as REFUSAL, *and* the easy
+in-distribution JBB set was far more separable than toxic-chat. Swap in the
+off-family judge on harder data and the effect inverts. The JBB-trained gate also
+transfers poorly (accuracy 0.69), so conditional steering inherits both problems.
+This is the honest,
 sobering result — a fixed one-subtraction vector is not a refusal switch on this
 model, and later lessons show what a *learned* intervention buys you.
 

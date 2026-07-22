@@ -194,7 +194,7 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 | [`trajguard`](trajguard/README.md) · DEFEND | **streaming detection works early**: a learned detector flags the jailbroken generation at **AUC 0.91 from the first 2 tokens** — but here per-token already wins (0.98), the honest twist: trajectory helps most when chunks look benign, less under active generation |
 | [`rogue_scalpel`](rogue_scalpel/README.md) · DEFEND | attack strips refusal **0.70→0.00** (n=200); the **norm-clamp guard recovers it (0.735)**; lock/dual guards don't |
 | [`hello_world`](hello_world/README.md) · READ | probe 5-fold CV **0.87 ± 0.03**; leakage clean; XSTest OOD AUC 0.89 |
-| [`hello_world_steering`](hello_world_steering/README.md) · WRITE | **fixed steering barely works** (n=175/arm): refusal *falls* 0.33→0.07 as α rises, gibberish 0.21→**0.69** — the honest negative |
+| [`hello_world_steering`](hello_world_steering/README.md) · WRITE | **fixed steering barely works** (n=200/arm): refusal *falls* 0.33→0.07 as α rises, gibberish 0.225→**0.755** — the honest negative |
 
 **Honest 2026-frontier negatives** (reported as prominently as the wins): `gavel`
 — an `any_of` compositional monitor blocks harmful and benign at the *same* rate
