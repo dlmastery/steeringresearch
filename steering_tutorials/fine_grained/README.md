@@ -108,8 +108,8 @@ The contrast and the evaluation both draw from the shared foundation
 `steering_tutorials/common/data.py` via `load_harmful_benign(N_PER_CLASS, SEED)`,
 which supplies **≥500 harmful + ≥500 benign prompt-level examples** (labels are
 prompt-level intent, not response-level; deduped; fixed-seed shuffle). We use the
-first `N_EXTRACT=200`/class to build the dense vector and a **disjoint**
-`N_EVAL=60`/class held-out slice to measure — so the vector is never graded on
+first `N_EXTRACT=300`/class to build the dense vector and a **disjoint**
+`N_EVAL` (up to 150, capped by `FG_N_EVAL`)/class held-out slice to measure — so the vector is never graded on
 the prompts that defined it. The goal of pulling the full ≥500/class is a stable
 diff-of-means and enough held-out prompts for a meaningful screening estimate;
 `FG_N_EVAL` caps the eval slice on a RAM-constrained host.
@@ -145,23 +145,24 @@ judge (`Qwen/Qwen2.5-3B-Instruct`), from `artifacts/results.json`.
 | | |
 |---|---|
 | **Claim** (inspired by AUSteer, arXiv:2602.04428) | A sparse edit keeping ~5–10% of the steering vector's coordinates **matches** dense refusal at matched strength, with **lower** benign over-refusal and gibberish. (Our top-k magnitude mask is a simplification of the paper's activation-momentum AU selection with adaptive per-input strength.) |
-| **Measured** (n=60/class, Qwen judge) | Across every sparsity level (keep-frac 1.0 → 0.02): **harmful-refusal = 0.00, gibberish = 0.00**, benign over-refusal ≈ 0.28–0.33. The dense vector and the 2%-sparse vector behave identically — *neither induces refusal*. |
-| **Verdict** | **PARTIAL / honest null on refusal.** "Steering **less**" holds — a 2%-sparse edit is **as coherent** as dense (gibberish 0.00 throughout, and it doesn't add over-refusal). But "achieving **more**" does **not**: on the abliterated model under the honest Qwen judge, *no* magnitude of this diff-of-means edit — dense or sparse — moves refusal off 0.00. So sparsification is free (no coherence cost), but the underlying fixed-vector steering it sparsifies simply doesn't work here — the same fixed-vector weakness lessons 2 and `flas` show. |
+| **Measured** (extract 300, n=100/class, Qwen judge) | Sparsity sweep (keep-frac → refusal / benign-over-refusal / gibberish): 1.0 (dense) 0.20 / 0.42 / **0.01**; 0.5 → 0.19 / 0.36 / 0.01; 0.25 → 0.16 / 0.33 / 0.005; 0.1 → 0.16 / 0.39 / 0.01; 0.05 → **0.23** / 0.40 / 0.01; 0.02 → **0.29** / 0.49 / 0.00. Gibberish stays ~0.01 **at every level**; the 2%-sparse edit refuses *more* than dense (0.29 vs 0.20). |
+| **Verdict** | **Weakly supported (both halves) — the ≥500/class re-run flips the earlier null.** "Steering **less**" clearly holds: keeping just 2–5% of the coordinates preserves coherence (gibberish ~0.01 throughout) — sparsification is free. "Achieving **more**" now weakly holds too: the sparsest edits (0.02–0.05 keep) reach the *highest* refusal (0.29 / 0.23) — above the dense 0.20 — though benign over-refusal also rises (to 0.49 at 2%). Best sparse level = 5% keep (58 of 1152 coords), refusal 0.23. |
 
-**Why.** The earlier committed run was a plumbing bug — an env-default made the
-eval split empty (`n=0`), giving meaningless 0/0 rates; that is now fixed (n=60/
-class). With a populated split the honest picture is clear: the top-k mask
-preserves coherence at every level (gibberish stays 0.00 even keeping 2% of
-coordinates — the paper's "steering less" claim about *collateral* holds), but
-the fixed diff-of-means refusal direction it operates on does not induce refusal
-on this abliterated 1B under an off-family judge (refusal 0.00 dense OR sparse).
-Sparsification can only be as good as the vector it thins — and here that vector
-is weak. (Our top-k magnitude mask is also a simplification of AUSteer's
-activation-momentum selection, which may pick more discriminative units.)
+**Why the change from the earlier null.** An earlier extract-200 / n=60 run found
+refusal **0.00 at every level** (an honest null: the vector didn't steer). At the
+≥500/class config the diff-of-means direction is estimated from **300/class** — a
+better vector — and it now induces a **modest but real** refusal (0.16–0.29) that
+sparsification *preserves and even slightly sharpens*, all at ~0.01 gibberish. So
+"steering less, achieving more" is weakly demonstrated here — but read it as
+screening: the absolute refusal is still low, benign over-refusal is high (~0.4,
+dominated by the base + judge), and the sparse-beats-dense gap (0.29 vs 0.20) is
+within screening noise. The honest lesson: a better-estimated vector is what turned
+the null positive, and sparsification rides on the vector it thins. (Our top-k
+magnitude mask is still a simplification of AUSteer's activation-momentum selection.)
 
 **Caveats (read before quoting any number this produces):**
 
-- **Screening-tier, not evaluation.** `N_EVAL=60`/class, single seed. This cannot
+- **Screening-tier, not evaluation.** `N_EVAL=100`/class, single seed. This cannot
   clear the CLAUDE.md rigor contract (n≥7 seeds, paired Wilcoxon, bootstrap CI,
   Holm-Bonferroni). It surfaces a direction; it does not certify a "winner."
 - **Judge is the instrument.** Even the off-family Qwen-3B judge is small; the
