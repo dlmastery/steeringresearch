@@ -68,10 +68,11 @@ natural ~7% toxic base rate is recorded before rebalancing, and per-class median
 length is reported so the classes are not separable on length. See
 [`common/data.py`](../common/data.py) for the five rigor requirements.
 
-This lesson draws `N_PER_CLASS = 250` per class, then splits **disjointly**:
-`N_EXTRACT = 150`/class build the refusal direction, `N_DECOMP = 80` held-out
-harmful prompts are decomposed, and `N_WRITE = 24` held-out harmful prompts drive
-the generate/judge check. A vector is never graded on the prompts that built it.
+This lesson draws `N_PER_CLASS = 600` per class (so the three disjoint harmful
+slices fit), then splits **disjointly**: `N_EXTRACT = 300`/class build the refusal
+direction, `N_DECOMP = 150` held-out harmful prompts are decomposed, and
+`N_WRITE = 100` held-out harmful prompts drive the generate/judge check. A vector
+is never graded on the prompts that built it.
 
 ---
 
@@ -165,34 +166,37 @@ only the decomposition math, not new steering machinery.
 
 ## 5. Results
 
-First honest run: abliterated Gemma-3-1B, layer 12, off-family Qwen2.5-3B judge,
-N_DECOMP=80 deltas, N_WRITE=20 judged/condition, from `artifacts/results.json`.
+Run at the ≥500/class config: abliterated Gemma-3-1B, layer 12, off-family
+Qwen2.5-3B judge, **N_DECOMP=150 deltas, N_WRITE=100 judged/condition**, from
+`artifacts/results.json`.
 
-| quantity | predicted (per arXiv:2606.03093) | **measured** |
+| quantity | predicted (per arXiv:2606.03093) | **measured (n=150/100)** |
 |---|---|---|
-| on-direction energy fraction | moderate–high — a real chunk of prompting is the refusal axis | **0.175** — *low*; ~82% of the prompt's delta is off the refusal axis |
-| cross-prompt consistency | high but < 1 — mostly a shared translation | **0.364** — *moderate*; the shift is substantially input-dependent |
-| shared-translation fraction | high — the common shift dominates the averaged delta | **0.377** — *moderate*; under half survives averaging |
-| `recovery_proj` (WRITE) | substantial (well above 0) — a steering vector reproduces prompting's gain | **0.00** — re-applying the on-direction translation *lowers* refusal (0.25 → 0.15) |
-| `recovery_shared` vs `recovery_proj` | `shared >= proj` — the residual adds a little | both **0.00**; shared 0.20 > proj 0.15 but *both below the 0.25 baseline* |
+| on-direction energy fraction | moderate–high — a real chunk of prompting is the refusal axis | **0.202** — *low*; ~80% of the prompt's delta is off the refusal axis |
+| cross-prompt consistency | high but < 1 — mostly a shared translation | **0.401** — *moderate*; the shift is substantially input-dependent |
+| shared-translation fraction | high — the common shift dominates the averaged delta | **0.411** — *moderate*; under half survives averaging |
+| `recovery_proj` (WRITE) | substantial (well above 0) — a steering vector reproduces prompting's gain | **0.00** — re-applying the on-direction translation *lowers* refusal (0.33 → 0.26) |
+| `recovery_shared` vs `recovery_proj` | `shared >= proj` — the residual adds a little | both **0.00**; shared 0.27 ≈ proj 0.26 but *both below the 0.33 baseline* |
 
-**Verdict — the falsifier triggers.** The prompt does raise refusal
-(baseline **0.25** → prompting **0.35**, a +0.10 gain), but that gain is **not**
-reproduced by the translation-tier steering vector: `recovery_proj` and
-`recovery_shared` are both **0.00** (in fact both steered arms sit *below*
-baseline, at 0.15 and 0.20). With `on_direction_frac = 0.175` and `recovery ≈ 0`
-*while prompting still refuses*, this is exactly the pre-registered falsifier:
-**at 1B layer 12, prompting's effect is not translation-tier-steering-vector-like.**
+**Verdict — the falsifier triggers (robust at 500/class).** The prompt does raise
+refusal (baseline **0.33** → prompting **0.40**, a +0.07 gain), but that gain is
+**not** reproduced by the translation-tier steering vector: `recovery_proj` and
+`recovery_shared` are both **0.00** (both steered arms sit *below* baseline, at 0.26
+and 0.27). With `on_direction_frac = 0.202` and `recovery ≈ 0` *while prompting
+still refuses*, this is exactly the pre-registered falsifier: **at 1B layer 12,
+prompting's effect is not translation-tier-steering-vector-like.** The larger N
+ticks on-direction-fraction up slightly (0.175 → 0.202) but the conclusion is
+unchanged.
 
-**Honest read.** Only ~18% of the prompt's activation footprint lies along the
-refusal direction; the residual (norm 322 of the 367 total delta) dominates, and a
-constant shift extracted from it doesn't carry the behavior. This is consistent
-with the paper's own hierarchy — the headline mechanism is the **affine** tier
-(cross-dimensional scaling + rotation), not the plain **translation** this lesson
-implements. So the lesson honestly demonstrates the *lower bound*: the simplest
-(translation) component of "prompting as steering" is insufficient here, which is
-itself the point — decomposing prompting shows the effect is richer than one
-additive vector. Screening-tier (single 1B, n=20/condition, one layer/seed).
+**Honest read.** Only ~20% of the prompt's activation footprint lies along the
+refusal direction; the residual dominates, and a constant shift extracted from it
+doesn't carry the behavior. This is consistent with the paper's own hierarchy — the
+headline mechanism is the **affine** tier (cross-dimensional scaling + rotation),
+not the plain **translation** this lesson implements. So the lesson honestly
+demonstrates the *lower bound*: the simplest (translation) component of "prompting
+as steering" is insufficient here, which is itself the point — decomposing prompting
+shows the effect is richer than one additive vector. Screening-tier (single 1B,
+n=100/condition, one layer/seed).
 
 ---
 
