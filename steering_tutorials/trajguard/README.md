@@ -318,45 +318,45 @@ lessons does not apply (`results.json` records `"judge": null`).
 
 ## 9. Results — measured vs. the claim
 
-First honest run: abliterated Gemma-3-1B, layer 12, 80 harmful + 80 benign
-completions (max 32 generated tokens), window=4, 5-fold stratified CV, bootstrap
-95% CIs, from `artifacts/results.json`.
+Run at the ≥500/class config: abliterated Gemma-3-1B, layer 12, **300 harmful +
+300 benign** completions (max 40 generated tokens), window=4, 5-fold stratified CV,
+bootstrap 95% CIs, from `artifacts/results.json`.
 
 Detection (full trajectory):
 
 | method | AUC | F1 | TPR@FPR=0.10 |
 |---|---|---|---|
-| `threshold_freeform` (training-free, the paper's method) | **0.665** [.58,.75] | 0.24 | 0.20 |
-| `per_turn_max` (learned per-token, stateless) | **0.977** [.95,.99] | 0.84 | 0.97 |
-| `trajectory_mlp` | 0.961 [.93,.99] | 0.90 | 0.90 |
-| `seq_gru` | 0.924 [.88,.96] | 0.86 | 0.84 |
+| `threshold_freeform` (training-free, the paper's method) | **0.638** | 0.24 | 0.10 |
+| `per_turn_max` (learned per-token, stateless) | 0.931 | 0.84 | 0.84 |
+| `trajectory_mlp` | 0.944 | 0.90 | 0.90 |
+| `seq_gru` | **0.945** | 0.86 | 0.88 |
 
 Early detection — AUC using only the first K generated tokens (the streaming value):
 
 | method | K=2 | K=4 | K=8 | K=16 | K=32 |
 |---|---|---|---|---|---|
-| `threshold_freeform` | 0.658 | 0.636 | 0.609 | 0.643 | 0.665 |
-| `seq_gru` | **0.911** | 0.878 | 0.891 | 0.932 | 0.924 |
+| `threshold_freeform` | 0.69 | 0.671 | 0.619 | 0.628 | 0.63 |
+| `seq_gru` | **0.94** | 0.946 | 0.935 | 0.947 | 0.949 |
 
-**Verdict — the signal is real and detectable EARLY, but it lives in the tokens,
-not (here) in the trajectory shape.** The falsifier (both detectors ≤ 0.60) is
-**not** triggered: every method clears chance, and the learned models reach
-0.92–0.98. The streaming promise holds strongly — `seq_gru` flags the jailbreak at
-**AUC 0.91 from just the first 2 generated tokens**, and stays 0.88–0.93 across K.
+**Verdict — the signal is real and detectable EARLY.** The falsifier (both detectors
+≤ 0.60) is **not** triggered: every method clears chance and the learned models reach
+**0.93–0.945**. The streaming promise holds strongly — `seq_gru` flags the jailbreak
+at **AUC 0.94 from just the first 2 generated tokens**, and stays ~0.94 across all K.
 You do not need to wait for the harmful content to finish.
 
-**The instructive twist (and the honest complication of the paper's framing).**
-Unlike the turn-level sibling `multiturn_jailbreak` — where the stateless per-chunk
-probe *collapsed* to 0.57 because each turn looked benign — here the stateless
-**`per_turn_max` is the best method (0.977)**. A jailbroken completion is *actively
-emitting harmful-content tokens*, so each token's hidden state is individually
-separable from a benign token; the sequence structure adds little. And the paper's
-**training-free sliding-window projection is the weakest (0.665)** — a single
-diff-of-means direction, projected and windowed, throws away signal a learned
-per-token classifier keeps. The cross-lesson lesson: **trajectory modeling earns
-its keep when the individual chunks look benign (multi-turn escalation), and much
-less when the chunks already carry the signal (active harmful generation).** Both
-are true and worth knowing.
+**The honest twist — softened by the larger N.** At the small n=80 run the stateless
+`per_turn_max` was clearly *best* (0.977), suggesting the sequence structure added
+nothing (a jailbroken completion emits harmful-content tokens, so each token's state
+is individually separable). At **n=300 that gap closes**: the learned sequence models
+(`seq_gru` 0.945, `trajectory_mlp` 0.944) now *marginally edge* `per_turn_max` (0.931)
+— the sequence structure adds a little after all, and the "per-token already wins"
+story was partly small-n. Still, the paper's **training-free sliding-window projection
+remains the weakest (0.638)** — a single diff-of-means direction, projected and
+windowed, throws away signal a learned classifier keeps. The cross-lesson lesson holds
+qualitatively: **trajectory modeling earns its keep most when the individual chunks
+look benign (multi-turn escalation), and least when the chunks already carry the
+signal (active harmful generation)** — but the per-token dominance here was weaker
+than the small run implied.
 
 **Why per-token is so strong here (a confound to name).** The abliterated model
 *complies immediately*, so a harmful-class completion is harmful from token 1 —
