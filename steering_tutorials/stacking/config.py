@@ -20,6 +20,7 @@ research harness in ``src/steering``.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 # --- The model we steer ------------------------------------------------------
@@ -65,7 +66,10 @@ COMPETE_ADD_FRACTION = 0.08
 # half and read the ladder on a held-out EVAL half of harmful prompts.
 N_PER_CLASS = 500
 N_EXTRACT = 300         # per class, used only to build the vector
-N_EVAL = 200            # held-out harmful prompts the ladder is judged on
+# Held-out harmful prompts the ladder is judged on. The ladder generates N_EVAL x
+# (rungs) completions, so on a RAM-constrained host STACK_N_EVAL shrinks the judged
+# slice into one foreground window (screening-tier, labelled).
+N_EVAL = int(os.environ.get("STACK_N_EVAL") or 200)
 SEED = 0
 
 # --- Generation --------------------------------------------------------------

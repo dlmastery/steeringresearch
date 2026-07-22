@@ -9,14 +9,6 @@ keep the top-k% highest-magnitude coordinates, zero the rest, renormalize to the
 same strength. The claim under test is that this **sparse edit matches dense
 steering on the target behavior while doing less collateral damage**.
 
-> **Paper:** *Fine-Grained Activation Steering: Steering Less, Achieving More*
-> (a.k.a. AUSteer; Feng et al., ICLR 2026, arXiv:2602.04428;
-> github.com/zijian678/AUSteer). This lesson is a **simplified reconstruction
-> inspired by AUSteer** — the paper selects units by an activation-momentum
-> discriminativeness metric with adaptive per-input strength; we use a simpler
-> top-k magnitude mask. We test the headline claim ("steering less, achieving
-> more"), not the paper's exact mechanism.
-
 ---
 
 ## The key idea in code
