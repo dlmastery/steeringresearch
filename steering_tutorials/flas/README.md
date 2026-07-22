@@ -54,27 +54,28 @@ encode — including held-out ones. Full file-by-file walkthrough below.
 
 ## Dataset
 
-**JailbreakBench** harm **categories**, loaded by `data.py`'s `load_concepts`.
-Where lessons 1–3 used JBB's harmful/benign split as one behaviour, FLAS reads
-JBB's `Category` field and treats **each category as a distinct concept** — the
-thing the velocity field must learn to steer toward when conditioned on that
-concept's code. From the harmful CSV (`Goal` prompts, `Category` labels) we take
-three categories to **train** the flow and hold **one out entirely** for the
-zero-shot test, plus a shared benign baseline as the common contrast origin.
+**Toxic-chat harm categories**, loaded by `data.py`'s `load_concepts` (which wraps
+the shared `common.data.load_concepts`). FLAS reads toxic-chat's
+`openai_moderation` harm categories and treats **each category as a distinct
+concept** — the thing the velocity field must learn to steer toward when
+conditioned on that concept's code. We take the **well-populated** categories to
+**train** the flow and hold **one out entirely** for the zero-shot test, plus a
+shared benign baseline as the common contrast origin.
 
-| concept | JBB category | trained? | per-concept prompts (exemplars/steer · eval) |
+| concept | toxic-chat category | trained? | pool (approx) |
 |---|---|---|---|
-| Malware/Hacking | Malware/Hacking | yes | 7 · 3 |
-| Fraud/Deception | Fraud/Deception | yes | 7 · 3 |
-| Harassment/Discrimination | Harassment/Discrimination | yes | 7 · 3 |
-| **Physical harm** | Physical harm | **no (held-out)** | 7 · 3 (eval only) |
+| sexual | sexual | yes | ~388 |
+| violence | violence | yes | ~111 |
+| **harassment** | harassment | **no (held-out)** | ~143 (eval only) |
 
-Each category caps at 10 prompts (`N_PER_CONCEPT`); the last 3 are held out for
-grading and the rest do double duty as exemplars (encode → the concept code `c`)
-and steer prompts (the harmful side of the diff-of-means target). A shared pool
-of 40 benign prompts is the neutral contrast for every concept. The goal: **one**
-field, conditioned on a concept, that steers all three trained concepts and
-generalizes **zero-shot** to the held-out "Physical harm" it never saw.
+*Concept lessons are **pool-limited**: no toxic-chat category reaches 500, so this
+uses the available per-concept pool (`N_PER_CONCEPT` up to 150), not 500/class.*
+Each concept splits into disjoint exemplar / steer / eval roles; a shared pool of
+**`N_BENIGN_BASELINE = 120` benign prompts** (bumped from a tiny 40) is the neutral
+contrast for every concept. The goal: **one** field, conditioned on a concept, that
+steers the trained concepts and generalizes **zero-shot** to the held-out concept
+it never saw. (Sparse categories — hate, self_harm — are dropped by the shared
+loader's `MIN_CONCEPT_AVAILABLE` gate rather than given a noise field.)
 
 ---
 
@@ -380,57 +381,60 @@ zero-shot arm. Serves on **port 8005** (lessons 1–3 use their own ports).
 ## 7. Results
 
 The GPU run wrote `artifacts/results.json` and two plots. Numbers below are the
-**measured** values at 1B (n=3 per concept per cell) — screening tier.
+**measured** values at 1B (off-family Qwen-3B judge, n=34–36/concept) — screening
+tier. Concepts are the well-populated toxic-chat categories (sexual, violence
+trained; harassment held out); the sparse hate/self_harm are dropped by the loader.
 
 **Q1 — Is `T` a smooth strength dial (and where's the cliff)?**
-`rates_vs_T.png` + `results.json` (dial concept: Malware/Hacking).
+`rates_vs_T.png` + `results.json` (dial concept: sexual, n=36).
 
 | flow-time `T` | refusal | comply | gibberish |
 |---|---|---|---|
-| 0.0 | 0.00 | 1.00 | 0.00 |
-| 0.5 | 0.33 | 0.00 | 0.67 |
-| 1.0 | 0.33 | 0.67 | 0.00 |
-| 1.5 | 0.33 | 0.67 | 0.00 |
-| 2.0 | 0.67 | 0.00 | 0.33 |
+| 0.0 | 0.25 | 0.47 | 0.28 |
+| 0.5 | 0.25 | 0.42 | 0.33 |
+| 1.0 | 0.14 | 0.31 | 0.56 |
+| 1.5 | 0.06 | 0.36 | 0.58 |
+| 2.0 | 0.06 | 0.19 | 0.75 |
 
-Refusal climbs from 0.00 at `T=0` to 0.67 at `T=2` — the dial works. But the
-climb is not clean: gibberish spikes to 0.67 at `T=0.5` and returns at 0.33 for
-`T=2`, so pushing past the useful band drops you over the **coherence cliff**,
-exactly as predicted.
+Refusal **falls** from 0.25 at `T=0` to 0.06 at `T=2` while gibberish **climbs**
+0.28 → 0.75 — the dial moves the *wrong* axis. Integrating the flow farther drives
+activations off-manifold into word salad, not refusal: the **coherence cliff**, not
+a clean strength dial.
 
 **Q2 — One field, many concepts; and does zero-shot work at 1B?**
 `per_concept.png` + `results.json`.
 
-| concept | trained? | refusal @ default `T` |
-|---|---|---|
-| Malware/Hacking | yes | 0.33 |
-| Fraud/Deception | yes | 0.67 |
-| Harassment/Discrimination | yes | 1.00 |
-| Physical harm | **no (held-out)** | 0.67 |
+| concept | trained? | refusal @ default `T` | gibberish |
+|---|---|---|---|
+| sexual | yes | 0.14 | 0.56 |
+| violence | yes | 0.44 | 0.21 |
+| **harassment** | **no (held-out)** | 0.19 | 0.47 |
 
-One field steers all three trained concepts (refusal 0.33 / 0.67 / 1.00), and the
-held-out "Physical harm" concept — never trained on — steers at 0.67 from its
-exemplars alone: zero-shot transfer holds at 1B.
+The field steers the two trained concepts **unevenly** (violence 0.44 vs sexual
+0.14), and the held-out "harassment" concept — never trained on — steers only at
+**0.19** with 0.47 gibberish: **zero-shot transfer is weak** at 1B, not the clean
+generalization the flow framing promises.
 
 ### Results — measured vs. the claim
 
-| Claim (FLAS, github.com/flas-ai/FLAS [UNVERIFIED]) | What we measured (n=36/T-step, n=7–36/concept, screening, off-family Qwen-3B judge, 500/class toxic-chat) | Verdict |
+| Claim (FLAS, github.com/flas-ai/FLAS [UNVERIFIED]) | What we measured (n=34–36/concept, screening, off-family Qwen-3B judge) | Verdict |
 |---|---|---|
-| Flow-time `T` dials **up the target behavior** | refusal *falls* 0.25 (T=0) → 0.11 (T=2); gibberish rises to **0.50–0.58** | **Not supported — `T` dials up incoherence, not refusal** |
-| One conditioned field steers many concepts | per-concept refusal: sexual **0.31** / violence **0.41** / hate **0.14** (n=7) / self-harm **0.13** (n=8) | **Uneven; tiny n on hate/self-harm** |
-| Generalizes zero-shot to an unseen concept | held-out "harassment": refusal **0.25**, compliance **0.50**, gibberish **0.25** | **Weak** |
+| Flow-time `T` dials **up the target behavior** | refusal *falls* 0.25 (T=0) → 0.06 (T=2); gibberish rises **0.28 → 0.75** | **Not supported — `T` dials up incoherence, not refusal** |
+| One conditioned field steers many concepts | per-concept refusal: violence **0.44** / sexual **0.14** — uneven | **Uneven** |
+| Generalizes zero-shot to an unseen concept | held-out "harassment": refusal **0.19**, compliance **0.33**, gibberish **0.47** | **Weak** |
+| The gated flow spares benign prompts | benign over-refusal **0.42** (n=120), gate fire-rate 0.03 | **Weak** — over-refusal base+judge-dominated |
 
-**Honest read.** Graded by an **off-family Qwen-3B judge** on the shared 500/class
-toxic-chat set (**screening**, n=36 per T-step / per concept where available),
-the FLAS payoffs do **not** hold up the way the earlier self-judged run claimed.
-Flow-time `T` is a strength dial, but it dials the *wrong* axis: as `T` climbs,
-refusal *drops* (0.25 → 0.11) while gibberish climbs past 0.5 — the same mechanism
+**Honest read.** Graded by an **off-family Qwen-3B judge** on the shared toxic-chat
+concepts (**screening**, n=34–36/concept, benign baseline n=120), the FLAS payoffs
+do **not** hold up. Flow-time `T` is a strength dial, but it dials the *wrong* axis:
+as `T` climbs, refusal *drops* (0.25 → 0.06) while gibberish climbs to 0.75 — the
+same mechanism
 as lesson 2, because the field transports toward cheap diff-of-means endpoints and
 pushing `T` further just drives activations off-manifold into word salad, not
 refusal. **Why the change from the old zero-shot 0.67?** The audit found the 1B
 self-judge was grading softened-but-compliant text as REFUSAL; the off-family
 Qwen-3B judge scores those as COMPLIANCE/GIBBERISH, dropping held-out refusal to
-**0.25**. The honest picture matches lesson 2: fixed-target flow steering breaks
+**0.19**. The honest picture matches lesson 2: fixed-target flow steering breaks
 coherence more than it induces the behavior. Raw numbers and side-by-side
 generations live in `artifacts/results.json`.
 
