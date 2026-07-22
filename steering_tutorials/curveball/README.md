@@ -133,7 +133,7 @@ producing less gibberish, because it never leaves the shell.*
 ### ASCII flow
 
 ```
-  extract split (150/class)                 eval split (40/class, held out)
+  extract split (300/class)                 eval split (<=150/class, held out)
         |                                             |
         v                                             v
   +--------------------------+             +----------------------------------+
