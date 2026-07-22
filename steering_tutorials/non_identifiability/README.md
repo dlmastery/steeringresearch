@@ -71,8 +71,8 @@ contrast, then carve **three disjoint roles**:
 
 | role | size | purpose |
 |---|---|---|
-| build | `N_EXTRACT = 150` / class | read activations, **build** the K directions |
-| eval | `N_EVAL = 40` harmful | **held out** — score each direction's steering effect |
+| build | `N_EXTRACT = 300` / class | read activations, **build** the K directions |
+| eval | `N_EVAL = 150` harmful (capped by `NONIDENT_N_EVAL`) | **held out** — score each direction's steering effect |
 | headroom | the rest | unused |
 
 Keeping *build* and *eval* disjoint is what stops us from grading a direction on
@@ -176,7 +176,7 @@ The payoff statistic (`summarize_nonidentifiability`):
         |
         |  split (disjoint)
         v
-   build: 150 harmful + 150 benign          eval: 40 held-out harmful
+   build: 300 harmful + 300 benign          eval: up to 150 held-out harmful
         |                                          |
         v  read residuals @ layer 12               |
    +--------------------------------------+        |
@@ -240,48 +240,38 @@ shift.
 
 ## 6. Results — measured vs. the claim
 
-First honest run: abliterated Gemma-3-1B, layer 12, matched α = 0.08, n = 40
-held-out harmful prompts/direction, screening tier (off-family Qwen-3B judge is
-the harness default; note this lesson's `results.json` does not record a
-`judge_id` field). Numbers below are read directly from `artifacts/results.json`.
+Run at the ≥500/class config: abliterated Gemma-3-1B, layer 12, matched α = 0.08,
+**extract 300/class**, n = 80 held-out harmful/direction, off-family Qwen-3B judge.
+Numbers from `artifacts/results.json`.
 
-| Claim (arXiv:2602.06801, Venkatesh & Kurapath) | What we measured | Verdict |
+| Claim (arXiv:2602.06801, Venkatesh & Kurapath) | What we measured (extract 300, n=80) | Verdict |
 |---|---|---|
-| A steering vector is **not unique** — several low-cosine directions reach the same behavior | refusal of each recipe vs. the effective threshold (80% of the best = 0.24); how many recipes clear it | **NOT SUPPORTED (screening).** Only **1** recipe (`pca_top1`, refusal 0.30) cleared the 0.24 bar; `min_cosine_effective = null` (a family needs ≥2 effective directions). |
-| The effect is a **family**, not any-direction | the `random_in_pcspan` control's refusal vs. the contrast recipes | Inconclusive — the control refused **0.125**, but so did the contrast recipes (`diffmean_meanpool` 0.10), because steering barely moved refusal at all. |
+| A steering vector is **not unique** — several low-cosine directions reach the same behavior | **4** recipes (halfA 0.275, halfB 0.250, pca_top1 0.287, diffmean_full 0.250) clear the 80%-of-best bar; min pairwise cosine among them = **0.81** | **Weakly supported (screening)** — but the "low-cosine" part is now *high* cosine (0.81) |
+| The effect is a **family**, not any-direction | `random_in_pcspan` control refusal **0.338** = the unsteered baseline **0.338** (inert); contrast recipes 0.25–0.29 | Control is correctly inert; but the contrast recipes sit *at or below* baseline, so the effect is near-null |
 
-**The numbers.** Baseline refusal = 0.25. Per recipe: `diffmean_halfA` 0.20,
-`diffmean_halfB` 0.225, `pca_top1` 0.30, `diffmean_full` 0.225,
-`diffmean_meanpool` 0.10, `random_in_pcspan` 0.125. The refusal **spread across
-the contrast recipes is 0.10–0.30** — as wide as the effect itself — and most
-recipes sit **at or below** the unsteered 0.25. At α = 0.08 the refusal direction
-is essentially **not being driven**, so there is no stable effect to be
-"non-identified" across recipes.
+**The subtle, honest read (and a screening-fragility lesson the larger data
+sharpens).** The verdict here is **SUPPORTED** — but weakly, and it flatly
+*contradicts* the earlier extract-150 / n=40 run, which was **NOT SUPPORTED** (only
+1 effective recipe). Two things move it, and neither is "the effect is real":
 
-**Why (mechanism + honest read).** Non-identifiability is a claim *about a real
-effect* — that many directions reproduce it. Here the effect never materialized:
-matched α = 0.08 is too small (or layer-12/1B too weak) to reliably raise
-refusal, so recipe-to-recipe differences are dominated by judge noise, not by a
-shared steering axis. The recipes ARE geometrically distinguishable as designed —
-`diffmean_meanpool` sits at cosine ~0.29–0.46 to the last-token diff-of-means
-cluster, `pca_top1` at ~0.84 to the CAA anchor, and the random control is
-near-orthogonal (cosine ≈ −0.08 to −0.18) — so the *setup* is sound; what is
-missing is a behavioral signal strong enough to test whether they converge. The
-honest verdict string in `results.json` says exactly this: *"fewer than two
-effective directions — the effect did not reproduce across recipes."* The path to
-a real test is a stronger α sweep (or a non-abliterated base with a higher refusal
-ceiling), not a change to the claim.
+1. **More extract data makes the recipes CONVERGE.** At extract 150 the diff-of-means
+   recipes had low pairwise cosine (down to ~0.58) — but a large chunk of that was
+   *finite-sample noise*. At extract 300 they agree far more: min cosine among the
+   effective set is **0.81**. So the striking "very different directions, same effect"
+   the thesis emphasizes is *partly a small-sample artifact*: with more data the
+   recipes are simply more similar, which makes non-identifiability *less* surprising,
+   not more.
+2. **The effect is still near-null.** Every contrast recipe (0.25–0.29) sits *below*
+   the unsteered baseline (0.338), and the random control equals baseline exactly —
+   so there is no strong steering signal to be "non-identified"; the "family" is a
+   family of similarly-*weak* effects at α = 0.08.
 
-**Screening-tier framing.** Single 1B model, n = 40 eval prompts, one layer, one
-alpha — not an evaluation-grade result (which needs n ≥ 7 seeds and the CLAUDE.md
-rigor contract). A 3B off-family judge on 1B outputs is pedagogy, not publication.
-The n = 40 numbers above **reproduce exactly** on re-run (deterministic, seed 0).
-A cautionary note on how fragile screening tier is: shrinking the eval to
-`NONIDENT_N_EVAL=20` flips the verdict to *SUPPORTED* (3 recipes within 80% of the
-best, min-cosine 0.58) — because at n = 20 a single prompt swings a rate by 0.05,
-which is the whole width of the effect here. The n = 40 verdict is the one to
-trust of the two, and even it is screening, not evaluation. This is exactly why
-CLAUDE.md forbids calling an n ≤ 3–40 result a "winner."
+So the fair statement is: **non-identifiability is only weakly and fragilely
+demonstrated here** — the verdict flips with both eval-N (n=20 → SUPPORTED, n=40 →
+NOT) *and* extract-N (150 → NOT, 300 → weakly SUPPORTED), and at more data the
+directions converge. A clean test needs a stronger α (a real refusal effect to
+reproduce) and n ≥ 7 seeds. Screening tier (extract 300, n=80, single seed) — this
+measures the setup honestly rather than confirming the claim.
 
 ---
 
