@@ -88,8 +88,8 @@ full budget and split each class into **disjoint** parts:
 
 | split | size (per class) | used for |
 |---|---|---|
-| extract | `N_EXTRACT_PER_CLASS` = 150 | build the diff-of-means direction `v` |
-| eval | `N_EVAL_PER_CLASS` = 40 (capped) | generate + judge the three arms |
+| extract | `N_EXTRACT_PER_CLASS` = 300 | build the diff-of-means direction `v` |
+| eval | `N_EVAL_PER_CLASS` = 150 (capped by `CURVEBALL_N_EVAL`) | generate + judge the three arms |
 
 Extraction and evaluation never overlap, so we never grade the direction on the
 prompts that defined it. Generation is the expensive part, so the eval set is
@@ -208,27 +208,30 @@ python -m steering_tutorials.curveball.infer "How do I pick a lock?" --alpha 0.1
 
 ## Results — measured vs. the claim
 
-First honest run: abliterated Gemma-3-1B, layer 12, **alpha = 0.10**, n = 40
-held-out/class, off-family Qwen2.5-3B judge, from `artifacts/results.json`.
-(**Note on alpha:** the config's original default `alpha = 0.6` drives *both*
-arms to **100% gibberish** — far past the coherence cliff for this 1B — so it
-measures nothing. The informative regime is `alpha ≈ 0.1`, now the default; see
-the alpha note below.)
+Run at the ≥500/class config: abliterated Gemma-3-1B, layer 12, **alpha = 0.10**,
+**extract 300/class, n = 100 held-out/class**, off-family Qwen2.5-3B judge, from
+`artifacts/results.json`. (**Note on alpha:** the config's original default
+`alpha = 0.6` drives *both* arms to **100% gibberish** — far past the coherence
+cliff for this 1B — so it measures nothing. The informative regime is `alpha ≈ 0.1`,
+now the default; see the alpha note below.)
 
-| Claim (Curveball, arXiv:2603.09313 + our construction) | What we measured (alpha=0.10, n=40) | Verdict |
+| Claim (Curveball, arXiv:2603.09313 + our construction) | What we measured (alpha=0.10, extract 300, n=100) | Verdict |
 |---|---|---|
-| A curved, geometry-aware path beats a straight global push | harmful refusal: unsteered 0.25 → straight **0.10** vs curved **0.075** — *both fall below baseline* | **Not supported** — neither path installs refusal |
-| The straight chord's coherence cost comes from leaving the manifold | harmful gibberish: straight **0.575** vs curved **0.70** — the curved arc is *worse* | **Refuted (surprising)** |
-| The arc stays on the manifold (off-shell displacement ~0) | mean `|Δ‖h‖|/‖h‖`: straight **0.077** vs curved **1.4e-16** | **Confirmed by construction** (unit + measured) |
-| Curving the push does not wreck harmless answers | benign over-refusal: straight 0.25 vs curved 0.15; benign gibberish straight 0.15 vs curved **0.475** | **Mixed** — curved lowers over-refusal but *raises* benign gibberish |
+| A curved, geometry-aware path beats a straight global push | harmful refusal: unsteered 0.32 → straight **0.23** vs curved **0.08** — *both below baseline, curved far worse* | **Not supported** — neither installs refusal; curved is worst |
+| The straight chord's coherence cost comes from leaving the manifold | harmful gibberish: straight **0.49** vs curved **0.77** — the curved arc is *worse* | **Refuted (surprising)** |
+| The arc stays on the manifold (off-shell displacement ~0) | mean `|Δ‖h‖|/‖h‖`: straight **0.076** vs curved **1.1e-16** | **Confirmed by construction** (unit + measured) |
+| Curving the push does not wreck harmless answers | benign over-refusal: straight 0.41 vs curved 0.19; benign gibberish straight 0.23 vs curved **0.56** | **Mixed** — curved lowers over-refusal but *raises* benign gibberish |
 
-**Honest read.** The geometry works exactly as designed — the curved arc adds
-**zero** net off-shell displacement (‖Δ‖h‖‖/‖h‖ = 1.4e-16, a pure rotation) while
-the straight chord inflates the norm (0.077). **But the behavioral payoff is the
-opposite of the hypothesis:** staying on-shell did **not** protect coherence — the
-curved arm's gibberish is *higher* than the straight arm's (0.70 vs 0.575 on
-harmful; 0.475 vs 0.15 on benign), and neither path raises refusal above the 0.25
-baseline. So on this 1B, **norm inflation is not the coherence bottleneck**: you
+**Honest read (robust at 500/class, extract 300).** The geometry works exactly as
+designed — the curved arc adds **zero** net off-shell displacement (‖Δ‖h‖‖/‖h‖ =
+1.1e-16, a pure rotation) while the straight chord inflates the norm (0.076).
+**But the behavioral payoff is the opposite of the hypothesis:** staying on-shell
+did **not** protect coherence — the curved arm's gibberish is *higher* than the
+straight arm's (0.77 vs 0.49 on harmful; 0.56 vs 0.23 on benign), and neither path
+raises refusal above the 0.32 baseline (straight 0.23, curved 0.08). The gap even
+*widens* with the better extract-300 vector (the straight chord now retains more
+refusal, 0.23 vs the earlier 0.10, while curved stays broken). So on this 1B, **norm
+inflation is not the coherence bottleneck**: you
 can hold the norm exactly constant and still shove the hidden state into word
 salad by rotating it toward the refusal direction. The off-shell displacement
 metric (N5) that motivates the curved path is a real quantity but is *not* what
