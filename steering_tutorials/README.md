@@ -188,7 +188,7 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 |---|---|
 | [`reft_r1`](reft_r1/README.md) · GENERATE | **reproduces AxBench**: learned **ReFT-r1 0.54 > DiffMean 0.26 > prompting 0.18** steering; DiffMean wins detection (AUC 0.71 vs 0.61) |
 | [`talan`](talan/README.md) · 2026 | **learned ≫ fixed** (n=150): harmful refusal DiffMean **0.29** → ReFT-r1 **0.65** = adapter **0.65**; the two learned edits tie (the n=40 "adapter edges rank-1" margin was noise) |
-| [`prompt_activation_duality`](prompt_activation_duality/README.md) · 2026 | **site matters**: same vector at the **attention** output raises refusal 0.35→**0.40** (gib 0.25) while residual-add *lowers* it 0.35→0.25 (gib 0.50) |
+| [`prompt_activation_duality`](prompt_activation_duality/README.md) · 2026 | **duality (cos 0.70) + site matters** (n=150): same vector at the **attention** output degrades less than residual-add (refusal 0.26/gib 0.30 vs 0.227/0.48); the n=20 "attention raises refusal" was noise |
 | [`realignment`](realignment/README.md) · DEFEND | **works** (n=200/class) — clean α=0.25 point: **ASR 0.46→0.045**, over-refusal 0.01, coherence 0.88 |
 | [`multiturn_jailbreak`](multiturn_jailbreak/README.md) · DEFEND | **trajectory matters**: on same-style hard negatives the stateless per-turn probe collapses to **0.57** while a sequence model reaches **0.96** (Gemma) — and a naive benchmark (easy negatives) is trivially 0.99, the cautionary half |
 | [`trajguard`](trajguard/README.md) · DEFEND | **streaming detection works early**: a learned detector flags the jailbroken generation at **AUC 0.91 from the first 2 tokens** — but here per-token already wins (0.98), the honest twist: trajectory helps most when chunks look benign, less under active generation |

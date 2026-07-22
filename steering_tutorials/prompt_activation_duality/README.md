@@ -45,20 +45,19 @@ Two questions, one pipeline:
 ## Dataset
 
 The prompts come from the **shared >=500/class foundation**,
-`steering_tutorials.common.data.load_harmful_benign(n_per_class=250)`, which
+`steering_tutorials.common.data.load_harmful_benign(n_per_class=500)`, which
 returns `{"harmful": [str], "benign": [str]}` — toxic-chat toxic prompts as the
 harmful class (topped up from JailbreakBench only when the unique toxic pool runs
 short) and toxic-chat clean prompts as the benign class, prompt-level labelled,
 deduplicated, group-aware sampled, and length-matched. See
 [`common/data.py`](../common/data.py) for provenance and base-rate reporting.
 
-We load **250 harmful + 250 benign** (well above the 500/class the loader can
-supply; raise `N_PER_CLASS` for more) and split each class into disjoint parts:
+We load **500 harmful + 500 benign** and split each class into disjoint parts:
 
 | item | value |
 |---|---|
 | source / loader | `common.data.load_harmful_benign` (toxic-chat + JBB top-up) |
-| size | `N_EXTRACT = 150`/class build the steering vector **and** measure the prompt-shift; a capped `N_EVAL_PER_CLASS = 20` harmful prompts are held out for the judged residual-vs-attention comparison |
+| size | `N_EXTRACT = 300`/class build the steering vector **and** measure the prompt-shift; a capped `N_EVAL_PER_CLASS = 150` harmful prompts are held out for the judged residual-vs-attention comparison |
 | labels | prompt-level harmful vs benign |
 | model + judge | abliterated `DavidAU/gemma-3-1b-it-heretic-...` (steered); off-family **Qwen2.5-3B-Instruct** judge via `STEER_JUDGE_MODEL` |
 
@@ -216,39 +215,40 @@ prompt and a vector install the same refusal.
 
 ## 6. Results — measured vs. the claim
 
-First honest run: abliterated Gemma-3-1B, layer 12, alpha 0.10, off-family
-Qwen2.5-3B judge, `N_EVAL_PER_CLASS = 20`, screening tier, from
+Run at the ≥500/class config: abliterated Gemma-3-1B, layer 12, alpha 0.10,
+off-family Qwen2.5-3B judge, **extract 300, `N_EVAL_PER_CLASS = 150`**, from
 `artifacts/results.json`.
 
-| Quantity | Measured | Expectation | Reading |
+| Quantity | Measured (extract 300, n=150) | Expectation | Reading |
 |---|---|---|---|
-| `cos(refusal_shift, v)` | **0.604** | high, well above the floor | ✅ the prompt-shift and the steering vector are strongly aligned |
-| `cos(control_shift, v)` | **0.446** | lower (refusal-specific gap) | ✅ refusal-specific: 0.60 > 0.45 |
+| `cos(refusal_shift, v)` | **0.701** | high, well above the floor | ✅ strongly aligned — *sharper* than the n=20 run (0.60) |
+| `cos(control_shift, v)` | **0.527** | lower (refusal-specific gap) | ✅ refusal-specific: 0.70 > 0.53 |
 | random cosine baseline | **0.024** | ~0 (near-orthogonal floor) | ✅ floor confirmed |
-| residual refusal rate | **0.25** (unsteered 0.35) | up vs unsteered | ✗ *down* — residual-add breaks it |
-| attention refusal rate | **0.40** (unsteered 0.35) | related to residual | ✅ *up* — attention arm works |
-| gibberish (residual / attention) | **0.50 / 0.25** | bounded | attention far more coherent |
+| residual refusal rate | **0.227** (unsteered 0.347) | related to attention | ✗ *down* — residual-add breaks it (gib 0.48) |
+| attention refusal rate | **0.260** (unsteered 0.347) | related to residual | ~ *down but less*, and far more coherent (gib 0.30) |
+| gibberish (residual / attention) | **0.48 / 0.30** | bounded | attention more coherent |
 
-| Claim | What we measured | Verdict |
+| Claim | What we measured (n=150) | Verdict |
 |---|---|---|
-| A refusal prompt shifts activations along the steering vector | `cos(refusal_shift, v)` = 0.60 vs random 0.02 | **Supported** |
-| The alignment is refusal-specific, not generic-instruction | 0.60 (refusal) > 0.45 (control) | **Supported** |
-| The same vector steers from the attention output | attention refusal 0.35 → **0.40**, gibberish 0.15 → 0.25 | **Supported (small effect)** |
-| Attention injection beats naive residual-add | attention **0.40** ref / 0.25 gib vs residual **0.25** ref / 0.50 gib | **Supported — the headline** |
+| A refusal prompt shifts activations along the steering vector | `cos(refusal_shift, v)` = 0.70 vs random 0.02 | **Supported (sharper at 500/class)** |
+| The alignment is refusal-specific, not generic-instruction | 0.70 (refusal) > 0.53 (control) | **Supported** |
+| The same vector steers *better* from the attention output than the residual | attention 0.26 ref / 0.30 gib vs residual 0.227 ref / 0.48 gib | **Supported — the site matters** |
+| Attention injection *raises* refusal above baseline | attention 0.26 vs unsteered 0.347 — it does **not** | **Not supported** — the n=20 "0.35→0.40" was noise |
 
-**Honest read (a rare positive).** The duality holds on the READ side — a refusal
-prompt shoves activations 0.60-cosine along the very diff-of-means vector we'd inject,
-well above a control prompt (0.45) and the random floor (0.02). On the WRITE side
-the paper's central claim reproduces: injecting that vector at the **attention
-output** (GCAD-style) *raises* refusal (0.35 → 0.40) while keeping gibberish modest
-(0.25), whereas the naive **residual-stream add** at the same alpha *lowers* refusal
-(0.35 → 0.25) and doubles gibberish (0.15 → 0.50). Same vector, same strength — the
-**site** is what matters, and the attention site is strictly better on both axes
-here. The effect is small (refusal +0.05) and screening-tier, so this is a
-directional demonstration, not an evaluation win — but it is one of the few WRITE
-interventions in the course that improves refusal *without* wrecking coherence.
+**Honest read (the larger N sharpens READ, softens WRITE).** The **duality holds
+and strengthens** on the READ side — a refusal prompt shoves activations
+**0.70-cosine** along the very diff-of-means vector we'd inject (up from 0.60 at
+n=20), well above the control (0.53) and random floor (0.02). On the WRITE side the
+honest picture is more modest than the small-n run suggested: injecting that vector
+at the **attention output** (GCAD-style) is **less damaging** than the naive
+**residual-stream add** (refusal 0.26 vs 0.227, gibberish 0.30 vs 0.48) — so the
+**site genuinely matters**. But the earlier claim that attention *raises* refusal
+above baseline (0.35 → 0.40) was **screening noise**: at n=150 *neither* site raises
+refusal above the 0.347 baseline — attention just degrades it less. So the honest
+headline is "same vector, the attention site is gentler," not "attention installs
+refusal."
 
-This is a **screening** design (single seed, 1B model, 3B judge, `n = 20`
+This is a **screening** design (single seed, 1B model, 3B judge, **n = 150**
 harmful/arm): a directional demonstration of the duality, not an evaluation-tier
 claim (no n>=7 seeds, no Wilcoxon/CI — see [CLAUDE.md section 7](../../CLAUDE.md)).
 Because the base model is **abliterated (uncensored)**, "refusal" here means
