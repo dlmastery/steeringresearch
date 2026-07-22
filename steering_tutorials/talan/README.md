@@ -81,12 +81,12 @@ top-up, deduped and length-matched), the same source lessons across the course
 now share. Labels are **prompt-level** (one intent per row) and the classes are
 length-matched, so the signal separating them is **intent, not vocabulary**. The
 loader (`data.py`'s `load_train_eval`) shuffles each class with a fixed seed, draws
-`N_PER_CLASS = 350` per class, and cuts a disjoint TRAIN / EVAL split:
+`N_PER_CLASS = 500` per class, and cuts a disjoint TRAIN / EVAL split:
 
 | split | harmful | benign | role |
 |---|---|---|---|
-| `train` | 175 | 175 | trains the TALAN adapter (refusal CE + benign KL) **and** builds the DiffMean baseline vector `mean(harm) − mean(benign)` on the same contrast |
-| `eval`  | 175 | 175 | disjoint held-out; grades steering (TALAN vs DiffMean vs ReFT-r1) |
+| `train` | 300 | 300 | trains the TALAN adapter (refusal CE + benign KL) **and** builds the DiffMean baseline vector `mean(harm) − mean(benign)` on the same contrast |
+| `eval`  | 200 | 200 | disjoint held-out (capped by `TALAN_EVAL_N` for a laptop run); grades steering (TALAN vs DiffMean vs ReFT-r1) |
 
 The smoke test in `data.py` asserts the two splits are **disjoint** (no leakage).
 
@@ -129,33 +129,33 @@ decision is **shared** across methods, so any difference is the method's own.
 ## Results — measured vs. the claim
 
 First honest run: abliterated Gemma-3-1B, layer 12, adapter memory 16 + GELU
-mixer, 300 train steps (best-checkpointed at step 275), off-family Qwen2.5-3B
-judge, n = 40 held-out/class, screening tier. From `artifacts/results.json`.
+mixer, 300 train steps (best-checkpointed), off-family Qwen2.5-3B judge,
+**train 300/class, n = 150 held-out/class**, screening tier. From
+`artifacts/results.json`.
 
 | Method (capacity) | Harmful refusal (want high) | Benign over-refusal (want low) | Gibberish (want low) |
 |---|---|---|---|
-| **TALAN** (learned adapter, mem 16) | **0.55** | 0.35 | **0.14** |
-| ReFT-r1 (learned rank-1) | 0.50 | 0.35 | 0.15 |
-| DiffMean (fixed vector, α=0.08) | 0.225 | 0.35 | 0.21 |
+| **TALAN** (learned adapter, mem 16) | **0.653** | 0.520 | **0.090** |
+| ReFT-r1 (learned rank-1) | **0.653** | 0.507 | **0.090** |
+| DiffMean (fixed vector, α=0.08) | 0.293 | 0.493 | 0.190 |
 
-**Verdict — the capacity spectrum orders as predicted (screening).** Harmful
-refusal climbs monotonically with edit capacity: fixed DiffMean **0.225** →
-learned rank-1 **0.50** → learned adapter **0.55**, and TALAN also has the *lowest*
-gibberish (0.14). So on this data the extra capacity *paid off* — the learned
-interventions roughly **double** the fixed vector's refusal, and the higher-capacity
-adapter edges the rank-1 edit. This echoes the `reft_r1` lesson (ReFT-r1 0.54 >
-DiffMean 0.26) and AxBench's finding that *learned* beats *fixed* — while here the
-even-higher-capacity adapter is marginally best.
+**Verdict — learned ≫ fixed, and the two learned methods TIE.** Harmful refusal
+splits cleanly by *whether the edit is learned*: fixed DiffMean **0.293** vs the
+two learned edits at **0.653** each — the learned interventions roughly **double**
+the fixed vector's refusal and halve its gibberish (0.09 vs 0.19). This echoes the
+`reft_r1` lesson and AxBench's "learned beats fixed."
 
-**Honest reads.** (1) **Over-refusal is identical (0.35) across all three arms**,
-including the low-capacity DiffMean — so the benign cost is dominated by the shared
-gate + the abliterated base + the judge, **not** by the steering method; no method
-is "more selective" here. (2) The TALAN-over-ReFT margin (0.55 vs 0.50) is **one
-prompt at n=40** — inside screening noise; the honest claim is "learned ≫ fixed,"
-not "adapter > rank-1." (3) **Provenance:** this TALAN is our *inference-time*
-analogue (frozen LLM, adapter-only, no backbone LoRA) of a *post-training* paper
-(arXiv:2606.06902); it is **not** a reproduction. Screening tier (n=40, single
-seed) — see [CLAUDE.md §7](../../CLAUDE.md); no n≥7/Wilcoxon/CI.
+**Honest reads (the larger N corrects the small-N story).** (1) The earlier n=40
+run put TALAN (0.55) *above* ReFT-r1 (0.50) — but at **n=150 they are identical
+(0.653 each)**. The apparent "adapter edges rank-1" margin was screening noise, as
+that run flagged. The honest claim is **"learned ≫ fixed," not "adapter > rank-1"**:
+extra adapter capacity buys *nothing* over a learned rank-1 edit here. (2)
+**Over-refusal is high and near-identical (~0.49–0.52)** across all three arms —
+the benign cost is dominated by the shared gate + abliterated base + judge, not the
+method; no arm is more selective. (3) **Provenance:** this TALAN is our
+*inference-time* analogue (frozen LLM, adapter-only, no backbone LoRA) of a
+*post-training* paper (arXiv:2606.06902); it is **not** a reproduction. Screening
+tier (n=150/class, single seed) — see [CLAUDE.md §7](../../CLAUDE.md).
 
 Artifacts produced by a run: `artifacts/talan.pt` (trained adapter),
 `artifacts/training_curve.png`, `artifacts/results.json`,
