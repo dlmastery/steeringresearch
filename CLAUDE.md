@@ -390,6 +390,35 @@ time) while docs/data/audit/code agents parallelize. Binary artifacts
 (`probe.pt`, `features.npz`) are force-added so each lesson reproduces from the
 repo.
 
+**HARD DATA & RIGOR RUBRIC — user-mandated, NON-NEGOTIABLE (do not forget this):**
+
+1. **≥500 positives AND ≥500 negatives per class.** Every binary lesson loads
+   `common.data` at `N_PER_CLASS >= 500`; the build/extract split is `>= 300`/class
+   and the eval a substantial held-out slice. **NO tiny datasets** — 30/30, 50/class,
+   `N_EVAL=5/20/40/60` are FORBIDDEN as headline numbers. When a lesson needs several
+   disjoint slices (extract+decomp+write, or disjoint attack halves), raise
+   `N_PER_CLASS` so all slices fit (e.g. 600), or state the pool cap honestly.
+2. **Concept/agent lessons are pool-limited** (toxic-chat categories cap ~100–388;
+   Attack_600 has 600 → ~300/class for disjoint-split conditions). Maximize within
+   the pool and **say so explicitly**; NEVER build a per-category/per-concept detector
+   from `< 30` examples (`MIN_CE_EXAMPLES >= 30`, `N_EVAL_PER_CONCEPT >= 30`).
+3. **Off-family judge for ALL reported numbers** — `STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct`.
+   The 1B model grading its own output inflates refusal; never headline a self-judged
+   number.
+4. **Every lesson README opens with a `> **Reference:**` block using the full paper
+   TITLE as a clickable `arxiv.org/abs` link**; the top-level `steering_tutorials/README.md`
+   tables carry a linked **Reference paper** column. Cite REAL, WebFetch-verified arXiv
+   ids (full author/title/venue); mark `[UNVERIFIED]` if unsure. `AUDIT.md` per lesson.
+5. **Use real released benchmarks (HuggingFace) as an OOD test where they exist**
+   (e.g. `intrinsec-ai/cstm-bench`, `ScaleAI/mhj`, `SafeMTData`); when the benchmark is
+   small, still construct the `>= 500/class` MAIN train/eval set from available data and
+   report the real benchmark as OOD.
+6. **Small-N findings are PROVISIONAL.** Re-validate at `>= 500/class`; several
+   findings flipped with more data (gavel calibration artifact, fine_grained null →
+   positive, talan adapter-vs-rank-1 tie, non-ident recipe convergence). More extract
+   data → a better direction → the finding sharpens/corrects. Never ship a small-N
+   number as settled.
+
 **Operational playbook (hard-won on this host — follow these):**
 
 1. **Build a lesson with a ~5-agent team on a shared interface contract.** One
