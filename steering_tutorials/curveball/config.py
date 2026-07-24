@@ -58,8 +58,18 @@ def _env_float(name: str, default: float) -> float:
 # behaviour was removed, so it complies with harmful prompts by default — which is
 # exactly what lets us RE-INSTALL refusal from the outside and compare how the
 # straight vs curved paths pay for it.
+#
+# Cross-scale check: STEER_MODEL_ID + STEER_LOAD_4BIT let this lesson run on a
+# LARGER model (e.g. Gemma-3-4B abliterated) in 4-bit to test whether a 1B
+# negative is a capacity artifact. The lesson-specific CURVEBALL_MODEL still wins
+# when set; STEER_MODEL_ID is the shared cross-lesson override; with neither set
+# the default is IDENTICAL to before (1B, bf16).
 MODEL_ID = _env_str("CURVEBALL_MODEL",
-                    "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated")
+                    _env_str("STEER_MODEL_ID",
+                             "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"))
+# "1" -> load_model() quantizes to 4-bit (bitsandbytes nf4) so a 4B model fits
+# the RAM-constrained host. Default off -> unchanged bf16 path.
+LOAD_4BIT = os.environ.get("STEER_LOAD_4BIT", "0") == "1"
 
 # Residual-stream layer we read the contrast from AND steer at. Middle layers carry
 # the most abstract "meaning", so "refuse this" is cleanly separable here. Kept at

@@ -55,6 +55,14 @@ def load_model(model_id: str, device: str | None = None) -> tuple[Any, Any]:
     the cleanest activations to read and the most faithful steering. The two
     guards below stop transformers from ``torch.compile``-ing a Triton CUDA
     kernel, which has no Windows wheel and would otherwise crash.
+
+    Cross-scale check (opt-in, default OFF): every ``steering_tutorials`` lesson
+    exposes ``STEER_MODEL_ID`` + ``STEER_LOAD_4BIT`` env vars via its ``config``.
+    When ``config.LOAD_4BIT`` is true we load the (larger) model in 4-bit
+    (bitsandbytes nf4) so e.g. Gemma-3-4B abliterated fits the 16 GB VRAM /
+    RAM-constrained host — this lets us test whether a 1B negative is a capacity
+    artifact rather than a property of the method. With no env vars set the flag
+    is false and this function's behaviour is BYTE-FOR-BYTE the original bf16 path.
     """
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -69,9 +77,44 @@ def load_model(model_id: str, device: str | None = None) -> tuple[Any, Any]:
     except Exception:  # pragma: no cover
         pass
 
+    # Opt-in 4-bit path. The flag lives in this lesson's config and is driven by
+    # the STEER_LOAD_4BIT env var, so every sibling lesson that reuses this loader
+    # picks up the same switch. Default False -> the bf16 branch below is unchanged.
+    try:
+        from . import config as _cfg
+        load_4bit = bool(getattr(_cfg, "LOAD_4BIT", False))
+    except Exception:  # pragma: no cover - config import is best-effort
+        load_4bit = False
+
     tok = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16)
-    model = model.to(device)
+    if load_4bit:
+        try:
+            from transformers import BitsAndBytesConfig
+        except Exception as e:  # pragma: no cover
+            raise RuntimeError(
+                "STEER_LOAD_4BIT=1 requires bitsandbytes + a transformers build with "
+                "BitsAndBytesConfig; install bitsandbytes to run the 4-bit cross-scale "
+                f"check (original error: {e})."
+            ) from e
+        bnb = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_use_double_quant=True,
+        )
+        # device_map="auto" places the quantized weights; do NOT call .to(device)
+        # afterwards (bitsandbytes forbids moving a loaded 4-bit model).
+        model = AutoModelForCausalLM.from_pretrained(
+            model_id,
+            quantization_config=bnb,
+            device_map="auto",
+            low_cpu_mem_usage=True,
+            torch_dtype=torch.bfloat16,
+            trust_remote_code=True,
+        )
+    else:
+        model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16)
+        model = model.to(device)
     model.eval()
 
     # Guard 2: never select the compiled static KV cache (Windows-safe generate).

@@ -24,6 +24,7 @@ steering hook, and the judge) — we do not reimplement steering, we compose it.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 # --- The model we steer ------------------------------------------------------
@@ -31,7 +32,16 @@ from pathlib import Path
 # refusal behaviour was removed, it complies with every harm category out of the
 # box — which is exactly what lets us watch K independent "refuse this category"
 # vectors switch each category off, and watch them interfere when we stack them.
-MODEL_ID = "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"
+#
+# Cross-scale check: STEER_MODEL_ID + STEER_LOAD_4BIT let this lesson run on a
+# LARGER model (e.g. Gemma-3-4B abliterated) in 4-bit to test whether a 1B
+# negative is a capacity artifact. No env vars set -> IDENTICAL to before (1B, bf16).
+MODEL_ID = os.environ.get(
+    "STEER_MODEL_ID", "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"
+)
+# "1" -> load_model() quantizes to 4-bit (bitsandbytes nf4) so a 4B model fits
+# the RAM-constrained host. Default off -> unchanged bf16 path.
+LOAD_4BIT = os.environ.get("STEER_LOAD_4BIT", "0") == "1"
 
 # Residual-stream layer we read each concept contrast from AND steer into. Middle
 # layers carry the most abstract "meaning", so a category like "malware" or

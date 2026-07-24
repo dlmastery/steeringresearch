@@ -31,6 +31,7 @@ it does not import the research harness in ``src/steering``.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 # --- The model we steer ------------------------------------------------------
@@ -38,7 +39,16 @@ from pathlib import Path
 # behaviour was removed, so it complies with harmful prompts by default — which
 # is exactly what lets us RE-INSTALL refusal from the outside and measure whether
 # the contextual schedule keeps benign prompts untouched.
-MODEL_ID = "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"
+#
+# Cross-scale check: STEER_MODEL_ID + STEER_LOAD_4BIT let this lesson run on a
+# LARGER model (e.g. Gemma-3-4B abliterated) in 4-bit to test whether a 1B
+# negative is a capacity artifact. No env vars set -> IDENTICAL to before (1B, bf16).
+MODEL_ID = os.environ.get(
+    "STEER_MODEL_ID", "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"
+)
+# "1" -> load_model() quantizes to 4-bit (bitsandbytes nf4) so a 4B model fits
+# the RAM-constrained host. Default off -> unchanged bf16 path.
+LOAD_4BIT = os.environ.get("STEER_LOAD_4BIT", "0") == "1"
 
 # Residual-stream layer we read the contrast from, read each prompt's projection
 # from, AND write the steering vector into. Middle layers carry the most abstract
@@ -89,6 +99,32 @@ REF_FALLBACK = 1.0
 # ~ALPHA_BASE (which would risk gibberish). 1.0 == never exceed the fixed alpha.
 CAP_MULT = 1.0
 
+# --- The GATE: WHICH per-prompt signal drives the schedule -------------------
+# The schedule needs a per-instance "how harmful is this?" signal to scale alpha.
+# Two are wired here and the run reports BOTH so the comparison is honest:
+#
+#   "diffmean_cos" : proj = cos(mean_pool(h) - benign_mean, v_unit) — the
+#       diff-of-means cosine. This is the honest NEGATIVE baseline: per-instance
+#       it barely separates the two classes at this layer (Cohen's d ~ 0.1;
+#       harmful and benign both spread across the same cosines), so tau lands
+#       ABOVE the harmful mean, ref <= tau, and the ramp collapses to a
+#       degenerate hard step that cannot spare benign.
+#   "probe"        : proj = the TRAINED lesson-1 probe's raw (pre-sigmoid) LOGIT.
+#       The probe is exactly the LEARNED sensing vector CLAS (arXiv:2604.24693)
+#       prescribes; it separates harmful/benign at AUC ~0.87 at this layer, so
+#       the harmful logits sit well above the benign ones, ref > tau, the linear
+#       ramp operates, and benign prompts (low logit) get alpha ~ 0. This is the
+#       FIX. The sibling `flas` lesson reuses the same probe as its gate.
+GATE = "probe"                            # headline gate -> results["arms"]/schedule
+GATES_TO_RUN = ("diffmean_cos", "probe")  # calibrate + report both for comparison
+
+# ref anchor for the ramp. None => ref = the MEAN harmful projection (so a
+# typical harmful prompt reaches full ALPHA_BASE — the honest central anchor).
+# Set to a percentile in (0,100] for a gentler ramp that only saturates on
+# high-confidence-harmful prompts (e.g. 60.0). tau is always TAU_BENIGN_PERCENTILE
+# of the benign projections; the probe's separation is what makes ref > tau hold.
+REF_HARMFUL_PERCENTILE = None
+
 # --- Generation --------------------------------------------------------------
 # Short greedy completions: long enough to tell a refusal from compliance, short
 # enough to run dozens of prompts on a laptop GPU.
@@ -97,6 +133,10 @@ MAX_NEW_TOKENS = 48
 # --- Paths -------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent
 ARTIFACTS = ROOT / "artifacts"
+# The lesson-1 probe checkpoint reused as the "probe" gate (the LEARNED sensing
+# vector). Same artifact the sibling `flas` lesson loads. None here would let
+# ProbeGate resolve this exact path itself; we make it explicit for transparency.
+PROBE_PATH = ROOT.parent / "hello_world" / "artifacts" / "probe.pt"
 VECTOR_PATH = ARTIFACTS / "steering_vector.pt"
 RESULTS_PATH = ARTIFACTS / "results.json"
 COMPARISON_PNG = ARTIFACTS / "fixed_vs_contextual.png"

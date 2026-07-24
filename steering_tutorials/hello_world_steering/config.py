@@ -19,6 +19,7 @@ verbatim as the gate).
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 # --- The model we steer ------------------------------------------------------
@@ -26,7 +27,17 @@ from pathlib import Path
 # refusal behaviour removed, which is exactly why it makes a good demo: an
 # aligned model already refuses harmful prompts, so there would be nothing to
 # steer. Here we RE-INSTALL refusal from the outside, with an activation vector.
-MODEL_ID = "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"
+#
+# Cross-scale check: STEER_MODEL_ID + STEER_LOAD_4BIT let this lesson run on a
+# LARGER model (e.g. Gemma-3-4B abliterated) in 4-bit to test whether a 1B
+# negative is a capacity artifact rather than a property of the method. With no
+# env vars set the default is IDENTICAL to before (the 1B model in bf16).
+MODEL_ID = os.environ.get(
+    "STEER_MODEL_ID", "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"
+)
+# When "1", load_model() quantizes to 4-bit (bitsandbytes nf4) so a 4B model
+# fits the 16 GB VRAM / RAM-constrained host. Default off -> unchanged bf16 path.
+LOAD_4BIT = os.environ.get("STEER_LOAD_4BIT", "0") == "1"
 
 # Which residual-stream layer we read the contrast from AND write the steering
 # vector into. Middle layers carry the most abstract "meaning", so a concept

@@ -205,13 +205,15 @@ def _combined_vector(vectors: list[np.ndarray], alphas: list[float]) -> np.ndarr
 
         V = Σ αᵢ unit(vᵢ)                      (a weighted sum of unit dirs)
 
-    and hand the hook ``V`` with ``alpha_total = 1.0``. Then the hook injects
-    ``||h|| * unit(V)`` scaled correctly ONLY if ||V|| carries the alphas — so we
-    do NOT re-normalize V here; we return the raw weighted sum and let the caller
-    pass it with the matching alpha (see ``apply_multi``). Concretely, the hook
-    computes ``alpha * ||h|| * unit(V)`` = ``||h|| * unit(V)`` at alpha=1, which
-    for orthonormal uᵢ has the intended per-concept ratios and total length
-    ``sqrt(Σαᵢ²)`` relative to the unit — matching ``norm_budget``.
+    We do NOT re-normalize V here — its MAGNITUDE ``||V|| = sqrt(Σαᵢ²)`` (for
+    orthonormal uᵢ) IS the norm budget and must be preserved. Because
+    ``SteeringContext`` re-normalizes its direction to unit and treats ``alpha``
+    as the ``relative_add`` fraction, the caller (``apply_multi``) must pass
+    ``alpha = ||V||`` (NOT 1.0) so the hook injects
+    ``||V|| * ||h|| * unit(V) = ||h|| * V`` — the intended per-concept magnitudes
+    and total length ``sqrt(Σαᵢ²)`` relative to ``||h||``, matching
+    ``norm_budget``. Passing ``alpha=1.0`` would discard ``||V||`` and over-steer
+    by ~1/||V|| (~16x at a 0.06 budget) — see the trap note in ``apply_multi``.
     """
     if len(vectors) != len(alphas):
         raise ValueError("vectors and alphas must have the same length")
@@ -222,6 +224,23 @@ def _combined_vector(vectors: list[np.ndarray], alphas: list[float]) -> np.ndarr
         if n > 0:
             combined += np.float32(a) * (v / n)   # alpha-weighted UNIT direction
     return combined
+
+
+def _budget_direction_alpha(combined: np.ndarray) -> tuple[np.ndarray, float]:
+    """Split ``combined`` into the (unit direction, budget alpha) the hook needs.
+
+    Factored out of ``apply_multi`` so the norm-budget fix is unit-testable on
+    CPU (no model). ``SteeringContext`` re-normalizes its direction to unit and
+    scales by ``alpha``; to preserve the intended magnitude ``||combined||`` we
+    return ``(combined / ||combined||, ||combined||)`` so the injected push is
+    ``||combined|| * ||h|| * unit(combined)`` — NOT the ~16x-too-big
+    ``1.0 * ||h||`` that ``alpha=1.0`` on ``combined`` would produce. Returns
+    ``(combined, 0.0)`` unchanged for a zero vector (guarded by the caller).
+    """
+    norm = float(np.linalg.norm(combined))
+    if norm == 0.0:
+        return combined, 0.0
+    return combined / norm, norm
 
 
 def apply_multi(
@@ -236,8 +255,10 @@ def apply_multi(
     """Generate ``prompt`` while steering along K directions simultaneously.
 
     Builds the alpha-weighted sum ``V = Σ αᵢ unit(vᵢ)`` and runs one
-    ``relative_add`` hook with ``alpha=1.0`` on ``V`` — so all K concepts are
-    injected in a single pass at ``||h|| * unit(V)``. Returns ONLY the new text.
+    ``relative_add`` hook with ``alpha = ||V||`` on ``unit(V)`` — so all K
+    concepts are injected in a single pass at ``||h|| * V`` (the intended norm
+    budget), NOT at the ~16x-too-large ``||h|| * unit(V)`` that ``alpha=1.0``
+    would give (see the trap note below). Returns ONLY the new text.
 
     Pass ORTHONORMALIZED ``vectors`` (from ``gram_schmidt``) to steer each
     concept along its own axis with minimal cross-talk; pass the RAW diff-of-mean
@@ -249,13 +270,27 @@ def apply_multi(
         return generate(model, tok, prompt, max_new_tokens=max_new_tokens, alpha=0.0)
 
     combined = _combined_vector(vectors, alphas)
-    if float(np.linalg.norm(combined)) == 0.0:
+    combined_norm = float(np.linalg.norm(combined))
+    if combined_norm == 0.0:
         # Every alpha was 0 (or all vectors degenerate) -> unsteered baseline.
         return generate(model, tok, prompt, max_new_tokens=max_new_tokens, alpha=0.0)
 
-    # One hook, one pass: the hook injects ||h|| * unit(combined). Because
-    # ``combined`` already carries the per-concept alpha weights, its direction
-    # encodes the K-way mixture and its magnitude sets the relative strengths.
+    # -- The double-normalization trap (why alpha is NOT 1.0 here) ------------
+    # ``combined`` = Sigma alpha_i unit(v_i) carries the intended norm budget in
+    # its MAGNITUDE: ||combined|| = sqrt(Sigma alpha_i^2) for orthonormal axes
+    # (e.g. ~0.06 for a single concept at alpha=0.06). But SteeringContext under
+    # ``relative_add`` RE-NORMALIZES whatever direction it is handed to UNIT
+    # length (``_v_unit = v / ||v||``) and injects ``alpha * ||h|| * _v_unit``.
+    # So if we passed ``combined`` with ``alpha=1.0``, the ||combined|| budget
+    # would be thrown away and the push would become ~1.0 * ||h|| -- roughly 16x
+    # too large at ||h|| ~ 16 -- driving the model straight to gibberish.
+    #
+    # The fix: hand the hook the UNIT direction and set ``alpha`` to the intended
+    # budget ``||combined||``. Then the injected delta is
+    #   alpha * ||h|| * unit(combined) = ||combined|| * ||h|| * unit(combined)
+    # i.e. exactly ||h|| * combined -- the per-concept magnitudes are preserved
+    # (at K=1, alpha_1=0.06 -> effective alpha 0.06, NOT 1.0).
+    direction, budget_alpha = _budget_direction_alpha(combined)  # unit dir, budget
     special = set(getattr(tok, "all_special_ids", []) or [])
     device_prompt_ids = tok.apply_chat_template(
         [{"role": "user", "content": prompt}],
@@ -268,7 +303,7 @@ def apply_multi(
         device = next(model.parameters()).device
         ids = device_prompt_ids.to(device)
         prompt_len = ids.shape[1]
-        with SteeringContext(model, combined, layer, alpha=1.0,
+        with SteeringContext(model, direction, layer, alpha=budget_alpha,
                              operation="relative_add", special_ids=special):
             out = model.generate(
                 ids,
@@ -332,8 +367,30 @@ def _self_test() -> None:
     C = cosine_matrix(U[:3])
     assert np.allclose(C, np.eye(3), atol=1e-5), "cosine matrix of ortho basis != I"
 
+    # (f) NORM-BUDGET FIX: the (direction, alpha) handed to SteeringContext must
+    #     be UNIT direction + alpha == ||combined||, so the re-normalizing hook
+    #     preserves the budget instead of over-steering ~16x.
+    #     (f1) single concept at alpha=0.06 -> effective alpha ~0.06, NOT ~1.0.
+    combined_1 = _combined_vector(U[:1], [0.06])
+    dir_1, alpha_1 = _budget_direction_alpha(combined_1)
+    assert abs(float(np.linalg.norm(dir_1)) - 1.0) < 1e-6, "direction must be unit"
+    assert abs(alpha_1 - 0.06) < 1e-6, f"K=1 effective alpha must be ~0.06, got {alpha_1}"
+    assert alpha_1 < 0.5, "budget must NOT collapse to the ~1.0 double-norm bug"
+    #     (f2) three concepts -> effective alpha == the norm budget sqrt(sum a^2),
+    #     and alpha * unit(direction) reconstructs ||h||-relative ``combined``.
+    combined_3 = _combined_vector(U[:3], alphas)
+    dir_3, alpha_3 = _budget_direction_alpha(combined_3)
+    assert abs(float(np.linalg.norm(dir_3)) - 1.0) < 1e-6, "direction must be unit"
+    assert abs(alpha_3 - norm_budget(U[:3], alphas)) < 1e-6, "alpha != norm budget"
+    assert np.allclose(alpha_3 * dir_3, combined_3, atol=1e-5), \
+        "alpha*direction must reconstruct combined (budget preserved)"
+    #     (f3) zero vector -> guarded (alpha 0), no divide-by-zero.
+    dir_z, alpha_z = _budget_direction_alpha(np.zeros(4, dtype=np.float32))
+    assert alpha_z == 0.0, "zero combined must yield alpha 0 (caller falls back)"
+
     print("[self-test] OK - Gram-Schmidt orthonormal, degenerate->0, "
-          "norm budget = sqrt(sum alpha^2), mixture recovers per-axis alphas.")
+          "norm budget = sqrt(sum alpha^2), mixture recovers per-axis alphas, "
+          "budget-preserving (dir=unit, alpha=||combined||~0.06 at K=1, not ~1.0).")
 
 
 if __name__ == "__main__":

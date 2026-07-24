@@ -37,12 +37,22 @@ model plumbing (``hello_world_steering.model_utils``); everything else is local.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 # --- The model we steer ------------------------------------------------------
 # The SAME uncensored / abliterated Gemma-3-1B used in lessons 1-3, so the flow
 # is learned on the same residual stream at the same representational depth.
-MODEL_ID = "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"
+#
+# Cross-scale check: STEER_MODEL_ID + STEER_LOAD_4BIT let this lesson run on a
+# LARGER model (e.g. Gemma-3-4B abliterated) in 4-bit to test whether a 1B
+# negative is a capacity artifact. No env vars set -> IDENTICAL to before (1B, bf16).
+MODEL_ID = os.environ.get(
+    "STEER_MODEL_ID", "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"
+)
+# "1" -> load_model() quantizes to 4-bit (bitsandbytes nf4) so a 4B model fits
+# the RAM-constrained host. Default off -> unchanged bf16 path.
+LOAD_4BIT = os.environ.get("STEER_LOAD_4BIT", "0") == "1"
 
 # Which residual-stream layer we hook the flow onto — the same middle-ish layer
 # lessons 1-3 read/wrote, where abstract concepts live cleanly and linearly.
