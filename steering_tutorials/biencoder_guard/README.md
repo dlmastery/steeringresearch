@@ -1,6 +1,6 @@
 # Bi-Encoder Guardrail — cache the policy tower once, moderate a million labels for a cosine
 
-> **Reference:** [The Million-Label NER: Bi-Encoder Named Entity Recognition at Scale (arXiv:2602.18487)](https://arxiv.org/abs/2602.18487) `[UNVERIFIED]`; [GLiNER Guard: A Unified Encoder Family for Production LLM Safety and Privacy (arXiv:2605.05277)](https://arxiv.org/abs/2605.05277) `[UNVERIFIED]`; [Opir: Efficient Multi-Task Safety Classification with a Three-Level Taxonomy (arXiv:2605.29659)](https://arxiv.org/abs/2605.29659) `[UNVERIFIED]`; [GLiGuard: Schema-Conditioned Classification for LLM Safeguard (arXiv:2605.07982)](https://arxiv.org/abs/2605.07982) `[UNVERIFIED]`; the shared backbone [EmbeddingGemma-300M (model card)](https://huggingface.co/google/embeddinggemma-300m). Hard-negative data-synthesis line: [ECIsem: Semantic Residual Effective Contrastive Information for Evaluating Hard Negatives (arXiv:2603.20990)](https://arxiv.org/abs/2603.20990) `[UNVERIFIED]`; [ARHN: Answer-Centric Relabeling of Hard Negatives with Open-Source LLMs for Dense Retrieval (arXiv:2604.11092)](https://arxiv.org/abs/2604.11092) `[UNVERIFIED]`; [CausalNeg: When Hard Negatives Hurt — Bridging the Generative-Discriminative Gap in Hard Negative Synthesis for Retrieval (arXiv:2606.01304)](https://arxiv.org/abs/2606.01304) `[UNVERIFIED]`.
+> **Reference:** [The Million-Label NER: Breaking Scale Barriers with GLiNER bi-encoder (arXiv:2602.18487)](https://arxiv.org/abs/2602.18487) — Stepanov, Shtopko, Vodianytskyi, Lukashov (Feb 2026); [GLiNER Guard: Unified Encoder Family for Production LLM Safety and Privacy (arXiv:2605.05277)](https://arxiv.org/abs/2605.05277) — Minko, Sadiekh, Kokuykin (May 2026); [Opir: Efficient Multi-Task Safety Classification for Toxicity, Jailbreaks, Hate Speech, and Harmful Content (arXiv:2605.29659)](https://arxiv.org/abs/2605.29659) — Stepanov, Smechov (May 2026); [GLiGuard: Schema-Conditioned Classification for LLM Safeguard (arXiv:2605.07982)](https://arxiv.org/abs/2605.07982) — Zaratiana, Newhauser, Hurn-Maloney, Lewis (May 2026); the shared backbone [EmbeddingGemma-300M (model card)](https://huggingface.co/google/embeddinggemma-300m). Hard-negative data-synthesis line: [ECIsem: Semantic Residual Effective Contrastive Information for Evaluating Hard Negatives (arXiv:2603.20990)](https://arxiv.org/abs/2603.20990) — Sinha, Seetharaman, Bansal (Mar 2026); [ARHN: Answer-Centric Relabeling of Hard Negatives with Open-Source LLMs for Dense Retrieval (arXiv:2604.11092)](https://arxiv.org/abs/2604.11092) — Choi et al. (SIGIR 2026); [When Hard Negatives Hurt: Bridging the Generative-Discriminative Gap in Hard Negative Synthesis for Retrieval (arXiv:2606.01304)](https://arxiv.org/abs/2606.01304) — Zhang et al. (KDD 2026); method name **CausalNeg**.
 
 > Earlier safety lessons catch an attack **inside one trajectory** — across
 > conversation turns (`multiturn_jailbreak`), generated tokens (`trajguard`),
@@ -92,8 +92,8 @@ guardrail. The **bi-encoder** breaks the dependency: the text is embedded on its
 own, each policy description is embedded on its own, and compatibility is a cheap
 cosine. The policy vectors do not depend on the text, so they are computed **once
 and cached** — per-request cost is one text embed plus a matmul, **flat** in the
-number of labels (The Million-Label NER, arXiv:2602.18487 `[UNVERIFIED]`; GLiNER
-Guard, arXiv:2605.05277 `[UNVERIFIED]`).
+number of labels (The Million-Label NER, arXiv:2602.18487; GLiNER
+Guard, arXiv:2605.05277).
 
 **The unseen-policy axis.** A **trained head** — a supervised one-vs-rest
 classifier on the content embedding — is the strongest option **on the policies it
@@ -102,7 +102,7 @@ that did not exist at training time has **no column**: it can score nothing, and
 adds require collecting labels and retraining. The bi-encoder needs no label at
 all — a new policy is a **description**, embedded into the same space, and it
 scores immediately (**zero-shot**). That is the property a growing taxonomy
-demands (Opir's 996-category taxonomy, arXiv:2605.29659 `[UNVERIFIED]`).
+demands (Opir's 996-category taxonomy, arXiv:2605.29659).
 
 So the bi-encoder is the design that is **cheap as labels grow** *and* **open to
 new labels** — at the cost of some accuracy versus a cross-encoder that gets to
@@ -252,11 +252,11 @@ Operates on **precomputed** content embeddings and the policy bank (it does not
 load the embedder). `mine_dense_hard_negatives()` retrieves, for each policy, the
 benign texts with the **highest** cosine to that policy vector — the look-alikes
 a boundary must learn to reject. `eci_score()` is the training-free ECIsem
-diagnostic (arXiv:2603.20990 `[UNVERIFIED]`) of a negative set in the frozen
+diagnostic (arXiv:2603.20990) of a negative set in the frozen
 geometry. `causal_counterfactuals()` builds CausalNeg-style
-(arXiv:2606.01304 `[UNVERIFIED]`) controlled negatives by violating exactly one
+(arXiv:2606.01304) controlled negatives by violating exactly one
 policy requirement with a **template** (no free-form generation).
-`arhn_false_negative_filter()` (arXiv:2604.11092 `[UNVERIFIED]`) drops a
+`arhn_false_negative_filter()` (arXiv:2604.11092) drops a
 candidate negative that actually still violates the policy. `ContrastiveAdapter`
 is a small InfoNCE projection over the frozen vectors with adaptive hardness
 weighting. Full narrative in [Section 7](#7-hard-negative-augmentation--the-2026-data-synthesis-recipe).
@@ -341,7 +341,7 @@ recipe end-to-end, each stage a cited idea:
    the true look-alikes, not random negatives. `mine_dense_hard_negatives()`.
 
 2. **ECIsem pre-filter — measure the set *before* you train**
-   ([arXiv:2603.20990](https://arxiv.org/abs/2603.20990) `[UNVERIFIED]`). A
+   ([arXiv:2603.20990](https://arxiv.org/abs/2603.20990)). A
    training-free diagnostic of a mined negative set in EmbeddingGemma's own frozen
    geometry: target-consistency (does the policy still prefer the positives?),
    semantic locality (how hard/close are the negatives?), a lexical-residual
@@ -350,7 +350,7 @@ recipe end-to-end, each stage a cited idea:
    strategies without a single gradient step. `eci_score()`.
 
 3. **CausalNeg counterfactuals — controlled, not free-form**
-   ([arXiv:2606.01304](https://arxiv.org/abs/2606.01304) `[UNVERIFIED]`). Take a
+   ([arXiv:2606.01304](https://arxiv.org/abs/2606.01304)). Take a
    violating text, decompose the policy into requirements, and violate **exactly
    one** via a template (swap a harmful entity for a benign one, insert a negation
    or constraint, soften the ask) so the text stays fluent and on-topic but no
@@ -359,7 +359,7 @@ recipe end-to-end, each stage a cited idea:
    from what a discriminator will actually see. `causal_counterfactuals()`.
 
 4. **ARHN false-negative filter — do not poison the negatives**
-   ([arXiv:2604.11092](https://arxiv.org/abs/2604.11092) `[UNVERIFIED]`). A mined
+   ([arXiv:2604.11092](https://arxiv.org/abs/2604.11092)). A mined
    or synthesized "negative" that actually **does** still violate the policy is a
    near-miss jailbreak mislabeled as safe — poison for the boundary. A
    policy-support check keeps a candidate negative only if it does **not** support
@@ -452,8 +452,8 @@ EmbeddingGemma run completes on the 4090. The falsifiers below are pre-registere
 against a large taxonomy at **flat** per-request cost and scores **unseen**
 policies zero-shot from a description, where a uni-encoder's cost grows with the
 label count and a trained head cannot score unseen policies at all (The
-Million-Label NER, arXiv:2602.18487 `[UNVERIFIED]`; GLiNER Guard,
-arXiv:2605.05277 `[UNVERIFIED]`).
+Million-Label NER, arXiv:2602.18487; GLiNER Guard,
+arXiv:2605.05277).
 
 **EXP-A — seen-policy multilabel** (test, seen columns; the trained head and
 uni-encoder are expected to lead on accuracy here):
@@ -546,8 +546,8 @@ rescue a failed ordering.
 - **Inspired-by, not a paper reproduction.** The architecture (two frozen towers +
   cosine + a cached policy bank + zero-shot-by-description) operationalizes the
   *idea* the cited papers share; it is **not** a faithful reimplementation of any
-  one paper's exact model, and the cited ids are marked `[UNVERIFIED]` pending the
-  lead's WebFetch check (see `AUDIT.md`).
+  one paper's exact model. All cited arXiv ids are WebFetch-verified by the lead
+  (see `AUDIT.md`).
 
 ---
 
@@ -556,11 +556,11 @@ rescue a failed ordering.
 Source and full artifacts:
 <https://github.com/dlmastery/steeringresearch/tree/master/steering_tutorials/biencoder_guard>
 
-Cited: The Million-Label NER (arXiv:2602.18487 `[UNVERIFIED]`), GLiNER Guard
-(arXiv:2605.05277 `[UNVERIFIED]`), Opir (arXiv:2605.29659 `[UNVERIFIED]`),
-GLiGuard (arXiv:2605.07982 `[UNVERIFIED]`), EmbeddingGemma-300M; hard-negative
-line ECIsem (arXiv:2603.20990 `[UNVERIFIED]`), ARHN (arXiv:2604.11092
-`[UNVERIFIED]`), CausalNeg (arXiv:2606.01304 `[UNVERIFIED]`).
+Cited: The Million-Label NER (arXiv:2602.18487), GLiNER Guard
+(arXiv:2605.05277), Opir (arXiv:2605.29659),
+GLiGuard (arXiv:2605.07982), EmbeddingGemma-300M; hard-negative
+line ECIsem (arXiv:2603.20990), ARHN (arXiv:2604.11092),
+CausalNeg (arXiv:2606.01304).
 
 See also
 [the course map](../README.md),

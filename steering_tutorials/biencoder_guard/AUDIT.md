@@ -2,9 +2,9 @@
 
 **Auditor role:** independent paper/data verifier. Scope: do the cited papers and
 datasets exist, does the code implement what the lesson claims, are the
-claims/results honest. No git, no code/README edits were made. The lead will
-WebFetch-verify every arXiv id below; until then all 2026 ids carry
-`[UNVERIFIED]`.
+claims/results honest. No git, no code/README edits were made. All eight arXiv
+ids below were WebFetch-verified by the lead; `[UNVERIFIED]` tags have been
+dropped from README.md and this file.
 
 ## What this lesson is (stated plainly)
 
@@ -20,17 +20,22 @@ follow from it — not the papers' trained weights or exact accuracy. The
 `uni_encoder` baseline is a cross-encoder-**lite** (joint-string embed + small
 head), a stand-in for a cross-encoder's *cost shape*, not its architecture.
 
-## Paper existence (to be confirmed by the lead's WebFetch)
+## Paper existence (VERIFIED by the lead's WebFetch)
 
-| # | arXiv id | claimed title | used for | status |
-|---|---|---|---|---|
-| 1 | 2602.18487 | The Million-Label NER: Bi-Encoder Named Entity Recognition at Scale | the core bi-encoder-at-scale thesis | `[UNVERIFIED]` |
-| 2 | 2605.05277 | GLiNER Guard: A Unified Encoder Family for Production LLM Safety and Privacy | the safety-guardrail application | `[UNVERIFIED]` |
-| 3 | 2605.29659 | Opir: Efficient Multi-Task Safety Classification with a Three-Level Taxonomy | the many-label / 996-category motivation | `[UNVERIFIED]` |
-| 4 | 2605.07982 | GLiGuard: Schema-Conditioned Classification for LLM Safeguard | schema conditioning / synthetic schema expansion | `[UNVERIFIED]` |
-| 5 | 2603.20990 | ECIsem: Semantic Residual Effective Contrastive Information for Evaluating Hard Negatives | the training-free hard-negative diagnostic (`eci_score`) | `[UNVERIFIED]` |
-| 6 | 2604.11092 | ARHN: Answer-Centric Relabeling of Hard Negatives with Open-Source LLMs for Dense Retrieval | the false-negative filter | `[UNVERIFIED]` |
-| 7 | 2606.01304 | CausalNeg: When Hard Negatives Hurt — Bridging the Generative-Discriminative Gap in Hard Negative Synthesis for Retrieval | the controlled counterfactual negatives | `[UNVERIFIED]` |
+Titles and authors below are the verified details; the two drifted titles from the
+initial draft (#1's subtitle and #3's "Three-Level Taxonomy") have been corrected
+here and in README.md, and #7 carries no "CausalNeg:" title prefix (CausalNeg is
+the method name).
+
+| # | arXiv id | verified title | authors | used for | status |
+|---|---|---|---|---|---|
+| 1 | 2602.18487 | The Million-Label NER: Breaking Scale Barriers with GLiNER bi-encoder | Stepanov, Shtopko, Vodianytskyi, Lukashov (Feb 2026) | the core bi-encoder-at-scale thesis | **VERIFIED (lead WebFetch)** |
+| 2 | 2605.05277 | GLiNER Guard: Unified Encoder Family for Production LLM Safety and Privacy | Minko, Sadiekh, Kokuykin (May 2026) | the safety-guardrail application | **VERIFIED (lead WebFetch)** |
+| 3 | 2605.29659 | Opir: Efficient Multi-Task Safety Classification for Toxicity, Jailbreaks, Hate Speech, and Harmful Content | Stepanov, Smechov (May 2026) | the many-label / 996-category motivation | **VERIFIED (lead WebFetch)** |
+| 4 | 2605.07982 | GLiGuard: Schema-Conditioned Classification for LLM Safeguard | Zaratiana, Newhauser, Hurn-Maloney, Lewis (May 2026) | schema conditioning / synthetic schema expansion | **VERIFIED (lead WebFetch)** |
+| 5 | 2603.20990 | ECIsem: Semantic Residual Effective Contrastive Information for Evaluating Hard Negatives | Sinha, Seetharaman, Bansal (Mar 2026) | the training-free hard-negative diagnostic (`eci_score`) | **VERIFIED (lead WebFetch)** |
+| 6 | 2604.11092 | ARHN: Answer-Centric Relabeling of Hard Negatives with Open-Source LLMs for Dense Retrieval | Choi et al. (SIGIR 2026) | the false-negative filter | **VERIFIED (lead WebFetch)** |
+| 7 | 2606.01304 | When Hard Negatives Hurt: Bridging the Generative-Discriminative Gap in Hard Negative Synthesis for Retrieval (method: CausalNeg) | Zhang et al. (KDD 2026) | the controlled counterfactual negatives | **VERIFIED (lead WebFetch)** |
 
 **Backbone:** `google/embeddinggemma-300m` — Gemma-3-based sentence embedder,
 768-dim with Matryoshka truncation, task-prompted (query/document). Gated (Gemma
@@ -57,15 +62,15 @@ relies on.
 | Rubric compliance (>=500/class) | **PASS (config)** | `N_PER_CLASS=500`, `N_BENIGN=500`; wildguard skip is graceful (BeaverTails+toxic-chat suffice). To confirm on the real GPU run that the pools actually reach 500. |
 | No LLM judge (detection task) | **PASS** | `results.json` records `"judge": null`; no generation. |
 | Claim honesty | **PASS** | README §10 marks all tables `[PENDING GPU RUN]`, pre-registers three falsifiers, and §11 discloses screening tier + the frozen-general-embedder / cross-encoder-lite / handwritten-paraphrase simplifications. |
-| Citation `[UNVERIFIED]` tags present | **PASS** | every 2026 id is tagged pending the lead's WebFetch; ids and author attribution to be re-checked before any tag is dropped (cf. the non_identifiability wrong-author finding). |
+| Citation ids + titles verified | **PASS** | all seven arXiv ids WebFetch-verified by the lead; two drifted titles (#1, #3) and the #7 method-vs-title distinction corrected in README + this file; `[UNVERIFIED]` tags dropped (cf. the non_identifiability wrong-author finding, avoided here). |
 
 ## Concerns (not blockers)
 
-- **Author names not asserted.** Unlike the non_identifiability audit, this
-  lesson deliberately does **not** attribute named authors in the README (only
-  titles), avoiding the wrong-author failure mode. When the lead verifies each id,
-  confirm the title matches before removing `[UNVERIFIED]`; do not un-hedge a
-  title that does not resolve.
+- **Author names verified, not guessed.** Unlike the non_identifiability audit
+  (which shipped a wrong author name), the README's Reference block now carries the
+  lead-verified authors for all seven ids, and two drifted titles were corrected
+  against the resolved arXiv pages — the wrong-author/wrong-title failure mode is
+  avoided here.
 - **`config.py` load-order note (out of scope for docs).** `ADAPTER_CACHE` /
   `HARDNEG_PNG` reference `ARTIFACTS` above where `ARTIFACTS` is defined; the RUN
   agent that owns `config.py` should confirm the module imports cleanly. Flagged
@@ -76,11 +81,13 @@ relies on.
 
 ## Overall verdict
 
-**CONDITIONAL PASS pending id verification.** The code is a faithful
-operationalization of the bi-encoder guardrail *pattern* with honest, pre-registered
-falsifiers and clearly disclosed simplifications. The one gating item is external:
-the lead must WebFetch-verify the seven arXiv ids and the EmbeddingGemma card and
-drop `[UNVERIFIED]` only where the title resolves.
+**PASS.** All seven arXiv ids are WebFetch-verified by the lead (titles/authors
+corrected where they had drifted), and the EmbeddingGemma-300M model card is the
+correct backbone reference. The code is a faithful operationalization of the
+bi-encoder guardrail *pattern* with honest, pre-registered falsifiers and clearly
+disclosed simplifications (frozen general embedder, cross-encoder-lite baseline,
+handwritten paraphrases). No gating items remain; the numbers are pending the GPU
+run and marked as such.
 
 *Internal QA pass — independent external review pending (auditor shares a model
 family with the author).*
