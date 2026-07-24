@@ -374,7 +374,9 @@ def _run_hardneg(hardneg, encoders, policies, policy_bank,
     print("[hardneg] ARHN dropped %d probable false negatives" % dropped)
 
     # 4. Train the contrastive adapter on frozen embeddings + mined hard negatives.
-    adapter = hardneg.ContrastiveAdapter()
+    #    The adapter projects vectors of the content/policy embedding dimension, so it
+    #    must be constructed with that dim (Xc_tr is [n_train, dim]).
+    adapter = hardneg.ContrastiveAdapter(dim=Xc_tr.shape[1])
     adapter.fit(Xc_tr, policy_bank, Y_tr, seen_cols, mined)
 
     # 5. FPR@recall0.90, frozen vs adapter, on TEST positives vs mined test negs.
