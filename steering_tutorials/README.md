@@ -220,12 +220,32 @@ abliterated-model judge noise. `contextual_steering` — the *diff-of-means cosi
 gate genuinely can't separate per-prompt (that pre-registered falsifier stands); a
 **trained-probe gate** (CLAS's learned sensing vector) is the fix under test.
 
-> **Under active investigation (2026-07-24):** a deep root-cause pass classified
-> these negatives as *genuine* (weak diff-of-means WRITE primitive on the
-> abliterated 1B — the AxBench result) vs *fixable artifacts*. `multi_intent` was a
-> 16× over-steer **bug** (a double-normalization discarded the norm budget);
-> `contextual_steering` and `meerkat` have data/gate fixes in test. Flipped results
-> are filled from re-runs, negatives kept honest.
+> **Deep root-cause pass + cross-scale check (2026-07-24).** A 5-agent investigation
+> classified each negative as a *fixable artifact* or a *genuine* weak-primitive result,
+> and the fixes were re-run:
+> - **`multi_intent` — FIXED (flip):** a 16× over-steer **bug** (a double-normalization
+>   discarded the norm budget) made everything gibberish (1.0); after the fix, gibberish
+>   drops to 0.22–0.52 and the K-ladder / orthogonalization story is readable again.
+> - **`contextual_steering` — gate FIXED, write still weak:** a **trained-probe gate**
+>   (CLAS's learned sensing vector, arXiv:2604.24693) separates harmful/benign (d′ 0.13→
+>   **1.67**, AUC 0.61→**0.89**) where the raw diff-of-means cosine cannot — but the
+>   end-to-end refusal stays ~baseline because the *write* is weak. A clean decomposition
+>   of the failure: **gate = fixable, write = genuinely weak.**
+> - **`meerkat` — improved, honest-partial:** redesigning campaigns as innocuous sub-step
+>   traces moved clustering from useless (AP 0.084) to viable (**0.568**, campaigns cluster
+>   at recall 0.933); a supervised per-trace monitor still edges it on *topic*, so a clean
+>   flip needs topically-matched benign.
+> - **Cross-scale check (your "try 4B" hypothesis): the weak-write negative HOLDS.** On
+>   Gemma-3-4B abliterated (4-bit), mean-pooled diff-of-means *still* fails to install
+>   refusal (0.03→0.00 as α rises) and only drives gibberish (0.23→**0.97**) — the same
+>   pattern as 1B. So it is **scale-robust, not a 1B-capacity artifact.** (Caveats: the 4B
+>   "Extreme" build is more heavily abliterated — baseline refusal 0.03 — so it is not a
+>   clean refusal-*restoration* substrate; and the probe-gate arm needs a probe retrained
+>   on 4B's 2560-dim activations.)
+>
+> Net: the honest through-line is confirmed and sharpened — **diff-of-means is a weak WRITE
+> primitive at both 1B and 4B; a *learned probe* rescues the gating/detection role but not
+> the write, which needs a learned direction (ReFT).** Genuine negatives kept honest.
 
 The remaining lessons (`flas`, `non_identifiability`, `fine_grained`,
 `multi_intent`, `stacking`, `probe_tuning`) each report their measured-vs-claimed
