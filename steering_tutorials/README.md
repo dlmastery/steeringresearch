@@ -207,13 +207,25 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 | [`hello_world_steering`](hello_world_steering/README.md) · WRITE | **fixed steering barely works** (n=200/arm): refusal *falls* 0.33→0.07 as α rises, gibberish 0.225→**0.755** — the honest negative |
 
 **Honest 2026-frontier negatives** (reported as prominently as the wins): `gavel`
-— an `any_of` compositional monitor blocks harmful and benign at the *same* rate
-(0.26/0.26): a union of per-CE 5%-FPR budgets over-blocks; `curveball` — a
-norm-preserving geodesic is *no more coherent* than the off-shell chord (off-shell
-displacement doesn't predict gibberish here); `decomposing_prompting` &
-`contextual_steering` — both pre-registered **falsifiers trigger** (a translation
-component recovers 0% of prompting's gain; a bare diff-of-means cosine can't
-separate harmful from benign at the prompt level even after fixing the projection).
+— block rates **0.135 harmful / 0.085 benign** at 500/class (the earlier 0.26/0.26
+was a small-N calibration artifact, since fixed); the residual is a **genuine**
+weak-atom negative — mean-pooled diff-of-means detectors have atom AUC ~0.57 vs a
+trained probe's 0.87, so recalibration can't raise recall (atom quality is the
+lever). `curveball` — a norm-preserving geodesic is *no more coherent* than the
+off-shell chord at matched budget (a confirmed genuine negative: the per-token
+re-aimed rotation is if anything *more* destructive). `decomposing_prompting` — the
+READ headline holds (a prompt's effect does **not** reduce to one translation at
+1B, on_direction_frac 0.20), though the WRITE "0% recovery" is dominated by
+abliterated-model judge noise. `contextual_steering` — the *diff-of-means cosine*
+gate genuinely can't separate per-prompt (that pre-registered falsifier stands); a
+**trained-probe gate** (CLAS's learned sensing vector) is the fix under test.
+
+> **Under active investigation (2026-07-24):** a deep root-cause pass classified
+> these negatives as *genuine* (weak diff-of-means WRITE primitive on the
+> abliterated 1B — the AxBench result) vs *fixable artifacts*. `multi_intent` was a
+> 16× over-steer **bug** (a double-normalization discarded the norm budget);
+> `contextual_steering` and `meerkat` have data/gate fixes in test. Flipped results
+> are filled from re-runs, negatives kept honest.
 
 The remaining lessons (`flas`, `non_identifiability`, `fine_grained`,
 `multi_intent`, `stacking`, `probe_tuning`) each report their measured-vs-claimed
