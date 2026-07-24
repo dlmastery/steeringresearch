@@ -378,43 +378,54 @@ apply here (`results.json` records `"judge": null`).
 
 ## 9. Results — measured vs. the claim
 
-**[PENDING GPU RUN]** — the harness, self-tests, and this table's structure are in
-place; the numbers below are filled from `artifacts/results.json` once the
-Gemma-embedder run completes on the 4090. The falsifier and reading are
-pre-registered here **before** the run.
+**MEASURED (screening tier, n=500/class).** Numbers below are from
+`artifacts/results.json` for the **MiniLM** turn-embedder run (the fast
+500-per-class pass); a Gemma-3-1B layer-12 embedder ablation is the pending
+follow-up and is expected to move absolute AUCs, not the ordering. The falsifier
+and reading were pre-registered **before** the run.
 
 **The claim under test.** A capable adversary decomposes a harmful goal across K
 agents so no single trajectory carries the payload; therefore a **set-aggregator**
 over the K trajectory latents detects the decomposed attack while a
 **per-trajectory** (session-bound) monitor misses it (Context-Fractured
-Decomposition, arXiv:2606.09084 `[UNVERIFIED]`; GroupGuard, arXiv:2603.13940
-`[UNVERIFIED]`; pooling from Set Transformer, arXiv:1810.00825).
+Decomposition, arXiv:2606.09084; GroupGuard, arXiv:2603.13940; pooling from Set
+Transformer, arXiv:1810.00825).
 
-Constructed main set — abliterated Gemma-3-1B layer-12 embedder, K=5,
-group-aware 5-fold CV, bootstrap 95% CIs. The **HARD** column is the one that
-matters (easy is the cautionary condition where per-trajectory can already win).
+Constructed main set — MiniLM turn-embedder, K=5, group-aware 5-fold CV,
+bootstrap 95% CIs. The **HARD** column is the one that matters (easy is the
+cautionary condition where per-trajectory can already win).
 
 | method | Easy AUC | **Hard AUC** |
 |---|---|---|
-| `per_traj_max` (decomposition-defeated baseline) | _pending_ | _pending_ |
-| `mean_agg` | _pending_ | _pending_ |
-| `attn_pool` (Set-Transformer PMA — headline) | _pending_ | _pending_ |
-| `gnn_agg` (GroupGuard-style) | _pending_ | _pending_ |
+| `per_traj_max` (decomposition-defeated baseline) | 0.991 | **0.607** |
+| `mean_agg` | 0.998 | **0.936** |
+| `attn_pool` (Set-Transformer PMA — headline) | 0.995 | **0.863** |
+| `gnn_agg` (GroupGuard-style) | 0.998 | **0.812** |
+
+On **hard**, the payload-removed baseline collapses to 0.607 while all three
+set-aggregators clear it by a wide margin — the pre-registered ordering holds.
 
 OOD transfer — trained on the constructed hard set, evaluated on the **real**
-CSTM-Bench with no further fitting:
+CSTM-Bench (52 attack / 56 benign) with no further fitting:
 
 | method | CSTM-Bench AUC |
 |---|---|
-| `per_traj_max` | _pending_ |
-| `mean_agg` | _pending_ |
-| `attn_pool` | _pending_ |
-| `gnn_agg` | _pending_ |
+| `per_traj_max` | 0.541 |
+| `mean_agg` | 0.500 |
+| `attn_pool` | 0.568 |
+| `gnn_agg` | 0.479 |
 
-**Confound audit** (hard, from `results.json`): `kcount_auc` and `totalchar_auc`
-report whether trajectory-count or total length alone predicts the label. We quote
-them beside the method AUCs and claim only the margin **above** the larger of the
-two, never the raw gap over `per_traj_max`.
+**Honest OOD read:** transfer to CSTM-Bench is **near chance** (0.48–0.57) for
+every method — the constructed decompositions do **not** teach a detector that
+generalizes to the real cross-session benchmark. This is reported as a negative
+result, stated as prominently as the in-distribution win.
+
+**Confound audit** (hard, from `results.json`): `kcount_auc = 0.500` (trajectory
+count carries nothing — K is fixed at 5 both classes) but **`totalchar_auc = 0.704`**
+— total text length is a partial shortcut on the hard set. The honest bar is
+therefore the **larger** of {`per_traj_max` 0.607, length 0.704} = **0.704**; all
+three aggregators (0.936 / 0.863 / 0.812) beat that length shortcut too, by
+0.11–0.23 AUC. We claim only that margin, never the raw gap over `per_traj_max`.
 
 **Pre-registered falsifier.** The thesis is the ordering `AUC(set-aggregator) >
 AUC(per_traj_max)` on the **HARD** condition (same-style, payload-removed
