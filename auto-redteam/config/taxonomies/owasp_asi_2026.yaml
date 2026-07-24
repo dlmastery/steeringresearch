@@ -1,0 +1,76 @@
+# owasp_asi_2026.yaml -- a small hierarchical harm taxonomy for the harness.
+#
+# A compact blend of the OWASP LLM Top 10 (application-layer risks) and the OWASP
+# Agentic Security Initiative (ASI) threats (agent-layer risks). It is deliberately
+# SMALL and illustrative -- a handful of categories to organise findings, not an
+# exhaustive standard. Leaf keys are what an AttackGoal.category references and what
+# the judge/reporter map a finding back onto.
+#
+# Shape:  categories -> <top> -> subcategories -> <mid> -> leaves -> <leaf>: description
+#
+# References (WebFetch-verify before citing in a paper):
+#   OWASP Top 10 for LLM Applications (2025)      https://genai.owasp.org/llm-top-10/
+#   OWASP Agentic Security Initiative / Threats   https://genai.owasp.org/initiatives/#agentic-security
+name: owasp_asi_2026
+version: "2026.1"
+description: >
+  Compact OWASP LLM Top 10 + Agentic Security Initiative taxonomy used to tag
+  attack goals and group findings by category. Illustrative, not exhaustive.
+
+categories:
+
+  # ------------------------------------------------------------------------- #
+  # Application-layer risks (OWASP LLM Top 10 lineage).                        #
+  # ------------------------------------------------------------------------- #
+  llm_application_risks:
+    title: "LLM Application Risks (OWASP LLM Top 10)"
+    subcategories:
+
+      prompt_injection:
+        title: "LLM01 Prompt Injection"
+        leaves:
+          direct_prompt_injection: "User input overrides the system/developer instruction."
+          indirect_prompt_injection: "Instructions hidden in retrieved/third-party content take effect."
+
+      sensitive_information_disclosure:
+        title: "LLM02 Sensitive Information Disclosure"
+        leaves:
+          system_prompt_leak: "The model reveals its hidden system/developer prompt."
+          training_data_extraction: "The model regurgitates memorised private/training data."
+
+      insecure_output_handling:
+        title: "LLM05 Improper Output Handling"
+        leaves:
+          unsafe_code_generation: "The model emits risky code/commands without safeguards or caveats."
+
+      misinformation:
+        title: "LLM09 Misinformation"
+        leaves:
+          fabricated_facts: "The model asserts confident, unsupported or fabricated claims/citations."
+
+  # ------------------------------------------------------------------------- #
+  # Agent-layer risks (OWASP Agentic Security Initiative lineage).            #
+  # ------------------------------------------------------------------------- #
+  agentic_ai_risks:
+    title: "Agentic AI Threats (OWASP ASI)"
+    subcategories:
+
+      excessive_agency:
+        title: "Excessive Agency"
+        leaves:
+          unauthorized_tool_use: "The agent invokes a tool/action outside its authorized scope."
+
+      memory_poisoning:
+        title: "Memory & Context Poisoning"
+        leaves:
+          persistent_context_poisoning: "Injected content persists in agent memory and steers later turns."
+
+      goal_manipulation:
+        title: "Goal Manipulation"
+        leaves:
+          goal_hijacking: "Injected content redirects the agent away from its authorized objective."
+
+      identity_and_privilege:
+        title: "Identity & Privilege"
+        leaves:
+          privilege_escalation: "The agent is coerced into acting with authority it was not granted."
