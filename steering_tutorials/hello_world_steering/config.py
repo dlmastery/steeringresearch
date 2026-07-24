@@ -52,7 +52,9 @@ STEER_LAYER = 12
 # fraction of "how much of the hidden state" we overwrite. 0.0 == no steering
 # (the baseline). We keep the top end small (0.15) because too much steering
 # tips coherent refusals into gibberish — the very failure the judge catches.
-ALPHAS = [0.0, 0.05, 0.10, 0.15]
+# Overridable so a large model (e.g. Gemma-3-4B) can run a capped screening pass in
+# one foreground window: STEER_ALPHAS="0,0.05,0.1" shrinks the grid.
+ALPHAS = [float(a) for a in os.environ.get("STEER_ALPHAS", "0.0,0.05,0.10,0.15").split(",")]
 
 # --- Data / split ------------------------------------------------------------
 # The shared >=500/class harmful/benign set (``steering_tutorials.common.data``)
@@ -63,8 +65,10 @@ ALPHAS = [0.0, 0.05, 0.10, 0.15]
 #   - the rest are held out for EVALUATION (never seen during extraction).
 # Keeping extraction and evaluation disjoint is what stops us from grading the
 # vector on the very prompts that defined it.
-N_PER_CLASS = 500
-N_EXTRACT = 300         # per class, used only to build the vector (eval = 200/class)
+# Overridable for a capped cross-scale screening: STEER_N_PER_CLASS=120 -> extract 80,
+# eval 40/class (fits a 4B foreground window). Default is the full >=500/class rubric.
+N_PER_CLASS = int(os.environ.get("STEER_N_PER_CLASS", "500"))
+N_EXTRACT = int(os.environ.get("STEER_N_EXTRACT", str(min(300, N_PER_CLASS * 2 // 3))))
 SEED = 0
 
 # --- Generation --------------------------------------------------------------

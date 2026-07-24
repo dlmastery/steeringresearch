@@ -134,13 +134,31 @@ def residual_layers(model: nn.Module) -> list[nn.Module]:
     """The decoder blocks whose forward output is the residual stream.
 
     A forward hook on block ``l`` reads (or edits) the residual stream after
-    layer ``l``. For Gemma-3 the path is ``model.model.layers``.
+    layer ``l``. Text-only Gemma-3 (1B, ``Gemma3ForCausalLM``) exposes them at
+    ``model.model.layers``; the multimodal 4B (``Gemma3ForConditionalGeneration``)
+    nests the TEXT decoder under a ``language_model`` sub-module, so we search the
+    common paths and fall back to the first ``.layers`` ModuleList we can find.
     """
-    inner = getattr(model, "model", None)
-    if inner is not None and hasattr(inner, "layers"):
-        return list(inner.layers)
-    if hasattr(model, "layers"):
-        return list(model.layers)
+    candidates = (
+        ("model", "layers"),                       # 1B text-only
+        ("language_model", "layers"),              # some multimodal wrappers
+        ("model", "language_model", "layers"),     # 4B: model.language_model.layers
+        ("language_model", "model", "layers"),
+        ("model", "language_model", "model", "layers"),
+    )
+    for path in candidates:
+        obj = model
+        for attr in path:
+            obj = getattr(obj, attr, None)
+            if obj is None:
+                break
+        if obj is not None and hasattr(obj, "__len__") and len(obj) > 0:
+            return list(obj)
+    # Last resort: recursively locate the deepest ModuleList named "layers".
+    import torch.nn as _nn
+    for name, mod in model.named_modules():
+        if name.endswith("layers") and isinstance(mod, _nn.ModuleList) and len(mod) > 0:
+            return list(mod)
     raise ValueError("Could not find decoder layers on this model.")
 
 
@@ -149,7 +167,15 @@ def num_layers(model: nn.Module) -> int:
 
 
 def hidden_size(model: nn.Module) -> int:
-    return int(model.config.hidden_size)
+    """Residual-stream width. Multimodal Gemma-3 keeps it under ``text_config``."""
+    cfg = model.config
+    if hasattr(cfg, "hidden_size") and cfg.hidden_size:
+        return int(cfg.hidden_size)
+    text_cfg = getattr(cfg, "text_config", None)
+    if text_cfg is not None and getattr(text_cfg, "hidden_size", None):
+        return int(text_cfg.hidden_size)
+    # Fall back to the first decoder block's input width.
+    return int(residual_layers(model)[0].mlp.gate_proj.in_features)
 
 
 # ---------------------------------------------------------------------------
