@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "auto-redteam"
+version = "0.1.0"
+description = "Configurable end-to-end auto red-teaming harness: an ablated local Gemma attacker against a pluggable frontier defender, for AUTHORIZED AI-safety research."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "research-use-only" }
+authors = [{ name = "steeringresearch" }]
+
+# Core deps are intentionally light so the package imports + tests run on CPU with
+# only mock providers. Real providers pull optional extras (see [project.optional-dependencies]).
+dependencies = [
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "pyyaml>=6.0",
+    "typer>=0.12",
+    "structlog>=24.1",
+]
+
+[project.optional-dependencies]
+gemini = ["google-genai>=1.0"]
+openai = ["openai>=1.30"]
+anthropic = ["anthropic>=0.30"]
+local = ["ollama>=0.3"]
+sql = ["sqlalchemy>=2.0"]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+all = ["auto-redteam[gemini,openai,anthropic,local,sql,dev]"]
+
+[project.scripts]
+auto-redteam = "autoredteam.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["autoredteam"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
