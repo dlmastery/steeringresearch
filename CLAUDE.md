@@ -405,10 +405,14 @@ repo.
 3. **Off-family judge for ALL reported numbers** — `STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct`.
    The 1B model grading its own output inflates refusal; never headline a self-judged
    number.
-4. **Every lesson README opens with a `> **Reference:**` block using the full paper
-   TITLE as a clickable `arxiv.org/abs` link**; the top-level `steering_tutorials/README.md`
-   tables carry a linked **Reference paper** column. Cite REAL, WebFetch-verified arXiv
-   ids (full author/title/venue); mark `[UNVERIFIED]` if unsure. `AUDIT.md` per lesson.
+4. **Cite every referenced arXiv paper with VERY CLEAR detail, in every lesson.**
+   Each README opens with a `> **Reference:**` block listing the full paper TITLE as
+   a clickable `arxiv.org/abs/XXXX.XXXXX` link **plus authors + venue/date + a
+   one-line relevance note**; the top-level `steering_tutorials/README.md` theme
+   tables carry a linked **Reference paper** column (full titles, every paper the
+   lesson uses). Every id is WebFetch-VERIFIED before it ships (real title+authors);
+   mark `[UNVERIFIED]` only if a fetch fails. `AUDIT.md` per lesson re-audits each id
+   and states plainly what is reproduction vs inspired-by. Never cite from memory.
 5. **Use real released benchmarks (HuggingFace) as an OOD test where they exist**
    (e.g. `intrinsec-ai/cstm-bench`, `ScaleAI/mhj`, `SafeMTData`); when the benchmark is
    small, still construct the `>= 500/class` MAIN train/eval set from available data and
@@ -418,6 +422,41 @@ repo.
    positive, talan adapter-vs-rank-1 tie, non-ident recipe convergence). More extract
    data → a better direction → the finding sharpens/corrects. Never ship a small-N
    number as settled.
+7. **Length/confound-match the negatives.** A detection lesson's benign hard-negatives
+   must be rendered the SAME way as the positives so raw length/token count can't
+   separate the classes. Run `confound_report` (length_auc / count_auc) on every
+   detection lesson and report the RESIDUAL honestly; claim only the margin ABOVE the
+   larger of {baseline, confound}. (Lesson: biencoder_guard benign pool drawn
+   prompt-only vs positives' prompt+response gave length_auc 0.72 → fixed to 0.52 by
+   drawing benigns from the same source rendering.)
+8. **The trajectory/guardrail-detection family** now spans turns → tokens → agents →
+   many-traces → policy-matching: `multiturn_jailbreak`, `trajguard`,
+   `cross_trajectory`, `meerkat` (clustering: arXiv:2604.11806), `biencoder_guard`
+   (EmbeddingGemma dual-tower: GLiNER bi-encoder 2602.18487, GLiNER Guard 2605.05277,
+   Opir 2605.29659, GLiGuard 2605.07982) with the 2026 hard-negative synthesis line
+   (ECIsem 2603.20990, ARHN 2604.11092, CausalNeg 2606.01304). Detection lessons take
+   NO generation judge; pre-register a falsifier per claim; use a real HF benchmark
+   (CSTM-Bench) as OOD.
+9. **Big packages use the spine-anchor multi-team pattern.** The lead writes the FIXED
+   spine first (Pydantic data models + Protocol interfaces + the config anchor + a
+   safety/authorization gate), verifies it imports, then fans out disjoint-scope agents
+   that build ONLY to those signatures. Relay cross-file interface notes between agents
+   via `SendMessage`; the lead owns the anchor and fixes anchor bugs centrally (agents
+   never edit it, never run git). Parallelize maximally: docs/code/data/test agents run
+   concurrently; only GPU work serializes on the one 4090.
+
+**`auto-redteam/` (standalone package) — authorized-research red-team harness.** An
+ablated local Gemma attacker vs a pluggable frontier defender (Gemini/OpenAI-compat/
+Anthropic/local), config-driven (YAML deep-merge + env + CLI), single/multi-turn +
+optional multi-agent swarm (Generator+Critic) + bandit strategy selection, hybrid
+rule+LLM judge, reproducible (config hash + seeds). **Safety posture is load-bearing:**
+a `banner.assert_authorized` gate refuses to launch without a confirmed authorization
+scope; API keys are read by env-var NAME and NEVER logged; the attacker has no network
+egress beyond its model server; strategy modules implement PUBLISHED techniques as
+mechanics/scaffolds only (no baked-in working exploit payloads — real seeds come from
+the runtime goals YAML). Built for defensive discovery + reporting, mirroring PyRIT/
+Garak/DeepTeam. Phases 2-6 (multi-turn, TAP, deeper agentic, reporting) layer on the
+same interfaces.
 
 **Operational playbook (hard-won on this host — follow these):**
 

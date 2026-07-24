@@ -54,6 +54,9 @@ flowchart TD
         D2["realignment"]:::built
         D3["multiturn_jailbreak"]:::built
         D4["trajguard"]:::built
+        D5["cross_trajectory"]:::built
+        D6["meerkat"]:::built
+        D7["biencoder_guard"]:::built
     end
     DEF --> DEF_S
 
@@ -95,6 +98,9 @@ flowchart TD
     click D2 "realignment/README.md"
     click D3 "multiturn_jailbreak/README.md"
     click D4 "trajguard/README.md"
+    click D5 "cross_trajectory/README.md"
+    click D6 "meerkat/README.md"
+    click D7 "biencoder_guard/README.md"
     click P1 "stacking/README.md"
     click F1 "non_identifiability/README.md"
     click F2 "fine_grained/README.md"
@@ -153,6 +159,9 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 | [`realignment`](realignment/README.md) · L11 | restore refusal in an abliterated model by transplanting a direction | [Refusal in LLMs Is Mediated by a Single Direction](https://arxiv.org/abs/2406.11717) | ✅ built + validated |
 | [`multiturn_jailbreak`](multiturn_jailbreak/README.md) | detect multi-turn (Crescendo/ActorAttack) jailbreaks: chunk-wise turn embedding + sequence classification | [DeepContext: Multi-Turn Intent-Drift Detection](https://arxiv.org/abs/2602.16935) · [Hierarchical Attention](https://arxiv.org/abs/2606.21082) · [ActorAttack](https://arxiv.org/abs/2410.10700) | ✅ built + validated |
 | [`trajguard`](trajguard/README.md) | streaming decoding-time detection: the hidden-state trajectory across generated tokens; flag the jailbreak early | [TrajGuard: Streaming Hidden-state Trajectory Detection for Decoding-time Jailbreak Defense](https://arxiv.org/abs/2604.07727) | ✅ built + validated |
+| [`cross_trajectory`](cross_trajectory/README.md) | swarm/cross-session attacks: a harmful goal fractured across K agents; aggregate the per-trajectory latents (set-transformer / GNN) to recover it | [Context-Fractured Decomposition](https://arxiv.org/abs/2606.09084) · [Cross-Session Threats / CSTM-Bench](https://arxiv.org/abs/2604.21131) · [GroupGuard](https://arxiv.org/abs/2603.13940) · [Set Transformer](https://arxiv.org/abs/1810.00825) | ✅ built (screening) |
+| [`meerkat`](meerkat/README.md) | sparse (~5%) distributed violations hidden across MANY traces: cluster trace embeddings + cluster-enrichment to surface the campaign a per-trace monitor misses | [Detecting Safety Violations Across Many Agent Traces (Meerkat)](https://arxiv.org/abs/2604.11806) · [CSTM-Bench](https://arxiv.org/abs/2604.21131) | 🧪 building |
+| [`biencoder_guard`](biencoder_guard/README.md) | EmbeddingGemma dual-tower guardrail: cache a policy tower + content tower, cosine-match many labels, add policies zero-shot; + hard-negative contrastive augmentation | [GLiNER bi-encoder (Million-Label NER)](https://arxiv.org/abs/2602.18487) · [GLiNER Guard](https://arxiv.org/abs/2605.05277) · [Opir](https://arxiv.org/abs/2605.29659) · [GLiGuard](https://arxiv.org/abs/2605.07982) | 🧪 building |
 
 ### 📜 Certify — provable guarantees
 
@@ -192,6 +201,7 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 | [`realignment`](realignment/README.md) · DEFEND | **works** (n=200/class) — clean α=0.25 point: **ASR 0.46→0.045**, over-refusal 0.01, coherence 0.88 |
 | [`multiturn_jailbreak`](multiturn_jailbreak/README.md) · DEFEND | **trajectory matters**: on same-style hard negatives the stateless per-turn probe collapses to **0.57** while a sequence model reaches **0.96** (Gemma) — and a naive benchmark (easy negatives) is trivially 0.99, the cautionary half |
 | [`trajguard`](trajguard/README.md) · DEFEND | **streaming detection works early** (n=300): a learned detector flags the jailbroken generation at **AUC 0.94 from the first 2 tokens**; sequence models (0.945) marginally edge the per-token baseline (0.931) at scale; training-free projection weakest (0.64) |
+| [`cross_trajectory`](cross_trajectory/README.md) · DEFEND | **aggregation recovers fractured intent** (n=500/class, MiniLM): on leakage-free HARD negatives the per-trajectory baseline collapses to **0.607** while set-aggregators recover (mean 0.936, attn 0.863, gnn 0.812) and clear the 0.704 length confound — but **OOD to real CSTM-Bench is near chance (0.48–0.57)**, reported as a negative |
 | [`rogue_scalpel`](rogue_scalpel/README.md) · DEFEND | attack strips refusal **0.70→0.00** (n=200); the **norm-clamp guard recovers it (0.735)**; lock/dual guards don't |
 | [`hello_world`](hello_world/README.md) · READ | probe 5-fold CV **0.87 ± 0.03**; leakage clean; XSTest OOD AUC 0.89 |
 | [`hello_world_steering`](hello_world_steering/README.md) · WRITE | **fixed steering barely works** (n=200/arm): refusal *falls* 0.33→0.07 as α rises, gibberish 0.225→**0.755** — the honest negative |
