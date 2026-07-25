@@ -21,7 +21,11 @@
       {"alpha": 0.15, "refusal": 0.07, "gibberish": 0.755}
     ]
   },
-  "verdict": "NEGATIVE HOLDS AT 4B. Mean-pooled diff-of-means does not install refusal at 4B (refusal 0.03->0.00 as alpha rises) and only drives gibberish (0.23->0.97), the same failure pattern as 1B. Scale-robust, not a 1B-capacity artifact.",
+  "read_probe_4b": {
+    "note": "Retrained the hello_world detection probe on 4B activations (dim 2560) -> saved as probe_4b.pt. The READ/gate side scales EXCELLENTLY at 4B, in contrast to the failing WRITE.",
+    "roc_auc": 0.997, "pr_auc": 0.998, "accuracy": 0.950
+  },
+  "verdict": "NEGATIVE HOLDS AT 4B, and the gate/write decomposition SHARPENS. WRITE: mean-pooled diff-of-means does not install refusal at 4B (refusal 0.03->0.00 as alpha rises) and only drives gibberish (0.23->0.97) -- same failure as 1B, scale-robust. READ/GATE: a probe on the SAME 4B activations separates harmful/benign at AUC 0.997 -- detection scales even better than 1B. So the bottleneck is the WRITE primitive, not the representation or the model scale.",
   "caveats": [
     "The 4B 'Extreme' build is more heavily abliterated (baseline refusal 0.03 vs 1B 0.33) -> almost no refusal circuit to restore; not a clean refusal-restoration substrate. A less-abliterated 4B (or gated base gemma-3-4b-it) would be a cleaner scale test.",
     "layer 12 of 34 (4B) is relatively earlier than layer 12 of 26 (1B); a proportional layer would be a fairer depth match.",
