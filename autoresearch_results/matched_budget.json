@@ -1,0 +1,73 @@
+{
+  "model": "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated",
+  "layer": 12,
+  "quant": "4bit",
+  "n_ppl_passages": 40,
+  "judge": null,
+  "endpoint": "WikiText perplexity (judge-free)",
+  "n_harmful": 10,
+  "n_harmless": 8,
+  "budgets": [
+    0.0,
+    0.02,
+    0.05,
+    0.1,
+    0.15,
+    0.2
+  ],
+  "rows": [
+    {
+      "budget_f": 0.0,
+      "relative_add_alpha": 0.0,
+      "relative_add_ppl": 92.32558097284337,
+      "rotate_alpha": 0.0,
+      "rotate_ppl": 92.29268485082414,
+      "delta_rotate_minus_add": -0.032896122019224094
+    },
+    {
+      "budget_f": 0.02,
+      "relative_add_alpha": 0.02,
+      "relative_add_ppl": 88.74373818701032,
+      "rotate_alpha": 0.020000333348334228,
+      "rotate_ppl": 89.54213310922177,
+      "delta_rotate_minus_add": 0.7983949222114433
+    },
+    {
+      "budget_f": 0.05,
+      "relative_add_alpha": 0.05,
+      "relative_add_ppl": 87.65222701923989,
+      "rotate_alpha": 0.05000520979872228,
+      "rotate_ppl": 117.37274799593888,
+      "delta_rotate_minus_add": 29.720520976698992
+    },
+    {
+      "budget_f": 0.1,
+      "relative_add_alpha": 0.1,
+      "relative_add_ppl": 117.98294437684099,
+      "rotate_alpha": 0.10004171361154003,
+      "rotate_ppl": 479.1789553197817,
+      "delta_rotate_minus_add": 361.19601094294075
+    },
+    {
+      "budget_f": 0.15,
+      "relative_add_alpha": 0.15,
+      "relative_add_ppl": 198.65837807789896,
+      "rotate_alpha": 0.15014098215343308,
+      "rotate_ppl": 4071.63573714483,
+      "delta_rotate_minus_add": 3872.977359066931
+    },
+    {
+      "budget_f": 0.2,
+      "relative_add_alpha": 0.2,
+      "relative_add_ppl": 375.5495894652589,
+      "rotate_alpha": 0.2003348423231196,
+      "rotate_ppl": 119316.92348243628,
+      "delta_rotate_minus_add": 118941.37389297102
+    }
+  ],
+  "n_budgets_where_rotate_better": 0,
+  "n_budgets_compared": 5,
+  "verdict": "ROTATION NOT BETTER \u2014 field assumption NOT supported at matched budget",
+  "tier": "SCREENING (single extraction set, single layer, n=1 per cell)",
+  "elapsed_s": 120.0
+}
