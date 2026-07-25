@@ -62,7 +62,71 @@ The revised program's surviving legs are largely measurable **without** an LLM j
 **Recommendation:** re-scope the immediate program to judge-independent endpoints, and
 treat judge repair as a separate, parallel instrument-engineering task.
 
-### Next calibration attempts (queued, not yet run)
+---
+
+## H0-2 — Qwen3-4B-Instruct-2507, **continuous readout** — **FAILED (but diagnostic)**
+
+| field | value |
+|---|---|
+| date | 2026-07-25 |
+| change vs H0-1 | **readout only.** Same model, same prompt, same 300 items, same labels. Integer argmax replaced by the expected value under the model's own distribution over `{"0","1","2"}` (`LocalJudge.score_axbench_expected`) |
+| **ROC-AUC** | **0.7508** (H0-1: 0.665, **Δ +0.0858**) |
+| distinct score values | **68** (H0-1: 3) |
+| positives / negatives | 1.018 / 0.457 (separation +0.561) |
+| runtime | **94 s** (H0-1: 1208.5 s — **12.8× faster**) |
+| **gate** | **≥ 0.85 → FAILED** |
+| artifact | `autoresearch_results/H0-2_continuous_judge.json` |
+
+### What this establishes
+
+The quantization hypothesis was **partially correct, and is now quantified**: recovering
+the discarded resolution is worth **+0.086 AUC**, roughly 40% of the gap between H0-1 and
+the 0.85 gate. Because only the readout changed, that delta is cleanly attributable to
+quantization and nothing else.
+
+**But the judge still fails at 0.751 with an optimal readout.** The residual deficit is
+genuine mis-scoring of concept presence, not lost resolution. Combined with H0-1's
+finding that a newer model generation did not help (0.68 → 0.665), the conclusion is:
+
+> **An open ~4B judge cannot resolve AxBench concept presence to the standard this
+> program requires. This is a property of the task and the model tier, not of the
+> prompt, the rubric's scale, or the model's vintage.**
+
+### Two things worth keeping regardless
+
+1. **`score_axbench_expected` is strictly better than the generate-and-parse path** —
+   higher AUC (+0.086) *and* 12.8× faster (one forward pass, no 16-token generate). It
+   should be the default readout wherever this judge is used at all.
+2. A judge at AUC 0.75 is still usable for **coarse triage** (e.g. filtering obvious
+   gibberish), but never for resolving small effects. Any such use must cite this card.
+
+---
+
+## PROGRAM DECISION (2026-07-25): re-scope to judge-independent endpoints
+
+Two calibrations have failed. The program does **not** get a third attempt at shopping
+for a judge before doing science — that would be the sunk-cost version of the original
+error. The surviving contributions are re-scoped onto endpoints that need no judge:
+
+| leg | endpoint | judge? |
+|---|---|---|
+| H1 certified gate | probe ROC-AUC vs **ground-truth** harmful/benign labels; realised over-refusal vs the conformal bound | **no** |
+| Matched-budget attribution | displacement (geometry) vs **WikiText-2 perplexity** | **no** |
+| Coherence throughout | perplexity | **no** |
+| Refusal detection | rule-based detector, human-verified on a sample | not an LLM concept-judge |
+
+**Judge-dependent claims (behaviour efficacy, concept steering strength) are suspended
+indefinitely**, and every historical result resting on them inherits this card's caveat.
+
+### Remaining options, deliberately NOT taken now
+
+| id | change | why not now |
+|---|---|---|
+| H0-3 | finer rubric (0–10) | H0-2 already shows resolution is not the binding constraint |
+| H0-4 | Qwen2.5-7B (~15 GB download) | 7B→4B moved AUC by 0.015; low expected value for high cost |
+| H0-5 | frontier API judge | breaks the offline/local constraint; revisit only if a claim truly requires it |
+
+### Superseded plan (kept for the record)
 
 | id | change | rationale | cost |
 |---|---|---|---|

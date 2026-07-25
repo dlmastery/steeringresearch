@@ -121,6 +121,48 @@ class LocalJudge:
                 pad_token_id=self.tok.eos_token_id)
         return self.tok.decode(out[0][ids.shape[1]:], skip_special_tokens=True)
 
+    def score_axbench_expected(self, text: str, concept: str, instruction: str) -> float:
+        """Continuous concept score in [0,2] read from the token distribution (H0-2).
+
+        The AxBench rubric emits an INTEGER in {0,1,2}. That quantization throws away
+        the judge's own uncertainty and saturates the score with ties, which depresses
+        ROC-AUC against ground-truth labels (H0-1 measured AUC 0.665 with a large mean
+        separation of +0.58 — the signature of a coarse score, not of no signal).
+
+        Instead of generating, we teacher-force the JSON prefix so the very next token
+        IS the concept digit, then take the expected value under the model's own
+        distribution restricted to {"0","1","2"}:
+
+            score = Σ_d p(d) · d   /   Σ_d p(d),      d ∈ {0,1,2}
+
+        This is strictly more informative than the argmax (it recovers "0.8 vs 1.4"
+        where the rubric could only say "1"), needs ONE forward pass instead of a
+        16-token generate, and is therefore also faster. Returns a float in [0,2].
+        """
+        import torch
+
+        msgs = [{"role": "user", "content": build_axbench_prompt(text, concept, instruction)}]
+        ids = self.tok.apply_chat_template(
+            msgs, add_generation_prompt=True, return_tensors="pt").to(self.device)
+        prefix = self.tok('{"concept": ', add_special_tokens=False,
+                          return_tensors="pt").input_ids.to(self.device)
+        full = torch.cat([ids, prefix], dim=1)
+        with torch.no_grad():
+            logits = self.model(full).logits[0, -1].float()
+        probs = torch.softmax(logits, dim=-1)
+
+        # First token id of each digit string (handles tokenizers that prefix a space).
+        cand = []
+        for d in ("0", "1", "2"):
+            tid = self.tok.encode(d, add_special_tokens=False)
+            cand.append(tid[0])
+        p = probs[cand]
+        tot = float(p.sum())
+        if tot <= 0:
+            raise JudgeUnavailable("digit tokens carry no probability mass")
+        p = p / p.sum()
+        return float(p[0] * 0.0 + p[1] * 1.0 + p[2] * 2.0)
+
     @staticmethod
     def _parse(raw: str) -> tuple[float, float]:
         m = _JSON_RE.search(raw)

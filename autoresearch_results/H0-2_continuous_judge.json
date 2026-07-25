@@ -1,0 +1,17 @@
+{
+  "judge_model": "Qwen/Qwen3-4B-Instruct-2507",
+  "dataset": "concept10",
+  "n_scored": 300,
+  "n_positive": 150,
+  "readout": "expected value over p({0,1,2}) \u2014 continuous",
+  "roc_auc_continuous": 0.7508361204013378,
+  "positives_mean": 1.0184730001882554,
+  "negatives_mean": 0.4573142592807749,
+  "separation": 0.5611587409074805,
+  "distinct_score_values": 68,
+  "baseline_h0_1_integer_auc": 0.665,
+  "delta_vs_integer": 0.08583612040133781,
+  "elapsed_s": 94.0,
+  "gate": 0.85,
+  "passes_gate": false
+}
