@@ -153,10 +153,16 @@ def get_pipeline() -> _Pipeline:
     return _pipeline
 
 
+# The dial's ceiling: never let the UI ask for a T beyond the segment the field
+# actually trained over (config.TRAIN_T_MAX under the v2 norm-relative convention).
+_T_MAX = max(C.TRAIN_T_MAX, max(C.T_SWEEP)) if C.NORM_RELATIVE else 2.0
+
+
 class SteerRequest(BaseModel):
     prompt: str
-    # Flow-time strength dial. Defaults to the config default (T=1.0 = the full
-    # learned trajectory); the slider on the page sends anything in [0, 2].
+    # Flow-time strength dial. Under the v2 norm-relative convention T is the
+    # FRACTIONAL displacement ||dh||/||h|| (the same dial lesson 2 calls alpha),
+    # so the slider spans [0, TRAIN_T_MAX=0.15] rather than v1's [0, 2].
     T: float = C.T_DEFAULT
     # Optional named concept to steer toward (indexes the trained concept table).
     concept: str | None = None
@@ -237,8 +243,11 @@ def steer(req: SteerRequest) -> dict:
     if not prompt:
         raise HTTPException(400, "empty prompt")
     # Clamp T into the dial's range so a hand-crafted request can't ask the
-    # integrator for a wild extrapolation the field was never trained for.
-    T = max(0.0, min(float(req.T), 2.0))
+    # integrator for a wild extrapolation the field was never trained for. Under
+    # the v2 norm-relative convention T is a FRACTION of ||h||, so the ceiling is
+    # the training interpolant's far end (0.15) rather than v1's raw 2.0 — which
+    # in relative terms was a 22% displacement, far past the coherence cliff.
+    T = max(0.0, min(float(req.T), _T_MAX))
 
     p = get_pipeline()
     # Deferred; cheap once torch is already loaded by the pipeline.
@@ -256,7 +265,10 @@ def steer(req: SteerRequest) -> dict:
         # All the steering lives in the flow: we pass NO CAA vector/alpha to
         # generate() and instead integrate v(h, t, c) to flow-time T at layer
         # C.LAYER inside the FlowContext hook.
-        with FlowContext(p.model, p.vfield, concept_vec, C.LAYER, T=T):
+        with FlowContext(p.model, p.vfield, concept_vec, C.LAYER, T=T,
+                         n_steps=C.N_STEPS,
+                         norm_relative=bool(p.meta.get("norm_relative", False)),
+                         skip_special=C.SKIP_SPECIAL):
             flow_response = generate(p.model, p.tok, prompt, alpha=0.0)
     else:
         # Gate stayed quiet (benign prompt), T dialled to zero, or no concept

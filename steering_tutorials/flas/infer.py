@@ -57,6 +57,11 @@ class FlowDemo:
 
         loaded = load_flow(C.FLOW_PATH)
         self.vfield = loaded[0] if isinstance(loaded, tuple) else loaded
+        meta = loaded[1] if isinstance(loaded, tuple) and len(loaded) > 1 else {}
+        # The integrator must match the convention the field was TRAINED under: a
+        # v2 field carries a unit direction (so T is a fraction of ||h||), a v1
+        # field carries the raw ||delta_c||. A checkpoint with no flag is v1.
+        self.norm_relative = bool(meta.get("norm_relative", False))
 
         self.gate = HarmGate(self.model, self.tok)
         self.judge = Judge(self.model, self.tok)
@@ -127,7 +132,9 @@ class FlowDemo:
 
         # Flow-steered: integrate the trained field to flow-time T at C.LAYER.
         with self._FlowContext(self.model, self.vfield, concept_vec, self.layer,
-                               T=self.T):
+                               T=self.T, n_steps=C.N_STEPS,
+                               norm_relative=self.norm_relative,
+                               skip_special=C.SKIP_SPECIAL):
             steered = self._generate(self.model, self.tok, prompt,
                                     max_new_tokens=getattr(C, "MAX_NEW_TOKENS", 48))
         steered_verdict = self.judge.verdict(prompt, steered)

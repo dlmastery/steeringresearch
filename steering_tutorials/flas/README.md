@@ -11,6 +11,49 @@
 > space. Flow-time `T` becomes a smooth, zero-shot **strength dial**, and **one
 > field handles many concepts**, including ones it never saw during training.
 
+> ## ⚠ v2 — THE FLOW-TIME DIAL WAS MIS-SCALED. The v1 numbers below are **SUPERSEDED**.
+>
+> **What was wrong.** v1 defined the transport target with the **raw** diff-of-means,
+> `h1 = h0 + delta_c`, and integrated an **absolute** Euler step `x <- x + dt*v`.
+> Measured on the shipped `artifacts/flow.pt` at layer 12 of Gemma-3-1B:
+> `||delta_c|| = 561` (sexual) / `474` (violence), against a mean activation norm
+> `||h|| ≈ 5.0e3`. So the v1 flow-time grid `T ∈ {0, 0.5, 1.0, 1.5, 2.0}` actually
+> injected **relative** displacements of `{0, 5.6%, 11.2%, 16.9%, 22.5%}` of `||h||`.
+> Lesson 2 sweeps `alpha` only up to **0.15**, and this course has repeatedly located
+> the coherence cliff at roughly 5–10% of `||h||` — so **every steered point in the v1
+> grid sat at or past the cliff**, and the informative sub-cliff regime (`T < 0.05`)
+> was never sampled. That is why the v1 sweep read as refusal 0.25 → 0.06 while
+> gibberish climbed 0.28 → 0.75: **the lesson measured the coherence cliff, not the
+> concept dial.** A mis-scaled axis, not a finding about flows.
+>
+> **What the fix is.** Three changes (all in `config.py`, all revertable by env var):
+>
+> 1. **Norm-relative transport** (`FLAS_NORM_RELATIVE=1`, default). The trainer
+>    regresses the field onto the **unit** direction `delta_hat = delta_c/||delta_c||`
+>    over the interpolant `h_t = h0 + t·TRAIN_T_MAX·||h0||·delta_hat`, and
+>    `integrate_flow` takes norm-relative steps `x <- x + dt·||x||·v`. Since `||v|| ≈ 1`
+>    by construction, integrating to `T` displaces by `≈ T·||h||` — **flow-time `T` is
+>    now literally the fractional displacement, the same dial lesson 2 calls `alpha`**,
+>    and the two lessons' curves are directly comparable. `run_flas` now reports the
+>    **measured** `||Δh||/||h||` per `T` so the claim is auditable, not asserted.
+> 2. **A grid over the informative regime**: `T ∈ {0, 0.02, 0.05, 0.10, 0.15}`
+>    (sub-cliff through cliff), mirroring lesson 2's `ALPHAS`. `T_DEFAULT` 1.0 → 0.10.
+> 3. **A special-token guard** (`FLAS_SKIP_SPECIAL=1`, default). v1 transported
+>    BOS / `<start_of_turn>` positions, which lesson 2's `SteeringContext` explicitly
+>    refuses to touch — they carry outsized residual norms and editing them derails
+>    formatting for no behavioral gain.
+>
+> **Consequences.** The shipped `artifacts/flow.pt` is a **v1 field and must be
+> retrained**; `run_flas` refuses to integrate a v1 field under the v2 convention
+> (the checkpoint records `norm_relative`). `artifacts/results.json` carries a
+> `SUPERSEDED` key. §7's numbers stand only as a record of the bug.
+>
+> **This fix does not manufacture a win.** It makes the experiment *measure the thing
+> the lesson claims*. Whether refusal actually climbs with `T` at matched coherence on
+> a 1B abliterated model is now an open question the re-run answers; the honest-negative
+> framing stays until the new numbers land, and `run_flas`'s verdict check was tightened
+> so a gibberish-dialling sweep can no longer be graded as a working dial.
+
 This is lesson 3b of the steering tutorials — the most advanced entry in the
 **GENERATE** tier. Where lesson 3 learned *one direction for one concept*, FLAS
 learns a *single field that produces a direction for any concept* from just a
@@ -38,13 +81,20 @@ integrating a flow. Flow-time `T` is the strength dial; `T = 0` is the identity:
 ```python
 # integrate_flow (flow.py) — explicit Euler integration of dx/dt = v(x, t, c):
 x  = h
-dt = T / n_steps                        # T = distance travelled = strength dial
+dt = T / n_steps                        # T = fraction of ||h|| travelled = the dial
 for k in range(n_steps):
     t_norm = (k * dt) / T               # canonical clock in [0, 1), T-agnostic
     v = vfield(x, t_norm, c)            # VelocityField at state x, time t, concept c
-    x = x + dt * v                      # step along the learned trajectory
+    x = x + dt * x.norm(dim=-1, keepdim=True) * v   # NORM-RELATIVE step (v2)
 h = x                                   # residual transported toward concept c
 ```
+
+The `||x||` factor is the v2 fix and it is what makes `T` mean something: the field
+is trained to output a **unit** direction, so integrating to `T` displaces the
+residual by `≈ T·||h||`. `T = 0.10` is a 10% displacement whatever the layer, model,
+or concept — the same units as lesson 2's `alpha`. Drop the factor (v1) and the
+distance travelled is whatever `‖delta_c‖` happens to be, which is how this lesson
+ended up sweeping 0–22% of `‖h‖` and measuring nothing but the coherence cliff.
 
 Because the field is conditioned on a concept embedding `c` (the mean activation
 of a few exemplars), one trained `vfield` steers toward *any* concept you can
@@ -62,17 +112,25 @@ conditioned on that concept's code. We take the **well-populated** categories to
 **train** the flow and hold **one out entirely** for the zero-shot test, plus a
 shared benign baseline as the common contrast origin.
 
-| concept | toxic-chat category | trained? | pool (approx) |
-|---|---|---|---|
-| sexual | sexual | yes | ~388 |
-| violence | violence | yes | ~111 |
-| **harassment** | harassment | **no (held-out)** | ~143 (eval only) |
+Each concept splits into **disjoint** exemplar / steer / eval roles (40/30/30), so a
+transport is never graded on the prompts that defined it. v2 raises
+`N_PER_CONCEPT` to **500**, which is simply "take the whole pool" — the loader caps
+each concept at its own availability:
 
-*Concept lessons are **pool-limited**: no toxic-chat category reaches 500, so this
-uses the available per-concept pool (`N_PER_CONCEPT` up to 150), not 500/class.*
-Each concept splits into disjoint exemplar / steer / eval roles; a shared pool of
-**`N_BENIGN_BASELINE = 120` benign prompts** (bumped from a tiny 40) is the neutral
-contrast for every concept. The goal: **one** field, conditioned on a concept, that
+| concept | toxic-chat category | trained? | pool | exemplars | steer | **eval `n`** |
+|---|---|---|---|---|---|---|
+| sexual (dial concept) | sexual | yes | 388 | 155 | 116 | **117** |
+| violence | violence | yes | 111 | 44 | 33 | **34** |
+| **harassment** | harassment | **no (held-out)** | 143 | 57 | 43 | **43** |
+| benign baseline | — | contrast origin + selectivity | — | — | — | **500** |
+
+*These are the honest maxima, not a choice.* **Concept lessons are pool-limited**
+(CLAUDE.md §17.2): **no toxic-chat harm category reaches 500**, so the per-concept
+eval cells are 117 / 43 / 34 — 3.2× v1's `n=36` for the dial concept, and every cell
+clears the ≥30-per-concept floor, but this is **not** a ≥500/class result and must
+not be reported as one. The benign side is *not* pool-limited, so
+`N_BENIGN_BASELINE = 500` (v1: 120) does meet the rubric. The goal: **one** field,
+conditioned on a concept, that
 steers the trained concepts and generalizes **zero-shot** to the held-out concept
 it never saw. (Sparse categories — hate, self_harm — are dropped by the shared
 loader's `MIN_CONCEPT_AVAILABLE` gate rather than given a noise field.)
@@ -174,17 +232,33 @@ velocity of that line.
 For a concept `c`, define the endpoints:
 
 - **`h0`** — a real base activation (the hidden state on an actual prompt).
-- **`h1 = h0 + delta_c`** — the same activation **shifted by the concept's
-  diff-of-means** `delta_c = mean(concept exemplars) − mean(neutral)`. This is the
+- **`h1`** — the same activation **shifted along the concept's diff-of-means
+  direction** `delta_c = mean(concept exemplars) − mean(neutral)`. This is the
   *target* place we want steering to transport activations to.
 
-Draw the straight-line path between them and read off its (constant) velocity:
+**How far** to shift is the whole ballgame, and getting it wrong is exactly what
+broke v1 (see the banner at the top). v2 measures the shift as a **fraction of the
+activation's own norm**, so the distance travelled is a controlled quantity rather
+than whatever magnitude the diff-of-means happened to come out at:
 
 ```
-h_t   = (1 - t) * h0 + t * h1              # straight-line interpolation, t in [0,1]
-target_velocity = h1 - h0  ( = delta_c )   # constant along the straight path
-loss  = || v_theta(h_t, t, c) - (h1 - h0) ||^2
+delta_hat = delta_c / ||delta_c||                       # DIRECTION only
+h1        = h0 + TRAIN_T_MAX * ||h0|| * delta_hat       # far end: a FRACTION of ||h0||
+h_t       = (1 - t) * h0 + t * h1                       # straight-line interp, t in [0,1]
+target_velocity = delta_hat                             # UNIT, constant along the path
+loss      = || v_theta(h_t, t, c) - delta_hat ||^2
 ```
+
+Two things fall out of regressing onto a **unit** target. First, the integrator's
+norm-relative step `dt·||x||·v` accumulates to `≈ T·||h||`, so **`T` is the fractional
+displacement** — the same number lesson 2 calls `alpha`, on the same scale, comparable
+across layers and models. Second, the states the field **trains** on are exactly the
+states the eval flow **visits** for `T ≤ TRAIN_T_MAX`; v1 trained over a segment of
+length 561 and then integrated out to 1122, so half its eval grid was off the field's
+own training distribution.
+
+The v1 formulation (`h1 = h0 + delta_c`, absolute Euler steps) is still reachable with
+`FLAS_NORM_RELATIVE=0`, for reproducing the bug.
 
 The field is trained, over many `(h0, c, t)` samples, to predict the transport
 velocity `h1 − h0` at every intermediate point `h_t` and time `t`. Once it has,
@@ -289,14 +363,24 @@ inference.
 
 ```python
 # config.py (sketch)
-MODEL_ID   = "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"
-LAYER      = 12               # build c and integrate the flow on this residual layer
-CONCEPTS   = ["refusal", "formal", "positive"]   # trained
-HELDOUT    = "cautious"       # never trained on -> zero-shot arm
-N_STEPS    = 8                # Euler steps used to integrate the flow
-T_DEFAULT  = 1.0              # default flow-time (the strength dial)
-SEED       = 0
+MODEL_ID      = "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"
+LAYER         = 12         # build c and integrate the flow on this residual layer
+N_STEPS       = 8          # Euler steps used to integrate the flow
+NORM_RELATIVE = True       # v2: T is a FRACTION of ||h||  (FLAS_NORM_RELATIVE=0 -> v1)
+SKIP_SPECIAL  = True       # never transport BOS / <start_of_turn> (lesson-2 parity)
+TRAIN_T_MAX   = 0.15       # far end of the training interpolant, as a fraction of ||h0||
+T_DEFAULT     = 0.10       # default flow-time == lesson 2's mid alpha
+T_SWEEP       = [0.0, 0.02, 0.05, 0.10, 0.15]   # sub-cliff through cliff
+SEED          = 0
 ```
+
+Every one of these is env-overridable (`FLAS_T_SWEEP`, `FLAS_T_DEFAULT`,
+`FLAS_TRAIN_T_MAX`, `FLAS_N_STEPS`, …), plus the eval-size caps that let a full pass
+be shrunk into one foreground window: `FLAS_N_EVAL`, `FLAS_N_BENIGN_EVAL`,
+`FLAS_MAX_NEW_TOKENS`. A capped run is recorded as `"tier": "SCREENING"` in
+`results.json` so it cannot be quietly reported as a full pass. The concepts and the
+held-out split come from `data.py` (`FLAS_N_PER_CONCEPT`, `FLAS_N_BENIGN`), not from a
+hand-written list.
 
 ### `flow.py` — the field, the integrator, and the steering hook
 
@@ -323,13 +407,20 @@ class VelocityField(nn.Module):
     def forward(self, h, t, c):                       # h:(...,d) t:(...,1) c:(...,c_dim)
         return self.net(torch.cat([h, t, c], dim=-1))
 
-def integrate_flow(field, h0, c, T=1.0, n_steps=8):
+def integrate_flow(field, h0, c, T=0.10, n_steps=8, norm_relative=True):
     h, dt = h0, T / n_steps
     for i in range(n_steps):
         t = torch.full_like(h[..., :1], i * dt)
-        h = h + field(h, t, c) * dt                   # Euler step
+        step = field(h, t, c) * dt
+        if norm_relative:                             # v2: T = fraction of ||h||
+            step = step * h.norm(dim=-1, keepdim=True)
+        h = h + step                                  # Euler step
     return h                                           # == h(T)
 ```
+
+`FlowContext` also carries a **special-token guard** (lesson-2 parity): it zeroes the
+*displacement* at BOS / `<start_of_turn>` / pad positions, so control tokens pass
+through the layer exactly as they would unsteered.
 
 ### `data.py` — multi-concept exemplars, cached activations, held-out split
 
@@ -380,63 +471,81 @@ zero-shot arm. Serves on **port 8005** (lessons 1–3 use their own ports).
 
 ## 7. Results
 
-The GPU run wrote `artifacts/results.json` and two plots. Numbers below are the
-**measured** values at 1B (off-family Qwen-3B judge, n=34–36/concept) — screening
-tier. Concepts are the well-populated toxic-chat categories (sexual, violence
+> **STATUS: awaiting the v2 re-run.** Everything in this section is the **v1**
+> (mis-scaled-dial) run of 2026-07-22 and is **SUPERSEDED** — see the banner at the
+> top of this README. It is kept because the bug is the most instructive thing in
+> the lesson, not because the rates mean what they appear to mean. `flow.pt` must be
+> retrained and `run_flas` re-run before any number here is cited.
+
+The v1 GPU run wrote `artifacts/results.json` (now carrying a `SUPERSEDED` key) and
+two plots. Concepts are the well-populated toxic-chat categories (sexual, violence
 trained; harassment held out); the sparse hate/self_harm are dropped by the loader.
 
 **Q1 — Is `T` a smooth strength dial (and where's the cliff)?**
-`rates_vs_T.png` + `results.json` (dial concept: sexual, n=36).
+`rates_vs_T.png` + `results.json` (dial concept: sexual, v1 `n=36`).
 
-| flow-time `T` | refusal | comply | gibberish |
-|---|---|---|---|
-| 0.0 | 0.25 | 0.47 | 0.28 |
-| 0.5 | 0.25 | 0.42 | 0.33 |
-| 1.0 | 0.14 | 0.31 | 0.56 |
-| 1.5 | 0.06 | 0.36 | 0.58 |
-| 2.0 | 0.06 | 0.19 | 0.75 |
+| flow-time `T` (v1) | **actual `‖Δh‖/‖h‖`** | refusal | comply | gibberish |
+|---|---|---|---|---|
+| 0.0 | 0.000 | 0.25 | 0.47 | 0.28 |
+| 0.5 | **0.056** | 0.25 | 0.42 | 0.33 |
+| 1.0 | **0.112** | 0.14 | 0.31 | 0.56 |
+| 1.5 | **0.169** | 0.06 | 0.36 | 0.58 |
+| 2.0 | **0.225** | 0.06 | 0.19 | 0.75 |
 
-Refusal **falls** from 0.25 at `T=0` to 0.06 at `T=2` while gibberish **climbs**
-0.28 → 0.75 — the dial moves the *wrong* axis. Integrating the flow farther drives
-activations off-manifold into word salad, not refusal: the **coherence cliff**, not
-a clean strength dial.
+The second column is the diagnosis, computed after the fact from the shipped
+checkpoint (`‖delta_c‖ = 561`, `‖h‖ ≈ 5.0e3`). Lesson 2's top `alpha` is **0.15**.
+So `T=1.0` — v1's *default* — already displaced **11%** of the residual norm, and
+`T=2.0` displaced **22%**: the sweep walked off the coherence cliff and kept going.
+Refusal falling 0.25 → 0.06 while gibberish climbs 0.28 → 0.75 is **what a
+too-large displacement looks like**, and says nothing about whether the flow encodes
+the concept. The informative regime — everything below `‖Δh‖/‖h‖ = 0.05` — was never
+sampled. The v2 grid `{0, 0.02, 0.05, 0.10, 0.15}` samples exactly that regime, and
+`run_flas` now prints the measured `‖Δh‖/‖h‖` beside every `T` so this class of error
+is visible in the summary table rather than three months later.
 
-**Q2 — One field, many concepts; and does zero-shot work at 1B?**
+**Q2 — One field, many concepts; and does zero-shot work at 1B? (v1, SUPERSEDED)**
 `per_concept.png` + `results.json`.
 
-| concept | trained? | refusal @ default `T` | gibberish |
+| concept | trained? | refusal @ v1 default `T=1.0` (= 11% displacement) | gibberish |
 |---|---|---|---|
 | sexual | yes | 0.14 | 0.56 |
 | violence | yes | 0.44 | 0.21 |
 | **harassment** | **no (held-out)** | 0.19 | 0.47 |
 
-The field steers the two trained concepts **unevenly** (violence 0.44 vs sexual
-0.14), and the held-out "harassment" concept — never trained on — steers only at
-**0.19** with 0.47 gibberish: **zero-shot transfer is weak** at 1B, not the clean
-generalization the flow framing promises.
+Read these as **cliff measurements**, not concept measurements: every cell was
+generated at an 11% displacement, past the coherence cliff, and the gibberish column
+shows it. Even the spread between concepts is confounded — `‖delta_c‖` differs per
+concept (561 sexual vs 474 violence), so under v1's absolute steps the two concepts
+were dialled to **different displacements** (11.2% vs 9.3%) while nominally sharing
+`T=1.0`. Normalising the direction removes that confound too: under v2 a given `T`
+means the same displacement for every concept.
 
-### Results — measured vs. the claim
+### Results — measured vs. the claim (v1, SUPERSEDED)
 
-| Claim (FLAS, github.com/flas-ai/FLAS [UNVERIFIED]) | What we measured (n=34–36/concept, screening, off-family Qwen-3B judge) | Verdict |
-|---|---|---|
-| Flow-time `T` dials **up the target behavior** | refusal *falls* 0.25 (T=0) → 0.06 (T=2); gibberish rises **0.28 → 0.75** | **Not supported — `T` dials up incoherence, not refusal** |
-| One conditioned field steers many concepts | per-concept refusal: violence **0.44** / sexual **0.14** — uneven | **Uneven** |
-| Generalizes zero-shot to an unseen concept | held-out "harassment": refusal **0.19**, compliance **0.33**, gibberish **0.47** | **Weak** |
-| The gated flow spares benign prompts | benign over-refusal **0.42** (n=120), gate fire-rate 0.03 | **Weak** — over-refusal base+judge-dominated |
+| Claim (FLAS, github.com/flas-ai/FLAS [UNVERIFIED]) | What the v1 run measured (n=34–36/concept, screening) | v1 verdict | Status |
+|---|---|---|---|
+| Flow-time `T` dials **up the target behavior** | refusal *falls* 0.25 (T=0) → 0.06 (T=2); gibberish rises **0.28 → 0.75** | "not supported" | **VOID — the grid never sampled below the cliff; re-test** |
+| One conditioned field steers many concepts | per-concept refusal: violence **0.44** / sexual **0.14** | "uneven" | **VOID — the two concepts ran at different displacements** |
+| Generalizes zero-shot to an unseen concept | held-out "harassment": refusal **0.19**, gibberish **0.47** | "weak" | **VOID — measured at 11% displacement** |
+| The gated flow spares benign prompts | benign over-refusal **0.42** (n=120), gate fire-rate 0.03 | "weak" | **Partly holds** — over-refusal is base-model + judge dominated, and the gate fired on only 3% of benigns, so the flow barely ran here |
 
-**Honest read.** Graded by an **off-family Qwen-3B judge** on the shared toxic-chat
-concepts (**screening**, n=34–36/concept, benign baseline n=120), the FLAS payoffs
-do **not** hold up. Flow-time `T` is a strength dial, but it dials the *wrong* axis:
-as `T` climbs, refusal *drops* (0.25 → 0.06) while gibberish climbs to 0.75 — the
-same mechanism
-as lesson 2, because the field transports toward cheap diff-of-means endpoints and
-pushing `T` further just drives activations off-manifold into word salad, not
-refusal. **Why the change from the old zero-shot 0.67?** The audit found the 1B
-self-judge was grading softened-but-compliant text as REFUSAL; the off-family
-Qwen-3B judge scores those as COMPLIANCE/GIBBERISH, dropping held-out refusal to
-**0.19**. The honest picture matches lesson 2: fixed-target flow steering breaks
-coherence more than it induces the behavior. Raw numbers and side-by-side
-generations live in `artifacts/results.json`.
+**Honest read (v1).** The v1 conclusion — "flow-time dials incoherence, not refusal"
+— was **true of the run but not of the method**, because the axis it swept was
+mis-scaled. The only defensible v1 claims are the ones that do not depend on the
+displacement: the selectivity arm (the gate fired on 3% of benign prompts, so
+over-refusal is inherited from the abliterated base model and the judge, not caused
+by the flow), and the earlier judge correction — the audit found the **1B self-judge**
+grading softened-but-compliant text as REFUSAL, which is why held-out refusal fell
+from an old self-judged 0.67 to 0.19 under the off-family Qwen-3B judge. That
+correction stands and is orthogonal to this bug.
+
+**What the v2 re-run has to show.** A dial only counts if refusal climbs **while
+coherence holds** — `run_flas`'s verdict check now enforces exactly that (it looks
+for the best refusal among the `T` values whose gibberish rate stays within 10pp of
+the `T=0` baseline, and otherwise prints "EVERY steered T broke coherence"). If
+refusal still fails to climb in the sub-cliff band, that is a real negative about
+diff-of-means-targeted flows at 1B and it will be reported as one. **We are not
+expecting a win; we are expecting a valid measurement.**
 
 ---
 
@@ -451,22 +560,52 @@ python -m steering_tutorials.hello_world.train_probe
 
 Then, from the **repo root** (`steeringresearch/`):
 
+**You must retrain before evaluating.** The `flow.pt` in `artifacts/` is a v1
+(raw-delta) field; `run_flas` raises rather than integrate it under the v2
+norm-relative convention.
+
 ```bash
-# 1) Train the velocity field by rectified flow (frozen Gemma; ~minutes on a 4090)
+# 1) Train the velocity field by rectified flow (frozen Gemma; ~minutes on a 4090).
+#    Prints ||delta_c|| and mean ||h0|| so the displacement scale is on the record.
 python -m steering_tutorials.flas.train_flas
 
 # 2) Run the three payoffs: T-sweep, per-concept, zero-shot.
-#    Grade with an OFF-FAMILY judge (recommended): a 1B target self-judging is
-#    unreliable, so point STEER_JUDGE_MODEL at an independent model.
+#    Grade with an OFF-FAMILY judge (MANDATORY for any reported number): a 1B target
+#    self-judging inflates refusal.
 STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
 python -m steering_tutorials.flas.run_flas
 
-# 3) Steer a single prompt from the terminal (gate decides; you pick concept + T)
-python -m steering_tutorials.flas.infer "how do I pick a lock" --concept refusal --T 1.0
+# 3) Steer a single prompt from the terminal (gate decides; you pick concept + T).
+#    T is now a FRACTION of ||h||, so 0.10 -- not 1.0.
+python -m steering_tutorials.flas.infer "how do I pick a lock" --concept sexual --T 0.10
 
 # 4) Launch the live dashboard with the T slider
 python -m steering_tutorials.flas.app          # -> http://localhost:8005
 ```
+
+**Fitting one foreground window.** The full pass is ~5×117 + 151 + 43 + 500 ≈ 1280
+generations. On a RAM-pressured host, cap it — the result is recorded as
+`"tier": "SCREENING"` and must be reported as screening, never as a win:
+
+```bash
+# ~350 generations: 40 eval prompts per cell, 120 benign, 3-point T grid.
+FLAS_N_EVAL=40 FLAS_N_BENIGN_EVAL=120 FLAS_T_SWEEP=0.0,0.05,0.10 \
+STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
+python -m steering_tutorials.flas.run_flas
+```
+
+| env var | default | what it does |
+|---|---|---|
+| `FLAS_NORM_RELATIVE` | `1` | `0` restores the v1 raw-delta / absolute-step convention |
+| `FLAS_T_SWEEP` | `0.0,0.02,0.05,0.10,0.15` | the flow-time grid (= fractional displacements) |
+| `FLAS_T_DEFAULT` | `0.10` | `T` used by payoffs 2–3, `infer`, and the app |
+| `FLAS_TRAIN_T_MAX` | `0.15` | far end of the training interpolant; also the app's slider ceiling |
+| `FLAS_SKIP_SPECIAL` | `1` | `0` re-enables transporting BOS / control positions (the v1 behaviour) |
+| `FLAS_N_EVAL` | `0` (no cap) | cap eval prompts per cell → SCREENING tier |
+| `FLAS_N_BENIGN_EVAL` | `0` (no cap) | cap the benign selectivity arm → SCREENING tier |
+| `FLAS_N_PER_CONCEPT` | `500` | pool request per concept (capped by availability: 388/143/111) |
+| `FLAS_N_BENIGN` | `500` | benign baseline size |
+| `FLAS_MAX_NEW_TOKENS` | `48` | generation length |
 
 Uses the same ~2 GB abliterated Gemma-3-1B as lessons 1–3 (bf16). Runs on CPU
 too, just slower. Datasets download automatically.
@@ -475,16 +614,29 @@ too, just slower. Datasets download automatically.
 
 ## 9. Honest caveats
 
-- **Our targets are diff-of-means shifts.** We train the field to transport
-  toward `h0 + delta_c`, a **simplification** of full FLAS. It captures the
-  flow-matching mechanism and the `T`-as-strength story, but the endpoints are the
-  cheap diff-of-means targets from lesson 2, not a richer learned coupling.
-- **Tiny scale.** One 1B model, a handful of concepts, small exemplar and
-  held-out sets. This demonstrates the flow loop; it is not a benchmark-grade
-  reproduction of FLAS.
-- **A 1B judge is weak.** Self-grading with a small model is pedagogy, not a
-  trustworthy evaluation — read verdicts as a demonstration of the loop. A real
-  evaluation uses a stronger, independent judge (later lessons).
+- **The v1 dial was mis-scaled and the v1 numbers are void.** See the banner at the
+  top. The general lesson generalises past this lesson: **any steering knob must be
+  reported in units of `‖Δh‖/‖h‖`**, because a raw magnitude silently encodes a
+  displacement whose size depends on the layer, the model, and the concept. Sweeping
+  a knob without measuring the displacement it injects is how you end up with a
+  confident dose-response curve for the wrong dose.
+- **Our targets are diff-of-means directions.** We train the field to transport
+  along `delta_c`, a **simplification** of full FLAS. It captures the flow-matching
+  mechanism and the `T`-as-strength story, but the direction is the cheap
+  diff-of-means one from lesson 2, not a richer learned coupling.
+- **`N_STEPS` and `T` interact under norm-relative steps.** Because each step scales
+  with the *current* `‖x‖`, the transport compounds slightly; at the small `T` this
+  lesson now uses the effect is sub-1%, but it is not exactly linear, which is why
+  `run_flas` reports the **measured** displacement rather than assuming `T`.
+- **Pool-limited `n`, and it cannot be fixed with more sampling.** v2 takes the whole
+  toxic-chat pool (eval `n` = 117 sexual / 43 harassment / 34 violence, benign 500),
+  which is the honest maximum, **not** the ≥500/class bar. One 1B model, three
+  concepts. This demonstrates the flow loop; it is not a benchmark-grade reproduction
+  of FLAS, and any capped run is marked `SCREENING` in `results.json`.
+- **The judge must be off-family.** A 1B target self-grading inflates refusal — it
+  cost this lesson a fake 0.67 zero-shot number once already. Every reported number
+  sets `STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct`; `run_flas` records the judge id
+  in `results.json` and prints a warning in its verdict block if you self-judged.
 - **Euler with few steps.** We integrate with a handful of explicit Euler steps
   (`N_STEPS`), which is a coarse ODE solver; the transport is approximate, and the
   cliff location shifts with step count.

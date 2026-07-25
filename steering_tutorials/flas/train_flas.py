@@ -30,6 +30,28 @@ to reproduce that line's (constant) velocity everywhere along it:
     target velocity  = h1 - h0 = delta_c # constant along the straight path
     loss = MSE( v_theta(h_t, t, c) , h1 - h0 )
 
+v2 — THE TRANSPORT TARGET IS NOW NORM-RELATIVE (see ``config.py`` for the full
+write-up). The v1 target above used the RAW ``delta_c``, whose measured norm at
+layer 12 of Gemma-3-1B is ~561 (sexual) / ~474 (violence) against ``||h|| ~= 5e3``
+— so integrating to the v1 default ``T=1.0`` displaced the residual by 11% of its
+own norm, past this course's coherence cliff, and the whole ``T`` sweep dialled
+gibberish instead of the concept. Under :data:`config.NORM_RELATIVE` (default on)
+the transport is defined in units of ``||h0||`` instead::
+
+    delta_hat = delta_c / ||delta_c||                     # DIRECTION only
+    h1  = h0 + TRAIN_T_MAX * ||h0|| * delta_hat           # the far end (a fraction)
+    h_t = h0 + t * TRAIN_T_MAX * ||h0|| * delta_hat       # the interpolant
+    target velocity = delta_hat                           # UNIT, constant in t
+    loss = MSE( v_theta(h_t, t, c) , delta_hat )
+
+Two things fall out. (1) Because the regression target is a unit vector, the
+norm-relative integrator's step ``dt*||x||*v`` accumulates to ``~= T*||h||`` —
+**flow-time T becomes literally the fractional displacement**, the same quantity
+lesson 2 calls ``alpha``. (2) Because the interpolant is scaled the same way, the
+states the field TRAINS on are exactly the states the eval flow VISITS for
+``T <= TRAIN_T_MAX``; v1 trained on a segment of length 561 and then integrated up
+to 1122, i.e. half the eval grid was off the field's training distribution.
+
 Because the interpolant is a straight line, the ground-truth velocity is the SAME
 vector ``delta_c`` at every ``t`` — that is exactly what makes few-step Euler
 integration accurate (Liu et al. 2023, rectified flow). Integrating the learned
@@ -117,19 +139,28 @@ def main() -> None:
           f"{len(train_names)} concepts + baseline...", file=sys.stderr)
 
     concept_vecs: dict[str, torch.Tensor] = {}   # c : the conditioning embedding
-    deltas: dict[str, torch.Tensor] = {}         # c : the diff-of-means target shift
+    deltas: dict[str, torch.Tensor] = {}         # c : the transport DIRECTION (v2)
+    delta_norms: dict[str, float] = {}           # c : ||delta_c||, for the record
     for name in train_names:
         split = concepts[name]
         # (a) concept embedding c — the mean-activation "ConceptEncoder" identity
         #     of the concept, used to CONDITION the velocity field.
         c_vec = concept_embedding(model, tok, split["exemplars"], C.LAYER)
         concept_vecs[name] = _as_tensor(c_vec, device)
-        # (b) target shift delta_c = mean(steer_c) - mean(benign) at LAYER — WHERE
-        #     a steered activation for this concept should end up (h1 = h0 + delta).
+        # (b) target shift delta_c = mean(steer_c) - mean(benign) at LAYER — WHICH
+        #     WAY a steered activation for this concept should move.
         caa = extract_caa_vector(
             model, tok, harmful=split["steer_prompts"], benign=baseline, layer=C.LAYER
         )
-        deltas[name] = _as_tensor(caa["v_raw"], device)
+        delta_raw = _as_tensor(caa["v_raw"], device)
+        norm = float(delta_raw.norm())
+        delta_norms[name] = norm
+        # v2: keep only the DIRECTION. The distance travelled is set at integration
+        # time as a fraction of ||h||, so the raw ||delta_c|| (which is ~10% of
+        # ||h|| and varies per concept) can no longer smuggle in an uncontrolled
+        # displacement. v1 (FLAS_NORM_RELATIVE=0) keeps the raw vector.
+        deltas[name] = (delta_raw / max(norm, 1e-8)) if C.NORM_RELATIVE else delta_raw
+        print(f"[train] {name:12s} ||delta_c||={norm:9.2f}", file=sys.stderr)
 
     # (c) the h0 bank: a pool of UNSTEERED activations the flow learns to transport.
     #     We pool the shared benign baseline (the natural unsteered origin) with the
@@ -142,6 +173,12 @@ def main() -> None:
     h0_bank_np = last_token_activations(model, tok, h0_prompts, C.LAYER)  # [N, hidden]
     h0_bank = torch.from_numpy(h0_bank_np).to(device=device, dtype=torch.float32)
     n_bank = h0_bank.shape[0]
+    mean_h_norm = float(h0_bank.norm(dim=-1).mean())
+    print(f"[train] mean ||h0|| = {mean_h_norm:.1f} over {n_bank} activations; "
+          f"||delta_c||/||h0|| = "
+          + ", ".join(f"{n}={delta_norms[n] / max(mean_h_norm, 1e-8):.3f}"
+                      for n in train_names),
+          file=sys.stderr)
 
     # Stack the per-concept tensors so a batch can be gathered by concept index.
     name_order = list(train_names)
@@ -158,7 +195,8 @@ def main() -> None:
 
     print(
         f"[train] steps={C.STEPS} batch={C.BATCH} lr={C.LR} grad_clip={C.GRAD_CLIP} "
-        f"layer={C.LAYER} concepts={n_concepts} h0_bank={n_bank}",
+        f"layer={C.LAYER} concepts={n_concepts} h0_bank={n_bank} "
+        f"norm_relative={C.NORM_RELATIVE} train_t_max={C.TRAIN_T_MAX}",
         file=sys.stderr,
     )
 
@@ -182,17 +220,29 @@ def main() -> None:
         idx_c = torch.randint(0, n_concepts, (C.BATCH,), device=device)
 
         h0 = h0_bank[idx_h0]              # [B, hidden]  unsteered start
-        delta = delta_mat[idx_c]          # [B, hidden]  concept target shift
+        delta = delta_mat[idx_c]          # [B, hidden]  transport direction (unit in v2)
         c_emb = cvec_mat[idx_c]           # [B, hidden]  concept conditioning
-        h1 = h0 + delta                   # [B, hidden]  steered target
+
+        # The transport's LENGTH. v2: a fraction TRAIN_T_MAX of each start's own
+        # norm, so the segment the field trains over is exactly the segment the
+        # norm-relative integrator walks for T <= TRAIN_T_MAX. v1: the raw
+        # ||delta_c||, which is already baked into `delta`, so the scale is 1.
+        if C.NORM_RELATIVE:
+            scale = C.TRAIN_T_MAX * h0.norm(dim=-1, keepdim=True)   # [B, 1]
+        else:
+            scale = torch.ones(C.BATCH, 1, device=device)
+        h1 = h0 + scale * delta           # [B, hidden]  steered target
 
         # a random point along each straight path; rectified flow => the target
-        # velocity is the SAME (h1 - h0) at every t, which is the whole trick.
+        # velocity is the SAME direction at every t, which is the whole trick.
         # t is [B,1] to broadcast into the interpolation, but VelocityField wants
         # t shaped like h's LEADING dims ([B]), so we squeeze it for the field.
         t = torch.rand(C.BATCH, 1, device=device)          # [B, 1] ~ U(0,1)
-        h_t = (1.0 - t) * h0 + t * h1                      # = h0 + t * delta
-        target_v = h1 - h0                                 # = delta (constant in t)
+        h_t = (1.0 - t) * h0 + t * h1                      # = h0 + t*scale*delta
+        # The field regresses onto the UNIT direction in v2 (so ||v|| ~= 1 and the
+        # integrator's dt*||x||*v accumulates to ~= T*||h||), and onto the raw
+        # displacement in v1. `delta` already carries the right convention.
+        target_v = delta
 
         pred_v = vfield(h_t, t.squeeze(-1), c_emb)         # [B, hidden]
         loss = F.mse_loss(pred_v, target_v)
@@ -238,6 +288,12 @@ def main() -> None:
                 n: concept_vecs[n].detach().cpu().numpy() for n in train_names
             },
             "n_steps": C.N_STEPS,
+            # v2 provenance: the integrator MUST match the training convention, so
+            # run_flas reads these back and refuses to mix v1 and v2 fields.
+            "norm_relative": bool(C.NORM_RELATIVE),
+            "train_t_max": float(C.TRAIN_T_MAX),
+            "delta_norms": {n: float(delta_norms[n]) for n in train_names},
+            "mean_h_norm": mean_h_norm,
         },
     )
 

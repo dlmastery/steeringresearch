@@ -192,6 +192,7 @@ def integrate_flow(
     c: torch.Tensor,
     T: float = 1.0,
     n_steps: int = 8,
+    norm_relative: bool = True,
 ) -> torch.Tensor:
     """Explicit-Euler integration of ``dx/dt = v(x, t, c)`` from ``t=0`` to ``T``.
 
@@ -200,6 +201,21 @@ def integrate_flow(
     ``t_norm = (k*dt)/max(T, eps)`` in ``[0, 1)`` — so the network always sees a
     layer-agnostic, ``T``-agnostic clock and ``T`` acts purely as the distance
     travelled (the strength dial). ``T = 0`` returns ``h`` unchanged (identity).
+
+    ``norm_relative`` (the v2 fix, default ON) makes each step scale with the
+    CURRENT position's own residual norm::
+
+        norm_relative=True :   x <- x + dt * ||x||_pos * v(x, t, c)
+        norm_relative=False:   x <- x + dt *            v(x, t, c)      # v1
+
+    Under the v2 trainer the field regresses onto a UNIT direction, so ``||v|| ~= 1``
+    and the accumulated displacement is ``~= T * ||h||``: **flow-time T is then
+    literally the fractional displacement**, the same dial as lesson 2's
+    ``relative_add`` alpha. The v1 (absolute) path applies the same displacement to
+    every position regardless of that position's norm, which is why a raw
+    ``||delta_c|| = 561`` against ``||h|| ~= 5e3`` blew past the coherence cliff.
+    The two modes are NOT interchangeable — a field must be integrated in the mode
+    it was trained under (``meta['norm_relative']`` records which).
 
     Fully differentiable (no ``.detach()``), so a training loss can backprop
     through the whole integration into ``vfield``'s parameters; equally usable
@@ -212,9 +228,13 @@ def integrate_flow(
     for k in range(n_steps):
         t_norm = (k * dt) / denom                # canonical flow time in [0, 1)
         v = vfield(x, t_norm, c)                  # velocity at current state
-        # Euler step; cast v to x's dtype so x keeps h's dtype (e.g. bf16 on GPU
-        # even though the field's params are fp32).
-        x = x + dt * v.to(device=x.device, dtype=x.dtype)
+        # cast v to x's dtype so x keeps h's dtype (e.g. bf16 on GPU even though
+        # the field's params are fp32).
+        step = dt * v.to(device=x.device, dtype=x.dtype)
+        if norm_relative:
+            # per-position norm; keepdim so [.., 1] broadcasts over `hidden`.
+            step = step * x.norm(dim=-1, keepdim=True)
+        x = x + step
     return x
 
 
@@ -233,6 +253,18 @@ class FlowContext:
     Mirrors lesson 2's ``SteeringContext`` / lesson 3's ``ReftContext`` interface,
     including ``prepend=True`` so a downstream probe hook observes the transported
     residual (which is also what the next layer sees).
+
+    Two v2 knobs, both matching lesson 2's ``SteeringContext``:
+
+      ``norm_relative`` — take norm-relative Euler steps, so ``T`` is a FRACTION of
+        each position's own residual norm (see :func:`integrate_flow`). Must match
+        the convention the field was trained under.
+      ``skip_special`` — never transport BOS / ``<start_of_turn>`` / pad positions.
+        Lesson 2 refuses to steer them because they carry outsized residual norms
+        and editing them derails formatting for no behavioral gain; v1 of this
+        lesson transported them and paid for it in gibberish. The mask is built
+        from ``input_ids`` when the prefill pass makes them visible; during
+        decoding each step feeds one freshly generated (never special) token.
     """
 
     def __init__(
@@ -243,6 +275,9 @@ class FlowContext:
         layer: int,
         T: float = 1.0,
         n_steps: int = 8,
+        norm_relative: bool = True,
+        skip_special: bool = True,
+        special_ids: "set[int] | None" = None,
     ) -> None:
         self.model = model
         self.vfield = vfield
@@ -251,13 +286,54 @@ class FlowContext:
         self.layer = max(0, min(layer, len(layers) - 1))
         self.T = float(T)
         self.n_steps = int(n_steps)
+        self.norm_relative = bool(norm_relative)
+        self.skip_special = bool(skip_special)
+        self.special_ids = special_ids
         self._handles: list[Any] = []
         self._c: torch.Tensor | None = None  # concept tensor on the model device
+        self._last_input_ids: torch.Tensor | None = None
+
+    # -- special-token bookkeeping (verbatim in spirit from SteeringContext) --
+    def _default_special_ids(self) -> set[int]:
+        cfg = getattr(self.model, "config", None)
+        ids: set[int] = set()
+        for name in ("bos_token_id", "eos_token_id", "pad_token_id"):
+            val = getattr(cfg, name, None)
+            if isinstance(val, int):
+                ids.add(val)
+            elif isinstance(val, (list, tuple)):
+                ids.update(int(x) for x in val)
+        return ids
+
+    def _capture_input_ids(self, _module, args, kwargs):
+        """forward-pre-hook on the whole model: stash input_ids for the mask.
+
+        Only an integer 2-D tensor counts as real token ids, so a float-tensor
+        micro-test stays on the "transport every position" path.
+        """
+        ids = kwargs.get("input_ids", None)
+        if ids is None and args and torch.is_tensor(args[0]):
+            ids = args[0]
+        if torch.is_tensor(ids) and ids.dim() == 2 and not ids.is_floating_point():
+            self._last_input_ids = ids
+        else:
+            self._last_input_ids = None
 
     def _hook(self, _module, _inputs, output):
         is_tuple = isinstance(output, tuple)
         h = output[0] if is_tuple else output       # [batch, seq, hidden]
-        h_new = integrate_flow(self.vfield, h, self._c, self.T, self.n_steps)
+        h_new = integrate_flow(self.vfield, h, self._c, self.T, self.n_steps,
+                               norm_relative=self.norm_relative)
+
+        # Zero the DISPLACEMENT (not the state) at special positions, so they pass
+        # through the layer exactly as they would unsteered.
+        ids = self._last_input_ids
+        if self.skip_special and ids is not None and ids.shape[1] == h.shape[1]:
+            special = torch.tensor(sorted(self.special_ids or set()),
+                                   device=ids.device)
+            keep = (~torch.isin(ids, special)).unsqueeze(-1)     # [batch, seq, 1]
+            h_new = h + (h_new - h) * keep.to(h_new.dtype)
+
         if is_tuple:
             return (h_new, *output[1:])
         return h_new
@@ -274,6 +350,15 @@ class FlowContext:
         # the field must live on the same device as the residual stream it edits
         self.vfield = self.vfield.to(device)
 
+        if self.skip_special:
+            if self.special_ids is None:
+                self.special_ids = self._default_special_ids()
+            self._last_input_ids = None
+            self._handles.append(
+                self.model.register_forward_pre_hook(
+                    self._capture_input_ids, with_kwargs=True)
+            )
+
         target = residual_layers(self.model)[self.layer]
         self._handles.append(target.register_forward_hook(self._hook, prepend=True))
         return self
@@ -283,6 +368,7 @@ class FlowContext:
             h.remove()
         self._handles.clear()
         self._c = None
+        self._last_input_ids = None
         return None
 
 
@@ -348,6 +434,26 @@ def _self_test() -> None:
     # A [hidden] activation (no batch/seq dims) integrates too (broadcast check).
     assert integrate_flow(vfield, torch.randn(hidden), c, T=1.0, n_steps=4).shape == (hidden,)
 
+    # (a2) NORM-RELATIVE transport (the v2 dial): the displacement scales with the
+    # position's OWN norm, so T is a fraction of ||h|| rather than a raw distance.
+    # Scaling h by 10 must scale the displacement by ~10 under norm_relative, and
+    # leave it ~unchanged under the v1 absolute mode.
+    h1x = torch.randn(1, 1, hidden)
+    h10x = h1x * 10.0
+    d1 = (integrate_flow(vfield, h1x, c, T=0.1, n_steps=8, norm_relative=True) - h1x).norm()
+    d10 = (integrate_flow(vfield, h10x, c, T=0.1, n_steps=8, norm_relative=True) - h10x).norm()
+    assert d10 > 5 * d1, "norm_relative displacement did not scale with ||h||"
+    # and the FRACTIONAL displacement is ~T (exactly so once ||v||~=1 after training)
+    frac = float(d1 / h1x.norm())
+    assert 0.0 < frac < 10.0, f"nonsensical relative displacement {frac}"
+    # The two modes differ by EXACTLY the position's norm. With one Euler step the
+    # relation is closed-form (both evaluate the field at the same state x=h), so
+    # this pins the v1-vs-v2 semantics without depending on a trained field.
+    rel1 = integrate_flow(vfield, h1x, c, T=0.1, n_steps=1, norm_relative=True) - h1x
+    abs1 = integrate_flow(vfield, h1x, c, T=0.1, n_steps=1, norm_relative=False) - h1x
+    assert torch.allclose(rel1, abs1 * h1x.norm(dim=-1, keepdim=True), atol=1e-4), \
+        "norm_relative step is not the absolute step scaled by ||h||"
+
     # (b) the whole integration is differentiable: a loss on h' trains the field.
     h_req = torch.randn(2, 4, hidden)
     out = integrate_flow(vfield, h_req, c, T=1.0, n_steps=4)
@@ -412,6 +518,22 @@ def _self_test() -> None:
 
     assert (flowed - base).norm().item() > 0, "FlowContext did not transport h"
     assert (restored - base).norm().item() == 0.0, "FlowContext did not restore exactly"
+
+    # (c2) SPECIAL-TOKEN GUARD: positions whose input id is special are left EXACTLY
+    # unsteered. We drive `_hook` directly with a hand-made id row, because _Tiny's
+    # forward takes floats (so the pre-hook correctly declines to build a mask).
+    ctx = FlowContext(model, vfield, torch.randn(hidden), layer, T=0.1,
+                      skip_special=True, special_ids={7})
+    with ctx:
+        ids = torch.tensor([[7, 3, 7, 5]])          # positions 0 and 2 are special
+        ctx._last_input_ids = ids
+        h_in = torch.randn(1, 4, hidden)
+        h_out = ctx._hook(None, None, h_in)
+        delta = (h_out - h_in).norm(dim=-1)[0]      # [seq]
+    assert float(delta[0]) == 0.0 and float(delta[2]) == 0.0, \
+        "special positions were transported despite skip_special"
+    assert float(delta[1]) > 0 and float(delta[3]) > 0, \
+        "ordinary positions were NOT transported"
 
     # (d) save/load round-trips the field (same transport out).
     import os

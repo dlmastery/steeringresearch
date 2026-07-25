@@ -47,17 +47,31 @@ import sys
 
 from steering_tutorials.common.data import load_concepts as _load_common_concepts
 
+import os
+
 # How many prompts to draw PER concept before the shared loader's 40/30/30
-# exemplars/steer/eval split. These concepts are POOL-LIMITED (sexual ~388,
-# harassment ~143, violence ~111), so a per-concept count cannot reach 500 — 120
-# just requests the available pool: ~36 eval prompts for the big categories and ~34
-# for violence (the smallest KEPT concept). The loader already drops any concept
-# with < 100 available, so every returned concept clears a >=30-prompt eval split.
-N_PER_CONCEPT = 120
-# Size of the shared benign baseline (contrast origin + unsteered h0 pool). Raised
-# to 120 to match the per-concept pool so the selectivity arm's benign contrast is
-# not the bottleneck; the concept pools above remain the binding limit.
-N_BENIGN_BASELINE = 120  # was 40
+# exemplars/steer/eval split.
+#
+# THESE CONCEPTS ARE POOL-LIMITED and CANNOT reach the >=500/class rubric
+# (CLAUDE.md 17.1): the toxic-chat coarse-category pools are sexual ~388,
+# harassment ~143, violence ~111 in total, BEFORE the three-way disjoint split.
+# Rubric 17.2 is the governing clause — maximise within the pool and say so.
+# 500 requests the WHOLE pool (the loader caps at ``available``), which yields the
+# honest maximum eval splits:
+#
+#     sexual      388 available -> 155 exemplars / 116 steer / 117 eval
+#     harassment  143 available ->  57 exemplars /  43 steer /  43 eval  (held out)
+#     violence    111 available ->  44 exemplars /  33 steer /  34 eval
+#
+# That is 3.2x the v1 eval split for the dial concept (117 vs 36) and every cell
+# still clears the >=30-per-concept floor (rubric 17.2). It is NOT 500/class and
+# the README must not pretend otherwise. Override with FLAS_N_PER_CONCEPT.
+N_PER_CONCEPT = int(os.environ.get("FLAS_N_PER_CONCEPT", "500"))
+# Size of the shared benign baseline (contrast origin + unsteered h0 pool + the
+# selectivity arm's over-refusal denominator). The benign pool is NOT limited, so
+# this one DOES meet the >=500 rubric. Note the shared loader derives the benign
+# slice from ``max(n_per_concept, 40)``, so we pass the larger of the two below.
+N_BENIGN_BASELINE = int(os.environ.get("FLAS_N_BENIGN", "500"))  # was 120
 
 
 def load_concepts(
@@ -92,8 +106,12 @@ def load_concepts(
     concept the field never trained on. ``held_out`` overrides the shared loader's
     default held-out concept (its second-largest pool) if you pass a name.
     """
-    common = _load_common_concepts(n_per_concept=n_per_concept, seed=seed,
-                                   held_out=held_out)
+    # The shared loader sizes the benign baseline as ``max(n_per_concept, 40)``, so
+    # ask it for the larger of the two budgets. Concept pools are capped by their
+    # own availability (~388 max), so over-asking cannot inflate a concept split.
+    common = _load_common_concepts(
+        n_per_concept=max(n_per_concept, n_benign_baseline), seed=seed,
+        held_out=held_out)
     src = common["concepts"]            # {name: {exemplars, steer, eval, n_available}}
     hold_name = common["held_out"]      # a concept name string (e.g. "harassment")
 

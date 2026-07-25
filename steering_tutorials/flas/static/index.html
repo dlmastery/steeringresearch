@@ -136,12 +136,12 @@
     <!-- the flow-time T slider: the highlight -->
     <div class="dial">
       <div class="head">
-        <span class="name">Flow-time&nbsp; T &nbsp;&mdash;&nbsp; steering strength</span>
-        <span class="val"><span id="tval">1.0</span><small>/ 2.0</small></span>
+        <span class="name">Flow-time&nbsp; T &nbsp;&mdash;&nbsp; steering strength (fraction of &#8214;h&#8214;)</span>
+        <span class="val"><span id="tval">0.100</span><small>/ 0.15</small></span>
       </div>
-      <input type="range" id="tslider" min="0" max="2" step="0.1" value="1.0">
-      <div class="ticks"><span>0.0 (off)</span><span>0.5</span><span>1.0 (full path)</span><span>1.5</span><span>2.0</span></div>
-      <div class="hint">Integrate the flow to time T. <b>0.0</b> = no transport (baseline); <b>1.0</b> = the full learned trajectory; beyond that overshoots the target.</div>
+      <input type="range" id="tslider" min="0" max="0.15" step="0.005" value="0.10">
+      <div class="ticks"><span>0.00 (off)</span><span>0.05</span><span>0.10 (default)</span><span>0.15 (cliff)</span></div>
+      <div class="hint">Integrate the flow to time T. Under the norm-relative convention T <b>is</b> the fractional displacement &#8214;&Delta;h&#8214;/&#8214;h&#8214; &mdash; the same dial lesson&nbsp;2 calls <code>alpha</code>. <b>0.00</b> = no transport (baseline); <b>0.10</b> = lesson-2's mid strength; past <b>0.15</b> coherence starts to break.</div>
     </div>
 
     <div class="row">
@@ -171,7 +171,7 @@
           <div class="resp" id="baseresp"></div>
         </div>
         <div class="col flow">
-          <h4><span id="flowhead">FLAS (flow to T=1.0)</span><span class="pill" id="flowpill"></span></h4>
+          <h4><span id="flowhead">FLAS (flow to T=0.100)</span><span class="pill" id="flowpill"></span></h4>
           <div class="resp" id="flowresp"></div>
         </div>
       </div>
@@ -258,7 +258,7 @@ function setPill(el, verdict){
 // Keep the big readout and the FLOW card heading in sync as the slider moves.
 function currentT(){ return Number($('tslider').value); }
 function syncT(){
-  const T = currentT().toFixed(1);
+  const T = currentT().toFixed(3);
   $('tval').textContent = T;
   $('flowhead').textContent = 'FLAS (flow to T=' + T + ')';
 }
@@ -290,7 +290,7 @@ function renderSteer(r){
   // 2 · before / after. POST /steer returns flow_response / flow_verdict + the
   // T actually used and the concept it steered toward.
   const Tused = (r.T === null || r.T === undefined) ? currentT() : r.T;
-  $('flowhead').textContent = `FLAS (flow to T=${Number(Tused).toFixed(1)}, ${esc(r.concept || '—')})`;
+  $('flowhead').textContent = `FLAS (flow to T=${Number(Tused).toFixed(3)}, ${esc(r.concept || '—')})`;
   $('baseresp').textContent = r.baseline_response || '(empty)';
   $('flowresp').textContent = r.flow_response || '(empty)';
   setPill($('basepill'), r.baseline_verdict);
