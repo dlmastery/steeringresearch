@@ -26,7 +26,13 @@ from typing import Any, Optional
 
 from .judge import AXBENCH_RUBRIC_VERSION, JudgeUnavailable, build_axbench_prompt
 
-_DEFAULT_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+# The default judge must be a model that is (a) present in the local HF cache and
+# (b) validated by H0 (see hypotheses/A_foundations/H0_instrument_validity.md).
+# It was previously "Qwen/Qwen2.5-7B-Instruct", whose cache entry on this host is a
+# 16 KB stub with zero safetensors — so any run that forgot to pass --judge-model
+# silently began a ~15 GB download mid-experiment. Never let the default be a model
+# that is not on disk.
+_DEFAULT_MODEL = "Qwen/Qwen3-4B-Instruct-2507"
 _DEFAULT_CACHE = Path(__file__).resolve().parents[2] / "autoresearch_results" / "judge_cache"
 _LOCAL_RUBRIC = f"{AXBENCH_RUBRIC_VERSION}-local"
 _JSON_RE = re.compile(r"\{[^{}]*\}", re.DOTALL)
