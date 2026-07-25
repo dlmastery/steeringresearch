@@ -104,10 +104,38 @@ The unconditional question is settled. The open question is:
 - Framing: *"under a calibrated gate the direction is a knob and the gate carries the
   information"* — **never** *"steering directions are arbitrary"* (published ×3).
 
-### Phase 3 — the budget, as a control variable only.
-Not a standalone claim. Its surviving role is as the resource the certified gate
-*spends per input*: displacement budget inside the conformal loop. Any coherence
-claim must cite `2602.02712` and `2606.06735` as owning the underlying relationship.
+### Phase 3 — **matched-budget attribution** (the budget leg, rescued and narrowed).
+
+The geometry scan (`corpus/LIT_2026-07_geometry.md`) confirms the budget-as-controller
+idea is closed: `2601.19375` (*Selective Steering: Norm-Preserving Control Through
+Discriminative Layer Selection*, Dang & Ngo, 27 Jan 2026 — eight models including **four
+in our 1B–4B band**, code public) ships norm-preserving control with zero PPL-threshold
+violations; `2606.19946` (GEMS), `2605.05115` (on-manifold projection) and `2510.04309`
+(PID Steering, closed-loop) close the remaining variants.
+
+**Stop calling the displacement budget novel.** Three gaps survive, and two are ours:
+
+1. **No matched-budget comparison exists.** Selective Steering compares three *rotation*
+   methods to each other and dismisses additive steering as "catastrophic degradation on
+   smaller models" **without a controlled equivalence test** — it never holds displacement
+   fixed and asks whether the rotation path is better *per unit of displacement spent*.
+   **We already ran that experiment.** At matched norm budget the curved/rotated path was
+   *worse*, not better (harmful gibberish 0.77 vs 0.49 for the straight chord; measured
+   arc length = chord length, off-shell 1.1e-16 vs 0.076). This directly contradicts the
+   field's working assumption in the exact hole it left. **This is now a real leg.**
+2. **Nobody uses displacement as a calibrated *online* predictor.** Published methods
+   constrain geometry a priori (rotate / project / clamp). None measures per-token
+   displacement at inference and modulates against a *calibrated* coherence setpoint —
+   PID Steering is closed-loop but its feedback signal is the steering vector itself, not
+   a coherence proxy. This is where N17 survives: not as an observation, but as the
+   calibrated signal inside a controller.
+3. The angle/norm decomposition (`2606.06735`) is asserted, not measured as a controller,
+   and not reported at ≤4B.
+
+**Reframe:** the contribution is *matched-budget attribution* — which component of
+displacement (radial vs angular) carries the coherence tax at ≤4B — citing `2601.19375`,
+`2606.19946`, `2605.05115`, `2510.04309` as the methods we decompose, **not** as ideas we
+invented. Pre-register the matched-budget equivalence test as the primary experiment.
 
 ---
 
