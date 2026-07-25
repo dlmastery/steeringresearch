@@ -13,12 +13,18 @@ The idea in one sentence:
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 # --- The frozen feature extractor -------------------------------------------
 # The uncensored / abliterated Gemma-3-1B already downloaded to the HF cache.
 # We only ever READ its activations; we never fine-tune or steer it here.
-MODEL_ID = "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"
+# Overridable so we can retrain the probe on a LARGER model (e.g. Gemma-3-4B
+# abliterated) for a cross-scale check: STEER_MODEL_ID + STEER_LOAD_4BIT=1.
+MODEL_ID = os.environ.get(
+    "STEER_MODEL_ID", "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"
+)
+LOAD_4BIT = os.environ.get("STEER_LOAD_4BIT", "0") == "1"
 
 # Which residual-stream layer to read. Middle layers carry the most abstract
 # "meaning" (early = tokens/syntax, late = next-token prediction), so a middle
@@ -49,9 +55,12 @@ SEED = 0
 ROOT = Path(__file__).resolve().parent
 ARTIFACTS = ROOT / "artifacts"
 STATIC = ROOT / "static"
-PROBE_PATH = ARTIFACTS / "probe.pt"
-METRICS_PATH = ARTIFACTS / "metrics.json"
-FEATURES_CACHE = ARTIFACTS / "features.npz"
+# Probe filename is overridable so a cross-scale (4B) probe is saved SEPARATELY and
+# never clobbers the 1B probe.pt that the steering lessons depend on:
+# STEER_PROBE_NAME=probe_4b.pt.
+PROBE_PATH = ARTIFACTS / os.environ.get("STEER_PROBE_NAME", "probe.pt")
+METRICS_PATH = ARTIFACTS / os.environ.get("STEER_METRICS_NAME", "metrics.json")
+FEATURES_CACHE = ARTIFACTS / os.environ.get("STEER_FEATURES_NAME", "features.npz")
 ROC_PNG = ARTIFACTS / "roc_curve.png"
 HISTORY_PNG = ARTIFACTS / "training_history.png"
 CONFUSION_PNG = ARTIFACTS / "confusion_matrix.png"

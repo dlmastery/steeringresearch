@@ -48,8 +48,30 @@ def load_model(model_id: str, device: str | None = None) -> tuple[Any, Any]:
         pass
 
     tok = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16)
-    model = model.to(device)
+
+    # Cross-scale check: when config.LOAD_4BIT is set, load a LARGER model (e.g.
+    # multimodal Gemma-3-4B) in 4-bit so it fits VRAM/RAM. bitsandbytes places the
+    # model on the GPU itself (device_map), so we must NOT call .to(device) after.
+    load_4bit = False
+    try:
+        from . import config as _cfg
+        load_4bit = bool(getattr(_cfg, "LOAD_4BIT", False))
+    except Exception:  # pragma: no cover
+        pass
+
+    if load_4bit:
+        from transformers import BitsAndBytesConfig
+        bnb = BitsAndBytesConfig(
+            load_in_4bit=True, bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True,
+        )
+        model = AutoModelForCausalLM.from_pretrained(
+            model_id, quantization_config=bnb, device_map="auto",
+            low_cpu_mem_usage=True, torch_dtype=torch.bfloat16, trust_remote_code=True,
+        )
+    else:
+        model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16)
+        model = model.to(device)
     model.eval()
 
     # Guard 2: never select the compiled static KV cache.
@@ -68,14 +90,29 @@ def load_model(model_id: str, device: str | None = None) -> tuple[Any, Any]:
 def residual_layers(model: nn.Module) -> list[nn.Module]:
     """The list of decoder blocks whose forward output is the residual stream.
 
-    A forward hook on block ``l`` reads the residual stream after layer ``l``.
-    For Gemma-3 the path is ``model.model.layers``.
+    Text-only Gemma-3 (1B) exposes them at ``model.model.layers``; the multimodal
+    4B (``Gemma3ForConditionalGeneration``) nests the TEXT decoder under a
+    ``language_model`` sub-module. We search the common paths, then fall back to
+    the first non-empty ``.layers`` ModuleList in the tree.
     """
-    inner = getattr(model, "model", None)
-    if inner is not None and hasattr(inner, "layers"):
-        return list(inner.layers)
-    if hasattr(model, "layers"):
-        return list(model.layers)
+    candidates = (
+        ("model", "layers"),
+        ("language_model", "layers"),
+        ("model", "language_model", "layers"),
+        ("language_model", "model", "layers"),
+        ("model", "language_model", "model", "layers"),
+    )
+    for path in candidates:
+        obj = model
+        for attr in path:
+            obj = getattr(obj, attr, None)
+            if obj is None:
+                break
+        if obj is not None and hasattr(obj, "__len__") and len(obj) > 0:
+            return list(obj)
+    for name, mod in model.named_modules():
+        if name.endswith("layers") and isinstance(mod, nn.ModuleList) and len(mod) > 0:
+            return list(mod)
     raise ValueError("Could not find decoder layers on this model.")
 
 
@@ -84,7 +121,14 @@ def num_layers(model: nn.Module) -> int:
 
 
 def hidden_size(model: nn.Module) -> int:
-    return int(model.config.hidden_size)
+    """Residual-stream width. Multimodal Gemma-3 keeps it under ``text_config``."""
+    cfg = model.config
+    if getattr(cfg, "hidden_size", None):
+        return int(cfg.hidden_size)
+    text_cfg = getattr(cfg, "text_config", None)
+    if text_cfg is not None and getattr(text_cfg, "hidden_size", None):
+        return int(text_cfg.hidden_size)
+    return int(residual_layers(model)[0].mlp.gate_proj.in_features)
 
 
 @torch.no_grad()
