@@ -1,0 +1,65 @@
+{
+ "done": 8,
+ "of": 8,
+ "instrument": "local_judge:Qwen2.5-3B-Instruct",
+ "mean_real": 0.140625,
+ "mean_shuffled": 0.171875,
+ "rows": [
+  {
+   "concept_id": 0,
+   "description": "references to rental services and associated equipment",
+   "real": 0.0,
+   "shuffled": 0.0,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 1,
+   "description": "scientific terms related to research findings and their implications",
+   "real": 0.25,
+   "shuffled": 0.375,
+   "delta": -0.125
+  },
+  {
+   "concept_id": 2,
+   "description": "C/C++ programming syntax elements such as data types, function definitions, and ",
+   "real": 0.0,
+   "shuffled": 0.25,
+   "delta": -0.25
+  },
+  {
+   "concept_id": 3,
+   "description": "references to academic papers and their formatting",
+   "real": 0.125,
+   "shuffled": 0.125,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 4,
+   "description": "layout attributes in a UI design context",
+   "real": 0.125,
+   "shuffled": 0.125,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 5,
+   "description": "terms related to root in mathematical contexts",
+   "real": 0.125,
+   "shuffled": 0.125,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 6,
+   "description": "statements or phrases involving the act of saying or expressing something",
+   "real": 0.25,
+   "shuffled": 0.25,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 7,
+   "description": "statements about the nature and condition of entities",
+   "real": 0.25,
+   "shuffled": 0.125,
+   "delta": 0.125
+  }
+ ]
+}

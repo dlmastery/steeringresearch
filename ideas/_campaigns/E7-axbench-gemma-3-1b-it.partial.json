@@ -1,0 +1,219 @@
+{
+ "done": 30,
+ "of": 30,
+ "instrument": "local_judge:Qwen2.5-3B-Instruct",
+ "mean_real": 0.43055555555555547,
+ "mean_shuffled": 0.4583333333333333,
+ "rows": [
+  {
+   "concept_id": 0,
+   "description": "references to rental services and associated equipment",
+   "real": 0.1667,
+   "shuffled": 0.1667,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 1,
+   "description": "scientific terms related to research findings and their implications",
+   "real": 0.5,
+   "shuffled": 0.5,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 2,
+   "description": "C/C++ programming syntax elements such as data types, function definitions, and ",
+   "real": 0.25,
+   "shuffled": 0.25,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 3,
+   "description": "references to academic papers and their formatting",
+   "real": 0.5,
+   "shuffled": 0.5,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 4,
+   "description": "layout attributes in a UI design context",
+   "real": 0.4167,
+   "shuffled": 0.4167,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 5,
+   "description": "terms related to root in mathematical contexts",
+   "real": 0.5,
+   "shuffled": 0.5,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 6,
+   "description": "statements or phrases involving the act of saying or expressing something",
+   "real": 0.75,
+   "shuffled": 0.6667,
+   "delta": 0.0833
+  },
+  {
+   "concept_id": 7,
+   "description": "statements about the nature and condition of entities",
+   "real": 0.75,
+   "shuffled": 0.8333,
+   "delta": -0.0833
+  },
+  {
+   "concept_id": 8,
+   "description": "biographical information about a person.",
+   "real": 0.5,
+   "shuffled": 0.5833,
+   "delta": -0.0833
+  },
+  {
+   "concept_id": 9,
+   "description": "references to different worlds, realities, or fantastical settings within narrat",
+   "real": 0.4167,
+   "shuffled": 0.3333,
+   "delta": 0.0833
+  },
+  {
+   "concept_id": 10,
+   "description": "technical vocabulary related to chemical processes and materials synthesis",
+   "real": 0.4167,
+   "shuffled": 0.25,
+   "delta": 0.1667
+  },
+  {
+   "concept_id": 11,
+   "description": "references to debugging processes and tools",
+   "real": 0.3333,
+   "shuffled": 0.4167,
+   "delta": -0.0833
+  },
+  {
+   "concept_id": 12,
+   "description": "qualifiers and intensifiers that modify the degree of an adjective or adverb",
+   "real": 0.5,
+   "shuffled": 0.5,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 13,
+   "description": "scientific concepts and terminology related to uncertainty and measurement",
+   "real": 0.3333,
+   "shuffled": 0.4167,
+   "delta": -0.0833
+  },
+  {
+   "concept_id": 14,
+   "description": "structures related to mathematical expressions and programming syntax",
+   "real": 0.4167,
+   "shuffled": 0.5,
+   "delta": -0.0833
+  },
+  {
+   "concept_id": 15,
+   "description": "phrases related to possession or experiences over time",
+   "real": 0.5,
+   "shuffled": 0.5833,
+   "delta": -0.0833
+  },
+  {
+   "concept_id": 16,
+   "description": "verbs that indicate ease or improvement in processes or experiences",
+   "real": 0.6667,
+   "shuffled": 0.6667,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 17,
+   "description": "code comments or documentation sections in programming files",
+   "real": 0.5,
+   "shuffled": 0.5,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 18,
+   "description": "technical code snippets and programming languages.",
+   "real": 0.4167,
+   "shuffled": 0.5,
+   "delta": -0.0833
+  },
+  {
+   "concept_id": 19,
+   "description": "structured data elements and their attributes, particularly in an XML or HTML fo",
+   "real": 0.5,
+   "shuffled": 0.3333,
+   "delta": 0.1667
+  },
+  {
+   "concept_id": 20,
+   "description": "references to legal terms and actions",
+   "real": 0.5,
+   "shuffled": 0.5833,
+   "delta": -0.0833
+  },
+  {
+   "concept_id": 21,
+   "description": "references to audio and translation services in media contexts",
+   "real": 0.3333,
+   "shuffled": 0.5,
+   "delta": -0.1667
+  },
+  {
+   "concept_id": 22,
+   "description": "terms related to connections in electrical circuits and network structures",
+   "real": 0.1667,
+   "shuffled": 0.25,
+   "delta": -0.0833
+  },
+  {
+   "concept_id": 23,
+   "description": "special markers or tags that indicate the beginning of a new section or document",
+   "real": 0.5,
+   "shuffled": 0.5,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 24,
+   "description": "references to numerical values, specifically related to counts or measurements",
+   "real": 0.4167,
+   "shuffled": 0.5,
+   "delta": -0.0833
+  },
+  {
+   "concept_id": 25,
+   "description": "transformations in societal attitudes and behaviors over time",
+   "real": 0.25,
+   "shuffled": 0.4167,
+   "delta": -0.1667
+  },
+  {
+   "concept_id": 26,
+   "description": "programming-related code snippets or structures",
+   "real": 0.25,
+   "shuffled": 0.25,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 27,
+   "description": "code-related syntax and components used in programming or web development",
+   "real": 0.3333,
+   "shuffled": 0.3333,
+   "delta": 0.0
+  },
+  {
+   "concept_id": 28,
+   "description": "structures related to mathematical arrays or matrices",
+   "real": 0.4167,
+   "shuffled": 0.5,
+   "delta": -0.0833
+  },
+  {
+   "concept_id": 29,
+   "description": "references to South or Southern geographical locations",
+   "real": 0.4167,
+   "shuffled": 0.5,
+   "delta": -0.0833
+  }
+ ]
+}
