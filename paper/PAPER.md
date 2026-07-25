@@ -15,7 +15,7 @@ Activation steering — adding or rotating a direction in a transformer's residu
 
 The method is newly built but not yet validated. Zero external-ready results exist. The contribution at submission time is: (1) the method specification and its implementation as an auditable policy layer over a shared harness; (2) a pre-registered evaluation protocol — method vs CAST baseline vs prompting baseline on JailbreakBench, StrongREJECT, and XSTest, judged by an off-family Qwen-7B judge, with Pareto comparison on ASR vs over-refusal at matched capability drop; (3) a reproducible autoresearch harness with a SHA-256-fingerprinted composite that prices behavior, capability, coherence, safety, and selectivity simultaneously; (4) a geometric account of the coherence cliff from 124 screening experiments — the only validated finding at submission time.
 
-The prior rigorous result is negative: on the real AxBench benchmark, the DiffMean steering direction carries only a weak concept-specific signal at 2B scale (+0.004, CI barely excluding zero, ~97% captured by a label-shuffled control), and is negative/floor at 270M. Five external reviewers returned a unanimous reject (2/10). We report these findings honestly because the evaluation protocol exists precisely to avoid building claims on weak foundations.
+The prior rigorous result is negative: on the real AxBench benchmark, the DiffMean steering direction carries only a weak concept-specific signal at 2B scale (+0.004, CI barely excluding zero, ~97% captured by a label-shuffled control), and is negative/floor at 270M. Five **simulated** adversarial reviews — an LLM role-playing a hostile reviewer in-session, *not* human peer review and not any venue's decision — returned a unanimous reject (2/10); they are internal red-teaming, and must never be cited as external validation (see `audits/reviews/` provenance banners and `STATUS.md`). We report these findings honestly because the evaluation protocol exists precisely to avoid building claims on weak foundations.
 
 We are explicit about scope. Every quantitative result except the rung-3 WikiText evaluation is a single-seed screening observation on sub-1B-parameter models with partly synthetic instruments; none is an external steering-efficacy claim. The method results are PENDING: all planned experiments are not yet run. The contribution is the method design, the evaluation protocol, the geometric account of the coherence cliff, and a two-sided ledger of what has and has not been validated.
 
@@ -579,7 +579,8 @@ No clumsy meta-narration remains in the paper body; all self-referential review 
    (DESIGN.md) is now built and unit-tested offline. Fixed: Section 3a added with full
    method specification; introduction updated to reflect the new contribution; the
    stale claim removed from Section 1.
-2. *No evaluation protocol specified.* External reviewers and the roadmap
+2. *No evaluation protocol specified.* The simulated adversarial reviews (internal
+   red-teaming, not external validation) and the roadmap
    (audits/reviews/IMPROVEMENTS_100.md) identified the missing baselines and benchmark
    wiring as the primary gap. Fixed: Section 6 added with the seven baselines, benchmark
    table, pre-registered success criterion, and Rogue-Scalpel red-team plan.
