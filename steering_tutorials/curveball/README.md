@@ -241,7 +241,82 @@ per-token perturbation. This is the honest negative: the elegant geodesic
 construction is geometrically clean and behaviorally *worse*. (The paper's own
 method is polynomial-kernel-PCA steering, **not** this great-circle arc — see the
 AUDIT; our construction tests the *manifold-preservation hypothesis*, which fails
-here.) Screening-tier: single 1B, n = 40, one alpha, one seed.
+here.) Screening-tier: single 1B, n = 100/class, one alpha, one seed.
+
+---
+
+## Independent corroboration — the same negative, judge-free
+
+This lesson's negative was **replicated from a different codebase, on a different
+endpoint metric, with no LLM judge in the loop**. That matters: the result above
+could have been an artifact of the Qwen judge's GIBBERISH calls, or of this
+lesson's particular hook. It is not.
+
+The sibling autoresearch program (this repo's `src/steering` harness, entirely
+separate code from `steering_tutorials/`) ran a **matched-budget** rotation-vs-
+addition comparison and measured **WikiText perplexity** — a judge-free coherence
+endpoint. Artifact:
+[`autoresearch_results/FINDING_matched_budget.md`](../../autoresearch_results/FINDING_matched_budget.md)
+(raw data in `autoresearch_results/matched_budget.json`, pre-registered in the
+script header before the run).
+
+Both operations were parameterised to the **same chord displacement**
+`f = ‖Δh‖/‖h‖` — `relative_add` with `alpha = f`, `rotate` with
+`theta = 2·arcsin(f/2)` — so the two arms travel the *same distance* and differ
+only in the **path**. Layer 12, abliterated Gemma-3-1B, 40 WikiText passages:
+
+| budget `f` | add PPL | rotate PPL | rotate − add |
+|---|---|---|---|
+| 0.00 (control) | 92.326 | 92.293 | **−0.033** |
+| 0.02 | 88.744 | 89.542 | +0.798 |
+| 0.05 | 87.652 | 117.373 | +29.72 |
+| 0.10 | 117.983 | 479.179 | +361.2 |
+| 0.15 | 198.658 | 4,071.64 | +3,873.0 |
+| 0.20 | 375.550 | 119,316.92 | +118,941.4 |
+
+**Rotation is worse at 5/5 non-zero budgets, and the penalty grows
+super-linearly.** The `f = 0` control differs by only −0.033, which proves both
+operations are exact no-ops at zero budget — so the gap at `f > 0` is the
+intervention, not a plumbing difference between the two arms.
+
+**Why this upgrades the lesson's verdict.** The two runs share *nothing* except
+the base model family and the layer: different repository, different
+implementation of the rotation, different data (WikiText passages vs. held-out
+toxic-chat prompts), different endpoint (perplexity vs. an off-family judge's
+GIBBERISH rate), different budget parameterisation. Both land on the same
+conclusion — **holding the norm fixed does not buy coherence; spending the budget
+on angle is worse than spending it on a straight step.** That takes this lesson's
+result from *one lesson's negative* to a **replicated negative**, which is a much
+harder thing to explain away.
+
+**Mechanistic re-attribution.** The sibling artifact reads the effect the same way
+this lesson does, and sharpens it: the coherence tax is priced by **angular**
+displacement, not radial. At matched chord length, rotation redirects the *whole*
+residual toward `v` (as the angle grows, `h` is increasingly dominated by its
+`v`-component), while addition perturbs `h` and leaves its original direction
+largely intact. Same distance travelled, far more **information destroyed**. That
+is why the on-shell arc — the geometrically "safe" path — is behaviorally the
+dangerous one.
+
+**The literature gap this fills.** As of July 2026 no published matched-budget
+equivalence test existed. [`arXiv:2601.19375`](https://arxiv.org/abs/2601.19375)
+(*Selective Steering: Norm-Preserving Control Through Discriminative Layer
+Selection*, Dang & Ngo, Jan 2026) **ships** norm-preserving rotation and dismisses
+additive steering as causing "catastrophic degradation on smaller models" — but it
+compares three *rotation* methods to each other and **never holds displacement
+fixed**, so it cannot separate "norm preservation helped" from "these arms spent
+different budgets". The field's working assumption that *norm preservation buys
+coherence* was untested; both of our runs test it and it does not survive.
+
+**Tier — read this honestly.** The sibling run is **SCREENING, n = 1 per cell**:
+no seeds, no CIs, no significance test, one model, one layer, one corpus, and its
+direction was estimated from only 10 harmful / 8 harmless prompts (far below this
+course's ≥500/class floor). It is *directional* evidence. A 300× perplexity gap at
+`f = 0.20` is not plausibly a seed artifact, but the **magnitudes must not be
+quoted as an evaluation result** until re-run at n ≥ 8 with a properly estimated
+direction across ≥2 layers. The same caveat applies to this lesson's own numbers.
+Two screening-tier runs agreeing is replication of a *direction*, not promotion to
+EVALUATION tier.
 
 ---
 
