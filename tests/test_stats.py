@@ -375,3 +375,37 @@ def test_power_note_n7_is_evaluation_eligible():
     assert note["can_reach_p05"] is True
     assert abs(note["min_achievable_p"] - 2 * 0.5**7) < 1e-12
     assert 0.0 <= note["approx_power"] <= 1.0
+
+
+def test_power_note_n7_is_INFEASIBLE_under_holm_for_realistic_families():
+    """n>=7 and Holm are individually satisfiable but JOINTLY impossible for m>=4.
+
+    Regression test for the constitution bug found 2026-07-25: CLAUDE.md mandated
+    both an n>=7 floor and Holm-Bonferroni across the sweep family, but nothing ever
+    checked them together. Paired-Wilcoxon min attainable two-sided p is 2/2**n, and
+    Holm's tightest threshold is 0.05/m, so at n=7 (min p 0.015625) no effect size can
+    clear a family of m>=4 (threshold 0.0125). An arithmetically unsatisfiable rule
+    gets silently violated -- the prior program met its own n>=7 contract 0 times in
+    124 experiments. The planner must refuse such designs UP FRONT.
+    """
+    # m=1..3 remain feasible at n=7
+    for m in (1, 2, 3):
+        assert power_note(7, effect=0.3, sd=0.1, family_size=m)["can_reach_holm_alpha"] is True
+
+    # m>=4 is impossible at n=7, at ANY effect size
+    for m in (4, 6, 8):
+        note = power_note(7, effect=99.0, sd=0.001, family_size=m)
+        assert note["can_reach_holm_alpha"] is False
+        assert "INFEASIBLE UNDER HOLM" in note["note"]
+        assert note["min_n_for_holm"] >= 8
+
+    # n=8 rescues families up to 6 (the constitution's corrected floor)
+    for m in (4, 6):
+        assert power_note(8, effect=0.3, sd=0.1, family_size=m)["can_reach_holm_alpha"] is True
+    # ...but not m=8, which needs n>=9
+    big = power_note(8, effect=0.3, sd=0.1, family_size=8)
+    assert big["can_reach_holm_alpha"] is False
+    assert big["min_n_for_holm"] >= 9
+
+    # default (no family_size) must stay backward compatible
+    assert power_note(7, effect=0.3, sd=0.1)["can_reach_holm_alpha"] is True

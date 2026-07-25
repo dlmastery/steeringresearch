@@ -344,7 +344,7 @@ def min_meaningful_effect(metric: str, default: float = 0.0) -> float:
     return MIN_MEANINGFUL_EFFECT.get(metric, default)
 
 
-def power_note(n: int, effect: float, sd: float) -> dict:
+def power_note(n: int, effect: float, sd: float, family_size: int = 1) -> dict:
     """Rough power / minimum-achievable-p note so screening (n<7) can't claim p.
 
     Two cheap, honest sanity numbers (NOT a substitute for a real power analysis):
@@ -366,6 +366,22 @@ def power_note(n: int, effect: float, sd: float) -> dict:
     is_screening = n < 7
     min_p = float(min(1.0, 2.0 * (0.5**n))) if n >= 1 else 1.0
     can_reach = min_p <= 0.05
+
+    # --- Holm-corrected feasibility (added 2026-07-25) -----------------------
+    # CLAUDE.md mandates BOTH n>=7 AND Holm-Bonferroni across the sweep family.
+    # Each rule is fine alone; TOGETHER they can be arithmetically unsatisfiable.
+    # Holm's tightest threshold for a family of m is 0.05/m, so:
+    #     n=7  -> min p 0.015625  IMPOSSIBLE for m>=4
+    #     n=8  -> min p 0.0078125 IMPOSSIBLE for m>=8
+    # A design that cannot reach its own corrected threshold at ANY effect size is
+    # structurally underpowered and must be caught BEFORE the compute is spent,
+    # not silently violated afterwards (which is what happened across 124 runs).
+    m = max(1, int(family_size))
+    holm_alpha = 0.05 / m
+    can_reach_holm = min_p <= holm_alpha
+    min_n_for_holm = 1
+    while min(1.0, 2.0 * (0.5**min_n_for_holm)) > holm_alpha and min_n_for_holm < 64:
+        min_n_for_holm += 1
     if sd > 0 and n >= 1:
         z = float(effect) / (float(sd) / np.sqrt(n))
         approx_power = float(min(1.0, max(0.0, 1.0 - _norm_sf(abs(z) - 1.96))))
@@ -381,12 +397,24 @@ def power_note(n: int, effect: float, sd: float) -> dict:
             f"n={n}: SCREENING (n<7). p<0.05 is attainable (min p={min_p:.4f}) but "
             f"the §7 evaluation floor is n≥7; treat any p as provisional."
         )
+    elif not can_reach_holm:
+        note = (
+            f"n={n}: INFEASIBLE UNDER HOLM. min attainable two-sided p={min_p:.6f} "
+            f"exceeds the Holm threshold {holm_alpha:.6f} for a family of m={m}; no "
+            f"effect size can clear it. Raise n to >={min_n_for_holm}, or pre-declare a "
+            f"smaller primary family (the rest exploratory)."
+        )
     else:
         note = (
-            f"n={n}: EVALUATION-eligible. min attainable p={min_p:.4f}; "
+            f"n={n}: EVALUATION-eligible (m={m}, Holm α={holm_alpha:.6f}). "
+            f"min attainable p={min_p:.4f}; "
             f"approx power≈{approx_power:.2f} at effect={effect:g}, sd={sd:g}."
         )
     return {
+        "family_size": m,
+        "holm_alpha": holm_alpha,
+        "can_reach_holm_alpha": can_reach_holm,
+        "min_n_for_holm": min_n_for_holm,
         "n": n,
         "is_screening": is_screening,
         "min_achievable_p": min_p,
