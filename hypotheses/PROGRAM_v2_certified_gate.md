@@ -58,10 +58,27 @@ the previous 124 experiments (judge AUC 0.68 against a self-imposed ≥0.85 bar)
   as blocking, but never written) + a logged calibration result.
 
 ### Phase 1 — H1: the certified gate. **The headline.**
-- **Pre-flight (cheap, do first):** verify `2603.14623`. It reportedly claims conformal
-  guarantees hold for *any* gate score independent of calibration quality. **If true,
-  our theory contribution collapses to an application** and we must reposition to the
-  empirical composition before spending compute.
+
+**Pre-flight: RESOLVED 2026-07-25 — the threat is refuted, and the framing improves.**
+`2603.14623` is *"Proactive Routing to Interpretable Surrogates with Distribution-Free
+Safety Guarantees"* (Uddin, Khider & Bauer, 15 Mar 2026; fetch-verified). It does **not**
+claim guarantees hold for any score regardless of quality. It derives a **feasibility
+condition** linking safe routing to the base safe rate π and the risk budget α, together
+with **sufficient AUC thresholds under which feasible routing exists**; calibration
+"primarily affects routing efficiency rather than distribution-free validity."
+
+Two consequences, both favourable:
+1. **Our theory contribution does not collapse.** The paper is about routing to
+   interpretable surrogates, not an activation-space steering gate, and its guarantee is
+   explicitly *conditional on gate discriminative power*. Cite it as the nearest
+   formalism and state the delta (activation-space gate; controlled quantity is
+   over-refusal on a safety intervention).
+2. **Our READ≫WRITE asymmetry becomes load-bearing rather than merely negative.** A
+   probe reaching AUC ≈0.99 on the same activations where the WRITE fails is exactly the
+   regime in which this feasibility condition is *satisfied*. The measured gate quality
+   is the precondition that makes a certified gate possible at all — so H1 should
+   **report the gate's AUC against the paper's sufficient-AUC threshold** as a first-class
+   result, not as background.
 - Split-conformal calibration of the activation cosine gate on the abliterated target;
   target over-refusal α; measure realised harmless-refusal rate vs the bound.
 - Baseline to beat: `2605.28722`'s energy-calibrated applicability gate (uncalibrated,
