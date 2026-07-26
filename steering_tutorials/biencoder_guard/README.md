@@ -443,10 +443,18 @@ so the off-family-judge discipline of the steering lessons does not apply here
 
 ## 10. Results — measured vs. the claim
 
-**[PENDING GPU RUN]** — the harness, the CPU self-tests, and this section's tables
-are in place; the numbers are filled from `artifacts/results.json` once the
-EmbeddingGemma run completes on the 4090. The falsifiers below are pre-registered
-**before** the run.
+**MEASURED — screening tier.** Numbers below are real, from
+`artifacts/results.json`. **Read the substitution caveat first:** this run used the
+**MiniLM** substitute embedder at **150/class**, *not* EmbeddingGemma-300M at the
+course's ≥500/class rubric. `google/embeddinggemma-300m` is a **gated** repo and
+returns `401 GatedRepoError` on weight download from this host; the licence must be
+accepted on the HF account before the headline run can happen. So treat every
+*absolute* number here as a lower bound on what the real backbone would give — but
+note that the two **architectural** claims (EXP-D scaling, EXP-C multi-prototype) are
+backbone-independent and already decided.
+
+The falsifiers were pre-registered **before** the run, and **one of them trips** —
+reported below without softening.
 
 **The claim under test.** A bi-encoder that caches the policy tower moderates
 against a large taxonomy at **flat** per-request cost and scores **unseen**
@@ -460,16 +468,16 @@ uni-encoder are expected to lead on accuracy here):
 
 | method | macro-AP | micro-AP | macro-F1 | binary harm AUC |
 |---|---|---|---|---|
-| `bi_encoder` | _pending_ | _pending_ | _pending_ | _pending_ |
-| `uni_encoder` | _pending_ | _pending_ | _pending_ | _pending_ |
-| `trained_head` | _pending_ | _pending_ | _pending_ | _pending_ |
+| `bi_encoder` | 0.355 | 0.338 | 0.167 | 0.595 |
+| `uni_encoder` | 0.118 | 0.106 | 0.168 | 0.451 |
+| **`trained_head`** | **0.670** | **0.662** | **0.616** | 0.576 |
 
 **EXP-B — held-out ZERO-SHOT** (test, held-out policies; **the headline**):
 
 | method | macro-AP | macro-F1 |
 |---|---|---|
-| `bi_encoder` | _pending_ | _pending_ |
-| `uni_encoder` | _pending_ | _pending_ |
+| **`bi_encoder`** | **0.408** | **0.328** |
+| `uni_encoder` | 0.178 | 0.216 |
 | `trained_head` | N/A (cannot score an unseen policy) | N/A |
 
 **EXP-C — multi-prototype ablation** (bi-encoder on held-out policies, 1 vs. `P`
@@ -477,38 +485,37 @@ prototypes):
 
 | policy tower | macro-AP |
 |---|---|
-| single description (`n_proto=1`) | _pending_ |
-| multi-prototype (`n_proto=P`) | _pending_ |
+| single description (`n_proto=1`) | 0.357 |
+| **multi-prototype (`n_proto=4`)** | **0.408**  (**+0.050**) |
 
 **EXP-D — scaling: latency vs. #labels** (fixed text batch; seconds):
 
 | #labels | `bi_encoder` (sec) | `uni_encoder` (sec) |
 |---|---|---|
-| 16 | _pending_ | _pending_ |
-| 64 | _pending_ | _pending_ |
-| 256 | _pending_ | _pending_ |
-| 1024 | _pending_ | _pending_ |
+| 16 | 0.041 | 0.027 |
+| 64 | 0.044 | 0.125 |
+| 256 | 0.044 | 0.397 |
+| **1024** | **0.044** *(flat)* | **1.786** *(**43×** the bi-encoder)* |
 
 **EXP-E — OOD transfer** (train on the constructed set, evaluate the disjoint OOD
 shard with no further fitting):
 
 | method | binary harm AUC | macro-AP |
 |---|---|---|
-| `bi_encoder` | _pending_ | _pending_ |
-| `uni_encoder` | _pending_ | _pending_ |
-| `trained_head` | _pending_ | _pending_ |
+| **`bi_encoder`** | **0.622** | **0.234** |
+| `uni_encoder` | 0.515 | 0.066 |
+| `trained_head` | 0.595 | 0.499 |
 
 **EXP-F — hard-negative augmentation** (frozen bi-encoder vs. the contrastive
 adapter, on held-out hard negatives):
 
 | quantity | value |
 |---|---|
-| ECIsem summary (`target_consistency` / `locality` / `lexical_residual` / `diversity` / `eci`) | _pending_ |
-| FPR@recall0.90 — frozen bi-encoder | _pending_ |
-| FPR@recall0.90 — contrastive adapter | _pending_ |
-| delta (frozen − adapter) | _pending_ |
-| # CausalNeg counterfactuals built | _pending_ |
-| # false-negatives dropped (ARHN) | _pending_ |
+| ECIsem (`target_consistency` / `locality` / `lexical_residual` / `diversity` / **`eci`**) | 0.016 / 0.201 / 0.178 / 0.931 / **0.399** |
+| FPR@recall0.90 — frozen bi-encoder | 0.850 |
+| **FPR@recall0.90 — contrastive adapter** | **0.613** |
+| **delta (frozen − adapter)** | **−0.237** (adapter is better) |
+| hard negatives mined | 240 |
 
 **Pre-registered falsifiers.**
 - **(i) Scaling.** If uni-encoder latency does **not** grow with #labels while the
@@ -522,6 +529,30 @@ adapter, on held-out hard negatives):
 
 No reclassification-after-the-fact, and no swapping to an easier condition to
 rescue a failed ordering.
+
+### Verdicts against those falsifiers
+
+| falsifier | outcome | evidence |
+|---|---|---|
+| **(i) Scaling** | **SURVIVES — claim upheld** | bi-encoder is flat at 0.041 → 0.044 s from 16 → 1024 labels; uni-encoder rises 0.027 → 1.786 s, **43×** the bi-encoder at 1024. The predicted flat-vs-linear split is exactly what was measured. |
+| **(ii) Zero-shot** | ⚠️ **TRIPS as literally written** | bi-encoder held-out macro-AP = **0.408 ≤ 0.5**. By the pre-registered rule, the claim is FALSE. |
+| **(iii) Hard-negative sharpening** | **SURVIVES — claim upheld** | FPR@recall0.90 falls **0.850 → 0.613** with the contrastive adapter (−0.237). |
+
+**On (ii) — reporting the trip, and a specification error I will not hide behind.**
+The falsifier is recorded as tripped because that is what the pre-registered rule
+says, and rules are not renegotiated after seeing data. But the threshold itself was
+**mis-specified**: `0.5` is a chance level for **AUC**, not for **average precision**.
+AP's chance level is the **base rate**. The four held-out policies have base rates
+0.118 / 0.180 / 0.342 / 0.102 → **chance macro-AP ≈ 0.185**. The measured 0.408 is
+therefore **2.2× chance**, and it beats the uni-encoder's 0.178 (≈ chance) on the
+same policies while the trained head cannot score them at all.
+
+So the *capability* is real; the *test of it* was written wrong. Both statements go
+in the record: the pre-registered falsifier **tripped**, and the pre-registration
+**contained an error** that a corrected re-run must fix by using a base-rate-relative
+threshold (e.g. "macro-AP ≥ 2× chance"). Correcting a threshold **after** seeing the
+data is exactly the HARKing this course forbids, so the corrected criterion applies
+only to the *next* run — it does not retroactively rescue this one.
 
 ---
 
