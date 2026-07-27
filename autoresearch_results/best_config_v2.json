@@ -1,5 +1,5 @@
 {
-  "experiment": "HC-1 angle/radius",
+  "experiment": "HC-2 (confirms HC-1)",
   "date": "2026-07-27",
   "objective": "WikiText-2 perplexity (JUDGE-FREE)",
   "model": "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated",
@@ -9,9 +9,9 @@
     "radius_frac": 1.0,
     "operation": "angle/radius split at fixed chord"
   },
-  "ppl": 87.65222701923989,
-  "unsteered_ppl": 92.32558097284337,
-  "ppl_ratio_vs_base": 0.9493818083313432,
+  "ppl": 77.55813549792339,
+  "unsteered_ppl": 81.67355963299228,
+  "ppl_ratio_vs_base": 0.9496113043981194,
   "citation": "arXiv:2606.06735 (angle-norm decomposition); arXiv:2601.19375 (norm-preserving control)",
   "predictions_evaluated": {
     "P1_rot_worse_than_add_f0.02": true,
@@ -23,5 +23,7 @@
   },
   "hypothesis_verdict": "FALSIFIED \u2014 no interior optimum; the surface is MONOTONE in angular fraction",
   "supersedes": "exp3 (Qwen-0.5B, stubbed safety, circular projection proxy) \u2014 quarantined",
-  "tier": "SCREENING (n=1/cell, single extraction set of 10 harmful/8 harmless)"
+  "tier": "SCREENING (n=1/cell, single extraction set of 10 harmful/8 harmless)",
+  "champion_status": "CONFIRMED, not advanced \u2014 HC-2 refined the neighbourhood at finer resolution (r=0.875 vs 1.0) and r=1.0 still wins at BOTH budgets, so pure radius is a true optimum rather than a grid-edge artifact; and f=0.05 beats f=0.07, so the budget optimum is interior.",
+  "COMPARABILITY_WARNING": "Raw PPL is NOT comparable across runs: HC-1 baseline 92.326 (n_ppl=40) vs HC-2 baseline 81.674 (n_ppl=30) \u2014 different WikiText passage samples. Only ppl_ratio_vs_base is comparable. Both champions land at ratio ~0.95."
 }

@@ -13,3 +13,7 @@
 {"exp": "HC-1", "objective": "wikitext_ppl", "judge": null, "budget_f": 0.1, "radius_frac": 0.5, "ppl": 204.6450495763308, "ppl_ratio": 2.216558481625207, "tier": "SCREENING", "citation": "arXiv:2606.06735"}
 {"exp": "HC-1", "objective": "wikitext_ppl", "judge": null, "budget_f": 0.1, "radius_frac": 0.75, "ppl": 149.72551199442765, "ppl_ratio": 1.6217121020713412, "tier": "SCREENING", "citation": "arXiv:2606.06735"}
 {"exp": "HC-1", "objective": "wikitext_ppl", "judge": null, "budget_f": 0.1, "radius_frac": 1.0, "ppl": 117.98294437684099, "ppl_ratio": 1.2779009147155487, "tier": "SCREENING", "citation": "arXiv:2606.06735"}
+{"exp": "HC-2", "objective": "wikitext_ppl", "judge": null, "budget_f": 0.05, "radius_frac": 0.875, "ppl": 78.40042669053675, "ppl_ratio": 0.9599242036570506, "n_ppl": 30, "tier": "SCREENING", "citation": "arXiv:2606.06735"}
+{"exp": "HC-2", "objective": "wikitext_ppl", "judge": null, "budget_f": 0.05, "radius_frac": 1.0, "ppl": 77.55813549792339, "ppl_ratio": 0.9496113043981194, "n_ppl": 30, "tier": "SCREENING", "citation": "arXiv:2606.06735"}
+{"exp": "HC-2", "objective": "wikitext_ppl", "judge": null, "budget_f": 0.07, "radius_frac": 0.875, "ppl": 88.63833715566099, "ppl_ratio": 1.0852757924837069, "n_ppl": 30, "tier": "SCREENING", "citation": "arXiv:2606.06735"}
+{"exp": "HC-2", "objective": "wikitext_ppl", "judge": null, "budget_f": 0.07, "radius_frac": 1.0, "ppl": 84.24204098350981, "ppl_ratio": 1.0314481377089384, "n_ppl": 30, "tier": "SCREENING", "citation": "arXiv:2606.06735"}

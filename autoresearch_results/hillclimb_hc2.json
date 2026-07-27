@@ -1,0 +1,46 @@
+{
+  "hypothesis": "angle/radius split of a FIXED displacement has an interior optimum",
+  "citation": "arXiv:2606.06735 (angle-norm decomposition); arXiv:2601.19375 (norm-preserving control)",
+  "objective": "WikiText-2 perplexity (JUDGE-FREE)",
+  "model": "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated",
+  "layer": 12,
+  "unsteered_ppl": 81.67355963299228,
+  "cells": [
+    {
+      "budget_f": 0.05,
+      "radius_frac": 0.875,
+      "ppl": 78.40042669053675,
+      "ppl_ratio_vs_base": 0.9599242036570506
+    },
+    {
+      "budget_f": 0.05,
+      "radius_frac": 1.0,
+      "ppl": 77.55813549792339,
+      "ppl_ratio_vs_base": 0.9496113043981194
+    },
+    {
+      "budget_f": 0.07,
+      "radius_frac": 0.875,
+      "ppl": 88.63833715566099,
+      "ppl_ratio_vs_base": 1.0852757924837069
+    },
+    {
+      "budget_f": 0.07,
+      "radius_frac": 1.0,
+      "ppl": 84.24204098350981,
+      "ppl_ratio_vs_base": 1.0314481377089384
+    }
+  ],
+  "champion": {
+    "budget_f": 0.05,
+    "radius_frac": 1.0,
+    "ppl": 77.55813549792339,
+    "ppl_ratio_vs_base": 0.9496113043981194
+  },
+  "predictions_evaluated": {
+    "P2_argmin_radius_f0.05": 1.0,
+    "P2_argmin_radius_f0.07": 1.0
+  },
+  "tier": "SCREENING (n=1 per cell, single extraction set)",
+  "elapsed_s": 120.0
+}
