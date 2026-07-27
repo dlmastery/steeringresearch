@@ -253,6 +253,25 @@ def main():
     print("[data] trajectories=%d harmful=%d benign=%d mean_len_h=%.1f mean_len_b=%.1f"
           % (n, n_harmful, n_benign, mean_len_h, mean_len_b))
 
+    # --- confound audit: what does a single trivial scalar score on this data? --
+    # Runs BEFORE the methods so the bar exists before the headline does. The
+    # detector's claim is only `auc - worst_auc_directionless` (CONFOUND_DISCIPLINE.md).
+    try:
+        confound = data.confound_report(trajs, labels, ds["completions"], prompts)
+        print("[confound] worst trivial baseline: %s at AUC %.4f (directionless)"
+              % (confound["worst_feature"], confound["worst_auc_directionless"]))
+        for name in ("tokencount", "charlen", "mean_norm", "final_norm",
+                     "prompt_charlen"):
+            key = "%s_auc_directionless" % name
+            if key in confound:
+                print("[confound]   %-15s %.4f (raw %.4f)  pos=%.2f neg=%.2f"
+                      % (name, confound[key], confound["%s_auc" % name],
+                         confound["%s_pos_mean" % name],
+                         confound["%s_neg_mean" % name]))
+    except Exception as exc:
+        confound = {"error": str(exc)}
+        print("[confound] FAILED: %s" % exc)
+
     folds = kfold_indices(n, C.N_FOLDS, C.SEED, labels=labels)
 
     # --- per-method 5-fold pooled out-of-fold predictions --------------------
@@ -347,6 +366,7 @@ def main():
         "seed": int(C.SEED),
         "n_folds": int(C.N_FOLDS),
         "judge": None,
+        "confound": confound,
         "methods": methods_block,
         "early_detection": early,
         "mean_traj_len_harmful": mean_len_h,
@@ -393,9 +413,14 @@ def _print_summary(results):
              results["seed"]))
     print("mean trajectory length: harmful=%.1f benign=%.1f tokens"
           % (results["mean_traj_len_harmful"], results["mean_traj_len_benign"]))
+    conf = results.get("confound") or {}
+    bar = conf.get("worst_auc_directionless")
+    if isinstance(bar, (int, float)):
+        print("CONFOUND BAR: worst trivial baseline = %s at AUC %.4f (directionless)"
+              % (conf.get("worst_feature"), bar))
     print(line)
-    print("%-20s %7s %-15s %6s %6s %8s"
-          % ("method", "AUC", "95% CI", "F1", "ACC", "TPR@10"))
+    print("%-20s %7s %-15s %6s %6s %8s %9s"
+          % ("method", "AUC", "95% CI", "F1", "ACC", "TPR@10", "vs CONF"))
     for name in C.METHODS:
         cell = results["methods"].get(name)
         if not isinstance(cell, dict):
@@ -404,8 +429,11 @@ def _print_summary(results):
             print("%-20s  [FAILED]" % name)
             continue
         ci = "[%.2f,%.2f]" % (cell["auc_ci"][0], cell["auc_ci"][1])
-        print("%-20s %7.3f %-15s %6.2f %6.2f %8.2f"
-              % (name, cell["auc"], ci, cell["f1"], cell["acc"], cell["tpr_at_fpr10"]))
+        margin = ("%+9.3f" % (cell["auc"] - bar)) if isinstance(bar, (int, float)) \
+            else "%9s" % "n/a"
+        print("%-20s %7.3f %-15s %6.2f %6.2f %8.2f %s"
+              % (name, cell["auc"], ci, cell["f1"], cell["acc"],
+                 cell["tpr_at_fpr10"], margin))
     print(line)
     print("EARLY DETECTION -- out-of-fold AUC vs generated tokens seen (K):")
     print("%-20s %s" % ("K:", "  ".join("%6d" % k for k in C.EARLY_KS)))
@@ -419,6 +447,9 @@ def _print_summary(results):
           "sequence detectors. If AUC rises with K, the jailbreak signal accumulates "
           "token-by-token -- it can be flagged BEFORE the harmful content is fully "
           "emitted. Screening tier (n small; abliterated model; label=prompt class).")
+    print("CLAIM: only the 'vs CONF' column is claimable -- a raw AUC is not a result "
+          "until the strongest trivial baseline (token count / char length / hidden-"
+          "state norm) is subtracted. See steering_tutorials/CONFOUND_DISCIPLINE.md.")
     print(line)
 
 

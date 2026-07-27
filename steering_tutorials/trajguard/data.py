@@ -193,6 +193,108 @@ def build_token_trajectories(
     }
 
 
+# --- confound audit ----------------------------------------------------------
+def _auc(scores, labels) -> float:
+    """Threshold-free AUC = P(score(pos) > score(neg)), ties count 0.5.
+
+    Uses sklearn.metrics.roc_auc_score if available, else a manual rank-AUC.
+    Same helper as ``multiturn_jailbreak.data`` / ``cross_trajectory.data``.
+    """
+    scores = [float(s) for s in scores]
+    labels = [int(y) for y in labels]
+    pos = [s for s, y in zip(scores, labels) if y == 1]
+    neg = [s for s, y in zip(scores, labels) if y == 0]
+    if not pos or not neg:
+        return 0.5
+    try:
+        from sklearn.metrics import roc_auc_score
+        return float(roc_auc_score(labels, scores))
+    except Exception:
+        order = sorted(range(len(scores)), key=lambda i: scores[i])
+        ranks = [0.0] * len(scores)
+        i = 0
+        while i < len(order):
+            j = i
+            while j + 1 < len(order) and scores[order[j + 1]] == scores[order[i]]:
+                j += 1
+            avg = (i + j) / 2.0 + 1.0  # 1-based average rank for ties
+            for m in range(i, j + 1):
+                ranks[order[m]] = avg
+            i = j + 1
+        sum_pos_ranks = sum(ranks[i] for i in range(len(labels)) if labels[i] == 1)
+        n_p, n_n = len(pos), len(neg)
+        u = sum_pos_ranks - n_p * (n_p + 1) / 2.0
+        return float(u / (n_p * n_n))
+
+
+def _directionless(auc: float) -> float:
+    """max(auc, 1-auc) -- the number a claim must clear.
+
+    An AUC of 0.11 is NOT clean: it is a 0.89 confound with the sign flipped (the
+    NEGATIVES are the long ones). Always fold before comparing to a headline.
+    """
+    return float(max(float(auc), 1.0 - float(auc)))
+
+
+def _mean(xs) -> float:
+    xs = list(xs)
+    return float(np.mean(xs)) if xs else 0.0
+
+
+def confound_report(trajectories, labels, completions=None, prompts=None) -> dict:
+    """Every trivial baseline a token-trajectory detector could be riding.
+
+    A streaming detector claiming AUC 0.94 has claimed nothing until we know what a
+    single scalar with no trajectory information scores on the same data. The
+    scalars available here:
+
+      * ``tokencount``  -- how many tokens the completion ran for. Nominally capped
+        at ``MAX_NEW_TOKENS``, but early EOS makes it class-informative.
+      * ``charlen``     -- the completion's raw character length.
+      * ``mean_norm``   -- mean over tokens of ``||h_t||`` at the capture layer, and
+      * ``final_norm``  -- ``||h_last||``. These are the important ones here: a
+        residual-stream MAGNITUDE difference alone would separate the classes with
+        no trajectory *shape* involved at all, so every sequence model's margin
+        must be priced against them.
+      * ``prompt_charlen`` -- the prompt's length (only when ``prompts`` is given);
+        a deployable prompt-side rule that needs no hidden states.
+
+    Returns raw AUCs (sibling-compatible), their directionless folds, the per-class
+    means, and ``worst_auc_directionless`` / ``worst_feature`` -- the bar a headline
+    must clear. Claim only ``headline - worst_auc_directionless``.
+    """
+    labels = [int(y) for y in labels]
+    trajs = [np.asarray(t, dtype=np.float32) for t in trajectories]
+    trajs = [t[None, :] if t.ndim == 1 else t for t in trajs]
+
+    feats = {
+        "tokencount": [float(t.shape[0]) for t in trajs],
+        "mean_norm": [float(np.linalg.norm(t, axis=-1).mean()) if t.size else 0.0
+                      for t in trajs],
+        "final_norm": [float(np.linalg.norm(t[-1])) if t.size else 0.0
+                       for t in trajs],
+    }
+    if completions is not None:
+        feats["charlen"] = [float(len(str(c))) for c in completions]
+    if prompts is not None:
+        feats["prompt_charlen"] = [float(len(str(p))) for p in prompts]
+
+    report = {}
+    worst_name, worst_val = None, 0.0
+    for name, values in feats.items():
+        auc = _auc(values, labels)
+        dl = _directionless(auc)
+        report["%s_auc" % name] = auc
+        report["%s_auc_directionless" % name] = dl
+        report["%s_pos_mean" % name] = _mean(v for v, y in zip(values, labels) if y == 1)
+        report["%s_neg_mean" % name] = _mean(v for v, y in zip(values, labels) if y == 0)
+        if dl > worst_val:
+            worst_name, worst_val = name, dl
+    report["worst_feature"] = worst_name
+    report["worst_auc_directionless"] = float(worst_val)
+    return report
+
+
 def load_or_build(**kw) -> dict:
     """Return the cached dataset if present, else build it (convenience wrapper).
 
@@ -226,4 +328,15 @@ if __name__ == "__main__":
     if ds["completions"]:
         sample = ds["completions"][0].replace("\n", " ")
         print("[smoke] sample completion[0] = %r" % sample[:80])
+
+    conf = confound_report(trajs, ds["labels"], ds["completions"], ds["prompts"])
+    print("[smoke] CONFOUND REPORT (trivial baselines, directionless):")
+    for name in ("tokencount", "charlen", "mean_norm", "final_norm", "prompt_charlen"):
+        key = "%s_auc_directionless" % name
+        if key in conf:
+            print("  %-16s %.4f (raw %.4f)  pos_mean=%.2f neg_mean=%.2f"
+                  % (name, conf[key], conf["%s_auc" % name],
+                     conf["%s_pos_mean" % name], conf["%s_neg_mean" % name]))
+    print("  worst -> %s at %.4f" % (conf["worst_feature"],
+                                     conf["worst_auc_directionless"]))
     print("[smoke] OK")

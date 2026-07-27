@@ -60,8 +60,9 @@ projection of the model's own decoding-time states. Full walkthrough below.
 7. [Sibling: multiturn_jailbreak](#7-sibling-multiturn_jailbreak)
 8. [Running](#8-running)
 9. [Results — measured vs. the claim](#9-results--measured-vs-the-claim)
-10. [Honest caveats](#10-honest-caveats)
-11. [Repository](#11-repository)
+10. [The confound audit — what the AUCs must clear](#10-the-confound-audit--what-the-aucs-must-clear)
+11. [Honest caveats](#11-honest-caveats)
+12. [Repository](#12-repository)
 
 ---
 
@@ -157,8 +158,8 @@ completion — is what `infer.py` prints and what `run_trajguard.py` renders to
 |---|---|
 | `config.py` | every knob: model, layer, generation cap, window, target FPR, early-K list, CV/methods, paths |
 | `trajectory.py` | generate + capture the per-token trajectory; the training-free sliding-window projection detector |
-| `data.py` | generate harmful/benign completions with the abliterated Gemma; capture + cache the token trajectories |
-| `run_trajguard.py` | orchestrator: build -> 5-fold CV over the four methods -> early-detection curve -> `results.json` + plots |
+| `data.py` | generate harmful/benign completions with the abliterated Gemma; capture + cache the token trajectories; **`confound_report()`** — the trivial-baseline audit (token count, char length, hidden-state norm, prompt length) |
+| `run_trajguard.py` | orchestrator: build -> **confound audit** -> 5-fold CV over the four methods -> early-detection curve -> `results.json` + plots |
 | `infer.py` | generate for one harmful + one benign prompt; print the per-token sliding-window risk drifting up and crossing `tau` |
 
 `models.py` is **not** in this folder — it is imported unchanged from the sibling
@@ -199,10 +200,24 @@ loads the abliterated Gemma **once**, and for each prompt calls
 result is cached as a ragged `.npz` pack (all trajectories vstacked with
 per-completion token counts) plus a prompts/completions sidecar, so re-runs and
 `infer.py` are fast. It is the **only** model load in the lesson besides `infer`.
+`confound_report(trajectories, labels, completions, prompts)` is the honesty check
+required by [`CONFOUND_DISCIPLINE.md`](../CONFOUND_DISCIPLINE.md): it scores the
+label against four **trivial scalars that carry no trajectory information** —
+generated-token count, completion character length, the mean per-token
+hidden-state norm `||h_t||`, and the final-token norm `||h_last||` (plus prompt
+length) — and returns each raw AUC, its **directionless** fold `max(auc, 1-auc)`,
+the per-class means, and `worst_auc_directionless`, the bar every headline must
+clear. The norm features are the load-bearing ones here: a residual-stream
+*magnitude* gap alone would separate the classes with no trajectory *shape*
+involved, which would make a sequence model's whole margin illusory. It is pure
+CPU numpy over the cached trajectories — no model load.
 
 ### `run_trajguard.py` — the orchestrator
 
-`main()` builds/loads the dataset and runs **5-fold StratifiedKFold CV**. For each
+`main()` builds/loads the dataset, runs the **confound audit first** (so the bar
+exists before the headline does; it lands in `results.json` under `confound` and in
+a `vs CONF` margin column in the summary table), then runs **5-fold StratifiedKFold
+CV**. For each
 method it pools out-of-fold predictions and reports **AUC (+ bootstrap CI), F1,
 accuracy, TPR@FPR=0.10**. It then computes the **early-detection curve**: for each
 `K` in `EARLY_KS`, the out-of-fold AUC of the training-free detector and `seq_gru`
@@ -318,18 +333,30 @@ lessons does not apply (`results.json` records `"judge": null`).
 
 ## 9. Results — measured vs. the claim
 
+> **These AUCs are UNPRICED and must not be read as the lesson's claim.** The run
+> below predates this lesson's confound audit: it was published with **no trivial
+> baseline of any kind**, so the margin it earns over a scalar with no trajectory
+> information in it is **unknown**. `confound_report()` now exists and is wired
+> into the orchestrator, but computing it needs a re-run (the audit reads the
+> cached trajectories, so it is a CPU-only recompute — the GPU is not needed).
+> Until that row is filled, treat every number here as *raw* and the lesson's
+> claim as **unsupported**, per
+> [`CONFOUND_DISCIPLINE.md`](../CONFOUND_DISCIPLINE.md). See
+> [Section 10](#10-the-confound-audit--what-the-aucs-must-clear).
+
 Run at the ≥500/class config: abliterated Gemma-3-1B, layer 12, **300 harmful +
 300 benign** completions (max 40 generated tokens), window=4, 5-fold stratified CV,
 bootstrap 95% CIs, from `artifacts/results.json`.
 
-Detection (full trajectory):
+Detection (full trajectory). The **claimable margin** column is the only quantity
+the lesson may headline; it stays empty until the audit is re-run:
 
-| method | AUC | F1 | TPR@FPR=0.10 |
-|---|---|---|---|
-| `threshold_freeform` (training-free, the paper's method) | **0.638** | 0.24 | 0.10 |
-| `per_turn_max` (learned per-token, stateless) | 0.931 | 0.84 | 0.84 |
-| `trajectory_mlp` | 0.944 | 0.90 | 0.90 |
-| `seq_gru` | **0.945** | 0.86 | 0.88 |
+| method | AUC (raw, unpriced) | F1 | TPR@FPR=0.10 | claimable margin over the confound bar |
+|---|---|---|---|---|
+| `threshold_freeform` (training-free, the paper's method) | 0.638 | 0.24 | 0.10 | _pending re-run_ |
+| `per_turn_max` (learned per-token, stateless) | 0.931 | 0.84 | 0.84 | _pending re-run_ |
+| `trajectory_mlp` | 0.944 | 0.90 | 0.90 | _pending re-run_ |
+| `seq_gru` | 0.945 | 0.86 | 0.88 | _pending re-run_ |
 
 Early detection — AUC using only the first K generated tokens (the streaming value):
 
@@ -338,11 +365,17 @@ Early detection — AUC using only the first K generated tokens (the streaming v
 | `threshold_freeform` | 0.69 | 0.671 | 0.619 | 0.628 | 0.63 |
 | `seq_gru` | **0.94** | 0.946 | 0.935 | 0.947 | 0.949 |
 
-**Verdict — the signal is real and detectable EARLY.** The falsifier (both detectors
-≤ 0.60) is **not** triggered: every method clears chance and the learned models reach
-**0.93–0.945**. The streaming promise holds strongly — `seq_gru` flags the jailbreak
-at **AUC 0.94 from just the first 2 generated tokens**, and stays ~0.94 across all K.
-You do not need to wait for the harmful content to finish.
+**Verdict — PROVISIONAL, pending the confound audit.** Against *chance*, the
+pre-registered falsifier (both detectors ≤ 0.60) is not triggered: every method
+clears 0.5 and the learned models reach 0.93–0.945, with `seq_gru` already at
+0.94 from the first 2 generated tokens. But "clears chance" is the wrong bar.
+The falsifier that actually binds this lesson is the confound one — *if
+`AUC(method) ≤ max(confound_auc, 1 − confound_auc)` the claim is FALSE* — and it
+**has never been evaluated here**. A norm-only or token-count-only rule could in
+principle produce most of this separation. The streaming story ("you do not need
+to wait for the harmful content to finish") is therefore **stated but not yet
+earned**; it becomes a result when [Section 10](#10-the-confound-audit--what-the-aucs-must-clear)
+has numbers in it.
 
 **The honest twist — softened by the larger N.** At the small n=80 run the stateless
 `per_turn_max` was clearly *best* (0.977), suggesting the sequence structure added
@@ -367,8 +400,70 @@ immediate-compliance setup does not exercise that drift. Reported, not hidden.
 
 ---
 
-## 10. Honest caveats
+## 10. The confound audit — what the AUCs must clear
 
+> **Status: NOT YET MEASURED.** `confound_report()` is implemented in `data.py` and
+> wired into `run_trajguard.py`, but the published `artifacts/results.json` was
+> produced before it existed and has no `confound` key. The table below is the
+> shape of the answer, not the answer. **No number in it is invented; every cell
+> says `pending re-run`.**
+
+A detection AUC is not a result until the strongest **trivial** baseline on the same
+data is reported beside it, and only `headline − baseline` may be claimed
+([`CONFOUND_DISCIPLINE.md`](../CONFOUND_DISCIPLINE.md)). This lesson was the
+course's one **non-compliant** case: it headlined 0.944 / 0.945 with no baseline of
+any kind. The only length-ish quantity ever recorded was *mean trajectory length*
+(harmful **38.78** vs benign **37.96** tokens), which is near-matched **by the
+40-token generation cap** — a design-time control, not a measured baseline. And
+`threshold_freeform` (0.638) is a weak *method*, not a confound; beating it proves
+nothing about triviality.
+
+The four scalars audited, each carrying **no trajectory information whatsoever**:
+
+| trivial feature | why it could separate the classes without any real signal | directionless AUC |
+|---|---|---|
+| `tokencount` | generated-token count. Nominally capped at `MAX_NEW_TOKENS`, but **early EOS** is class-informative — a benign completion that stops short is a free label. | _pending re-run_ |
+| `charlen` | the completion's raw character length — the classic prompt-harm confound, one level downstream. | _pending re-run_ |
+| `mean_norm` | **the important one.** Mean over tokens of `‖h_t‖` at layer 12. If harmful and benign completions simply sit at different residual-stream *magnitudes*, one scalar separates them and **every sequence model's margin is illusory** — no drift, no shape, no trajectory. | _pending re-run_ |
+| `final_norm` | `‖h_last‖` alone, the single cheapest such scalar. | _pending re-run_ |
+| `prompt_charlen` | prompt length — a deployable prompt-side rule that needs no hidden states at all. | _pending re-run_ |
+| **worst (the bar)** | `max` of the above; the number every headline must clear | _pending re-run_ |
+
+**Why the norms are the right confound for *this* lesson.** The siblings audit
+length and count because their inputs are text. Here the detector's input is a
+matrix of hidden states, so the trivial shortcut is geometric: the classes could
+differ in the *size* of the residual-stream vectors rather than in how those
+vectors *move*. `harm_direction` is a diff-of-means, and a mean-norm gap projects
+straight onto it — so `threshold_freeform`, `trajectory_mlp`, and `seq_gru` could
+all be reading one scalar. That is exactly the hypothesis the audit falsifies or
+confirms, and it has never been run.
+
+**Pre-registered falsifier (binding from now on).** For each method, if
+`AUC(method) ≤ worst_auc_directionless`, that method's detection claim is **FALSE**
+and must be reported as such — no reinterpreting the confound as "a strong
+baseline", no retreating to the early-detection curve to rescue it. The
+early-detection numbers inherit the same bar: an early-K AUC is claimable only
+above the confound computed on the **same first-K truncation**, which the current
+audit does not yet compute.
+
+**To fill this in** (CPU only, no GPU, no regeneration — the trajectories are
+cached in `artifacts/token_trajectories.npz`):
+
+```bash
+python -m steering_tutorials.trajguard.run_trajguard
+```
+
+The audit prints before the CV block, lands in `results.json` under `confound`,
+and adds a `vs CONF` margin column to the summary table.
+
+---
+
+## 11. Honest caveats
+
+- **The published AUCs are unpriced.** The single largest caveat, and the reason
+  §9 opens with a warning: the run in `artifacts/results.json` reports **no
+  trivial-confound baseline**, so its margin over a no-trajectory scalar is
+  unknown. Fixed in code (§10), not yet fixed in the numbers.
 - **Screening tier, not evaluation.** Single 1B model, one layer, a few hundred
   generated completions, 5-fold CV, one seed — a directional demo, not the n ≥ 7
   seeds + rigor contract CLAUDE.md reserves the word "winner" for. Do not
@@ -397,7 +492,7 @@ immediate-compliance setup does not exercise that drift. Reported, not hidden.
 
 ---
 
-## 11. Repository
+## 12. Repository
 
 Source and full artifacts:
 <https://github.com/dlmastery/steeringresearch/tree/master/steering_tutorials/trajguard>

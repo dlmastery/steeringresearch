@@ -22,6 +22,12 @@ benign UltraChat conversations rendered the same way. Three localizers are
 compared across two base-rate regimes; the whole point is a single ordering: at
 the **sparse** rate, **clustering the repository beats scoring each trace alone**.
 
+> **That ordering did NOT hold when measured.** On our run `kmeans_enrich` scored
+> sparse AP **0.568** against `per_trace`'s **0.818** — the pre-registered
+> falsifier fires, and the lesson's headline is a **negative result**. The
+> length-confound audit discounts it further. Read
+> [Section 9](#9-results--measured-vs-the-claim) before anything else here.
+
 ---
 
 ## The key idea in code
@@ -99,6 +105,11 @@ The benign twin has no such structure: ordinary traffic is topically scattered, 
 benign traces spread across many low-enrichment clusters and never concentrate.
 **The discriminator is cluster density, and only an aggregate view can see it.**
 
+*(That is the argument. Half of it checked out and half did not: the campaign did
+concentrate — 93% of it in one 0.997-pure cluster — but the per-trace probe still
+out-ranked cluster-enrichment at the sparse rate. See
+[Section 9](#9-results--measured-vs-the-claim).)*
+
 ---
 
 ## 2. The three localizers
@@ -119,7 +130,9 @@ embeddings; `kmeans_enrich` and `knn_purity` generalize by **who a trace sits
 near**. The pre-registered claim is an **ordering**: at the sparse ~5% rate,
 `kmeans_enrich` (and `knn_purity`) beat `per_trace` on **Average Precision**. If
 they do not, "clustering surfaces the distributed campaign" is false (see the
-falsifier in [Section 9](#9-results--measured-vs-the-claim)).
+falsifier in [Section 9](#9-results--measured-vs-the-claim)). **Measured: they do
+not.** `kmeans_enrich` came back at sparse AP 0.568 against `per_trace`'s 0.818,
+so the claim below is the *hypothesis*, not the finding.
 
 The embedder is the paper's own: **`BAAI/bge-base-en-v1.5`** (`bge`), a general
 text embedder loaded via `transformers` + mean pooling (a faster `minilm`
@@ -288,13 +301,14 @@ build the repository, cluster, seed-label a few CSTM traces, and report AP/ROC-A
 on it with **no** in-distribution retuning — an honest transfer number.
 
 **The confound audit — and why it matters.** The obvious shortcut is **length**:
-if joined attack traces are systematically longer than benign ones, a model could
-separate the classes on character count alone and clustering would earn no credit.
-`confound_report()` measures the AUC of raw **trace character-length** against the
-label (`length_auc`). ≈0.5 means no trivial tell and a high localizer AP is real
-cluster structure; well above 0.5 means the headline must be discounted for a
-length artifact. The numbers are recorded in `results.json` and quoted beside the
-method APs in [Section 9](#9-results--measured-vs-the-claim).
+if attack traces are systematically longer (or shorter) than benign ones, a model
+could separate the classes on character count alone and clustering would earn no
+credit. `confound_report()` measures the AUC of raw **trace character-length**
+against the label (`length_auc`). The bar is the **directionless** value
+`max(auc, 1−auc)` — an AUC *below* 0.5 is not clean, it is a tell with the sign
+flipped. **Measured here: `length_auc` = 0.325 raw ⇒ 0.675 directionless**, i.e. a
+real 0.675 length tell in the *benign-is-longer* direction, which every headline in
+[Section 9](#9-results--measured-vs-the-claim) is discounted against there.
 
 ---
 
@@ -365,43 +379,11 @@ so the off-family-judge discipline of the steering lessons does not apply here
 
 ## 9. Results — measured vs. the claim
 
-**[PENDING GPU RUN]** — the harness, self-tests, and this section's structure are
-in place; the numbers below are filled from `artifacts/results.json` once the
-bge-embedder run completes. The falsifier and reading are pre-registered here
-**before** the run.
-
 **The claim under test.** Safety violations in agent repositories are sparse
 (~5%), distributed, and adversarially diluted, so a per-trace monitor that scores
 each trace alone misses them; **clustering the repository** concentrates the
 campaign into one cluster and cluster-enrichment scoring surfaces it, reaching
 Average Precision far above the per-trace baseline (Meerkat, arXiv:2604.11806).
-
-Averaged over `N_REPOS` sampled repositories, bge-base-en-v1.5 embeddings, a
-`SEED_FRAC` labelled seed, bootstrap 95% CIs. The **sparse (5%)** AP column is the
-one that matters (balanced is the sanity control where per-trace can already do
-fine).
-
-| method | Sparse (5%) **AP** | Sparse ROC-AUC | Balanced ROC-AUC |
-|---|---|---|---|
-| `per_trace` (diluted-campaign-defeated baseline) | _pending_ | _pending_ | _pending_ |
-| `kmeans_enrich` (Meerkat-style — headline) | _pending_ | _pending_ | _pending_ |
-| `knn_purity` (clustering-free density proxy) | _pending_ | _pending_ | _pending_ |
-
-OOD transfer — seed-labelled on a few CSTM-Bench traces, scored on the rest with no
-in-distribution retuning:
-
-| method | CSTM-Bench AP | CSTM-Bench ROC-AUC |
-|---|---|---|
-| `per_trace` | _pending_ | _pending_ |
-| `kmeans_enrich` | _pending_ | _pending_ |
-| `knn_purity` | _pending_ | _pending_ |
-
-**Cluster quality** (sparse repo, from `results.json`): `best_k` _pending_,
-`cluster_purity` _pending_, `campaign_max_cluster_recall` _pending_ — the fraction
-of the campaign captured by its single most-enriched cluster (the mechanism the
-whole claim rests on). **Confound audit:** `length_auc` _pending_ — we quote it
-beside the method APs and claim only the margin **above** a length tell, never the
-raw gap over `per_trace`.
 
 **Pre-registered falsifier.** The thesis is the ordering `AP(kmeans_enrich) >
 AP(per_trace)` at the **5% sparse** base rate. If `kmeans_enrich` comes back
@@ -410,13 +392,119 @@ campaign" is **FALSE** for this setup and must be reported as a negative result 
 no reclassifying to the balanced regime to rescue it, no moving the goalposts to a
 richer base rate.
 
+### 9.1 The confound bar — measured, and it is NOT ≈0.5
+
+Read this before the method table; it changes what every number below means.
+
+```
+length_auc (raw)          0.3246     pos mean 104.5 chars  vs  neg mean 121.7 chars
+length_auc (directionless) 0.6754    = max(0.3246, 1 - 0.3246)
+```
+
+**0.3246 is not "clean".** It is a **0.675 tell with the sign flipped** — the
+*benign* traces are the long ones (121.7 vs 104.5 chars), so a rule that says
+"shorter ⇒ attack" already separates the classes at AUC **0.675** with no
+embedding, no clustering, and no model. Per rule 4 of
+[`CONFOUND_DISCIPLINE.md`](../CONFOUND_DISCIPLINE.md), the directionless fold
+`max(auc, 1−auc)` is the number a headline must clear, and reading 0.325 as "near
+0.5, therefore fine" is the single most common way a confound audit is misread.
+This lesson's earlier text did exactly that by leaving the value unstated.
+
+**Why it happened.** `load_trace_pool()` *does* try to length-match: it draws
+benign UltraChat singletons inside a window derived from the attack sub-step
+lengths. But the window is deliberately widened (`0.6 × p10` to `1.05 × p90`) so it
+is fillable, and the benign draws pile up in the upper half of it — hence a 17-char
+mean gap in the *benign* direction. **The fix is the `biencoder_guard` one**
+(rigor rubric item 7, which took that lesson's `length_auc` from 0.72 to 0.52):
+stop widening the window and instead draw benigns **stratified per length
+quantile** of the positive pool, so the two length *distributions* match rather
+than merely overlapping. That is a data-construction change, not a modelling one.
+
+### 9.2 The measured results, priced against the bar
+
+Averaged over `n_repos = 6` sampled repositories of 300 traces, a `SEED_FRAC`
+labelled seed, bootstrap 95% CIs, from `artifacts/results.json`. The **sparse
+(5%)** AP column is the one that matters (balanced is the sanity control where
+per-trace can already do fine).
+
+> **Run config caveat, stated up front:** this run used the **`minilm`** fallback
+> embedder (not the `bge-base-en-v1.5` the lesson describes) and a pool of
+> **200 attack + 200 benign** — *below* the ≥500/class floor
+> ([`DATA_SUFFICIENCY.md`](../DATA_SUFFICIENCY.md)). Provisional numbers on both
+> counts.
+
+| method | Sparse (5%) **AP** [95% CI] | Sparse ROC-AUC | ROC-AUC margin over the 0.675 length bar | Balanced ROC-AUC |
+|---|---|---|---|---|
+| `per_trace` (diluted-campaign-defeated baseline) | **0.818** [0.732, 0.905] | 0.969 | **+0.294** | 0.966 |
+| `kmeans_enrich` (Meerkat-style — the headline) | **0.568** [0.366, 0.769] | 0.892 | **+0.217** | 0.913 |
+| `knn_purity` (clustering-free density proxy) | 0.166 [0.120, 0.220] | 0.841 | +0.166 | 0.907 |
+
+**The headline, discounted — and it does not survive.** Two things go wrong, and
+the lesson's own thesis is on the losing side of both:
+
+1. **The falsifier fires.** `AP(kmeans_enrich) = 0.568` is far **below**
+   `AP(per_trace) = 0.818` at the sparse rate. The pre-registered ordering is
+   **FALSIFIED**: in this setup clustering does *not* surface the distributed
+   campaign better than scoring each trace alone. Per the pre-registration this is
+   reported as a negative result, not rescued by the balanced column (where
+   `per_trace` also wins, 0.966 vs 0.913).
+2. **`kmeans_enrich` sits below the confound bar on the headline metric.** Its
+   sparse AP of **0.568** is *lower than the 0.675 directionless length tell* —
+   so on the number this lesson chose to headline, **the clustering arm does not
+   clear the trivial baseline at all.** `per_trace`'s 0.818 clears it, by
+   **+0.142**, and that is the only margin either arm may claim on AP.
+
+   *One honest qualification, which does not rescue the arm:* AP-at-5% and AUC are
+   different metrics, so 0.568-vs-0.675 is a bare-number comparison, not a strictly
+   commensurable one — **the length-only ranker's AP at the 5% rate was never
+   computed** and is the missing cell here (a CPU-only recompute). The
+   commensurable comparison is the ROC-AUC column above, where both arms *do* clear
+   0.675 (`kmeans_enrich` +0.217). Either way the conclusion is unchanged:
+   `kmeans_enrich` loses to `per_trace` on every metric measured, and its headline
+   AP is not defensible against a length rule until that missing cell exists.
+
+**Cluster quality** (sparse repo, from `results.json`): `best_k` = **16**,
+`cluster_purity` = **0.997**, `campaign_max_cluster_recall` = **0.933**. This is
+the interesting twist: the mechanism *works* — the campaign really does concentrate,
+with 93% of it captured by a single cluster at near-perfect purity — and yet
+**enrichment scoring still loses to the per-trace probe.** The clusters are right;
+converting them into a *ranking* at a 5% base rate is what fails, because a
+cluster-level score is coarse (every member of a cluster gets the same value), and
+AP punishes exactly that flatness. That is a real, reportable finding and it is not
+the one the lesson set out to make.
+
+OOD transfer — seed-labelled on a few CSTM-Bench traces, scored on the rest with no
+in-distribution retuning (52 attack + 56 benign, base rate ≈ 0.48):
+
+| method | CSTM-Bench AP | CSTM-Bench ROC-AUC |
+|---|---|---|
+| `per_trace` | 0.492 | 0.540 |
+| `kmeans_enrich` | 0.484 | 0.424 |
+| `knn_purity` | 0.485 | 0.500 |
+
+**All three collapse to chance out of distribution.** At a ≈0.48 base rate a
+random ranker scores AP ≈ 0.48 and AUC 0.50 — every method is within noise of
+that, and `kmeans_enrich` is *below* chance on AUC (0.424). Nothing learned on the
+constructed pool transfers to the real cross-session benchmark. Reported, not
+buried.
+
 ---
 
 ## 10. Honest caveats
 
-- **Screening tier, not evaluation.** One embedder, one seed fraction, a few
-  hundred traces per repository — a directional demo, not the n ≥ 7 seeds + rigor
-  contract CLAUDE.md reserves the word "winner" for. Do not over-read the ordering.
+- **The headline claim is FALSIFIED on this run, and partly unpriced.**
+  `kmeans_enrich` lost to `per_trace` on sparse AP (0.568 vs 0.818), and its AP is
+  below the **0.675 directionless length tell** the confound audit measured. The
+  clustering *mechanism* works (0.997 purity, 0.933 campaign recall) — turning it
+  into a sparse-regime ranking is what fails. Two cells are still missing: a
+  length-only ranker's **AP** at the 5% base rate, and a re-run with the length
+  windows properly quantile-matched (§9.1).
+- **Screening tier, not evaluation** — and below the data floor. One embedder
+  (the `minilm` fallback, not the `bge` this README describes), one seed fraction,
+  6 repositories of 300 traces drawn from a **200/class** pool, under the ≥500/class
+  rubric. A directional demo, not the n ≥ 7 seeds + rigor contract CLAUDE.md
+  reserves the word "winner" for. Do not over-read the ordering — including the
+  negative one.
 - **Our localizer is NOT Meerkat's agentic-search system.** The paper's method
   pairs clustering with an **agentic search** step that reasons over clusters and
   describes violations in natural language, discovering failures with no seed
