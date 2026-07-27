@@ -471,11 +471,58 @@ zero-shot arm. Serves on **port 8005** (lessons 1–3 use their own ports).
 
 ## 7. Results
 
-> **STATUS: awaiting the v2 re-run.** Everything in this section is the **v1**
-> (mis-scaled-dial) run of 2026-07-22 and is **SUPERSEDED** — see the banner at the
-> top of this README. It is kept because the bug is the most instructive thing in
-> the lesson, not because the rates mean what they appear to mean. `flow.pt` must be
-> retrained and `run_flas` re-run before any number here is cited.
+### 7.0 v2 — the corrected run (2026-07-26). **This is the citable one.**
+
+The field was retrained with **norm-relative transport** and re-swept. First, proof
+that the dial is now calibrated — flow-time maps to *measured* displacement:
+
+| T | measured ‖Δh‖/‖h‖ | refusal | comply | gibberish |
+|---|---|---|---|---|
+| 0.00 | 0.0000 | **0.32** (baseline) | 0.56 | 0.12 |
+| 0.02 | 0.0122 | 0.26 | 0.59 | 0.15 |
+| 0.05 | 0.0304 | 0.15 | 0.59 | 0.26 |
+| 0.10 | 0.0605 | 0.00 | 0.00 | **1.00** |
+| 0.15 | 0.0900 | 0.00 | 0.00 | 1.00 |
+
+*(v1's grid spanned 5.6 % → 22.5 % — every point at or past the ~5 % cliff knee. v2
+spans 1.2 % → 9.0 %, straddling it. That is the whole fix.)*
+
+**The verdict is still negative — and now it means something.** The decisive row is
+**T = 0.02**, where coherence is essentially intact (gibberish 0.15 vs a 0.12
+baseline) and refusal has *already fallen* to 0.26 from 0.32. Pushing along the
+concept direction does not install refusal in the sub-cliff band; it mildly
+*suppresses* it, and then coherence collapses completely by 6 % displacement.
+
+- flow-time as a strength dial **at matched coherence**: **no** — refusal never rose
+  above the 0.32 baseline while coherence held.
+- zero-shot concept (`harassment`) at 1B: **no** — refusal 0.00, gibberish 1.00.
+- one field, many concepts at `T_default`: refusal 0.00 for both `sexual` and
+  `violence`.
+- selectivity: benign over-refusal 0.43 at a gate fire-rate of 0.03 — i.e. the
+  over-refusal is the *base model's*, not the intervention's.
+
+**Why this is worth more than the v1 negative it replaces.** v1 measured the
+coherence cliff five times and reported it as a concept dial. v2 samples the regime
+where an effect *could* appear and shows there is none — a clean negative rather than
+a confounded one. It corroborates the course's broader finding that the **WRITE**
+primitive is weak at this scale *regardless of how the push is parameterised*
+(cf. `curveball`, `hello_world_steering`, `multi_intent`), while **READ**/gating
+works (lesson 1's probe, `contextual_steering`'s probe gate).
+
+**Tier: SCREENING.** n = 34 eval prompts/concept, one 1B abliterated target, off-family
+Qwen2.5-3B judge. `hate` and `self_harm` were dropped by the loader for having < 100
+examples and `violence` has only 44 exemplars — below this course's own data floor.
+Directional, not publication-grade. See also `JUDGE_VALIDITY.md`: a sibling
+calibration measured this judge family at ROC-AUC 0.665–0.751, so small rate
+differences here sit near the instrument's noise floor.
+
+---
+
+### 7.1 v1 — the mis-scaled run, kept as the record of the bug
+
+> Everything below is the **v1** run of 2026-07-22 and is **SUPERSEDED**. It is kept
+> because the bug is the most instructive thing in the lesson, not because the rates
+> mean what they appear to mean.
 
 The v1 GPU run wrote `artifacts/results.json` (now carrying a `SUPERSEDED` key) and
 two plots. Concepts are the well-populated toxic-chat categories (sexual, violence
