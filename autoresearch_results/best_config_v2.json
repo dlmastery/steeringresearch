@@ -1,0 +1,27 @@
+{
+  "experiment": "HC-1 angle/radius",
+  "date": "2026-07-27",
+  "objective": "WikiText-2 perplexity (JUDGE-FREE)",
+  "model": "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated",
+  "layer": 12,
+  "config": {
+    "budget_f": 0.05,
+    "radius_frac": 1.0,
+    "operation": "angle/radius split at fixed chord"
+  },
+  "ppl": 87.65222701923989,
+  "unsteered_ppl": 92.32558097284337,
+  "ppl_ratio_vs_base": 0.9493818083313432,
+  "citation": "arXiv:2606.06735 (angle-norm decomposition); arXiv:2601.19375 (norm-preserving control)",
+  "predictions_evaluated": {
+    "P1_rot_worse_than_add_f0.02": true,
+    "P2_argmin_radius_f0.02": 1.0,
+    "P1_rot_worse_than_add_f0.05": true,
+    "P2_argmin_radius_f0.05": 1.0,
+    "P1_rot_worse_than_add_f0.1": true,
+    "P2_argmin_radius_f0.1": 1.0
+  },
+  "hypothesis_verdict": "FALSIFIED \u2014 no interior optimum; the surface is MONOTONE in angular fraction",
+  "supersedes": "exp3 (Qwen-0.5B, stubbed safety, circular projection proxy) \u2014 quarantined",
+  "tier": "SCREENING (n=1/cell, single extraction set of 10 harmful/8 harmless)"
+}

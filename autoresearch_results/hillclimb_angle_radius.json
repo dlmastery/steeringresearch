@@ -1,0 +1,116 @@
+{
+  "hypothesis": "angle/radius split of a FIXED displacement has an interior optimum",
+  "citation": "arXiv:2606.06735 (angle-norm decomposition); arXiv:2601.19375 (norm-preserving control)",
+  "objective": "WikiText-2 perplexity (JUDGE-FREE)",
+  "model": "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated",
+  "layer": 12,
+  "unsteered_ppl": 92.32558097284337,
+  "cells": [
+    {
+      "budget_f": 0.02,
+      "radius_frac": 0.0,
+      "ppl": 89.61889788329746,
+      "ppl_ratio_vs_base": 0.9706832812637047
+    },
+    {
+      "budget_f": 0.02,
+      "radius_frac": 0.25,
+      "ppl": 89.33200749920191,
+      "ppl_ratio_vs_base": 0.9675759042932859
+    },
+    {
+      "budget_f": 0.02,
+      "radius_frac": 0.5,
+      "ppl": 88.99311023646446,
+      "ppl_ratio_vs_base": 0.9639052286347473
+    },
+    {
+      "budget_f": 0.02,
+      "radius_frac": 0.75,
+      "ppl": 88.7717484763125,
+      "ppl_ratio_vs_base": 0.9615076075440435
+    },
+    {
+      "budget_f": 0.02,
+      "radius_frac": 1.0,
+      "ppl": 88.74373818701032,
+      "ppl_ratio_vs_base": 0.9612042215376191
+    },
+    {
+      "budget_f": 0.05,
+      "radius_frac": 0.0,
+      "ppl": 117.24090387043498,
+      "ppl_ratio_vs_base": 1.269863700125756
+    },
+    {
+      "budget_f": 0.05,
+      "radius_frac": 0.25,
+      "ppl": 105.84091949450685,
+      "ppl_ratio_vs_base": 1.146387798259714
+    },
+    {
+      "budget_f": 0.05,
+      "radius_frac": 0.5,
+      "ppl": 97.37145008656552,
+      "ppl_ratio_vs_base": 1.054652990650623
+    },
+    {
+      "budget_f": 0.05,
+      "radius_frac": 0.75,
+      "ppl": 90.98767058198551,
+      "ppl_ratio_vs_base": 0.9855087790755264
+    },
+    {
+      "budget_f": 0.05,
+      "radius_frac": 1.0,
+      "ppl": 87.65222701923989,
+      "ppl_ratio_vs_base": 0.9493818083313432
+    },
+    {
+      "budget_f": 0.1,
+      "radius_frac": 0.0,
+      "ppl": 479.67694460852255,
+      "ppl_ratio_vs_base": 5.195493378477788
+    },
+    {
+      "budget_f": 0.1,
+      "radius_frac": 0.25,
+      "ppl": 301.46279228985975,
+      "ppl_ratio_vs_base": 3.265214137981238
+    },
+    {
+      "budget_f": 0.1,
+      "radius_frac": 0.5,
+      "ppl": 204.6450495763308,
+      "ppl_ratio_vs_base": 2.216558481625207
+    },
+    {
+      "budget_f": 0.1,
+      "radius_frac": 0.75,
+      "ppl": 149.72551199442765,
+      "ppl_ratio_vs_base": 1.6217121020713412
+    },
+    {
+      "budget_f": 0.1,
+      "radius_frac": 1.0,
+      "ppl": 117.98294437684099,
+      "ppl_ratio_vs_base": 1.2779009147155487
+    }
+  ],
+  "champion": {
+    "budget_f": 0.05,
+    "radius_frac": 1.0,
+    "ppl": 87.65222701923989,
+    "ppl_ratio_vs_base": 0.9493818083313432
+  },
+  "predictions_evaluated": {
+    "P1_rot_worse_than_add_f0.02": true,
+    "P2_argmin_radius_f0.02": 1.0,
+    "P1_rot_worse_than_add_f0.05": true,
+    "P2_argmin_radius_f0.05": 1.0,
+    "P1_rot_worse_than_add_f0.1": true,
+    "P2_argmin_radius_f0.1": 1.0
+  },
+  "tier": "SCREENING (n=1 per cell, single extraction set)",
+  "elapsed_s": 235.7
+}
