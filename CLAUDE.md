@@ -491,3 +491,98 @@ same interfaces.
    say so. `n` is screening (§7); never call a screening result a "win".
 7. Latest-developments requests → `WebSearch` and filter by the arXiv `YYMM`
    prefix (`26MM` = 2026); do not cite from training memory without a date.
+
+---
+
+# 18. SESSION STATE — portable checkpoint (maintained; last update 2026-07-27)
+
+> Written so the session can be resumed on **another machine**. Read §18 before §16.
+> Three repos are active and all are public under `github.com/dlmastery/`.
+
+## 18.1 Repos and their state
+
+| repo | purpose | state |
+|---|---|---|
+| `steeringresearch` (this) | activation-steering autoresearch + `steering_tutorials/` course | loop RESTARTED; first legitimate champion (HC-1) |
+| `auto-research-voice-based-disease-detection` | voice-health **claim-audit** program | apparatus built; **0 experiments run** |
+| `yoganext` | agent-first meditation app | complete; 24 tools, 25/25 UI parity, verified failing-then-passing |
+
+## 18.2 What was established this session (all pushed)
+
+**The forensic critique of the old loop.** 124 experiments, 0 external-ready findings.
+Five root causes, each evidenced: (1) champion `exp3` was a Qwen-0.5B row with *stubbed
+safety* and a self-admittedly *circular* behavior proxy, frozen 2026-05-30 across 121
+later experiments; (2) the composite fingerprint (`a9001e87087e`) no longer matches the
+code (`8509c229b58f`) and 92/124 rows do not reproduce; two of five priced axes were
+inert; (3) the 7-step ritual was decorative — `_manual: true` on all 124, 81 identical
+citation pastes, **0/124 falsifiable numeric predictions**; (4) 94 % synthetic substrate,
+74 % on a 270M model its own findings called unsteerable; (5) `n≥7 + Holm` is
+**arithmetically unsatisfiable** for m ≥ 4 — which is why the contract was met **zero**
+times. Fixed in `stats.py` (`power_note(..., family_size)`) with a regression test.
+
+**The instrument is broken and the program is re-scoped around it.** Two judge
+calibrations failed: AUC **0.665** (integer readout) → **0.7508** (continuous
+expected-value readout, +0.086 and 12.8× faster). Both under the 0.85 gate. See
+`autoresearch_results/JUDGE_CARD.md`. **No judge-dependent claim is admissible.**
+All live work uses judge-free endpoints: WikiText-2 perplexity, geometry, probe AUC
+vs ground-truth labels.
+
+**Literature refresh (Jun–Jul 2026), 4 scans in `corpus/LIT_2026-07_*.md`.** Two of the
+three planned contributions were **scooped while the program sat idle** — the
+displacement budget (`2602.02712`, `2606.06735`, `2604.09839`, `2601.19375`) and
+direction fungibility (`2509.22067`, `2602.06801`, `2606.20852`). Only the **conformal
+gate** survives as novel, and its pre-flight cleared: `2603.14623` is feasibility-
+conditioned on gate AUC, so our probe result *strengthens* rather than scoops it.
+
+**Findings that survive:**
+- **HC-1 (new champion).** Angle/radius at fixed chord is **monotone**, not U-shaped:
+  norm preservation (r=0) is the WORST allocation; at f=0.10 pure rotation costs 4× the
+  perplexity of pure addition. Champion `f=0.05, r=1.0`, PPL 87.652 = 0.949× base.
+  Challenges the mechanism GEMS/ORBIT assume for stacking.
+- **Matched-budget.** Rotation worse than addition at 5/5 budgets, judge-free.
+- **flas v2.** Mis-scaled dial fixed (norm-relative); the corrected sweep is a *clean*
+  negative — at T=0.02 coherence is intact yet refusal already falls 0.32→0.26.
+- **Voice F1.** On SVD, **age alone → ROC-AUC 0.871**; 200/1853 speakers have >1 session.
+
+## 18.3 KNOWN DEFICIENCIES — fix these
+
+1. **Voice program has run ZERO experiments.** No `experiment_log.jsonl`, no champion,
+   **17 hypotheses UNTESTED**. The apparatus is built; the research is not done.
+   *(This is the `darebench` failure mode — 324 scaffolds, 0 experiments — which R11c
+   was written to prevent. Do not add another artifact before running the loop.)*
+2. **Voice dashboard is one flat page.** The standard (CLAUDE.md §11, and
+   `docs/dashboard/` here) is master → per-hypothesis → per-experiment with radar,
+   Pareto, parallel-coordinates, ladder board, stack/compete matrix and a sortable
+   table. Voice has none of those; steering has 124 per-experiment pages.
+3. **Voice has 2 audits; steering has 17.** Missing: impl-critic, sci-critic,
+   **data-split audit** (the one this program is *about*), shuffle-test, meta-process.
+4. **`trajguard` claims AUC 0.944/0.945 with NO confound baseline at all** — the margin
+   is unpriced. Needs `confound_report()` + a re-run.
+5. **`meerkat` has `length_auc` 0.325 (= 0.675 directionless) but the README never
+   states the discount**; `kmeans_enrich` 0.568 actually sits *below* that bar.
+6. **HC-1's direction comes from only 10 harmful / 8 harmless prompts** — far below the
+   data floor. Re-run at n≥8 seeds with a properly estimated direction (M-a).
+
+## 18.4 Next actions, in order
+
+1. Fix deficiencies 4 + 5 (cheap; 5 is docs-only).
+2. Voice: finish the SVD download (~6/38 GB) → `preprocess_audio.py` → embeddings →
+   **screen all 17 hypotheses** → hill-climb → log + advance a champion.
+3. Voice: run the missing auditors, especially the data-split audit.
+4. Voice: build the multi-page dashboard once runs exist to render.
+5. Steering: extend the matched-budget test to **N stacked vectors** — challenges
+   GEMS/ORBIT directly and is judge-free.
+
+## 18.5 Host gotchas (cost real time — do not repeat)
+
+- **Use `C:\Users\evija\anaconda3\python.exe`.** Bare `python` is Windows-Store 3.13:
+  no CUDA, `transformers` will not import.
+- Windows **cp1252** console: printing a German filename (umlaut) crashed a 38 GB
+  download. Use `PYTHONIOENCODING=utf-8` and `.encode('ascii','replace')`.
+- Piping a long job through `head -n` **SIGPIPE-kills** it.
+- `nohup … &` inside a backgrounded call orphans the process.
+- **ONE GPU.** Re-check `nvidia-smi --query-compute-apps` before every launch — three
+  concurrent model loads got two jobs killed this session.
+- `google/embeddinggemma-300m` is **gated**; this host has **no HF token at all**
+  (`huggingface-cli login` required). Metadata listing succeeds while weights 401 —
+  test a real weight fetch, never a file listing.
