@@ -151,9 +151,17 @@ def main() -> None:
     ap.add_argument("--budget", type=float, default=0.10)
     ap.add_argument("--ns", default="1,2,4,8")
     ap.add_argument("--n-ppl", type=int, default=20)
+    ap.add_argument("--permute", action="store_true",
+                    help="ORDER CONTROL: shuffle the direction order per seed. M-b's own "
+                         "limitations note that rotations compose sequentially, so for N>1 "
+                         "the operation is order-dependent and the result could be an "
+                         "artifact of one fixed ordering. If the gaps reproduce under "
+                         "permuted order, that alternative is dead.")
     ap.add_argument("--out", default=str(ROOT / "autoresearch_results" / "nstack_matched_budget.json"))
     args = ap.parse_args()
     NS = [int(x) for x in args.ns.split(",")]
+    if args.permute:                      # never overwrite the main artifact
+        args.out = args.out.replace(".json", "_PERMUTED.json")
 
     harm, benign = load_pools(120, 120)
     print(f"[data] harmful={len(harm)} harmless={len(benign)} (real benchmarks)", flush=True)
@@ -189,6 +197,8 @@ def main() -> None:
                 sl = [harm[i] for i in hi[:chunk]]
             dirs.append(extract_refusal_direction(model, tok, sl, bset, layer=args.layer))
         D = orthonormalize(np.stack(dirs))
+        if args.permute:
+            D = D[np.random.default_rng(500 + s).permutation(D.shape[0])]
         print(f"  [seed {s}] {D.shape[0]} orthonormal directions", flush=True)
 
         for N in NS:

@@ -58,13 +58,54 @@ The defect is mine: a discriminating prediction must be operationalised on the *
 not on a brittle ordering property that a single noisy point can flip. Recorded rather
 than quietly reinterpreted.
 
+## ORDER CONTROL — and it substantially qualifies the result above
+
+M-b's own limitations flagged that rotations compose sequentially, so for N>1 the
+operation is order-dependent. Re-running with the direction order **shuffled per seed**
+(`--permute`, n=5, separate artifact) was meant to kill that alternative. It did not.
+
+| N | main gap (n=8) | **permuted gap (n=5)** | main add/base | **permuted add/base** |
+|---|---|---|---|---|
+| 1 | +88.89 [+84.33, +92.77] | **+13.65** [+2.02, +26.62] | 1.09× | **3.72×** |
+| 2 | +24.63 [−6.12, +56.17] | **+11.25** [+1.71, +20.91] | 2.25× | 3.10× |
+| 4 | −45.99 [−97.24, −6.53] | **−3.90** [−17.23, **+6.97**] | 3.32× | 2.96× |
+| 8 | −44.47 [−75.30, −20.07] | **−1.52** [−26.83, **+23.79**] | 3.35× | 3.06× |
+
+**What survives.** The *direction* of the effect replicates: the additive advantage
+still shrinks monotonically with N and still crosses zero (+13.65 → +11.25 → −3.90 →
+−1.52).
+
+**What does NOT survive.** The **magnitudes collapse by roughly an order of magnitude**,
+and at N=4 and N=8 the CIs now **include zero**. So *"rotation wins at N ≥ 4"* is
+**NOT established**. Only the weaker claim survives: *the additive advantage shrinks as
+vectors stack, and is gone by N=4.*
+
+**The cause, and it is a design flaw of mine.** Look at N=1, where permutation should be
+a no-op — there is only one direction. It is not a no-op: `add/base` goes from **1.09× to
+3.72×**. `orthonormalize()` is Gram-Schmidt, so direction *i*>1 is a **residual** — what
+remains of that slice's diff-of-means after projecting out all earlier ones. Those
+residuals are progressively noisier and more damaging to steer along. The unpermuted run
+always placed the *raw, highest-quality* direction first, so its N=1 arm was measuring
+the best direction while its N=8 arm averaged in the worst.
+
+**The budget was matched in displacement but NOT in direction quality.** That is the same
+class of error as V2's unmatched variance control in the sibling program — a control that
+equalises the quantity you thought to equalise while leaving a second one free.
+
 ## Conclusion
 
-**The norm-preservation premise is vindicated in the regime it was proposed for.**
-M-a's finding is real but **strictly single-vector**, and every statement of it in this
-repository must carry that scope. This program set out to challenge GEMS/ORBIT and
-instead produced evidence *for* them at N ≥ 4 — a more useful outcome than confirmation
-would have been.
+**Stated at the strength the evidence actually supports:** the additive advantage
+**shrinks as vectors stack and is gone by N=4**. That much is robust — it holds under
+both fixed and permuted direction order. The stronger claim that *rotation wins* at N≥4
+is **supported only under fixed order** and disappears when the order confound is
+removed, so it is **not claimed**.
+
+M-a's single-vector finding stands, and must be scoped as single-vector. GEMS/ORBIT's
+premise is **directionally supported** — norm preservation stops being a liability as N
+grows — but this experiment does **not** show it becomes an advantage. Establishing that
+would need a basis whose directions are exchangeable by construction (e.g. N independent
+diff-of-means from disjoint slices *without* Gram-Schmidt, accepting non-orthogonality
+and pricing the budget differently).
 
 ## Limitations
 
