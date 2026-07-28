@@ -151,6 +151,20 @@ def main() -> None:
     ap.add_argument("--budget", type=float, default=0.10)
     ap.add_argument("--ns", default="1,2,4,8")
     ap.add_argument("--n-ppl", type=int, default=20)
+    ap.add_argument("--basis", choices=("gs", "raw"), default="gs",
+                    help="gs  = Gram-Schmidt orthonormal (the ORIGINAL M-b basis). Its "
+                         "directions are NOT exchangeable: direction i>1 is a residual of "
+                         "the earlier ones, progressively noisier, so the first slot "
+                         "always holds the best direction. The permutation control proved "
+                         "this -- at N=1, where permuting must be a no-op, add/base moved "
+                         "1.09x -> 3.72x.  "
+                         "raw = N unit-normalised diff-of-means from disjoint slices, NO "
+                         "orthogonalisation. Every direction is the same KIND of estimate "
+                         "from an equal-sized slice, so the basis is exchangeable by "
+                         "construction. They are correlated rather than orthogonal, so the "
+                         "realised total displacement is MEASURED and reported instead of "
+                         "assumed -- and it is identical across the add/rot arms at a given "
+                         "N, which is what the comparison needs.")
     ap.add_argument("--permute", action="store_true",
                     help="ORDER CONTROL: shuffle the direction order per seed. M-b's own "
                          "limitations note that rotations compose sequentially, so for N>1 "
@@ -160,8 +174,9 @@ def main() -> None:
     ap.add_argument("--out", default=str(ROOT / "autoresearch_results" / "nstack_matched_budget.json"))
     args = ap.parse_args()
     NS = [int(x) for x in args.ns.split(",")]
-    if args.permute:                      # never overwrite the main artifact
-        args.out = args.out.replace(".json", "_PERMUTED.json")
+    tag = ("_PERMUTED" if args.permute else "") + ("_RAWBASIS" if args.basis == "raw" else "")
+    if tag:                               # never overwrite the main artifact
+        args.out = args.out.replace(".json", tag + ".json")
 
     harm, benign = load_pools(120, 120)
     print(f"[data] harmful={len(harm)} harmless={len(benign)} (real benchmarks)", flush=True)
@@ -196,7 +211,11 @@ def main() -> None:
             if len(sl) < 10:
                 sl = [harm[i] for i in hi[:chunk]]
             dirs.append(extract_refusal_direction(model, tok, sl, bset, layer=args.layer))
-        D = orthonormalize(np.stack(dirs))
+        raw = np.stack(dirs)
+        if args.basis == "raw":
+            D = raw / (np.linalg.norm(raw, axis=1, keepdims=True) + 1e-12)
+        else:
+            D = orthonormalize(raw)
         if args.permute:
             D = D[np.random.default_rng(500 + s).permutation(D.shape[0])]
         print(f"  [seed {s}] {D.shape[0]} orthonormal directions", flush=True)
@@ -207,8 +226,12 @@ def main() -> None:
             V = torch.tensor(D[:N], dtype=torch.float32)
             add = ppl_with(model, tok, layer_mod, V, args.budget, 1.0, args.n_ppl)
             rot = ppl_with(model, tok, layer_mod, V, args.budget, 0.0, args.n_ppl)
+            # realised displacement of the composite edit, in units of f. Exactly 1.0
+            # for an orthonormal basis; >1 when directions are correlated. Identical
+            # across the add/rot arms at a given N, so it cannot bias the contrast.
+            realised = float(np.linalg.norm(D[:N].sum(0) / math.sqrt(N)))
             rows.append({"seed": s, "N": N, "add": add, "rot": rot, "delta": rot - add,
-                         "add_ratio": add / base})
+                         "add_ratio": add / base, "realised_displacement_x_f": realised})
             print(f"    N={N}: add={add:8.2f} rot={rot:9.2f} gap={rot - add:+9.2f} "
                   f"(add {add / base:.3f}x base)", flush=True)
             # CHECKPOINT after every cell. Background jobs get reaped on this host --
@@ -246,7 +269,11 @@ def main() -> None:
            "citation": "arXiv:2606.06735; challenges arXiv:2606.19946 (GEMS) and arXiv:2606.22357 (ORBIT)",
            "objective": "WikiText-2 perplexity (JUDGE-FREE)", "model": args.model,
            "layer": args.layer, "total_budget_f": args.budget,
-           "budget_construction": "N orthonormal directions, each f/sqrt(N) -> total displacement f for all N",
+           "basis": args.basis, "permuted_order": bool(args.permute),
+           "budget_construction": ("N orthonormal directions, each f/sqrt(N) -> total "
+                                   "displacement f for all N" if args.basis == "gs" else
+                                   "N unit raw diff-of-means (EXCHANGEABLE, not orthogonal), "
+                                   "each f/sqrt(N); realised displacement measured per row"),
            "unsteered_ppl": base, "Ns": NS, "seeds": args.seeds,
            "rows": rows, "by_N": by_n, "predictions_evaluated": preds, "power": pw,
            "elapsed_s": round(time.time() - t0, 1)}
