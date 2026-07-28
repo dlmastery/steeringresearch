@@ -593,49 +593,70 @@ conditioned on gate AUC, so our probe result *strengthens* rather than scoops it
 | 5 | `meerkat` never stated its length discount | **DONE, and it went further.** `results.json` predated the `data.py` length-matching fix and could not be regenerated from the code beside it. Re-run at identical config: per-trace −11% (0.818→0.731), **clustering arm −65% (0.568→0.199)**. `pool_fingerprint` guard added; repo-wide staleness sweep found the defect isolated to this one lesson. |
 | 6 | HC-1's direction from only 10 harmful / 8 harmless prompts | **DONE** — superseded by M-a (340 harmful / 120 harmless real benchmark prompts, n=8). |
 
-## 18.7 VOICE V2 — the first registered-hypothesis experiment (2026-07-28)
+## 18.7 VOICE — three registered hypotheses executed (2026-07-28)
 
-**What it tests.** Does frozen-embedding disease discrimination live in a low-rank
-SPEAKER-IDENTITY subspace? Estimate it from between-speaker scatter, project it out,
-re-measure — against controls that remove *the same or more* variance. Audits
-arXiv:2604.14354, which established the effect by measurement but never ran the
-mechanistic removal. Judge-free (ROC-AUC vs clinical labels), CPU-only on the cached
-28,509 × 1536 WavLM matrix (1,679 speakers).
+The program went from **0 experiments** to **3 of 7 hypotheses with results** and
+**6 findings**. All judge-free (ROC-AUC vs clinical labels), so the failed judge
+calibration is irrelevant to every number below.
 
-**Screening (n=2, k=16) hit all three pre-registered predictions AND exposed two
-defects in my own design** — this is what screening is for:
+### F4 / V2 — EVALUATION tier. ~a third of WavLM's discrimination is speaker IDENTITY
 
-1. **The control was not variance-matched.** Speaker subspace held **0.818** of the
-   variance; the best of 400 uniformly-random draws reached **0.350**. Removing 82%
-   and removing 35% are not the same intervention. FIXED with two controls built from
-   the data's own principal axes — `pca_topk` (the variance-*maximising* rank-k
-   subspace, 0.879 at k=16, i.e. MORE than the speaker subspace) and `var_matched`.
-   **Effect: D fell from an inflated +0.132 to +0.070/+0.075** — the broken control
-   was overstating it ~1.8×. Still inside the pre-registered [0.06, 0.22].
-2. **The manipulation check could not check anything.** Speaker-ID accuracy on
-   UNPROJECTED embeddings was 0.204 against a predicted ~0.90 — no room to fall.
-   FIXED to 60-way over speakers with ≥12 recordings (now 0.278, chance 0.0167).
-   **Still nowhere near 0.90, so the check remains WEAK and the finding must say so** —
-   mean-pooled WavLM-base+ is not an x-vector; my prediction assumed it was.
+n=10 x 5-fold speaker-disjoint, m=14 pre-registered, **4h15m CPU**. Audits
+arXiv:2604.14354, which established speaker leakage by *measurement*; the mechanistic
+removal had not been run.
 
-**Corrected screening at k=16:** full 0.7372 · speaker-removed **0.6035** ·
-`pca_topk` 0.6739 · `var_matched` 0.6782.
+| k | AUC spk-removed | AUC topk-removed | D vs topk [95% CI] | var spk/topk |
+|---|---|---|---|---|
+| 1 | 0.6755 | 0.7320 | +0.0565 [.056,.058] | 0.206/0.345 |
+| 8 | **0.6104** | 0.7025 | **+0.0921** [.090,.094] | 0.700/0.812 |
+| 64 | 0.5398 | 0.6287 | +0.0888 [.086,.091] | 0.940/0.959 |
 
-**Confirmatory run:** all 7 pre-registered ranks × n=10, family stays at the
-pre-registered **m=14** (shrinking m post hoc to buy significance is forbidden).
-Runtime ~2.5 h, longer than estimated. **If it holds, V2 composes with F3 into one
-story: the audio model's remaining margin over age is largely identity, not pathology.**
+Full AUC 0.7382. D positive with CI excluding zero at **all 7 ranks, both controls**.
+Cleanest form: at *every* rank the speaker subspace removes **less** variance than
+top-k PCA yet costs **more** AUC. Identity = **24–39%** of above-chance headroom.
+**Shuffle control passes**: D 0.0921 → 0.0016, full AUC 0.5074.
+
+**The falsifier did NOT fire.** It required D's CI excluding zero *and* AUC_spk
+including 0.5; at k=64 AUC_spk is 0.5398 — near chance, not chance. So
+"clinical validity falsified" **does not follow**. Manipulation check remains WEAK
+(speaker-ID 0.278 → 0.193 vs a predicted 0.90 → <0.30) — mean-pooled WavLM-base+ is
+not an x-vector.
+
+### F5 / V6 — PARTIAL. Scaler-before-split leakage is *nothing* on SVD embeddings
+
+`D = +0.00004` [+0.00001, +0.00007] on WavLM; **−0.00418** on eGeMAPS with a CI
+excluding zero (leakage *degrades*, reproducing the audited paper's subtler point).
+Extends the published handcrafted-feature near-null to **embeddings**. The
+corpus-specificity claim — V6's actual novel content — is **not evaluable**.
+
+### F6 / V7 — PARTIAL. The Clever-Hans silence shortcut does NOT generalise
+
+SVD 0.5136 · Coswara 0.5146 (directionless) · COUGHVID 0.5264. 42,654 files VAD'd,
+0 unreadable, nothing above 0.527. **My predicted mechanism was WRONG**: I predicted
+Coswara ∈ [0.55,0.70] because it is crowd-recorded and heterogeneous; it came in
+**lowest**. Caveat that limits the null: these corpora are sustained vowels/coughs —
+Pitt is spontaneous speech where pause structure carries cognitive load, so this is
+**not** evidence the Pitt effect was spurious. PROCESS-2 is the sharper test.
+
+### COUGHVID extraction — DELIBERATELY ABANDONED, with cause
+
+Killed twice at ~8.5% of 13,535 files (backgrounded GPU jobs get reaped on this host;
+the extractor writes one npz at the end, so each retry loses everything). Not retried,
+because **F2 already established COUGHVID can never carry an evaluation claim** — it
+has 13,535 unique ids for 13,535 recordings, so its `GroupKFold` is plain `KFold` in
+costume. Spending hours of GPU to populate cells whose results are unclaimable, in a
+program whose thesis is that unclaimable numbers get reported as claims, is a bad
+trade. Recorded as a **deliberate exclusion citing F2**, not a silent omission.
+*A pre-registered cell that becomes known-uninformative is different from one that is
+merely inconvenient, and the distinction belongs in the record.*
 
 ## 18.4 Next actions, in order
 
-1. **Write up V2** when the n=10 artifact lands — including the weak manipulation
-   check as a stated limitation, not a footnote.
-2. Voice: **V6 then V7** (both free, both judge-free, both unblock V1/V3 per the
-   registry's own execution order), then V1 → V3 → V4 → V5.
-3. Voice: run the missing auditors, especially the **data-split audit**.
-4. Steering: `cross_trajectory` Gemma-embedder ablation (GPU).
-5. Steering: extend the matched-budget test to **N stacked vectors** — challenges
-   GEMS/ORBIT directly and is judge-free.
+1. Finish V6 re-run (SVD + Coswara = 3/6 cells) and update F5.
+2. **V1 then V3** — both now unblocked for SVD + Coswara by the Coswara extraction.
+3. V4 (free once V1/V3 predictions exist), V5 last (GPU-gated).
+4. Voice: the shuffle-test and meta-process auditors are still missing.
+5. Steering: `cross_trajectory` Gemma-embedder ablation; N-vector stacking vs GEMS/ORBIT.
 
 ## 18.8 THE RECURRING FAILURE MODE — read this before debugging anything
 
