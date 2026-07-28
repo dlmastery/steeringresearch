@@ -582,34 +582,80 @@ conditioned on gate AUC, so our probe result *strengthens* rather than scoops it
 **yoganext — COMPLETE.** 24 tools, 25/25 UI parity, verified failing-then-passing;
 `_recovered` surfaced in `get_progress`.
 
-## 18.3 KNOWN DEFICIENCIES — fix these
+## 18.3 KNOWN DEFICIENCIES — status as of 2026-07-28
 
-1. **Voice program has run ZERO experiments.** No `experiment_log.jsonl`, no champion,
-   **17 hypotheses UNTESTED**. The apparatus is built; the research is not done.
-   *(This is the `darebench` failure mode — 324 scaffolds, 0 experiments — which R11c
-   was written to prevent. Do not add another artifact before running the loop.)*
-2. **Voice dashboard is one flat page.** The standard (CLAUDE.md §11, and
-   `docs/dashboard/` here) is master → per-hypothesis → per-experiment with radar,
-   Pareto, parallel-coordinates, ladder board, stack/compete matrix and a sortable
-   table. Voice has none of those; steering has 124 per-experiment pages.
-3. **Voice has 2 audits; steering has 17.** Missing: impl-critic, sci-critic,
-   **data-split audit** (the one this program is *about*), shuffle-test, meta-process.
-4. **`trajguard` claims AUC 0.944/0.945 with NO confound baseline at all** — the margin
-   is unpriced. Needs `confound_report()` + a re-run.
-5. **`meerkat` has `length_auc` 0.325 (= 0.675 directionless) but the README never
-   states the discount**; `kmeans_enrich` 0.568 actually sits *below* that bar.
-6. **HC-1's direction comes from only 10 harmful / 8 harmless prompts** — far below the
-   data floor. Re-run at n≥8 seeds with a properly estimated direction (M-a).
+| # | deficiency | status |
+|---|---|---|
+| 1 | **Voice program had run ZERO experiments** (the `darebench` failure mode: many scaffolds, no research) | **IN PROGRESS.** V2 is the first experiment ever run against a registered hypothesis. Confirmatory n=10 in flight. 6 of 7 still UNTESTED. |
+| 2 | Voice dashboard was one flat page | **DONE.** `docs/hypotheses/` adds the per-hypothesis tier (V1–V7), generated from `IDEA_TABLE.md`. Renders the PREDICTION whether or not a result exists, so an untested hypothesis is a visible debt. Tier chips read the run's own repeat count — a 1-repeat smoke file must not look like a 10-repeat confirmatory file. Build-time markdown-leak gate. |
+| 3 | Voice has 2 audits; steering has 17 | **OPEN.** Missing: impl-critic, sci-critic, **data-split audit** (the one this program is about), shuffle-test, meta-process. |
+| 4 | `trajguard` claimed AUC 0.944/0.945 with NO confound baseline | **DONE.** Bar = prompt char-length **0.7354** directionless. Margins: `seq_gru` +0.209, `trajectory_mlp` +0.208, `per_turn_max` +0.195, and the paper's own `threshold_freeform` (0.638) lands **below the bar**. |
+| 5 | `meerkat` never stated its length discount | **DONE, and it went further.** `results.json` predated the `data.py` length-matching fix and could not be regenerated from the code beside it. Re-run at identical config: per-trace −11% (0.818→0.731), **clustering arm −65% (0.568→0.199)**. `pool_fingerprint` guard added; repo-wide staleness sweep found the defect isolated to this one lesson. |
+| 6 | HC-1's direction from only 10 harmful / 8 harmless prompts | **DONE** — superseded by M-a (340 harmful / 120 harmless real benchmark prompts, n=8). |
+
+## 18.7 VOICE V2 — the first registered-hypothesis experiment (2026-07-28)
+
+**What it tests.** Does frozen-embedding disease discrimination live in a low-rank
+SPEAKER-IDENTITY subspace? Estimate it from between-speaker scatter, project it out,
+re-measure — against controls that remove *the same or more* variance. Audits
+arXiv:2604.14354, which established the effect by measurement but never ran the
+mechanistic removal. Judge-free (ROC-AUC vs clinical labels), CPU-only on the cached
+28,509 × 1536 WavLM matrix (1,679 speakers).
+
+**Screening (n=2, k=16) hit all three pre-registered predictions AND exposed two
+defects in my own design** — this is what screening is for:
+
+1. **The control was not variance-matched.** Speaker subspace held **0.818** of the
+   variance; the best of 400 uniformly-random draws reached **0.350**. Removing 82%
+   and removing 35% are not the same intervention. FIXED with two controls built from
+   the data's own principal axes — `pca_topk` (the variance-*maximising* rank-k
+   subspace, 0.879 at k=16, i.e. MORE than the speaker subspace) and `var_matched`.
+   **Effect: D fell from an inflated +0.132 to +0.070/+0.075** — the broken control
+   was overstating it ~1.8×. Still inside the pre-registered [0.06, 0.22].
+2. **The manipulation check could not check anything.** Speaker-ID accuracy on
+   UNPROJECTED embeddings was 0.204 against a predicted ~0.90 — no room to fall.
+   FIXED to 60-way over speakers with ≥12 recordings (now 0.278, chance 0.0167).
+   **Still nowhere near 0.90, so the check remains WEAK and the finding must say so** —
+   mean-pooled WavLM-base+ is not an x-vector; my prediction assumed it was.
+
+**Corrected screening at k=16:** full 0.7372 · speaker-removed **0.6035** ·
+`pca_topk` 0.6739 · `var_matched` 0.6782.
+
+**Confirmatory run:** all 7 pre-registered ranks × n=10, family stays at the
+pre-registered **m=14** (shrinking m post hoc to buy significance is forbidden).
+Runtime ~2.5 h, longer than estimated. **If it holds, V2 composes with F3 into one
+story: the audio model's remaining margin over age is largely identity, not pathology.**
 
 ## 18.4 Next actions, in order
 
-1. Fix deficiencies 4 + 5 (cheap; 5 is docs-only).
-2. Voice: finish the SVD download (~6/38 GB) → `preprocess_audio.py` → embeddings →
-   **screen all 17 hypotheses** → hill-climb → log + advance a champion.
-3. Voice: run the missing auditors, especially the data-split audit.
-4. Voice: build the multi-page dashboard once runs exist to render.
+1. **Write up V2** when the n=10 artifact lands — including the weak manipulation
+   check as a stated limitation, not a footnote.
+2. Voice: **V6 then V7** (both free, both judge-free, both unblock V1/V3 per the
+   registry's own execution order), then V1 → V3 → V4 → V5.
+3. Voice: run the missing auditors, especially the **data-split audit**.
+4. Steering: `cross_trajectory` Gemma-embedder ablation (GPU).
 5. Steering: extend the matched-budget test to **N stacked vectors** — challenges
    GEMS/ORBIT directly and is judge-free.
+
+## 18.8 THE RECURRING FAILURE MODE — read this before debugging anything
+
+Every serious defect found in this program failed **silently and plausibly**, never
+loudly. Not one crashed. Each produced confident, well-formed, wrong output:
+
+- `load_rows()` returned 0 and the dashboard **silently dropped every v2 row**.
+- `preprocess_audio.py` globbed the 22-zip PARTIAL while reporting `complete: True`,
+  capping the corpus at 49 of 1,679 speakers.
+- The embedding cache returned **stale labels** under a key that ignored them.
+- `meerkat`'s `results.json` **could not be regenerated from the code beside it**, and
+  the README priced every method against a confound bar that no longer existed.
+- A `str.replace` with a stray trailing space **matched nothing and returned
+  silently**, so a "successful" build shipped a page with literal markdown in it.
+
+The operative rules, each paid for: **assert your anchors** (a replace that matches
+nothing must fail, not pass); **stamp your inputs** (an artifact that cannot be
+regenerated from the code beside it is not evidence); **gate at build time** (a check
+that must be remembered will eventually be skipped); and **verify contents, never
+listings** (a directory listing said the model was cached; it was a 16 KB stub).
 
 ## 18.5 Host gotchas (cost real time — do not repeat)
 
