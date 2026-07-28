@@ -544,6 +544,44 @@ conditioned on gate AUC, so our probe result *strengthens* rather than scoops it
   negative — at T=0.02 coherence is intact yet refusal already falls 0.32→0.26.
 - **Voice F1.** On SVD, **age alone → ROC-AUC 0.871**; 200/1853 speakers have >1 session.
 
+## 18.6 LOOP PROGRESS (updated 2026-07-27, autonomous /loop running)
+
+**Steering — the loop is RUNNING and has produced its first EVALUATION-tier result.**
+- HC-1 (15 cells) -> HC-2 (4 cells) -> **M-a (n=8, EVALUATION-eligible)**.
+- **M-a**: at fixed chord displacement, rotation costs **+91.24 PPL** more than addition,
+  bootstrap CI95 **[87.98, 94.71]**, ordering stable **8/8** resamples, direction from
+  **340 harmful / 120 harmless REAL benchmark prompts** (JailbreakBench+HarmBench+
+  AdvBench / XSTest). Norm-matched **random control +16.80** (~0 in 6 of 8 draws) proves
+  the effect is direction-specific, not geometry-generic. Power: n=8, m=1, min p=0.0078,
+  power ~1.00. Artifact `autoresearch_results/FINDING_Ma_matched_budget_n8.md`.
+  **Contradicts the norm-preservation premise of GEMS (2606.19946), ORBIT (2606.22357)
+  and Selective Steering (2601.19375) for the single-vector case.**
+- Dashboard REGENERATED and now renders the hill-climb (52 HC refs, 19 new per-experiment
+  pages). It had been stale since 2026-06-06 and silently dropped every v2 row because
+  `load_rows()` requires legacy schema fields -- see `scripts/adapt_v2_for_dashboard.py`.
+- `biencoder_guard` headline run done on the REAL backbone (EmbeddingGemma-300M @500/class):
+  scaling gap **widened 43x -> 64x**; hard-negative adapter FPR **1.000 -> 0.438**. Accuracy
+  fell vs the MiniLM substitute, but that comparison changes THREE things at once
+  (encoder, n, held-out policy set) so no backbone conclusion is drawn -- see README 10.1.
+- All 14 judge-scored lessons now cross-link `JUDGE_VALIDITY.md`.
+
+**Voice — full corpus decoded, benchmark verdict still pending.**
+- **28,509 recordings / 1,679 speakers / 60.6 h** (was 667/49). Two bugs fixed en route:
+  preprocessing globbed the 22-zip PARTIAL while reporting `complete:True`, and the
+  manifest carried duplicate rows (61,170 for 28,509 unique paths, ~2x inflation;
+  verified within-speaker and within-label, so not leakage).
+- WavLM embeddings extracted and cached for all 28,509 (`cache/` is gitignored -- 151 MB,
+  over GitHub's limit, and derived).
+- **The full-corpus benchmark has NOT yet produced a verdict** -- the run is long and has
+  been interrupted repeatedly; `bench_svd_wavlm_mean_std.json` is still the 49-speaker
+  PILOT (F2). Do not read it as a full-corpus result.
+- 6 audits now exist (was 2). The data-split audit **FAILS** the pre-registered V1 design
+  (only 9 age-matched pairs at 49 speakers) and **FAILS** Coswara (pre-registered label has
+  zero positive rows). Re-check V1 feasibility now that the corpus is 34x larger.
+
+**yoganext — COMPLETE.** 24 tools, 25/25 UI parity, verified failing-then-passing;
+`_recovered` surfaced in `get_progress`.
+
 ## 18.3 KNOWN DEFICIENCIES — fix these
 
 1. **Voice program has run ZERO experiments.** No `experiment_log.jsonl`, no champion,
