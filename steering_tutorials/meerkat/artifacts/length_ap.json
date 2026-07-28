@@ -1,0 +1,35 @@
+{
+  "note": "length-only ranker, the missing AP cell from README 9.2",
+  "n_repos": 6,
+  "repo_size": 400,
+  "regimes": {
+    "0.05": {
+      "base_rate": 0.05,
+      "n_scored": 2400,
+      "positives": 120,
+      "ap_shorter_is_attack": 0.05995470924680947,
+      "ap_longer_is_attack": 0.07639954637782775,
+      "ap_directionless": 0.07639954637782775,
+      "ap_ci": [
+        0.046342377920938614,
+        0.114368242158338
+      ],
+      "roc_auc_directionless": 0.5581122076023391,
+      "ap_chance_floor": 0.05
+    },
+    "0.5": {
+      "base_rate": 0.5,
+      "n_scored": 2400,
+      "positives": 1200,
+      "ap_shorter_is_attack": 0.5353184158644018,
+      "ap_longer_is_attack": 0.5073120298460059,
+      "ap_directionless": 0.5353184158644018,
+      "ap_ci": [
+        0.5084258017026493,
+        0.5660183312527375
+      ],
+      "roc_auc_directionless": 0.5488875,
+      "ap_chance_floor": 0.5
+    }
+  }
+}
