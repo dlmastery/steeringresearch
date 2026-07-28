@@ -200,7 +200,7 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 | [`prompt_activation_duality`](prompt_activation_duality/README.md) · 2026 | **duality (cos 0.70) + site matters** (n=150): same vector at the **attention** output degrades less than residual-add (refusal 0.26/gib 0.30 vs 0.227/0.48); the n=20 "attention raises refusal" was noise |
 | [`realignment`](realignment/README.md) · DEFEND | **works** (n=200/class) — clean α=0.25 point: **ASR 0.46→0.045**, over-refusal 0.01, coherence 0.88 |
 | [`multiturn_jailbreak`](multiturn_jailbreak/README.md) · DEFEND | **trajectory matters**: on same-style hard negatives the stateless per-turn probe collapses to **0.57** while a sequence model reaches **0.96** (Gemma) — and a naive benchmark (easy negatives) is trivially 0.99, the cautionary half |
-| [`trajguard`](trajguard/README.md) · DEFEND | **streaming detection works early** (n=300): a learned detector flags the jailbroken generation at **AUC 0.94 from the first 2 tokens**; sequence models (0.945) marginally edge the per-token baseline (0.931) at scale; training-free projection weakest (0.64) |
+| [`trajguard`](trajguard/README.md) · DEFEND | **streaming detection works early, but a third of the raw number is length** (n=300): the strongest trivial baseline is prompt **character length at AUC 0.735**, so the claimable quantity is the margin above it — `seq_gru` **+0.209**, `trajectory_mlp` **+0.208**, `per_turn_max` **+0.195**; the paper's own training-free projection (0.638) lands **below the bar** |
 | [`cross_trajectory`](cross_trajectory/README.md) · DEFEND | **aggregation recovers fractured intent** (n=500/class, MiniLM): on leakage-free HARD negatives the per-trajectory baseline collapses to **0.607** while set-aggregators recover (mean 0.936, attn 0.863, gnn 0.812) and clear the 0.704 length confound — but **OOD to real CSTM-Bench is near chance (0.48–0.57)**, reported as a negative |
 | [`rogue_scalpel`](rogue_scalpel/README.md) · DEFEND | attack strips refusal **0.70→0.00** (n=200); the **norm-clamp guard recovers it (0.735)**; lock/dual guards don't |
 | [`hello_world`](hello_world/README.md) · READ | probe 5-fold CV **0.87 ± 0.03**; leakage clean; XSTest OOD AUC 0.89 |
@@ -231,10 +231,14 @@ gate genuinely can't separate per-prompt (that pre-registered falsifier stands);
 >   **1.67**, AUC 0.61→**0.89**) where the raw diff-of-means cosine cannot — but the
 >   end-to-end refusal stays ~baseline because the *write* is weak. A clean decomposition
 >   of the failure: **gate = fixable, write = genuinely weak.**
-> - **`meerkat` — improved, honest-partial:** redesigning campaigns as innocuous sub-step
->   traces moved clustering from useless (AP 0.084) to viable (**0.568**, campaigns cluster
->   at recall 0.933); a supervised per-trace monitor still edges it on *topic*, so a clean
->   flip needs topically-matched benign.
+> - **`meerkat` — FALSIFIED, and the confound audit is why.** The published `results.json`
+>   turned out to predate a fix to the benign length-matching in `data.py` and could not be
+>   regenerated from the code beside it. Re-running at the identical config moved the two
+>   arms in opposite directions: the per-trace baseline lost 11% of its sparse AP
+>   (0.818→**0.731**) while the clustering arm lost **65%** (0.568→**0.199**). The
+>   clustering arm was the one leaning on the length artifact. The pre-registered falsifier
+>   fires harder than before, and a `pool_fingerprint` is now stamped into every run so a
+>   stale artifact cannot masquerade as a current one again.
 > - **Cross-scale check (your "try 4B" hypothesis): the weak-write negative HOLDS.** On
 >   Gemma-3-4B abliterated (4-bit), mean-pooled diff-of-means *still* fails to install
 >   refusal (0.03→0.00 as α rises) and only drives gibberish (0.23→**0.97**) — the same
