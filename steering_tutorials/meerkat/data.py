@@ -411,6 +411,29 @@ def _auc(scores, labels) -> float:
         return float(u / (n_p * n_n))
 
 
+def pool_fingerprint(pool) -> str:
+    """A content hash of the trace pool, stored in every results.json.
+
+    Why this exists: an earlier `results.json` in this lesson reported
+    `length_auc` 0.3246 while the committed `data.py` reproducibly builds a pool
+    with 0.4511. The artifact could not be regenerated from the code beside it, and
+    nothing in the file said so -- the README went on pricing every method against a
+    confound bar that no longer existed. That is the quiet failure mode: not a
+    crash, just a stale number wearing a fresh timestamp.
+
+    A run now records this fingerprint, so a reader (or a future re-run) can tell in
+    one comparison whether an artifact belongs to the current data. Note we do NOT
+    use `hash()` -- Python randomizes string hashing per process, so it would differ
+    across runs on identical data and be worse than useless here.
+    """
+    import hashlib
+
+    h = hashlib.sha256()
+    for t, y in zip(pool["traces"], pool["labels"]):
+        h.update(f"{y}\x00{t}\x00".encode("utf-8"))
+    return h.hexdigest()[:16]
+
+
 def confound_report(traces, labels) -> dict:
     """Can raw trace char-LENGTH alone separate the classes?
 

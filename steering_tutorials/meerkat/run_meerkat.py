@@ -496,6 +496,9 @@ def main():
         conf = {"length_auc": float("nan"), "len_pos_mean": float("nan"),
                 "len_neg_mean": float("nan"), "error": str(exc)}
         print("[confound] FAILED: %s" % exc)
+    # stamp the pool's content hash so a stale artifact can never masquerade as current
+    conf["pool_fingerprint"] = data.pool_fingerprint(pool)
+    print("[confound] pool_fingerprint=%s" % conf["pool_fingerprint"])
     print("[confound] length_auc=%.3f len_pos=%.0f len_neg=%.0f  (~0.5 => no trivial length tell)"
           % (conf.get("length_auc", float("nan")), conf.get("len_pos_mean", float("nan")),
              conf.get("len_neg_mean", float("nan"))))

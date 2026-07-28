@@ -49,3 +49,49 @@ confirmed or the hedge kept.
 
 *Internal QA pass — independent external review pending (auditor shares a model
 family with the author).*
+
+---
+
+## Addendum 2026-07-27 — a reproduction failure, and the guard added for it
+
+**What happened.** `artifacts/results.json` recorded `length_auc` **0.3246**
+(benign mean 121.7 chars). Re-running the committed `data.py` builds a pool with
+**0.4511** (benign mean 106.5) — twice, in separate processes, byte-identical. So
+the published artifact **could not be regenerated from the code sitting beside it**,
+and nothing in either file said so.
+
+The cost was not a crash. It was that README §9.1 spent several paragraphs
+explaining why 0.325 was "a 0.675 tell with the sign flipped", and §9.2 priced every
+method against that bar — all of it describing a confound that no longer existed.
+A stale number wearing a fresh timestamp reads exactly like a current one.
+
+**What the re-run changed.** At the identical config (200/200, minilm, 6 repos),
+`per_trace` lost 11% of its sparse AP while `kmeans_enrich` lost **65%**
+(0.568 → 0.199). The clustering arm — the lesson's own thesis — was the one leaning
+on the length artifact. The pre-registered falsifier fires harder, not softer.
+
+**The guard.** `data.pool_fingerprint()` hashes the (label, trace) content of the
+pool and every run now stamps it into `results.json`. One comparison tells a reader
+whether an artifact belongs to the current data. Deliberately a `sha256`, not
+`hash()` — Python randomizes string hashing per process, so `hash()` would differ
+across runs on identical data and be worse than useless.
+
+Current pool fingerprint: `caa8fc99716b9824`.
+
+**Repo-wide sweep for the same failure.** Every lesson whose code commit is newer
+than its artifacts commit was checked:
+
+| lesson | verdict |
+|---|---|
+| `meerkat` | **STALE — confirmed and fixed** (this addendum) |
+| `curveball` | clean — the only post-artifact change is an additive `STEER_MODEL_ID` / `STEER_LOAD_4BIT` override whose default path is byte-identical |
+| `stacking` | clean — same additive override |
+| `hello_world_steering` | clean — code and artifacts committed the same day |
+| `common` | n/a — `artifacts/` is a cached dataset, not a result |
+
+So the defect was isolated to one lesson. The guard is course-wide practice going
+forward: **an artifact that cannot be regenerated from the code beside it is not
+evidence, and a run that does not stamp its inputs cannot prove it can be.**
+
+*Internal QA pass — independent external review pending (auditor shares a model
+family with the author).*

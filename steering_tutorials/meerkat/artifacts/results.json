@@ -7,7 +7,8 @@
   "confound": {
     "length_auc": 0.4511125,
     "len_pos_mean": 104.495,
-    "len_neg_mean": 106.49
+    "len_neg_mean": 106.49,
+    "pool_fingerprint": "caa8fc99716b9824"
   },
   "regimes": {
     "0.05": {
