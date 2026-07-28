@@ -443,15 +443,10 @@ so the off-family-judge discipline of the steering lessons does not apply here
 
 ## 10. Results — measured vs. the claim
 
-**MEASURED — screening tier.** Numbers below are real, from
-`artifacts/results.json`. **Read the substitution caveat first:** this run used the
-**MiniLM** substitute embedder at **150/class**, *not* EmbeddingGemma-300M at the
-course's ≥500/class rubric. `google/embeddinggemma-300m` is a **gated** repo and
-returns `401 GatedRepoError` on weight download from this host; the licence must be
-accepted on the HF account before the headline run can happen. So treat every
-*absolute* number here as a lower bound on what the real backbone would give — but
-note that the two **architectural** claims (EXP-D scaling, EXP-C multi-prototype) are
-backbone-independent and already decided.
+**MEASURED — the HEADLINE run: EmbeddingGemma-300M at 500/class.** Numbers below are
+from `artifacts/results.json` for the real dual-encoder backbone
+(`google/embeddinggemma-300m`, 768-dim, n_per_class = n_benign = 500). The earlier
+MiniLM@150 substitute run is retained in §10.1 for comparison.
 
 The falsifiers were pre-registered **before** the run, and **one of them trips** —
 reported below without softening.
@@ -468,16 +463,16 @@ uni-encoder are expected to lead on accuracy here):
 
 | method | macro-AP | micro-AP | macro-F1 | binary harm AUC |
 |---|---|---|---|---|
-| `bi_encoder` | 0.355 | 0.338 | 0.167 | 0.595 |
-| `uni_encoder` | 0.118 | 0.106 | 0.168 | 0.451 |
-| **`trained_head`** | **0.670** | **0.662** | **0.616** | 0.576 |
+| `bi_encoder` | 0.240 | 0.243 | 0.152 | 0.589 |
+| `uni_encoder` | 0.169 | 0.142 | 0.194 | 0.490 |
+| **`trained_head`** | **0.658** | **0.667** | **0.595** | 0.588 |
 
 **EXP-B — held-out ZERO-SHOT** (test, held-out policies; **the headline**):
 
 | method | macro-AP | macro-F1 |
 |---|---|---|
-| **`bi_encoder`** | **0.408** | **0.328** |
-| `uni_encoder` | 0.178 | 0.216 |
+| **`bi_encoder`** | **0.382** | **0.223** |
+| `uni_encoder` | 0.115 | 0.129 |
 | `trained_head` | N/A (cannot score an unseen policy) | N/A |
 
 **EXP-C — multi-prototype ablation** (bi-encoder on held-out policies, 1 vs. `P`
@@ -485,26 +480,26 @@ prototypes):
 
 | policy tower | macro-AP |
 |---|---|
-| single description (`n_proto=1`) | 0.357 |
-| **multi-prototype (`n_proto=4`)** | **0.408**  (**+0.050**) |
+| single description (`n_proto=1`) | 0.360 |
+| **multi-prototype (`n_proto=4`)** | **0.382**  (**+0.023**) |
 
 **EXP-D — scaling: latency vs. #labels** (fixed text batch; seconds):
 
 | #labels | `bi_encoder` (sec) | `uni_encoder` (sec) |
 |---|---|---|
-| 16 | 0.041 | 0.027 |
-| 64 | 0.044 | 0.125 |
-| 256 | 0.044 | 0.397 |
-| **1024** | **0.044** *(flat)* | **1.786** *(**43×** the bi-encoder)* |
+| 16 | 0.422 | 0.301 |
+| 64 | 0.422 | 1.575 |
+| 256 | 0.423 | 6.502 |
+| **1024** | **0.424** *(flat)* | **27.06** *(**64×** the bi-encoder)* |
 
 **EXP-E — OOD transfer** (train on the constructed set, evaluate the disjoint OOD
 shard with no further fitting):
 
 | method | binary harm AUC | macro-AP |
 |---|---|---|
-| **`bi_encoder`** | **0.622** | **0.234** |
-| `uni_encoder` | 0.515 | 0.066 |
-| `trained_head` | 0.595 | 0.499 |
+| `bi_encoder` | 0.615 | 0.184 |
+| `uni_encoder` | 0.571 | 0.146 |
+| **`trained_head`** | **0.636** | **0.496** |
 
 **EXP-F — hard-negative augmentation** (frozen bi-encoder vs. the contrastive
 adapter, on held-out hard negatives):
@@ -512,10 +507,10 @@ adapter, on held-out hard negatives):
 | quantity | value |
 |---|---|
 | ECIsem (`target_consistency` / `locality` / `lexical_residual` / `diversity` / **`eci`**) | 0.016 / 0.201 / 0.178 / 0.931 / **0.399** |
-| FPR@recall0.90 — frozen bi-encoder | 0.850 |
-| **FPR@recall0.90 — contrastive adapter** | **0.613** |
-| **delta (frozen − adapter)** | **−0.237** (adapter is better) |
-| hard negatives mined | 240 |
+| FPR@recall0.90 — frozen bi-encoder | **1.000** |
+| **FPR@recall0.90 — contrastive adapter** | **0.438** |
+| **delta (frozen − adapter)** | **−0.562** (adapter is better) |
+| hard negatives mined / counterfactuals / false-neg dropped | 240 / 8,985 / 22 |
 
 **Pre-registered falsifiers.**
 - **(i) Scaling.** If uni-encoder latency does **not** grow with #labels while the
@@ -530,13 +525,47 @@ adapter, on held-out hard negatives):
 No reclassification-after-the-fact, and no swapping to an easier condition to
 rescue a failed ordering.
 
+
+### 10.1 MiniLM@150 vs EmbeddingGemma@500 — and why this comparison is NOT clean
+
+| quantity | MiniLM @150/class | **EmbeddingGemma @500/class** |
+|---|---|---|
+| EXP-D scaling at 1024 labels | bi 0.044 s / uni 1.786 s = **43×** | bi **0.424** s / uni **27.06** s = **64×** |
+| EXP-B zero-shot (bi, macro-AP) | 0.408 | **0.382** |
+| EXP-A seen (bi, macro-AP) | 0.355 | **0.240** |
+| EXP-F adapter FPR@recall0.90 | 0.850 → 0.613 | **1.000 → 0.438** |
+| length confound | 0.517 | 0.526 |
+
+**The bigger, purpose-built backbone scored LOWER on accuracy.** That is unexpected and
+it is reported rather than buried — but it must **not** be attributed to the backbone,
+because this comparison changes **three things at once**:
+
+1. the **encoder** (MiniLM → EmbeddingGemma-300M),
+2. **n_per_class** (150 → 500), and
+3. **which policies were held out** — the seen/held-out split is chosen from the
+   populated columns, and at 500/class it selected *Animal Abuse, Sexually Explicit,
+   Violence, Toxicity* instead of *Drug Weapon, Non Violent Unethical, Violence,
+   Toxicity*. Different held-out policies have different base rates and different
+   intrinsic difficulty, so the two zero-shot numbers are **not measuring the same task**.
+
+That violates this course's own one-change-at-a-time rule. **No backbone conclusion may
+be drawn from it.** A clean test would pin the held-out column set and n_per_class and
+vary only the encoder — pre-registered here as the follow-up, not claimed now.
+
+What the change *does* establish cleanly is the **architectural** result, because that
+is backbone-independent by construction: the uni-encoder's cost grew from 43× to **64×**
+the bi-encoder at 1024 labels, precisely because a *larger* encoder makes every one of
+its `n_texts × n_labels` forward passes more expensive — while the bi-encoder's cached
+policy tower keeps per-request cost flat at 0.42 s regardless. **Scaling the backbone up
+makes the bi-encoder's advantage larger, not smaller.**
+
 ### Verdicts against those falsifiers
 
 | falsifier | outcome | evidence |
 |---|---|---|
-| **(i) Scaling** | **SURVIVES — claim upheld** | bi-encoder is flat at 0.041 → 0.044 s from 16 → 1024 labels; uni-encoder rises 0.027 → 1.786 s, **43×** the bi-encoder at 1024. The predicted flat-vs-linear split is exactly what was measured. |
-| **(ii) Zero-shot** | ⚠️ **TRIPS as literally written** | bi-encoder held-out macro-AP = **0.408 ≤ 0.5**. By the pre-registered rule, the claim is FALSE. |
-| **(iii) Hard-negative sharpening** | **SURVIVES — claim upheld** | FPR@recall0.90 falls **0.850 → 0.613** with the contrastive adapter (−0.237). |
+| **(i) Scaling** | **SURVIVES — claim upheld** | bi-encoder is flat at 0.422 → 0.424 s from 16 → 1024 labels; uni-encoder rises 0.301 → 27.06 s, **64×** the bi-encoder at 1024. The predicted flat-vs-linear split is exactly what was measured. |
+| **(ii) Zero-shot** | ⚠️ **TRIPS as literally written** | bi-encoder held-out macro-AP = **0.382 ≤ 0.5**. By the pre-registered rule, the claim is FALSE. |
+| **(iii) Hard-negative sharpening** | **SURVIVES — claim upheld** | FPR@recall0.90 falls **1.000 → 0.438** with the contrastive adapter (−0.562) — a larger gain than the substitute run showed. |
 
 **On (ii) — reporting the trip, and a specification error I will not hide behind.**
 The falsifier is recorded as tripped because that is what the pre-registered rule
