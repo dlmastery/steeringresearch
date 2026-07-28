@@ -618,7 +618,13 @@ conditioned on gate AUC, so our probe result *strengthens* rather than scoops it
 - Windows **cp1252** console: printing a German filename (umlaut) crashed a 38 GB
   download. Use `PYTHONIOENCODING=utf-8` and `.encode('ascii','replace')`.
 - Piping a long job through `head -n` **SIGPIPE-kills** it.
-- `nohup … &` inside a backgrounded call orphans the process.
+- **Never put `&` inside a `run_in_background` call.** Any form of it — `nohup … &`,
+  `cmd > log 2>&1 &`, `cmd & sleep 5` — orphans the real job: the *wrapper* exits
+  immediately, the completion notification fires for the wrapper, and the actual
+  process keeps running with nothing watching it. Hit twice now (SVD download; the V2
+  n=10 run). Pass the command directly and let `run_in_background` own it.
+- Redirecting a long Python job to a file gives an **empty log until it exits** —
+  stdout is block-buffered when not a tty. Use `python -u` if you want to tail it.
 - **ONE GPU.** Re-check `nvidia-smi --query-compute-apps` before every launch — three
   concurrent model loads got two jobs killed this session.
 - `google/embeddinggemma-300m` is **gated**; this host has **no HF token at all**
