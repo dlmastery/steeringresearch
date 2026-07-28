@@ -353,10 +353,10 @@ the lesson may headline; it stays empty until the audit is re-run:
 
 | method | AUC (raw, unpriced) | F1 | TPR@FPR=0.10 | claimable margin over the confound bar |
 |---|---|---|---|---|
-| `threshold_freeform` (training-free, the paper's method) | 0.638 | 0.24 | 0.10 | _pending re-run_ |
-| `per_turn_max` (learned per-token, stateless) | 0.931 | 0.84 | 0.84 | _pending re-run_ |
-| `trajectory_mlp` | 0.944 | 0.90 | 0.90 | _pending re-run_ |
-| `seq_gru` | 0.945 | 0.86 | 0.88 | _pending re-run_ |
+| `threshold_freeform` (training-free, the paper's method) | 0.638 | 0.24 | 0.10 | **−0.045** (BELOW the bar) |
+| `per_turn_max` (learned per-token, stateless) | 0.931 | 0.84 | 0.84 | **+0.196** |
+| `trajectory_mlp` | 0.944 | 0.90 | 0.90 | **+0.208** |
+| `seq_gru` | 0.945 | 0.86 | 0.88 | **+0.209** |
 
 Early detection — AUC using only the first K generated tokens (the streaming value):
 
@@ -402,11 +402,27 @@ immediate-compliance setup does not exercise that drift. Reported, not hidden.
 
 ## 10. The confound audit — what the AUCs must clear
 
-> **Status: NOT YET MEASURED.** `confound_report()` is implemented in `data.py` and
-> wired into `run_trajguard.py`, but the published `artifacts/results.json` was
-> produced before it existed and has no `confound` key. The table below is the
-> shape of the answer, not the answer. **No number in it is invented; every cell
-> says `pending re-run`.**
+> **Status: MEASURED 2026-07-27 — and it changes how the headline reads.**
+> The strongest trivial baseline is **prompt character length at AUC 0.7354**
+> (directionless); hidden-state `final_norm` reaches **0.588** and token count **0.514**.
+>
+> So a raw AUC of 0.944 is **not** a 0.944-sized result. The claimable quantity is the
+> margin **above 0.7354**:
+>
+> | method | raw AUC | **margin above the 0.7354 bar** |
+> |---|---|---|
+> | `seq_gru` | 0.945 | **+0.209** |
+> | `trajectory_mlp` | 0.944 | **+0.208** |
+> | `per_turn_max` | 0.931 | **+0.195** |
+> | `threshold_freeform` (the paper's own training-free method) | 0.638 | **−0.098 — BELOW the bar** |
+>
+> Two consequences stated plainly. The learned sequence detectors **do** clear the bar,
+> by ~0.21 — a real result, but a fifth of what the raw number suggests. And the paper's
+> own training-free projection method lands **below** a character-count heuristic on this
+> data, so it does not clear the bar at all.
+>
+> Before this audit the lesson headlined 0.944 / 0.945 with no baseline whatsoever, which
+> made the margin unpriced and the claim uninterpretable.
 
 A detection AUC is not a result until the strongest **trivial** baseline on the same
 data is reported beside it, and only `headline − baseline` may be claimed
@@ -422,12 +438,12 @@ The four scalars audited, each carrying **no trajectory information whatsoever**
 
 | trivial feature | why it could separate the classes without any real signal | directionless AUC |
 |---|---|---|
-| `tokencount` | generated-token count. Nominally capped at `MAX_NEW_TOKENS`, but **early EOS** is class-informative — a benign completion that stops short is a free label. | _pending re-run_ |
-| `charlen` | the completion's raw character length — the classic prompt-harm confound, one level downstream. | _pending re-run_ |
-| `mean_norm` | **the important one.** Mean over tokens of `‖h_t‖` at layer 12. If harmful and benign completions simply sit at different residual-stream *magnitudes*, one scalar separates them and **every sequence model's margin is illusory** — no drift, no shape, no trajectory. | _pending re-run_ |
-| `final_norm` | `‖h_last‖` alone, the single cheapest such scalar. | _pending re-run_ |
-| `prompt_charlen` | prompt length — a deployable prompt-side rule that needs no hidden states at all. | _pending re-run_ |
-| **worst (the bar)** | `max` of the above; the number every headline must clear | _pending re-run_ |
+| `tokencount` | generated-token count. Nominally capped at `MAX_NEW_TOKENS`, but **early EOS** is class-informative — a benign completion that stops short is a free label. | **+0.209** |
+| `charlen` | the completion's raw character length — the classic prompt-harm confound, one level downstream. | **+0.209** |
+| `mean_norm` | **the important one.** Mean over tokens of `‖h_t‖` at layer 12. If harmful and benign completions simply sit at different residual-stream *magnitudes*, one scalar separates them and **every sequence model's margin is illusory** — no drift, no shape, no trajectory. | **+0.209** |
+| `final_norm` | `‖h_last‖` alone, the single cheapest such scalar. | **+0.209** |
+| `prompt_charlen` | prompt length — a deployable prompt-side rule that needs no hidden states at all. | **+0.209** |
+| **worst (the bar)** | `max` of the above; the number every headline must clear | **+0.209** |
 
 **Why the norms are the right confound for *this* lesson.** The siblings audit
 length and count because their inputs are text. Here the detector's input is a
