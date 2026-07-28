@@ -3,204 +3,171 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Steering Autoresearch &mdash; methods, harness &amp; screening</title>
+<title>Steering Autoresearch — start here</title>
 <style>
   :root{
-    --ink:#1a1a1a; --muted:#555; --line:#d8d4cc; --bg:#faf8f4;
-    --panel:#fffdf9; --accent:#5b4636; --warn:#7a4a00; --warnbg:#fdf3e2;
-    --ok:#2f5d3a; --chip:#eee8dc;
+    --ink:#1a1a1a; --muted:#5a5a5a; --line:#ddd8ce; --bg:#faf8f4; --panel:#fffdf9;
+    --accent:#2f5c9e; --good:#2f5d3a; --goodbg:#eef6ef; --bad:#8a2c22; --badbg:#fbf0ee;
+    --chip:#eee8dc;
   }
   *{box-sizing:border-box}
   html{font-size:17px}
-  body{
-    margin:0; background:var(--bg); color:var(--ink);
-    font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Times New Roman",serif;
-    line-height:1.55;
-  }
-  .wrap{max-width:860px; margin:0 auto; padding:2.4rem 1.4rem 4rem}
-  header h1{font-size:2rem; line-height:1.2; margin:0 0 .3rem}
-  header .sub{color:var(--muted); font-size:1.02rem; margin:0 0 1.2rem}
-  code,.mono{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace; font-size:.86em}
-  .fingerprint{background:var(--chip); padding:.12rem .4rem; border-radius:3px}
-  .banner{
-    background:var(--warnbg); border:1px solid #e6cfa3; border-left:5px solid var(--warn);
-    color:var(--warn); padding:.9rem 1.1rem; border-radius:5px; margin:1.4rem 0; font-size:.98rem;
-  }
-  .banner strong{color:#5c3800}
-  h2{font-size:1.28rem; border-bottom:1px solid var(--line); padding-bottom:.3rem; margin:2.2rem 0 .9rem}
-  ul.what{list-style:none; padding:0; margin:1rem 0}
-  ul.what li{padding:.55rem 0 .55rem 1.7rem; position:relative; border-bottom:1px dotted var(--line)}
-  ul.what li:before{content:"\25B8"; position:absolute; left:.2rem; color:var(--accent)}
-  ul.what li:last-child{border-bottom:none}
-  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:.9rem; margin:1rem 0}
-  a.card{
-    display:block; text-decoration:none; color:var(--ink);
-    background:var(--panel); border:1px solid var(--line); border-radius:6px;
-    padding:.95rem 1.05rem; transition:border-color .12s, box-shadow .12s;
-  }
-  a.card:hover{border-color:var(--accent); box-shadow:0 1px 6px rgba(0,0,0,.06)}
-  a.card .t{font-weight:600; font-size:1.04rem; display:block; margin-bottom:.2rem}
-  a.card .d{color:var(--muted); font-size:.9rem}
-  a.card .t:after{content:" \2192"; color:var(--accent)}
-  .chips{margin:.6rem 0 0}
-  .chip{display:inline-block; background:var(--chip); color:var(--accent); font-size:.78rem;
-        padding:.12rem .5rem; border-radius:10px; margin:.15rem .3rem .15rem 0}
-  table{border-collapse:collapse; width:100%; margin:1rem 0; font-size:.92rem}
-  th,td{border:1px solid var(--line); padding:.45rem .6rem; text-align:left; vertical-align:top}
-  th{background:var(--chip)}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.6;
+       font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif}
+  .wrap{max-width:860px;margin:0 auto;padding:2.6rem 1.4rem 5rem}
+  h1{font-size:2.1rem;line-height:1.15;margin:0 0 .4rem;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:1.05rem;margin:0 0 1.6rem}
+  h2{font-size:1.3rem;border-bottom:1px solid var(--line);padding-bottom:.35rem;
+     margin:2.6rem 0 .9rem}
+  h3{font-size:1.06rem;margin:1.2rem 0 .4rem}
   p{margin:.7rem 0}
-  .muted{color:var(--muted)}
-  footer{margin-top:3rem; padding-top:1rem; border-top:1px solid var(--line);
-          color:var(--muted); font-size:.86rem}
-  .ok{color:var(--ok)}
-  a.inline{color:var(--accent)}
+  a{color:var(--accent)}
+  code{background:var(--chip);padding:.1rem .35rem;border-radius:3px;
+       font-family:Consolas,Menlo,monospace;font-size:.86em}
+  .lede{font-size:1.08rem}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;
+        padding:1.1rem 1.3rem;margin:1rem 0}
+  .card.good{border-left:5px solid var(--good);background:var(--goodbg)}
+  .card.bad{border-left:5px solid var(--bad);background:var(--badbg)}
+  .tag{display:inline-block;font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;
+       font-weight:700;padding:.16rem .55rem;border-radius:20px;margin-bottom:.5rem;
+       font-family:Consolas,Menlo,monospace}
+  .tag.g{background:#dff0e2;color:var(--good)}
+  .tag.b{background:#f6ded9;color:var(--bad)}
+  table{width:100%;border-collapse:collapse;margin:.9rem 0;font-size:.93rem;
+        display:block;overflow-x:auto}
+  th,td{text-align:left;padding:.45rem .6rem;border-bottom:1px solid var(--line)}
+  th{font-size:.76rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .links a{display:block;padding:.75rem 1rem;background:var(--panel);
+           border:1px solid var(--line);border-radius:6px;margin:.55rem 0;
+           text-decoration:none;color:var(--ink)}
+  .links a:hover{border-color:var(--accent)}
+  .links b{color:var(--accent)}
+  .links span{display:block;color:var(--muted);font-size:.88rem;margin-top:.15rem}
+  footer{margin-top:3rem;padding-top:1.1rem;border-top:1px solid var(--line);
+         color:var(--muted);font-size:.88rem}
 </style>
 </head>
-<body>
-<div class="wrap">
+<body><div class="wrap">
 
-<header>
-  <h1>Activation-Steering Autoresearch</h1>
-  <p class="sub">A pre-registered, ladder-bound research harness for conditional /
-  activation steering of small language models &mdash; with a Goodhart-resistant,
-  fingerprinted multi-objective composite and a fully transparent multi-page dashboard.</p>
-</header>
+<h1>Steering Autoresearch</h1>
+<p class="sub">An autonomous, pre-registered research program on activation steering of
+small language models — run on a single laptop GPU.</p>
 
-<div class="banner">
-  <strong>Status: methodology + harness + n=1 screening. External claims are gated.</strong><br>
-  Every quantitative result here is <strong>SCREENING (n=1)</strong>, on synthetic
-  mini-datasets, a single behavior, no calibrated judge, on sub-0.5B models
-  (Gemma-3-270m-it / Qwen2.5-0.5B). They establish mechanism <em>direction</em>, never
-  magnitude. No result has cleared the rigor contract (n&ge;7 + paired Wilcoxon +
-  bootstrap CI + Holm-Bonferroni + ordinal gate), so <strong>no external steering claim
-  is made</strong>. Composite formula fingerprint:
-  <span class="fingerprint mono">a9001e87087e</span>.
+<p class="lede"><b>Read this page before the dashboard.</b> Most numbers in this
+repository are a <b>screening-tier search trail</b>, not results. Exactly one finding
+currently clears the statistical bar. This page says which, why the rest can't be ranked,
+and where to look.</p>
+
+<h2>1. The one result that clears the bar</h2>
+
+<div class="card good">
+  <span class="tag g">Evaluation-tier · judge-free</span>
+  <h3 style="margin-top:0">Norm preservation is the <em>worst</em> way to spend a steering budget</h3>
+
+  <p>Steering pushes a model's hidden state a certain distance. That distance can be spent
+  on <b>radius</b> (ordinary addition, which changes the vector's length) or on
+  <b>angle</b> (norm-preserving rotation, which does not). Recent work assumes preserving
+  the norm protects output quality. Measured at <em>equal displacement</em>, the opposite
+  holds.</p>
+
+  <table>
+    <tr><th>quantity</th><th>value</th></tr>
+    <tr><td>Extra perplexity cost of rotation vs. addition</td><td class="n"><b>+91.24</b></td></tr>
+    <tr><td>Bootstrap 95% CI</td><td class="n">[87.98, 94.71]</td></tr>
+    <tr><td>Resamples in which the ordering held</td><td class="n"><b>8 / 8</b></td></tr>
+    <tr><td>Same test with a norm-matched <em>random</em> direction</td><td class="n">+16.80</td></tr>
+    <tr><td>Power check</td><td class="n">n=8, min p = 0.0078, power ≈ 1.00</td></tr>
+  </table>
+
+  <p>The random-direction control is what makes this stand up: a meaningless vector of
+  identical length shows almost no rotation penalty, so the cost is tied to rotating along
+  a <em>meaningful</em> direction — not to turning vectors in general.</p>
+
+  <p><b>Why it matters.</b> GEMS (arXiv:2606.19946), ORBIT (2606.22357) and Selective
+  Steering (2601.19375) all build on norm preservation. Selective Steering dismisses
+  additive steering as causing “catastrophic degradation on smaller models” — but never
+  holds displacement fixed. This supplies the missing control, and inverts the conclusion
+  at ≤4B.</p>
+
+  <p><a href="https://github.com/dlmastery/steeringresearch/blob/master/autoresearch_results/FINDING_Ma_matched_budget_n8.md">Full write-up, with its limitations →</a></p>
 </div>
 
-<h2>What this is</h2>
-<ul class="what">
-  <li><strong>A reproducible harness, not a steering-claims paper.</strong> The
-  contribution is the autoresearch process &mdash; a single-axis champion loop over a
-  12-axis intervention taxonomy, a five-rung cost-ordered benchmark ladder, and a 7-step
-  Diagnose&rarr;Cite&rarr;Hypothesize&rarr;Predict&rarr;Execute&rarr;Analyse&rarr;Checkpoint ritual
-  whose pre-run fields are mechanically gated against placeholders.</li>
-  <li><strong>A Goodhart-resistant, fingerprinted composite.</strong> One metric prices
-  all five axes (behavior, capability, coherence, safety, selectivity) with one-sided
-  penalties, so a gibberish-but-&ldquo;safe&rdquo; run cannot win &mdash; the coherence
-  tax dominates. The frozen formula's SHA-256[:12] fingerprint
-  (<span class="fingerprint mono">a9001e87087e</span>) appears in every reasoning entry,
-  ledger row, and dashboard footer.</li>
-  <li><strong>Honest measurement validity.</strong> An internal ICML-area-chair review
-  caught a <em>circular</em> projection-of-the-edit-onto-itself behavior proxy and a
-  <em>hardcoded-constant</em> safety axis; both were replaced with non-circular
-  generation-based instruments, which revealed behavior is non-monotonic in &alpha; and
-  that steering measurably degrades refusal.</li>
-  <li><strong>Three directional screening observations.</strong> A super-linear
-  coherence cliff predicted by a cheap behavior-free geometry probe (N17); cross-model
-  DiffMean&asymp;PCA-top-1 alignment (E4, cos&asymp;0.994&ndash;0.996); and
-  scale-dependent fragility (E27, the 270m model leaves the manifold earlier and harder
-  than the 0.5B model). All n=1, all gated.</li>
-</ul>
+<h2>2. Two caveats that invalidate a naive reading</h2>
 
-<h2>Explore</h2>
-<div class="grid">
-  <a class="card" href="dashboard/index.html">
-    <span class="t">Live dashboard</span>
-    <span class="d">Sortable runs table, 5-axis radar, Pareto + stack/compete panels,
-    ladder board, geometry probes, and per-experiment drill-downs.</span>
-  </a>
-  <a class="card" href="https://github.com/dlmastery/steeringresearch/blob/master/paper/PAPER.md">
-    <span class="t">The paper</span>
-    <span class="d">Honest ICML-format methods / harness / screening-results draft.
-    Limitations are central; required experiments enumerated.</span>
-  </a>
-  <a class="card" href="https://github.com/dlmastery/steeringresearch/blob/master/FINDINGS.md">
-    <span class="t">FINDINGS</span>
-    <span class="d">Rigor-gated. Currently zero external-ready findings; the S-1..S-4
-    screening observations are clearly separated as non-claims.</span>
-  </a>
-  <a class="card" href="https://github.com/dlmastery/steeringresearch/blob/master/audits/RUBRICS.md">
-    <span class="t">Verification rubrics</span>
-    <span class="d">Scoreable PASS/FAIL rubrics A&ndash;E, checked by
-    <span class="mono">scripts/verify_rubrics.py</span> and
-    <span class="mono">scripts/verify_dashboard.py</span>.</span>
-  </a>
-  <a class="card" href="https://github.com/dlmastery/steeringresearch/blob/master/audits/ICML_REVIEW.md">
-    <span class="t">ICML area-chair review</span>
-    <span class="d">The hostile-but-fair internal review whose cruxes (W1 circular
-    proxy, W2 stubbed safety) drove the instrument fixes.</span>
-  </a>
-  <a class="card" href="https://github.com/dlmastery/steeringresearch/blob/master/EXPERIMENT_LEDGER.md">
-    <span class="t">Experiment ledger</span>
-    <span class="d">Append-only promotion/demotion log: every run, five axes, geometry
-    columns, verdict, failure_reason (exp#1&ndash;19).</span>
-  </a>
-  <a class="card" href="https://github.com/dlmastery/steeringresearch/blob/master/audits/CODE_QUALITY.md">
-    <span class="t">Code-quality audit</span>
-    <span class="d">Elite SWE pass on <span class="mono">src/steering/</span>: ruff +
-    mypy clean, 46 tests, the load-once / OOM and hook-mask fixes.</span>
-  </a>
-  <a class="card" href="https://github.com/dlmastery/steeringresearch/blob/master/audits/META_PROCESS_AUDIT.md">
-    <span class="t">Meta-process audit</span>
-    <span class="d">Faithful-reproduction review of the domain-agnostic
-    <span class="mono">meta-skills/</span> pack against the dashboard mandate.</span>
-  </a>
-  <a class="card" href="https://github.com/dlmastery/steeringresearch/blob/master/README.md">
-    <span class="t">Repository</span>
-    <span class="d">Layout, quickstart, the constitution
-    (<span class="mono">CLAUDE.md</span>) and the inner loop
-    (<span class="mono">AUTORESEARCH_PROCESS.md</span>).</span>
-  </a>
+<div class="card bad">
+  <span class="tag b">Instrument failure</span>
+  <h3 style="margin-top:0">The judge is unreliable, so judge-based claims are suspended</h3>
+  <p>Many experiments score model output with a local LLM judge. Calibrated against
+  ground-truth labels, that judge reaches <b>ROC-AUC 0.665</b> — and <b>0.751</b> with an
+  improved continuous readout. Both sit below this project's own <b>0.85</b> gate, and a
+  newer, larger judge did not help, so the weakness belongs to the task rather than the
+  model version.</p>
+  <p>Consequence: <b>neither an efficacy claim nor a null</b> may rest on it — at that
+  accuracy the instrument cannot resolve the effect sizes involved. Live work therefore
+  uses judge-free endpoints: perplexity, geometry, and probe AUC against real labels.</p>
+  <p><a href="https://github.com/dlmastery/steeringresearch/blob/master/autoresearch_results/JUDGE_CARD.md">Judge card →</a></p>
 </div>
 
-<h2>Screening snapshot</h2>
-<p class="muted">Directional only. n=1, synthetic mini-data, single behavior ("ocean"),
-no calibrated judge. Confidence intervals are deliberately withheld &mdash; n=1 cannot
-support them. See the
-<a class="inline" href="https://github.com/dlmastery/steeringresearch/blob/master/ideas/30_alpha_coherence_cliff/results.md">E3 results</a> and
-the <a class="inline" href="https://github.com/dlmastery/steeringresearch/blob/master/EXPERIMENT_LEDGER.md">ledger</a>.</p>
+<div class="card bad">
+  <span class="tag b">Not one scale</span>
+  <h3 style="margin-top:0">The 124 legacy rows cannot be ranked against each other</h3>
+  <p>The scoring formula was edited <em>after</em> those rows were written, so their stored
+  scores came from a formula that no longer exists — 92 of 124 do not reproduce. Two of the
+  five scored axes were also inert (constant), and the stored “champion” was a single-seed
+  row with stubbed safety scoring that never advanced across the 121 experiments that
+  followed it.</p>
+  <p><b>Sorting that table is meaningless.</b> It is kept as history, not as a leaderboard.</p>
+  <p><a href="https://github.com/dlmastery/steeringresearch/blob/master/autoresearch_results/PROVENANCE.md">Provenance record →</a></p>
+</div>
+
+<h2>3. Where to look</h2>
+
+<div class="links">
+  <a href="dashboard/"><b>Interactive dashboard →</b>
+    <span>Sortable run table, per-experiment pages, radar / Pareto / ladder panels.
+    Read §2 above before sorting anything.</span></a>
+  <a href="https://github.com/dlmastery/steeringresearch/blob/master/FINDINGS.md"><b>FINDINGS.md</b>
+    <span>Rigor-gated results, with negatives reported as prominently as positives.</span></a>
+  <a href="https://github.com/dlmastery/steeringresearch/blob/master/CLAUDE.md"><b>CLAUDE.md</b>
+    <span>The constitution — the rules this program binds itself to; §18 is the current state.</span></a>
+  <a href="https://github.com/dlmastery/steeringresearch/blob/master/SETUP.md"><b>SETUP.md</b>
+    <span>Reproduce everything on another machine, including the host traps that cost time here.</span></a>
+  <a href="https://github.com/dlmastery/steeringresearch/tree/master/steering_tutorials"><b>steering_tutorials/</b>
+    <span>A 20-lesson course teaching activation steering from scratch, reporting honest results.</span></a>
+  <a href="https://dlmastery.github.io/auto-research-voice-based-disease-detection/"><b>Sibling program: voice-health claim audit</b>
+    <span>Same process, different domain. Headline: on a standard voice-pathology corpus,
+    patient <em>age alone</em> reaches ROC-AUC 0.874 — beating the audio embeddings.</span></a>
+</div>
+
+<h2>4. What this program does differently</h2>
+
+<p>Its previous incarnation ran <b>124 experiments and produced zero external-ready
+findings</b>. A forensic audit established why, and each cause became a rule the program
+is now bound by:</p>
+
 <table>
-  <thead><tr><th>Observation</th><th>Model(s)</th><th>Screening signal (n=1)</th><th>Gate to external</th></tr></thead>
-  <tbody>
-    <tr>
-      <td>E3 / N17 &mdash; coherence cliff</td>
-      <td>Gemma-3-270m, Qwen-0.5B</td>
-      <td>Super-linear PPL with knee at &alpha;&asymp;1&ndash;2; off-shell &Delta;&#8214;h&#8214; tracks PPL in lockstep.</td>
-      <td>real generation + real safety + n&ge;7 + prompting baseline + Gemma-2-2B</td>
-    </tr>
-    <tr>
-      <td>E4 &mdash; DiffMean&asymp;PCA</td>
-      <td>Gemma-3-270m (0.994), Qwen-0.5B (0.996)</td>
-      <td>cos(DiffMean, PCA-top-1) &gt; 0.95 at max-Fisher layer, both architectures.</td>
-      <td>n&ge;7, multiple behaviors, Gemma reproduction</td>
-    </tr>
-    <tr>
-      <td>E27 &mdash; scale fragility</td>
-      <td>Gemma-3-270m vs Qwen-0.5B</td>
-      <td>270m cliff at &alpha;&asymp;1 (vs &asymp;2); behavior never improves (0.50&rarr;0.22 monotone).</td>
-      <td>multi-scale (incl. 2B/9B), n&ge;7, real benchmarks</td>
-    </tr>
-    <tr>
-      <td>Safety (Rogue-Scalpel direction)</td>
-      <td>both</td>
-      <td>Real compliance rate rises with &alpha; (0.30&rarr;1.00 Qwen; 0.80&rarr;1.00 Gemma).</td>
-      <td>real JailbreakBench + XSTest + calibrated judge</td>
-    </tr>
-  </tbody>
+  <tr><th>what went wrong</th><th>rule now enforced</th></tr>
+  <tr><td>Everything measured with an uncalibrated judge</td><td>Validate the instrument before trusting it</td></tr>
+  <tr><td>74% of runs on a model too small to show the effect</td><td>Never run where the effect cannot appear</td></tr>
+  <tr><td>91% single-seed; the champion never advanced</td><td>A screening run is not a result</td></tr>
+  <tr><td>0 of 124 falsifiable numeric predictions</td><td>Predictions are pre-registered and machine-checked</td></tr>
+  <tr><td>The rigor rule was arithmetically impossible*</td><td>Feasibility is computed per family, before the run</td></tr>
 </table>
 
+<p style="color:var(--muted);font-size:.92rem">* The old contract demanded n ≥ 7 seeds
+<em>and</em> Holm correction. At n = 7 the smallest attainable p-value is 0.0156, while
+Holm's threshold for a family of 4 is 0.0125 — so it could not be satisfied at any effect
+size. It was met zero times in 124 experiments. The harness now refuses under-powered
+designs up front.</p>
+
 <footer>
-  <p>Composite formula fingerprint <span class="fingerprint mono">a9001e87087e</span>
-  (SHA-256[:12] of the frozen formula in <span class="mono">src/steering/eval.py</span>).
-  Self-contained page (no CDN, no JS framework).</p>
-  <p><strong>Internal QA pass &mdash; independent external review pending.</strong>
-  This program is authored, implemented, and audited largely by agents sharing one model
-  family; per its own circularity-disclosure rule, all internal verdicts are a useful
-  filter, not an external seal of approval.</p>
+  Internal QA pass — implementer and critic share a model family; independent external
+  review pending. Adversarial reviews in this repository are <b>simulated</b> internal
+  red-teaming and are never external validation or a venue decision.<br>
+  <a href="https://github.com/dlmastery/steeringresearch">github.com/dlmastery/steeringresearch</a>
 </footer>
 
-</div>
-
-<div style="margin:18px 0;font-family:IBM Plex Mono,monospace;font-size:13px;line-height:2.2"><a href="dashboard/index.html">▸ Live dashboard</a><br><a href="awesome-steering.html">▸ Awesome LLM Steering — literature survey (60 papers)</a><br><a href="mindmap.html">▸ Mindmap — the steering landscape</a><br><a href="https://github.com/dlmastery/steeringresearch">▸ Repo</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/paper/PAPER.md">Paper</a> &middot; <a href="https://github.com/dlmastery/steeringresearch/blob/master/FINDINGS.md">FINDINGS</a></div>
-</body>
+</div></body>
 </html>
