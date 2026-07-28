@@ -1,0 +1,112 @@
+{
+  "hypothesis": "radial-beats-angular survives a properly estimated direction",
+  "citation": "arXiv:2606.06735; control protocol arXiv:2606.20852",
+  "objective": "WikiText-2 perplexity (JUDGE-FREE)",
+  "model": "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated",
+  "layer": 12,
+  "budget_f": 0.1,
+  "n_harmful_pool": 340,
+  "n_harmless_pool": 120,
+  "seeds": 8,
+  "unsteered_ppl": 77.30955864452025,
+  "rows": [
+    {
+      "seed": 0,
+      "real_add": 78.89025965406316,
+      "real_rot": 176.08198881022332,
+      "rand_add": 854.6549172796041,
+      "rand_rot": 949.8509964512302,
+      "real_delta": 97.19172915616016,
+      "rand_delta": 95.19607917162614
+    },
+    {
+      "seed": 1,
+      "real_add": 77.59579995127554,
+      "real_rot": 177.3406046430695,
+      "rand_add": 515.0659373660915,
+      "rand_rot": 541.5916812925827,
+      "real_delta": 99.74480469179396,
+      "rand_delta": 26.52574392649126
+    },
+    {
+      "seed": 2,
+      "real_add": 89.40753396647621,
+      "real_rot": 174.42287686038026,
+      "rand_add": 410.6053477513333,
+      "rand_rot": 411.701263895802,
+      "real_delta": 85.01534289390405,
+      "rand_delta": 1.095916144468731
+    },
+    {
+      "seed": 3,
+      "real_add": 75.65163039751705,
+      "real_rot": 166.6323970030116,
+      "rand_add": 590.6313557312662,
+      "rand_rot": 590.5712338572474,
+      "real_delta": 90.98076660549454,
+      "rand_delta": -0.060121874018818744
+    },
+    {
+      "seed": 4,
+      "real_add": 80.19748279941658,
+      "real_rot": 167.43225857662952,
+      "rand_add": 151.68082728160812,
+      "rand_rot": 152.18152899293375,
+      "real_delta": 87.23477577721295,
+      "rand_delta": 0.5007017113256325
+    },
+    {
+      "seed": 5,
+      "real_add": 74.98232207415273,
+      "real_rot": 164.56234649409834,
+      "rand_add": 411.8568822160931,
+      "rand_rot": 415.1538120840293,
+      "real_delta": 89.5800244199456,
+      "rand_delta": 3.296929867936228
+    },
+    {
+      "seed": 6,
+      "real_add": 75.86067188889763,
+      "real_rot": 162.32158615562264,
+      "rand_add": 270.1400604553574,
+      "rand_rot": 272.0546544410133,
+      "real_delta": 86.46091426672501,
+      "rand_delta": 1.9145939856559266
+    },
+    {
+      "seed": 7,
+      "real_add": 73.23111818779981,
+      "real_rot": 166.9166628534959,
+      "rand_add": 262.34685892112293,
+      "rand_rot": 268.30892022895875,
+      "real_delta": 93.68554466569609,
+      "rand_delta": 5.962061307835825
+    }
+  ],
+  "real_delta_mean": 91.23673780961654,
+  "real_delta_ci95": [
+    87.97584313931827,
+    94.71242847587376
+  ],
+  "random_delta_mean": 16.803988030165115,
+  "power": {
+    "family_size": 1,
+    "holm_alpha": 0.05,
+    "can_reach_holm_alpha": true,
+    "min_n_for_holm": 6,
+    "n": 8,
+    "is_screening": false,
+    "min_achievable_p": 0.0078125,
+    "can_reach_p05": true,
+    "approx_power": 1.0,
+    "note": "n=8: EVALUATION-eligible (m=1, Holm \u03b1=0.050000). min attainable p=0.0078; approx power\u22481.00 at effect=91.2367, sd=5.26696."
+  },
+  "predictions_evaluated": {
+    "P1_ordering_stable_all_seeds": true,
+    "P1_seeds_rotation_worse": 8,
+    "P2_ci_excludes_zero": true,
+    "P3_real_gap_exceeds_random_gap": true
+  },
+  "tier": "EVALUATION-eligible",
+  "elapsed_s": 405.0
+}
