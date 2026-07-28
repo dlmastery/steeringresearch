@@ -200,6 +200,34 @@ def main() -> None:
     for s in range(args.seeds):
         # N directions from DISJOINT harmful slices -- genuinely different estimates,
         # not N copies of one direction with noise
+        # DIRECTION CACHE. Extraction of maxN directions happens BEFORE the first
+        # (seed, N) cell can checkpoint, so a reap inside that window cost the whole
+        # seed. Cached per (seed, maxN, layer) -- maxN is in the key because
+        # chunk = len(harm)//maxN, so a different maxN means different data behind each
+        # direction and the cells would not be comparable.
+        dcache = ROOT / "autoresearch_results" / f".dircache_s{s}_m{max(NS)}_L{args.layer}.npy"
+        if dcache.exists():
+            raw = np.load(dcache)
+            D = (raw / (np.linalg.norm(raw, axis=1, keepdims=True) + 1e-12)
+                 if args.basis == "raw" else orthonormalize(raw))
+            if args.permute:
+                D = D[np.random.default_rng(500 + s).permutation(D.shape[0])]
+            print(f"  [seed {s}] {D.shape[0]} directions from cache", flush=True)
+            for N in NS:
+                if D.shape[0] < N or (s, N) in done:
+                    continue
+                V = torch.tensor(D[:N], dtype=torch.float32)
+                add = ppl_with(model, tok, layer_mod, V, args.budget, 1.0, args.n_ppl)
+                rot = ppl_with(model, tok, layer_mod, V, args.budget, 0.0, args.n_ppl)
+                realised = float(np.linalg.norm(D[:N].sum(0) / math.sqrt(N)))
+                rows.append({"seed": s, "N": N, "add": add, "rot": rot, "delta": rot - add,
+                             "add_ratio": add / base, "realised_displacement_x_f": realised})
+                print(f"    N={N}: add={add:8.2f} rot={rot:9.2f} gap={rot - add:+9.2f} "
+                      f"(add {add / base:.3f}x base, disp {realised:.3f}x f)", flush=True)
+                Path(args.out).with_suffix(".partial.json").write_text(
+                    json.dumps({"unsteered_ppl": base, "rows": rows}, indent=2),
+                    encoding="utf-8")
+            continue
         hi = rng.permutation(len(harm))
         bi = rng.choice(len(benign), size=min(len(benign), 60), replace=False)
         bset = [benign[i] for i in bi]
@@ -212,6 +240,7 @@ def main() -> None:
                 sl = [harm[i] for i in hi[:chunk]]
             dirs.append(extract_refusal_direction(model, tok, sl, bset, layer=args.layer))
         raw = np.stack(dirs)
+        np.save(dcache, raw)          # so a reap never costs the extraction again
         if args.basis == "raw":
             D = raw / (np.linalg.norm(raw, axis=1, keepdims=True) + 1e-12)
         else:
