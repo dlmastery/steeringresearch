@@ -555,7 +555,19 @@ conditioned on gate AUC, so our probe result *strengthens* rather than scoops it
   the effect is direction-specific, not geometry-generic. Power: n=8, m=1, min p=0.0078,
   power ~1.00. Artifact `autoresearch_results/FINDING_Ma_matched_budget_n8.md`.
   **Contradicts the norm-preservation premise of GEMS (2606.19946), ORBIT (2606.22357)
-  and Selective Steering (2601.19375) for the single-vector case.**
+  and Selective Steering (2601.19375) — but ONLY for the single-vector case. See M-b.**
+
+- **M-b (n=8, EVALUATION): the challenge does NOT survive stacking, and GEMS/ORBIT are
+  VINDICATED.** At a matched TOTAL displacement (N orthonormal directions, each f/√N),
+  the additive advantage collapses and inverts: gap **+88.89** (8/8 seeds) at N=1 →
+  **+24.63** at N=2 → **−45.99** at N=4 → **−44.47** at N=8, the last two with CIs
+  excluding zero. The additive arm degrades 1.09× → 3.35× base PPL as vectors stack while
+  rotation holds — exactly the compounding norm-growth mechanism those papers argue for.
+  **All three pre-registered predictions failed**, and P2 failed *deceptively*: coded as
+  "not strictly monotonically decreasing", it returned TRUE only because of a 1.5-PPL
+  uptick at N=8 sitting deep inside its own CI. A discriminating prediction must be
+  operationalised on the EFFECT, not on a brittle ordering a single noisy point can flip.
+  Artifact `autoresearch_results/FINDING_Mb_nstack_matched_budget.md`.
 - Dashboard REGENERATED and now renders the hill-climb (52 HC refs, 19 new per-experiment
   pages). It had been stale since 2026-06-06 and silently dropped every v2 row because
   `load_rows()` requires legacy schema fields -- see `scripts/adapt_v2_for_dashboard.py`.
