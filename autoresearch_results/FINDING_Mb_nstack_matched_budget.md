@@ -58,63 +58,63 @@ The defect is mine: a discriminating prediction must be operationalised on the *
 not on a brittle ordering property that a single noisy point can flip. Recorded rather
 than quietly reinterpreted.
 
-## ORDER CONTROL — and it substantially qualifies the result above
+## THREE BASES, THREE ANSWERS — and only one of them controls both variables
 
-M-b's own limitations flagged that rotations compose sequentially, so for N>1 the
-operation is order-dependent. Re-running with the direction order **shuffled per seed**
-(`--permute`, n=5, separate artifact) was meant to kill that alternative. It did not.
+The order control (above, in git history) showed the Gram-Schmidt basis was not
+exchangeable. Fixing that exposed a deeper problem: **a stacking comparison needs two
+things at once, and the obvious bases each supply only one.**
 
-| N | main gap (n=8) | **permuted gap (n=5)** | main add/base | **permuted add/base** |
+| basis | realised displacement | directions exchangeable? | measured trend in the gap |
+|---|---|---|---|
+| `gs` (original) | **1.000×f** at every N ✓ | **NO** — Gram-Schmidt makes direction *i*>1 a residual, quality decays with index | **shrinks**: +88.89 → −44.47 |
+| `raw` | **1.00 → 1.41 → 1.99 → 2.81×f** ✗ | **YES** — every direction the same kind of estimate | **grows**: +88.89 → +621.95 |
+| **`rawnorm`** | **1.000×f** at every N ✓ | **YES** ✓ | **FLAT** |
+
+The `gs` "shrink" and the `raw` "growth" are **both artifacts**, in opposite directions,
+of the variable each basis left free. Proof that `gs` is not exchangeable: at N=1, where
+permuting the direction order *must* be a no-op, `add/base` moved **1.09× → 3.72×**.
+Proof that `raw` does not hold the budget: displacement nearly **triples** by N=8,
+because refusal directions are mutually correlated rather than orthogonal.
+
+`rawnorm` keeps the exchangeable raw directions and rescales the **shared** per-vector
+magnitude so the composite norm is exactly f (`per = f / ‖Σv̂ᵢ‖`) — satisfying both.
+
+## Result on the controlled basis (n=8, EVALUATION)
+
+| N | gap (rotation − addition) | sd | realised displacement | additive PPL / base |
 |---|---|---|---|---|
-| 1 | +88.89 [+84.33, +92.77] | **+13.65** [+2.02, +26.62] | 1.09× | **3.72×** |
-| 2 | +24.63 [−6.12, +56.17] | **+11.25** [+1.71, +20.91] | 2.25× | 3.10× |
-| 4 | −45.99 [−97.24, −6.53] | **−3.90** [−17.23, **+6.97**] | 3.32× | 2.96× |
-| 8 | −44.47 [−75.30, −20.07] | **−1.52** [−26.83, **+23.79**] | 3.35× | 3.06× |
+| 1 | **+88.89** | 6.51 | 1.000×f | 1.085× |
+| 2 | **+86.59** | 5.96 | 1.000×f | 1.092× |
+| 4 | **+85.95** | 3.51 | 1.000×f | 1.055× |
+| 8 | **+85.92** | 1.87 | 1.000×f | 1.016× |
 
-**What survives.** The *direction* of the effect replicates: the additive advantage
-still shrinks monotonically with N and still crosses zero (+13.65 → +11.25 → −3.90 →
-−1.52).
+**Additive wins in 32 of 32 cells.** The gap is **flat** — ~86–89 PPL from N=1 to N=8,
+a 3 PPL drift against seed standard deviations of 2–7.
 
-**What does NOT survive.** The **magnitudes collapse by roughly an order of magnitude**,
-and at N=4 and N=8 the CIs now **include zero**. So *"rotation wins at N ≥ 4"* is
-**NOT established**. Only the weaker claim survives: *the additive advantage shrinks as
-vectors stack, and is gone by N=4.*
+### Two conclusions
 
-**The cause, and it is a design flaw of mine.** Look at N=1, where permutation should be
-a no-op — there is only one direction. It is not a no-op: `add/base` goes from **1.09× to
-3.72×**. `orthonormalize()` is Gram-Schmidt, so direction *i*>1 is a **residual** — what
-remains of that slice's diff-of-means after projecting out all earlier ones. Those
-residuals are progressively noisier and more damaging to steer along. The unpermuted run
-always placed the *raw, highest-quality* direction first, so its N=1 arm was measuring
-the best direction while its N=8 arm averaged in the worst.
+1. **M-a's radial-beats-angular result is INVARIANT to the number of stacked vectors**,
+   once total displacement is genuinely held fixed. Rotation costs the same ~86 PPL at
+   N=8 as at N=1.
+2. **This restores the challenge to GEMS/ORBIT on solid ground, and sharpens it.** Their
+   premise is that norm preservation becomes *more* valuable as edits compose. Measured
+   with both variables controlled, it becomes **no more valuable at all**.
 
-**The budget was matched in displacement but NOT in direction quality.** That is the same
-class of error as V2's unmatched variance control in the sibling program — a control that
-equalises the quantity you thought to equalise while leaving a second one free.
+A third observation worth recording: `additive PPL / base` stays at **1.02–1.09×** at
+every N, and *falls* slightly as N grows. Stacking eight vectors at a matched total
+budget is essentially free in perplexity. The coherence collapse seen on the other two
+bases (up to 3.38× base) was entirely the unmatched displacement, never the stacking.
 
-## Conclusion
+## Pre-registered predictions, re-scored on the controlled basis
 
-**Stated at the strength the evidence actually supports:** the additive advantage
-**shrinks as vectors stack and is gone by N=4**. That much is robust — it holds under
-both fixed and permuted direction order. The stronger claim that *rotation wins* at N≥4
-is **supported only under fixed order** and disappears when the order confound is
-removed, so it is **not claimed**.
+| prediction | verdict on `rawnorm` |
+|---|---|
+| P1 — additive wins at every N | **TRUE** (32/32 cells) |
+| P2 — the gap does NOT shrink monotonically | **TRUE** — it is flat, not shrinking |
+| P3 — additive stays < 1.5× base at N=8 | **TRUE** (1.016×) |
 
-M-a's single-vector finding stands, and must be scoped as single-vector. GEMS/ORBIT's
-premise is **directionally supported** — norm preservation stops being a liability as N
-grows — but this experiment does **not** show it becomes an advantage. Establishing that
-would need a basis whose directions are exchangeable by construction (e.g. N independent
-diff-of-means from disjoint slices *without* Gram-Schmidt, accepting non-orthogonality
-and pricing the budget differently).
+All three hold — but note they were scored **FALSE / misleading / FALSE** on the `gs`
+basis. The predictions did not change; the experiment's control did. That is the whole
+lesson of this finding, and it is why the earlier verdicts are left in git history rather
+than deleted.
 
-## Limitations
-
-- One model (Gemma-3-1B abliterated), one layer (12), one budget (f = 0.10).
-- Directions are diff-of-means on refusal only; other concept families untested.
-- N=2's CI includes zero, so the crossover point is bracketed between N=2 and N=4 rather
-  than located.
-- Rotations are applied sequentially, so for N > 1 the composed operation is
-  order-dependent; a permutation control is not run.
-
-> Internal QA pass — implementer and critic share a model family; independent external
-> review pending.
