@@ -685,6 +685,13 @@ listings** (a directory listing said the model was cached; it was a 16 KB stub).
 - Windows **cp1252** console: printing a German filename (umlaut) crashed a 38 GB
   download. Use `PYTHONIOENCODING=utf-8` and `.encode('ascii','replace')`.
 - Piping a long job through `head -n` **SIGPIPE-kills** it.
+- **Harness-tracked background jobs get REAPED; orphaned ones do not.** Three kills this
+  session with RAM healthy each time (COUGHVID WavLM at 1,152/13,535; SVD eGeMAPS at
+  21,200/28,509). Meanwhile the V2 run survived 4h15m -- but only because a stray `&`
+  had orphaned it from the harness. So the fix is NOT more headroom or shorter jobs:
+  **make long jobs resumable.** `extract_egemaps_resumable.py` checkpoints every 500
+  files and skips completed paths on restart, so a reap costs a minute instead of hours.
+  Compute deserves the same treatment as bandwidth (`fetch_svd_resumable.py`).
 - **Never put `&` inside a `run_in_background` call.** Any form of it — `nohup … &`,
   `cmd > log 2>&1 &`, `cmd & sleep 5` — orphans the real job: the *wrapper* exits
   immediately, the completion notification fires for the wrapper, and the actual
