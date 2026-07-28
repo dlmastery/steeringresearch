@@ -96,15 +96,16 @@ class NStackHook:
     spanned by the current state and its direction.
     """
 
-    def __init__(self, V: torch.Tensor, f: float, r: float):
+    def __init__(self, V: torch.Tensor, f: float, r: float, per: float | None = None):
         self.V, self.f, self.r = V, float(f), float(r)      # V: (N, d)
+        self.per = per      # explicit per-vector share; None -> f/sqrt(N) (orthogonal case)
 
     def __call__(self, module, args, output):
         h = output[0] if isinstance(output, tuple) else output
         if self.f == 0.0:
             return output
         N = self.V.shape[0]
-        per = self.f / math.sqrt(N)                          # quadrature-matched share
+        per = self.per if self.per is not None else self.f / math.sqrt(N)
         Vh = self.V.to(dtype=h.dtype, device=h.device)
         radial = torch.zeros_like(h)
         for i in range(N):
@@ -135,8 +136,32 @@ def orthonormalize(V: np.ndarray) -> np.ndarray:
     return np.stack(out) if out else V
 
 
-def ppl_with(model, tok, layer_mod, V, f, r, n_ppl) -> float:
-    hk = layer_mod.register_forward_hook(NStackHook(V, f, r))
+def per_share(D: np.ndarray, N: int, f: float, basis: str) -> tuple[float, float]:
+    """Per-vector magnitude, and the realised composite displacement in units of f.
+
+    THE TENSION THIS RESOLVES. A stacking comparison needs two things at once:
+      (a) MATCHED TOTAL DISPLACEMENT across N, or "more vectors" is confounded with
+          "more displacement";
+      (b) EXCHANGEABLE directions, or the result depends on which slot holds the best
+          one.
+    Measured, the first two bases each satisfy exactly one:
+      gs  -- displacement 1.000x f at every N (a: yes), but Gram-Schmidt makes direction
+             i>1 a residual, so quality decays with index (b: no).
+      raw -- every direction is the same kind of estimate (b: yes), but refusal
+             directions are mutually CORRELATED, so the composite grows to 2.813x f by
+             N=8 (a: no).
+    rawnorm keeps the exchangeable raw directions and rescales the shared per-vector
+    magnitude so the composite norm is exactly f -- satisfying both.
+    """
+    if basis == "rawnorm":
+        s = np.linalg.norm(D[:N].sum(0))
+        per = f / max(s, 1e-12)                       # ||sum(per * v_hat)|| == f
+        return per, 1.0
+    per = f / math.sqrt(N)
+    return per, float(np.linalg.norm(D[:N].sum(0) / math.sqrt(N)))
+
+def ppl_with(model, tok, layer_mod, V, f, r, n_ppl, per=None) -> float:
+    hk = layer_mod.register_forward_hook(NStackHook(V, f, r, per))
     try:
         return float(wikitext_perplexity(model, tok, n=n_ppl))
     finally:
@@ -151,7 +176,7 @@ def main() -> None:
     ap.add_argument("--budget", type=float, default=0.10)
     ap.add_argument("--ns", default="1,2,4,8")
     ap.add_argument("--n-ppl", type=int, default=20)
-    ap.add_argument("--basis", choices=("gs", "raw"), default="gs",
+    ap.add_argument("--basis", choices=("gs", "raw", "rawnorm"), default="gs",
                     help="gs  = Gram-Schmidt orthonormal (the ORIGINAL M-b basis). Its "
                          "directions are NOT exchangeable: direction i>1 is a residual of "
                          "the earlier ones, progressively noisier, so the first slot "
@@ -174,7 +199,7 @@ def main() -> None:
     ap.add_argument("--out", default=str(ROOT / "autoresearch_results" / "nstack_matched_budget.json"))
     args = ap.parse_args()
     NS = [int(x) for x in args.ns.split(",")]
-    tag = ("_PERMUTED" if args.permute else "") + ("_RAWBASIS" if args.basis == "raw" else "")
+    tag = ("_PERMUTED" if args.permute else "") + ({"raw": "_RAWBASIS", "rawnorm": "_RAWNORM"}.get(args.basis, ""))
     if tag:                               # never overwrite the main artifact
         args.out = args.out.replace(".json", tag + ".json")
 
@@ -209,7 +234,7 @@ def main() -> None:
         if dcache.exists():
             raw = np.load(dcache)
             D = (raw / (np.linalg.norm(raw, axis=1, keepdims=True) + 1e-12)
-                 if args.basis == "raw" else orthonormalize(raw))
+                 if args.basis in ("raw", "rawnorm") else orthonormalize(raw))
             if args.permute:
                 D = D[np.random.default_rng(500 + s).permutation(D.shape[0])]
             print(f"  [seed {s}] {D.shape[0]} directions from cache", flush=True)
@@ -217,9 +242,9 @@ def main() -> None:
                 if D.shape[0] < N or (s, N) in done:
                     continue
                 V = torch.tensor(D[:N], dtype=torch.float32)
-                add = ppl_with(model, tok, layer_mod, V, args.budget, 1.0, args.n_ppl)
-                rot = ppl_with(model, tok, layer_mod, V, args.budget, 0.0, args.n_ppl)
-                realised = float(np.linalg.norm(D[:N].sum(0) / math.sqrt(N)))
+                per, realised = per_share(D, N, args.budget, args.basis)
+                add = ppl_with(model, tok, layer_mod, V, args.budget, 1.0, args.n_ppl, per)
+                rot = ppl_with(model, tok, layer_mod, V, args.budget, 0.0, args.n_ppl, per)
                 rows.append({"seed": s, "N": N, "add": add, "rot": rot, "delta": rot - add,
                              "add_ratio": add / base, "realised_displacement_x_f": realised})
                 print(f"    N={N}: add={add:8.2f} rot={rot:9.2f} gap={rot - add:+9.2f} "
@@ -241,7 +266,7 @@ def main() -> None:
             dirs.append(extract_refusal_direction(model, tok, sl, bset, layer=args.layer))
         raw = np.stack(dirs)
         np.save(dcache, raw)          # so a reap never costs the extraction again
-        if args.basis == "raw":
+        if args.basis in ("raw", "rawnorm"):
             D = raw / (np.linalg.norm(raw, axis=1, keepdims=True) + 1e-12)
         else:
             D = orthonormalize(raw)
@@ -253,12 +278,12 @@ def main() -> None:
             if D.shape[0] < N or (s, N) in done:
                 continue
             V = torch.tensor(D[:N], dtype=torch.float32)
-            add = ppl_with(model, tok, layer_mod, V, args.budget, 1.0, args.n_ppl)
-            rot = ppl_with(model, tok, layer_mod, V, args.budget, 0.0, args.n_ppl)
+            per, realised = per_share(D, N, args.budget, args.basis)
+            add = ppl_with(model, tok, layer_mod, V, args.budget, 1.0, args.n_ppl, per)
+            rot = ppl_with(model, tok, layer_mod, V, args.budget, 0.0, args.n_ppl, per)
             # realised displacement of the composite edit, in units of f. Exactly 1.0
             # for an orthonormal basis; >1 when directions are correlated. Identical
             # across the add/rot arms at a given N, so it cannot bias the contrast.
-            realised = float(np.linalg.norm(D[:N].sum(0) / math.sqrt(N)))
             rows.append({"seed": s, "N": N, "add": add, "rot": rot, "delta": rot - add,
                          "add_ratio": add / base, "realised_displacement_x_f": realised})
             print(f"    N={N}: add={add:8.2f} rot={rot:9.2f} gap={rot - add:+9.2f} "
