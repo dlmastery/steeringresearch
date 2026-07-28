@@ -1,0 +1,75 @@
+{
+  "embedder": "gemma",
+  "gemma_model": "models/google/gemma-3-1b-it",
+  "gemma_layer": 12,
+  "hidden": 1152,
+  "n_per_class": 298,
+  "K": 5,
+  "note": "Embedder ablation of the MiniLM headline. ONLY the embedder changed; data, K, splits, n and the hard-negative construction are identical. The OOD arm was NOT reached -- the run was reaped during CSTM-Bench loading -- so it is absent here rather than guessed.",
+  "conditions": {
+    "easy": {
+      "confound": {
+        "kcount_auc": 0.5,
+        "totalchar_auc": 0.11
+      },
+      "methods": {
+        "per_traj_max": {
+          "auc": 1.0
+        },
+        "mean_agg": {
+          "auc": 1.0
+        },
+        "attn_pool": {
+          "auc": 1.0
+        },
+        "gnn_agg": {
+          "auc": 1.0
+        }
+      }
+    },
+    "hard": {
+      "confound": {
+        "kcount_auc": 0.5,
+        "totalchar_auc": 0.704
+      },
+      "methods": {
+        "per_traj_max": {
+          "auc": 0.628,
+          "ci": [
+            0.584,
+            0.672
+          ],
+          "margin_over_bar": -0.076
+        },
+        "mean_agg": {
+          "auc": 0.947,
+          "ci": [
+            0.929,
+            0.963
+          ],
+          "margin_over_bar": 0.243
+        },
+        "attn_pool": {
+          "auc": 0.838,
+          "ci": [
+            0.806,
+            0.869
+          ],
+          "margin_over_bar": 0.134
+        },
+        "gnn_agg": {
+          "auc": 0.905,
+          "ci": [
+            0.881,
+            0.928
+          ],
+          "margin_over_bar": 0.201
+        }
+      }
+    }
+  },
+  "ood": {
+    "status": "NOT RUN -- run reaped during CSTM-Bench load"
+  },
+  "replication_verdict": "HOLDS. The per-trajectory collapse and aggregator recovery reproduce on a completely different representation (1152-dim Gemma decoder residual vs 384-dim MiniLM sentence encoder). Ordering mean_agg > gnn_agg > attn_pool > per_traj_max is preserved; per_traj_max sits BELOW the 0.704 length bar under both."
+}

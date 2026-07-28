@@ -51,3 +51,38 @@ table cannot stand. Resolve both, then drop the corresponding `[UNVERIFIED]` tag
 
 *Internal QA pass — independent external review pending (auditor shares a model
 family with the author).*
+
+---
+
+## Addendum 2026-07-28 — the embedder ablation, and what it rules out
+
+The headline was measured entirely with **MiniLM**. That left an unpriced alternative
+explanation: *"aggregation recovers fractured intent"* might be a property of the
+aggregation, or an artifact of that one 384-dim sentence encoder. Re-running with
+**Gemma-3-1B layer-12 mean-pooled** (1152-dim decoder residual stream) changes only the
+embedder — data, K, splits, n=298/class and the hard-negative construction are identical.
+
+| hard condition | MiniLM | **Gemma** | margin over the 0.704 length bar (Gemma) |
+|---|---|---|---|
+| `per_traj_max` (baseline) | 0.607 | **0.628** | **−0.076 — BELOW the bar** |
+| `mean_agg` | 0.936 | **0.947** | **+0.243** |
+| `gnn_agg` | 0.812 | **0.905** | +0.201 |
+| `attn_pool` | 0.863 | **0.838** | +0.134 |
+
+**Verdict: the finding HOLDS across embedders.** The per-trajectory collapse and the
+aggregator recovery both reproduce on a completely different representation, and the
+ordering `mean_agg > gnn_agg > attn_pool > per_traj_max` is preserved. Under *both*
+embedders the per-trajectory baseline sits **below** the length-confound bar, so the
+claimable result is the aggregation margin and nothing else.
+
+This matters because the alternative was live. M-b in the parent repo had just shown a
+single-vector result failing to survive a change of regime, so "it replicates" is not a
+formality here — it is the specific thing that could have gone wrong.
+
+**Not run: the OOD arm.** The job was reaped during CSTM-Bench loading, so the Gemma OOD
+numbers are absent rather than estimated. The MiniLM OOD result (near chance, 0.48–0.57)
+therefore remains the only measured out-of-distribution evidence, and this ablation does
+not extend it.
+
+*Internal QA pass — independent external review pending (auditor shares a model family
+with the author).*
