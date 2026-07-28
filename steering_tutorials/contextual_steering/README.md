@@ -29,6 +29,15 @@ steering for?* — and dials the strength accordingly.
 
 ---
 
+
+> **Instrument caveat — read before citing any rate on this page.** Every refusal /
+> compliance / gibberish number here is scored by a local LLM judge. That judge family
+> was calibrated against ground-truth labels and measured **ROC-AUC 0.665–0.751** — below
+> the 0.85 bar this course sets for a trustworthy instrument. Small differences between
+> arms therefore sit at or below the judge's own noise floor and must not be read as
+> effects. See [`../JUDGE_VALIDITY.md`](../JUDGE_VALIDITY.md) for the calibration, the
+> continuous-readout improvement (+0.086 AUC, 12.8x faster), and which claims survive.
+
 ## The key idea in code
 
 The steering direction doubles as its own gate: a harmful prompt's mean-pooled
