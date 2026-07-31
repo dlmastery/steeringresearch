@@ -2,6 +2,17 @@
 
 Independent paper/verification audit. Auditor did not modify lesson code or the README.
 
+> **PARTIALLY SUPERSEDED (2026-07-31).** Checks 1–3 (citations, method fidelity,
+> claim accuracy) still stand. **Check 4's numbers do not** — it audits a
+> `results.json` (self-judge, n=20, "refusal 0.50 → 0.70") that has since been
+> replaced twice: first by an off-family-judge run at n=200, and now by a run
+> whose direction is extracted from the **aligned base model** rather than the
+> abliterated one. The lesson's "Not supported" verdict against ActAdd / CAA /
+> Arditi — which check 3 passed as fair — has been **withdrawn** as an extraction
+> artifact; see README [3b](README.md#3b-where-the-direction-is-extracted-from)
+> and the Results section. This audit has **not** been re-run against the current
+> artifacts; treat check 4 as historical.
+
 ## Cited papers
 - Turner et al. 2023, ActAdd — arXiv:2308.10248
 - Rimsky/Panickssery et al. 2023, CAA — arXiv:2312.06681

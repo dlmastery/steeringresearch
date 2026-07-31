@@ -51,3 +51,4 @@ autoresearch_results/judge_cache/
 .playwright-mcp/
 .dash_v2/
 .dircache_*.npy
+steering_tutorials/*/artifacts/_run_checkpoint.json

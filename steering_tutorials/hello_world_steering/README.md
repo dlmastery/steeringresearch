@@ -55,6 +55,7 @@ dial portable; the gate makes it selective. Full file-by-file walkthrough below.
 1. [What you'll build](#1-what-youll-build)
 2. [Concepts: probing (READ) vs steering (WRITE)](#2-concepts-probing-read-vs-steering-write)
 3. [The method — Contrastive Activation Addition](#3-the-method--contrastive-activation-addition)
+3b. [Where the direction is extracted from](#3b-where-the-direction-is-extracted-from)
 4. [Conditional steering — the gate is the probe](#4-conditional-steering--the-gate-is-the-probe)
 5. [The judge — the same Gemma grades itself](#5-the-judge--the-same-gemma-grades-itself)
 6. [Data flow](#6-data-flow)
@@ -70,8 +71,11 @@ dial portable; the gate makes it selective. Full file-by-file walkthrough below.
 
 A complete conditional-steering pipeline that:
 
-1. **Extracts a refusal steering vector** from the abliterated Gemma-3-1B by
-   contrasting its activations on harmful vs. benign prompts (diff-of-means).
+1. **Extracts a refusal steering vector** from the **aligned** Gemma-3-1B by
+   contrasting its activations on harmful vs. benign prompts (diff-of-means) —
+   then transplants it into the abliterated model of the same architecture.
+   (Reading the contrast from the *abliterated* model instead is the lesson's
+   original bug; see [3b](#3b-where-the-direction-is-extracted-from).)
 2. **Steers generation** by adding that vector to the residual stream at
    inference time — turning a model that *complies* with harmful requests into
    one that *refuses*.
@@ -81,17 +85,29 @@ A complete conditional-steering pipeline that:
    `REFUSAL` (steering worked), `COMPLIANCE` (no effect), or `GIBBERISH`
    (steering broke coherence).
 
-**Teaser (and an honest negative).** An abliterated model has had its refusal
-removed, so at baseline it happily answers "how do I pick a lock?". The *goal* is
-to *re-install* refusal from the outside with a single activation vector, applied
-**selectively** only when the prompt trips the gate. But the honest measurement
-(off-family Qwen-3B judge, 500/class toxic-chat, n=200/arm) says this simple
-fixed vector **does not** install refusal on this model: as α rises 0 → 0.15,
-refusal *falls* **0.33 → 0.07** while gibberish *climbs* **0.225 → 0.755** — pushing
-harder just shoves activations off-manifold into word salad. That negative is the
-whole point of the lesson: a one-subtraction vector is not a refusal switch, which
-is exactly why later lessons reach for *learned* interventions. Full numbers in
-the [Results section](#results--measured-vs-the-claim) and `artifacts/results.json`.
+**Teaser (a partial negative, and a bug this lesson used to blame on the
+literature).** An abliterated model has had its refusal removed, so at baseline it
+happily answers "how do I pick a lock?". The *goal* is to *re-install* refusal
+from the outside with a single activation vector, applied **selectively** only
+when the prompt trips the gate.
+
+For most of this lesson's life it read that vector out of the **abliterated model
+itself** — a model with no refusal behaviour left to difference — measured the
+resulting mess, and stamped "**Not supported**" on ActAdd, CAA and Arditi. That
+verdict has been **withdrawn**: it was an artifact of the extraction, not a
+property of the method ([3b](#3b-where-the-direction-is-extracted-from)).
+
+Reading the direction from the **aligned** Gemma-3-1B instead (and steering the
+abliterated one) gives a vector that is **cosine 0.99999988 identical** to the one
+the sibling [`realignment`](../realignment/README.md) lesson uses to drive harmful
+compliance to 0.045. With it, harmful compliance falls monotonically
+**0.445 → 0.115** as α rises 0 → 0.15. But judged *refusal* still falls
+(0.33 → 0.04): at these strengths on a 1B model the vector removes compliance
+without installing a coherent refusal — the model drifts into fluent, unrelated
+prose. (Not word salad: the deterministic repetition gate fires on 0/20 sampled
+outputs. Grammar survives; instruction-following does not.) Full numbers, both
+extraction arms side by side, in the
+[Results section](#results--measured-vs-the-claim) and `artifacts/results.json`.
 
 ---
 
@@ -185,6 +201,75 @@ training, and is the technique behind the foundational steering papers:
 
 This is the *simplest* steering method, not the state of the art — see
 [caveats](#10-honest-caveats).
+
+---
+
+## 3b. WHERE the direction is extracted from
+
+The formula above hides a question that turns out to decide the whole result:
+**which model do you run the two prompt sets through?**
+
+For most of this lesson's life the answer was "the same abliterated model we
+steer." That is a **bug**, and it is worth understanding because it is subtle,
+it never crashes, and it produced a confident, well-formed, wrong conclusion.
+
+Diff-of-means finds the axis along which the two prompt sets' activations
+separate. On an **aligned** model, harmful and benign prompts separate along
+*refusal*: the model has actually decided to decline one set and help the other,
+and Arditi et al. show that decision is carried by a single direction. On an
+**abliterated** model, that machinery has been surgically removed — the model
+refuses *neither* set. The two clouds still separate, but along whatever is left:
+**topic**. Harmful-subject-matter vs benign-subject-matter.
+
+So the old recipe extracted a direction with a large **topic** component, called
+it a refusal direction, added it to the residual stream, measured falling refusal
+and rising gibberish, and wrote "**Not supported**" next to ActAdd, CAA and
+Arditi. We were blaming three real papers for our own extraction error.
+
+Two honest qualifications, both measured below and neither of which rescues the
+old verdict:
+
+- The two directions turn out to be **cos = +0.905 apart**, not orthogonal. On
+  this model, at this layer, on this data, "harmful topic" and "refuse this" are
+  largely the same axis — which is *why* the buggy arm produced a plausible curve
+  and why the bug went unnoticed. It is still not a controlled extraction, and a
+  verdict about three papers cannot rest on one.
+- Fixing the extraction **did not flip the refusal curve**. It materially changed
+  the numbers (compliance suppression 0.445→0.115 instead of 0.445→0.175) and it
+  changed what may be concluded, but refusal still falls with α here. The
+  withdrawal of "Not supported" is a statement about what the old measurement was
+  *entitled to claim*, not a reversal into "it works".
+
+**The fix** (which the sibling lesson
+[`../realignment`](../realignment/README.md) had been doing correctly all along):
+abliteration only damages the *abliterated* model. The **aligned base model of
+the same architecture still refuses perfectly**, so its residual stream still
+carries a clean refusal direction. Read the direction there, then transplant it:
+
+```
+                 ALIGNED  gemma-3-1b-it            ABLITERATED gemma-3-1b-it
+                 (refusal intact)                  (refusal removed)
+   harmful ──►   layer-12 last-token acts  ─┐
+   benign  ──►   layer-12 last-token acts  ─┴─► v = Δμ ──►  h += α·‖h‖·unit(v)
+                        READ only                            WRITE / steer
+```
+
+Same architecture ⇒ same hidden width (1152) and the same representational depth
+at layer 12, so the transplant is well-typed; `run_steering.py` asserts both
+before it steers. The run loads the base model, takes one diff-of-means, frees
+it, and only then loads the model it steers.
+
+`config.EXTRACT_FROM` selects the source:
+
+| value | direction read from | status |
+|---|---|---|
+| `base` *(default)* | aligned `models/google/gemma-3-1b-it` | the correct recipe |
+| `abliterated` | the steered model itself | **the old bug**, kept as a labelled ablation |
+| `both` | runs the unconditional sweep under each, on identical prompts | the contrast plot |
+
+Keeping the buggy arm runnable is deliberate: a negative result you cannot
+reproduce is not evidence, and the contrast is the most instructive thing in
+this lesson.
 
 ---
 
@@ -310,13 +395,20 @@ lesson 1 so the gate and the steer speak about the same representation:
 
 ```python
 # config.py
-MODEL_ID = "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"
+MODEL_ID   = "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"  # STEERED
+BASE_MODEL = "models/google/gemma-3-1b-it"       # ALIGNED — the direction is READ here
+EXTRACT_FROM = "base"               # base | abliterated | both  (see §3b)
 STEER_LAYER = 12                    # read the contrast here AND inject here
 ALPHAS = [0.0, 0.05, 0.10, 0.15]    # 0.0 = baseline; top kept small (coherence cliff)
-N_PER_CLASS = 60
-N_EXTRACT = 40                      # per class, used ONLY to build the vector
+N_PER_CLASS = 500
+N_EXTRACT = 300                     # per class, used ONLY to build the vector
 GIBBERISH_TOLERANCE = 0.20          # disqualify an alpha whose gibberish rate exceeds this
 ```
+
+`MODEL_ID` and `BASE_MODEL` are **two different models of the same architecture**,
+and keeping them straight is the single most important detail in this lesson:
+we **read** the direction from the aligned one and **write** it into the
+abliterated one. §3b explains why.
 
 The extract/eval split is disjoint on purpose: the first `N_EXTRACT` prompts per
 class *build* the vector, the rest are held out to *grade* it — so we never
@@ -348,8 +440,12 @@ def hook(_m, _inp, output):
 ### `steer_vector.py` — build the refusal vector (CAA / diff-of-means)
 
 Extracts layer-12 activations for the `N_EXTRACT` harmful and benign prompts,
-averages each group, subtracts, and saves the unit direction to
-`artifacts/steering_vector.pt`:
+averages each group, subtracts, and saves the unit direction. **Which model is
+passed in is decided by `run_steering.py`, not here** — by default the *aligned*
+base model ([3b](#3b-where-the-direction-is-extracted-from)). Vectors are written
+per source to `artifacts/steering_vector_from_{base,abliterated}.pt`, and the
+primary one is mirrored to `artifacts/steering_vector.pt` for `infer.py` /
+`app.py`:
 
 ```python
 # steer_vector.py (sketch)
@@ -390,7 +486,15 @@ python -m steering_tutorials.hello_world_steering.judge   # prints "self-test OK
 Wires everything together and runs the three arms
 ([Section 8](#8-the-three-experiment-arms--results)): build the vector, sweep
 alpha unconditionally, then run the gated arm. Writes `results.json` and renders
-`rates_vs_alpha.png` and `conditional.png`.
+`rates_vs_alpha.png`, `conditional.png` and `extraction_source_contrast.png`.
+
+It also owns the **extraction-source logic**: with `EXTRACT_FROM=base` it loads
+the aligned model, takes one diff-of-means, frees it, *then* loads the model it
+steers — and asserts the two share a hidden size and layer index before steering,
+so a shape mismatch fails loudly instead of steering with a garbage direction.
+Progress is checkpointed to `artifacts/_run_checkpoint.json` under a fingerprint
+of the full config, so a killed run resumes and a *changed* config never silently
+reuses stale cells.
 
 ### `infer.py` — steer one prompt from the CLI
 
@@ -415,7 +519,11 @@ refusal rate **rises** with alpha, then coherence collapses — past some alpha
 the model stops producing refusals and starts producing **gibberish** (the
 coherence cliff). `rates_vs_alpha.png` plots refusal / compliance / gibberish
 rate vs alpha; the "best" alpha is the smallest one with high refusal *before*
-gibberish exceeds `GIBBERISH_TOLERANCE = 0.20`.
+gibberish exceeds `GIBBERISH_TOLERANCE = 0.20`. **Measured, that expected shape
+does not appear** — compliance falls monotonically but refusal falls with it; see
+the results below. With `EXTRACT_FROM=both` this arm runs **twice**, once per
+extraction source, so the correct and buggy directions are measured on identical
+prompts (`extraction_source_contrast.png`).
 
 **Arm (c) — conditional steering.** Fix the chosen alpha and route every prompt
 through the gate: harmful prompts get steered (→ refusal), benign prompts pass
@@ -423,41 +531,120 @@ untouched (→ still helpful, no over-refusal). `conditional.png` contrasts the
 harmful and benign streams and shows the gate preserving benign behavior that
 unconditional steering would have destroyed.
 
-**Measured results.** The authoritative numbers — measured with the off-family
-Qwen-3B judge on the shared 500/class toxic-chat set at n=175/arm — are in the
-**"Results — measured vs. the claim"** section immediately below. (An earlier
-draft of this lesson reported an inflated 0.50 → 0.70 "refusal rises" table from
-a 1B *self*-judge on the easy in-distribution JailbreakBench set; that instrument
-was wrong and the honest section explains why. Raw numbers and side-by-side
-generations are in `artifacts/results.json`.)
+**Measured results.** The authoritative numbers — off-family Qwen2.5-3B judge,
+shared 500/class toxic-chat set, **n=200/arm** — are in the
+**"Results — measured vs. the claim"** section immediately below. Two earlier
+drafts of this page are superseded: an inflated 0.50 → 0.70 "refusal rises" table
+from a 1B *self*-judge on the easy in-distribution JailbreakBench set, and the
+"Not supported"-on-three-papers table that was measured with a direction
+extracted from the abliterated model. Raw numbers, **both extraction arms**, and
+side-by-side generations are in `artifacts/results.json`.
 
 ---
 
 ## Results — measured vs. the claim
 
+### The alpha sweep under BOTH extraction sources
+
+Identical steered model, identical 200 held-out harmful prompts, identical
+alphas, identical judge — **only the model the direction was read from differs.**
+
+| α | **BASE-extracted** (aligned — the fix)<br>refusal / compliance / gibberish | **ABLITERATED-extracted** (the old bug)<br>refusal / compliance / gibberish |
+|---|---|---|
+| 0.00 | 0.330 / 0.445 / 0.225 | 0.330 / 0.445 / 0.225 |
+| 0.05 | 0.220 / 0.370 / 0.410 | 0.205 / 0.445 / 0.350 |
+| 0.10 | 0.120 / 0.250 / 0.630 | 0.210 / 0.295 / 0.495 |
+| 0.15 | 0.040 / **0.115** / 0.845 | 0.070 / **0.175** / 0.755 |
+
+`n = 200` per cell, single seed, off-family Qwen2.5-3B judge — **screening tier**.
+α=0 injects no vector at all, so those two rows are the same measurement twice
+and agree exactly; the α=0 cell run a second time later in the session moved by
+0.005, which is this setup's empirical run-to-run noise floor at n=200.
+Plot: `artifacts/extraction_source_contrast.png`.
+
+**The headline answer: refusal does NOT rise with α under either source.** Fixing
+the extraction did not flip the sign of that curve. But it did change two things
+that matter, and it changes *what may be concluded*:
+
+- **Compliance suppression is real and is stronger with the correct vector.**
+  Harmful compliance falls **0.445 → 0.115** (−74% relative) with the
+  base-extracted direction, versus 0.445 → 0.175 with the buggy one. Monotone in
+  α in both arms.
+- **The two directions are cos = +0.905 apart** (norms 247.6 vs 342.3). They are
+  *not* orthogonal — which is exactly why the old buggy arm produced a
+  plausible-looking curve, and why the bug survived so long.
+
+### Two checks that pin the diagnosis down
+
+**1. The corrected direction is provably the right one.** The vector this lesson
+now extracts is **cosine 0.99999988** identical to the one the sibling
+[`../realignment`](../realignment/README.md) lesson extracts — the direction that
+drives harmful compliance from ASR 0.46 → **0.045** at α=0.25 with benign
+over-refusal 0.01. Same model, same layer, same 300 prompts. So the direction
+demonstrably mediates refusal; nothing is wrong with the extraction any more.
+
+**2. The "gibberish" is not word salad — and the old mechanism claim was wrong.**
+At α=0.15 with the base vector, on 20 held-out harmful prompts:
+
+| readout | result |
+|---|---|
+| deterministic repetition / distinct-token gate (`is_gibberish`) | fires on **0 / 20** |
+| Qwen-3B judge verdict | GIBBERISH **15**, COMPLIANCE 4, REFUSAL 1 |
+
+The text is **fluent, grammatical English**. What it stops being is *an answer*:
+the model drifts into unrelated descriptive prose ("The silken threads cascaded,
+a hush fell over the silver reeds…") instead of either complying or refusing. So
+the previous README's mechanism sentence — "off-manifold text is word salad" —
+was **wrong on the surface form**. Steering at this magnitude does not break
+grammar; it breaks **instruction-following**. The judge, correctly given its
+rubric, files a fluent non-answer under GIBBERISH.
+
+### Claims vs. verdicts
+
 | Claim | What we measured (**n=200/arm**, screening-tier, off-family Qwen-3B judge, 500/class toxic-chat) | Verdict |
 |---|---|---|
-| A diff-of-means vector *installs* refusal (ActAdd 2308.10248 / CAA 2312.06681 / Arditi 2406.11717) | unconditional refusal **falls** 0.33 (α=0) → 0.21 → 0.21 → **0.07** (α=0.15); it never rises | **Not supported** |
-| Push harder and coherence breaks | gibberish climbs **0.225 → 0.35 → 0.50 → 0.755**; compliance collapses **0.445 → 0.175** | **Confirmed — this is the dominant effect** |
-| The lesson-1 probe can gate the steer (CAST 2409.05907) | gate accuracy **0.69** on toxic-chat (the probe was trained on JBB) | **Transfers poorly** |
-| Conditional gating recovers behavior | at α=0.10: harmful-refusal **0.28**, benign over-refusal **0.48**, gibberish **0.205** | **Weak** |
+| Adding a fixed activation direction at inference steers generation (ActAdd 2308.10248) | the base-extracted direction moves behavior monotonically at every α: compliance **0.445 → 0.370 → 0.250 → 0.115** | **Supported** |
+| A diff-of-means contrast yields a usable steering direction (CAA 2312.06681) | it does — *provided the contrast is run on a model that exhibits the behavior*. Read from the aligned model it suppresses compliance 74%; read from the abliterated model, only 61%, and it is a different direction (cos 0.905) | **Supported, with the extraction condition made explicit** |
+| Refusal is mediated by a single direction you can add back (Arditi 2406.11717) | the extracted direction is **cos 0.99999988** identical to the one that drives ASR 0.46 → 0.045 in [`../realignment`](../realignment/README.md); here it suppresses compliance but judged refusal still falls 0.33 → 0.04 | **Partially supported** — the direction is right; at these α it removes compliance without producing a *coherent refusal* |
+| Push harder and the output degrades | compliance collapses **0.445 → 0.115**; judge-GIBBERISH climbs **0.225 → 0.845** — but the deterministic repetition gate fires on **0/20** sampled α=0.15 outputs. The failure is loss of instruction-following, not degenerate text | **Confirmed, with the mechanism corrected** |
+| The lesson-1 probe can gate the steer (CAST 2409.05907) | gate accuracy **0.6925** on toxic-chat (the probe was trained on JailbreakBench) | **Transfers poorly** |
+| Conditional gating recovers behavior | at α=0.05: harmful-refusal **0.285**, benign over-refusal **0.48**, gibberish **0.18** | **Weak** |
 
-**Honest read.** Every number is **screening-tier** (n=200 per arm, single seed),
-graded by an **off-family Qwen-3B judge** on the shared 500/class toxic-chat set —
-no self-grading. Under that honest instrument, **fixed diff-of-means refusal
-steering largely does not work here.** As α rises, refusal *drops* (0.33 → 0.07)
-while gibberish *more than triples* (0.225 → 0.755): the mechanism is not "add a
-refusal behavior" but "push activations off-manifold," and off-manifold text is
-word salad, not a coherent refusal. The finding is **robust to the larger N** (it
-held from the earlier n=175 run: 0.33 → 0.07, gibberish 0.21 → 0.69). **Why the
-change from the old 0.50 → 0.70 headline?** That number was inflated on *both* ends:
-the 1B self-judge mislabeled hedged-but-compliant text as REFUSAL, *and* the easy
-in-distribution JBB set was far more separable than toxic-chat. Swap in the
-off-family judge on harder data and the effect inverts. The JBB-trained gate also
-transfers poorly (accuracy 0.69), so conditional steering inherits both problems.
-This is the honest,
-sobering result — a fixed one-subtraction vector is not a refusal switch on this
-model, and later lessons show what a *learned* intervention buys you.
+### Honest read — and a correction to this page's own history
+
+Every number is **screening-tier** (n=200 per arm, single seed), graded by an
+**off-family Qwen2.5-3B judge** on the shared 500/class toxic-chat set — no
+self-grading.
+
+**This page previously stamped "Not supported" on ActAdd, CAA and Arditi. That
+verdict was not earned, and it has been withdrawn.** It was measured with a
+direction extracted from the *abliterated* model — a model whose refusal
+behaviour had been surgically removed, so there was no refusal signal in it to
+difference (see [3b](#3b-where-the-direction-is-extracted-from)). Blaming three
+real papers for our own extraction error was the wrong call, and the reproducible
+ablation above is what makes the error visible rather than merely asserted.
+
+What the corrected measurement actually shows is narrower and more interesting
+than either the old "it works" or the old "it doesn't":
+
+- The refusal direction **is** real, **is** transferable across the
+  aligned→abliterated pair, and **does** monotonically remove harmful compliance.
+- At the α range this lesson sweeps (≤0.15), on a **1B** abliterated model with a
+  48-token window, what replaces compliance is mostly a fluent non-answer rather
+  than a refusal. `realignment` reaches a clean operating point only at
+  **α = 0.25**, outside this lesson's grid.
+- **The two lessons disagree because their readouts disagree, not because their
+  vectors do.** `realignment` scores success as *non-compliance* (ASR), which
+  counts a fluent non-answer as a win; this lesson separates REFUSAL from
+  GIBBERISH and so does not. Our 15/20 judge-GIBBERISH at α=0.15 suggests a
+  meaningful share of that lesson's ASR drop is "stopped answering", not
+  "refused" — an ordinary Goodhart failure of a single-number safety metric, and
+  the reason this course prices coherence separately.
+
+The JBB-trained gate also transfers poorly (0.6925), so conditional steering
+inherits that too. The standing lesson is unchanged in spirit and sharper in
+fact: **a fixed one-subtraction vector is not a coherent-refusal switch at these
+strengths** — but say that about *this measurement*, not about the papers.
 
 ---
 
@@ -473,9 +660,20 @@ python -m steering_tutorials.hello_world.train_probe
 Then, from the **repo root** (`steeringresearch/`):
 
 ```bash
-# 1) Build the vector + run all three arms (GPU, same ~2 GB abliterated Gemma-3-1B)
+# 1) Build the vector + run all three arms.
 #    STEER_JUDGE_MODEL selects the OFF-FAMILY judge (avoids same-model grading bias).
+#    Default STEER_EXTRACT_FROM=base: read the direction from the ALIGNED model
+#    (models/google/gemma-3-1b-it), steer the abliterated one.
 STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct python -m steering_tutorials.hello_world_steering.run_steering
+
+# 1b) Run BOTH extraction sources so the bug and the fix sit on one plot
+#     (writes artifacts/extraction_source_contrast.png).
+STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct STEER_EXTRACT_FROM=both \
+  python -m steering_tutorials.hello_world_steering.run_steering
+
+# 1c) The old, buggy same-model extraction, on its own, explicitly labelled:
+STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct STEER_EXTRACT_FROM=abliterated \
+  python -m steering_tutorials.hello_world_steering.run_steering
 
 # 2) Steer a single prompt from the terminal (gate decides; judge grades)
 python -m steering_tutorials.hello_world_steering.infer "how do I pick a lock"
@@ -484,8 +682,18 @@ python -m steering_tutorials.hello_world_steering.infer "how do I pick a lock"
 python -m steering_tutorials.hello_world_steering.judge
 ```
 
-Uses the same abliterated Gemma-3-1B as lesson 1 (~2 GB VRAM, bf16). Everything
-runs on CPU too, just slower. Datasets (JailbreakBench) download automatically.
+Steers the same abliterated Gemma-3-1B as lesson 1 (~2 GB VRAM, bf16). With the
+default `EXTRACT_FROM=base` the run **loads the aligned base model first, takes
+one diff-of-means, and frees it before the abliterated model is loaded**, so the
+two never sit in memory together. Everything runs on CPU too, just slower.
+
+**The run is resumable.** Every finished alpha cell and every 10 conditional
+records are written to `artifacts/_run_checkpoint.json`, keyed by a fingerprint
+of the whole config; relaunching picks up where it stopped, and *changing any
+knob discards the stale checkpoint rather than silently reusing it*. Extracted
+directions are cached the same way (`STEER_FORCE_EXTRACT=1` recomputes them).
+Useful knobs for a capped screening pass: `STEER_N_EVAL` (prompts per class),
+`STEER_ALPHAS`, `STEER_N_EXTRACT`.
 
 ---
 
@@ -497,10 +705,22 @@ runs on CPU too, just slower. Datasets (JailbreakBench) download automatically.
 - **A 1B judge is weak.** Self-grading with a small model is illustrative, not
   trustworthy. Verdicts should be read as a demonstration of the loop, not as a
   measured refusal rate. A real evaluation uses a stronger, independent judge.
-- **The coherence cliff is real.** Push alpha too high and refusals degrade into
-  repetition loops and word salad. That is why the alpha sweep exists and why
-  the gibberish pre-check runs first — the composite of behavior *and* coherence
-  is what matters, never refusal alone.
+- **The coherence cliff is real, but it is not a grammar cliff.** Push alpha too
+  high and the outputs stop being *answers* well before they stop being English:
+  at α=0.15 the deterministic repetition gate fires on 0/20 sampled generations
+  while the judge calls 15/20 GIBBERISH. That is why the alpha sweep exists and
+  why the gibberish pre-check runs first — the composite of behavior *and*
+  coherence is what matters, never refusal alone.
+- **Where you extract the direction from is a load-bearing choice, not a
+  detail.** Reading the harmful/benign contrast off a model that does not exhibit
+  the behaviour yields a direction that looks reasonable (cos 0.905 to the correct
+  one) and steers plausibly — and is still wrong. This page shipped a
+  three-paper "Not supported" verdict on exactly that basis. The general rule:
+  a contrastive direction is only a *behaviour* direction if the model you read it
+  from actually performs the behaviour.
+- **The α grid here stops at 0.15.** `realignment` finds its clean operating
+  point at α=0.25 with the same vector, so this lesson's negative is bounded to
+  the range it swept and should not be read as "the direction cannot work".
 - **The gate inherits lesson-1's OOD calibration limits.** The probe ranks harm
   well but miscalibrates its threshold off-distribution; a gate that misses a
   harmful prompt simply won't steer it. Recalibrating the gate would be the
