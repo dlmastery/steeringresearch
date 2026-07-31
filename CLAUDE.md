@@ -589,7 +589,7 @@ conditioned on gate AUC, so our probe result *strengthens* rather than scoops it
   pages). It had been stale since 2026-06-06 and silently dropped every v2 row because
   `load_rows()` requires legacy schema fields -- see `scripts/adapt_v2_for_dashboard.py`.
 - `biencoder_guard` headline run done on the REAL backbone (EmbeddingGemma-300M @500/class):
-  scaling gap **widened 43x -> 64x**; hard-negative adapter FPR **1.000 -> 0.438**. Accuracy
+  scaling gap is **~40x and INVARIANT** (MiniLM 40.6x vs EmbeddingGemma 40.3x) - the previously claimed **43x -> 64x widening is WITHDRAWN**: the 64x was a *contended* uni-encoder time divided by an *uncontended* bi-encoder time, and 43x was arithmetic error on the README's own latencies (1.786/0.044 = 40.6x). Both towers share a backbone, so a costlier encoder multiplies numerator and denominator alike and the ratio CANNOT grow - the claim should have been suspect on its face. The replacement finding is stronger: ~40x holds across a 13x change in model size, so it is a property of the ARCHITECTURE, not the encoder; hard-negative adapter FPR **1.000 -> 0.438**. Accuracy
   fell vs the MiniLM substitute, but that comparison changes THREE things at once
   (encoder, n, held-out policy set) so no backbone conclusion is drawn -- see README 10.1.
 - All 14 judge-scored lessons now cross-link `JUDGE_VALIDITY.md`.
