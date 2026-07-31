@@ -195,7 +195,7 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 
 | Lesson | Honest result |
 |---|---|
-| [`reft_r1`](reft_r1/README.md) · GENERATE | **reproduces AxBench**: learned **ReFT-r1 0.54 > DiffMean 0.26 > prompting 0.18** steering; DiffMean wins detection (AUC 0.71 vs 0.61) |
+| [`reft_r1`](reft_r1/README.md) · GENERATE | **NOT a like-for-like test of AxBench** (n=200/arm): ReFT-r1 **0.605** > prompting **0.325** > DiffMean **0.285**, but the base is *abliterated*, which removes exactly the instruction-following the prompting arm depends on and no other arm does - so this is a property of the model, not evidence on the paper. Detection is a fair comparison and DiffMean wins it: **0.748 vs 0.568** |
 | [`talan`](talan/README.md) · 2026 | **learned ≫ fixed** (n=150): harmful refusal DiffMean **0.29** → ReFT-r1 **0.65** = adapter **0.65**; the two learned edits tie (the n=40 "adapter edges rank-1" margin was noise) |
 | [`prompt_activation_duality`](prompt_activation_duality/README.md) · 2026 | **duality (cos 0.70) + site matters** (n=150): same vector at the **attention** output degrades less than residual-add (refusal 0.26/gib 0.30 vs 0.227/0.48); the n=20 "attention raises refusal" was noise |
 | [`realignment`](realignment/README.md) · DEFEND | **works** (n=200/class) — clean α=0.25 point: **ASR 0.46→0.045**, over-refusal 0.01, coherence 0.88 |

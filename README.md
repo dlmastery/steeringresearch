@@ -7,29 +7,50 @@ intents, without breaking capability, coherence, or over-refusing benign prompts
 Method development is on AxBench; final evaluation targets SOTA safety benchmarks
 (JailbreakBench / StrongREJECT / XSTest).
 
-**Honest status:** the safety method is newly built but not yet validated.
-Zero external-ready results exist. The one rigorous prior result is negative: on
-the real AxBench benchmark, the steering direction carries only a weak
-concept-specific signal (~97% of the steering effect is captured by a label-shuffled
-control). **Five _simulated_ adversarial reviews — LLM role-played (Opus) in-session,
-NOT human peer review** — returned a unanimous reject (2/10); the roadmap synthesized
-from them is in `audits/reviews/IMPROVEMENTS_100.md`. No human or venue has reviewed
-this work.
+**Honest status (updated 2026-07-31).** The original goal above was not reached, and
+the program was re-scoped after a forensic audit found **124 experiments and zero
+external-ready findings**. What exists now is smaller and actually holds up.
 
-## Outcome and success criterion
+### Two evaluation-tier findings, both judge-free
 
-| Axis | Current (measured) | Target (pre-registered) |
-|---|---|---|
-| JailbreakBench ASR reduction | not yet measured | >= X pp vs no-steer baseline |
-| XSTest over-refusal | not yet measured | <= 1% absolute |
-| MMLU drop | not yet measured | <= 2 pp |
-| Pareto vs CAST + prompting | not yet measured | Pareto-dominates on ASR vs over-refusal |
-| AxBench direction-specificity (E7) | +0.004 at 2B (weak; ordinal gate fails) | >10% advantage over shuffled control |
+| | |
+|---|---|
+| **M-a** | At a *fixed* displacement, **rotating** the residual stream costs **+91.24 perplexity** more than **adding** to it (n=8, CI95 [87.98, 94.71], ordering holds 8/8; a norm-matched *random* direction costs only +16.80, so the effect is direction-specific). |
+| **M-b** | That advantage is **invariant to stacking**: gap **+88.89 / +86.59 / +85.95 / +85.92** at N=1/2/4/8, additive winning **32/32 cells**. Norm preservation does **not** become more valuable as edits compose — which is what GEMS (2606.19946) and ORBIT (2606.22357) assume. |
 
-Success = the conditional safety method Pareto-dominates CAST and a prompting
-baseline on the JailbreakBench ASR vs XSTest over-refusal frontier at <= 2 pp
-MMLU drop, confirmed at n >= 7 seeds with a paired Wilcoxon p < 0.05 and a
-bootstrap 95% CI excluding zero.
+M-b took **three bases** to get one answer. Gram-Schmidt holds displacement fixed but its
+directions are not exchangeable (the gap appears to *shrink*); raw diff-of-means directions
+are exchangeable but displacement triples by N=8 (the gap appears to *grow*); only a basis
+controlling **both** shows it is flat. Two of the three answers were artifacts of whichever
+variable the basis left free.
+
+### Three things a reader must know before trusting anything else here
+
+1. **The judge fails its own gate.** Calibrated against ground truth it reaches ROC-AUC
+   **0.665**, and **0.751** with an improved readout — both below this project's **0.85**
+   bar. **No judge-dependent claim is admissible**; all live work uses perplexity,
+   geometry, and probe AUC against real labels. See `autoresearch_results/JUDGE_CARD.md`.
+2. **The 124 legacy rows are not one comparable scale.** The composite formula was edited
+   after they were written, so **92 of 124 do not reproduce**, and two of five priced axes
+   were inert. **Do not sort or rank that table.** See `autoresearch_results/PROVENANCE.md`.
+3. **Adversarial reviews in this repo are SIMULATED** — an LLM role-playing a hostile
+   reviewer. They are internal red-teaming, never external validation or a venue decision.
+
+### The course is the other half of the work
+
+[`steering_tutorials/`](steering_tutorials) is a 22-lesson course teaching activation
+steering from scratch. A paper-alignment sweep (2026-07-31) checked every lesson against
+the paper it cites: **all arXiv ids resolve correctly**, **11 lessons cleared**, and
+**6 were misattributing results** — most often by running a *frozen* encoder where the
+cited paper *fine-tunes* one, then blaming the paper for the weak number. Those are fixed,
+with the withdrawn verdicts recorded rather than deleted.
+
+### Sibling program
+
+[auto-research-voice-based-disease-detection](https://github.com/dlmastery/auto-research-voice-based-disease-detection)
+applies the same process to voice-health claims. Headline: on a 1,679-speaker clinical
+corpus, **patient age alone** reaches ROC-AUC **0.874** while WavLM reaches 0.744 — and
+once age is matched away, **88 handcrafted features beat a 1536-dim self-supervised model**.
 
 ## Start here
 
