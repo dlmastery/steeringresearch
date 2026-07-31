@@ -94,17 +94,40 @@
       1024
     ],
     "bi_sec": [
-      0.38958410001941957,
-      0.39049080001132097,
-      0.3905036000069231,
-      0.3915492000087397
+      0.7305816000443883,
+      0.7312027000298258,
+      0.730669200012926,
+      0.7316460000292864
     ],
     "uni_sec": [
-      0.26925279998977203,
-      0.9010981000028551,
-      3.811054299992975,
-      15.77822429999651
-    ]
+      0.6430009999894537,
+      1.8857370999758132,
+      4.9913999999989755,
+      18.38683589998982
+    ],
+    "ratio_at_max_labels": 25.13078168848573,
+    "gpu_witness_before": {
+      "available": true,
+      "n_compute_processes": 3,
+      "n_python_processes": 2,
+      "concurrent_python_jobs_excluding_self": 1,
+      "memory_used_mib": 12379,
+      "memory_total_mib": 16376,
+      "utilization_pct": 83,
+      "contended": true
+    },
+    "gpu_witness_after": {
+      "available": true,
+      "n_compute_processes": 2,
+      "n_python_processes": 1,
+      "concurrent_python_jobs_excluding_self": 0,
+      "memory_used_mib": 3216,
+      "memory_total_mib": 16376,
+      "utilization_pct": 39,
+      "contended": false
+    },
+    "contended": true,
+    "measurement_note": "Wall-clock on one shared GPU. The ABSOLUTE seconds are only comparable across runs measured in the same machine state -- two runs of identical code gave bi 0.39 vs 0.69 s and uni 15.8 vs 27.0 s purely from a co-tenant job. Contention scales BOTH arms by nearly the same factor, so compare runs on `ratio_at_max_labels`, not on seconds. `contended`=true means another python GPU job was resident during the measurement and the absolute seconds should not be quoted. NEVER form a ratio from a bi_encoder and a uni_encoder measured in different states -- a published '64x' in this lesson's README was exactly that error."
   },
   "ood": {
     "source": "BeaverTails/30k_test",
@@ -388,6 +411,8 @@
         "n_above_0.95": 0
       }
     },
+    "precision": "torch.float32",
+    "precision_note": "The taxonomy bank is embedded at the SAME precision as the content embeddings, the 16-policy bank and EXP-G's 884-distractor bank already on disk. This is deliberate and load-bearing: EXP-H's only claim is a head-to-head against EXP-G in which exactly ONE variable moves (are the ~900 competitors related to the truth or not). Re-running the taxonomy bank in fp16 for speed would introduce a second uncontrolled variable into that comparison while saving memory the 300M encoder does not need. If this field ever disagrees with the precision of the banks it is scored against, the EXP-G/EXP-H head-to-head is void.",
     "arms": {
       "bi_encoder": {
         "n_labels": 996,
@@ -711,6 +736,5 @@
     "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\biencoder_guard\\artifacts\\hardneg_fpr.png",
     "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\biencoder_guard\\artifacts\\label_scale_accuracy.png",
     "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\biencoder_guard\\artifacts\\opir_taxonomy.png"
-  ],
-  "scaling_provenance": "This block is PRESERVED VERBATIM from the prior clean run (git HEAD), NOT from the run that produced the rest of this file. That run's timing executed while a hill-climb saturated the GPU and inflated both arms (uni 1.71x, bi 1.76x). Every other block here is bit-identical to HEAD or new (EXP-H). Recorded rather than silently spliced: a ratio must never be formed across two machine states -- that is exactly the error that produced the withdrawn 64x figure. Pending: one clean regeneration with gpu_witness."
+  ]
 }

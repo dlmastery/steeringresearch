@@ -783,17 +783,65 @@ prototypes):
 > `bi_encoder` of 0.424 *together with* a `uni_encoder` of 27.06.
 >
 > **The mechanism of the error is worth more than the correction.** These are wall-clock
-> timings on a single shared GPU, so the *absolute* numbers move a lot with contention —
-> across the two runs `bi_encoder` ranged 0.39 → 0.69 s and `uni_encoder` 15.8 → 27.0 s.
-> But contention scales **both** arms by nearly the same factor (1.76× and 1.71×), so the
-> **ratio is the stable quantity** (40.3× and 39.2×) and the absolute latencies are not.
-> The retracted 64× is what you get by dividing a *contended* uni-encoder measurement by
-> an *uncontended* bi-encoder one — two different machine states in a single ratio.
+> timings on a single shared GPU, and the retracted 64× came from dividing a *contended*
+> uni-encoder measurement by an *uncontended* bi-encoder one — two different machine states
+> inside a single ratio.
 >
-> **The scaling claim itself is unaffected and still SURVIVES:** the bi-encoder is flat to
-> three decimal places while the uni-encoder grows linearly. It survives at ~40×, not 64×.
-> Absolute seconds here should be read as indicative only; the flat-vs-linear *shape* and
-> the ratio are the findings.
+> **A second correction, to the first one.** This note originally went on to claim that the
+> *ratio* is contention-robust, because contention appeared to scale both arms by nearly the
+> same factor (1.76× and 1.71× across the only two runs then available). **A third
+> measurement falsified that**, and it is left here rather than quietly edited out:
+>
+> | run | GPU state | `bi_encoder` @1024 | `uni_encoder` @1024 | ratio |
+> |---|---|---|---|---|
+> | committed HEAD | quiet throughout | 0.392 s | 15.78 s | **40.30×** |
+> | EXP-H run 1 | contended throughout | 0.690 s | 27.05 s | **39.23×** |
+> | EXP-H run 2 | **changed mid-benchmark** | 0.732 s | 18.39 s | **25.13×** |
+>
+> **The `gpu_witness` block explains the outlier, and the explanation is damning for the
+> benchmark rather than for the GPU.** Run 2 recorded `contended: true` *before* the
+> measurement (1 co-tenant, 12.4 GB, 83 % util) and `contended: false` *after* it
+> (0 co-tenants, 3.2 GB, 39 % util) — the co-tenant job **finished while EXP-D was
+> running**. That matters because of how `scaling_latency` is built: `bi_encoder`'s time is
+> dominated by a single text-embedding pass measured **once, before the K-loop**, while
+> `uni_encoder` is timed **inside** the loop with K=1024 measured **last**. So run 2 divided
+> a *contended* `bi` by a *largely uncontended* `uni`.
+>
+> That is **structurally the same error as the retracted 64×** — a ratio spanning two
+> machine states — except that here it happened *inside a single run*. Being one run is no
+> protection at all. The benchmark is intrinsically vulnerable to this, because its
+> numerator and denominator are measured minutes apart; a fix would re-measure `bi`
+> adjacent to each `uni` point, and is noted here as a known limitation rather than
+> silently patched.
+>
+> **What this does and does not license.** The two *constant-state* runs agree closely
+> (40.30× quiet, 39.23× contended, 2.7 % apart) while the state-changing run is far off,
+> which is consistent with the ratio being robust to a **steady** machine state and broken
+> only by a **changing** one. That reading is mechanistically sensible — but it rests on
+> **two** constant-state points, and an n=2 robustness inference is precisely what failed
+> here the first time. So it is recorded as the most plausible reading and **not asserted**.
+> The operative rule stands regardless: quote only a run that is `contended: false` in
+> **both** witnesses, which makes **40.30×** the single quotable figure.
+>
+> **The scaling claim itself is unaffected and still SURVIVES**, because it never depended
+> on either number: `bi_encoder` is flat to three decimal places in **all three** runs
+> (0.390→0.392, 0.689→0.690, 0.731→0.732) while `uni_encoder` grows ~linearly in all three.
+> The **flat-vs-linear shape** is the robust finding; the ratio is a quiet-GPU measurement
+> and the absolute seconds are indicative only.
+>
+> **Scope of the contamination — measured, so it is not re-litigated later.** `scaling` is
+> the *only* wall-clock block in this lesson, and therefore the only one contention can
+> touch. Diffing a quiet run against a contended one, **every other block is bit-identical**:
+> EXP-A, EXP-B, EXP-C, EXP-E, EXP-F, EXP-G and the confound audit all match exactly, and
+> EXP-G's `steal@1` at K=900 agrees to `0.0e+00` (0.133290 in both). EXP-H is likewise pure
+> cosine geometry, and its head-to-head reads EXP-G values computed **inside the same
+> process on the same rows**, so it cannot mix machine states even in principle. **No
+> accuracy number anywhere in §10 is contention-sensitive.**
+>
+> Every `scaling` block written from this point carries its own `gpu_witness` (co-tenant
+> count, memory, utilisation, before *and* after the benchmark), `ratio_at_max_labels`, and
+> a `contended` flag — *inside* the block, not annotated beside it, so a timing can never
+> again be quoted without its conditions travelling with it.
 
 **EXP-E — OOD transfer** (train on the constructed set, evaluate the disjoint OOD
 shard with no further fitting):
@@ -880,19 +928,25 @@ construction, and it is the finding.
 > | MiniLM @150 | 43× | **40.6×** (1.786 / 0.044) | arithmetic on this table's own figures |
 > | EmbeddingGemma @500 | 64× | **40.3×** (15.778 / 0.3915) | `artifacts/results.json` (`scaling`) |
 >
-> **40.6× versus 40.3× is no growth at all.** The uni-encoder's relative cost is
-> essentially *the same* on a 22M-parameter MiniLM and a 300M-parameter EmbeddingGemma, so
-> the claim that scaling the backbone up widens the bi-encoder's advantage is **not
-> supported and is withdrawn**. In hindsight it should have been suspect on its face: both
-> towers use the *same* backbone, so making that backbone more expensive multiplies the
-> numerator and the denominator alike and largely cancels. The ratio is set by the
-> *architecture* (re-encode per label vs. one cached matmul), not by the encoder's size.
+> **40.6× versus 40.3× is no growth at all**, so the claim that scaling the backbone up
+> widens the bi-encoder's advantage is **not supported and is withdrawn**. In hindsight it
+> should have been suspect on its face: both towers use the *same* backbone, so making that
+> backbone more expensive multiplies the numerator and the denominator alike and largely
+> cancels.
 >
-> That the corrected numbers agree to within 0.3× across a ~13× change in model size
-> (22M-parameter MiniLM-L6 → 300M-parameter EmbeddingGemma) is a
-> **stronger** result than the one being withdrawn — it says the flat-vs-linear advantage
-> is a property of the design rather than of a particular backbone. It is just not the
-> result that was claimed.
+> **What must NOT be done is to flip this into the opposite claim.** It is tempting to read
+> 40.6× vs 40.3× as positive evidence that the advantage is *invariant* to backbone size —
+> a tidier result than the one withdrawn. That inference is not available here, for two
+> reasons. First, the MiniLM figure comes from a run whose GPU contention state was never
+> recorded. Second, and decisively, the EXP-D correction note above shows this ratio moving
+> **40.30× → 25.13×** on the *same* backbone purely from a co-tenant job — a swing far
+> larger than the 0.3× gap being interpreted. Two numbers that agree to 0.3× on an axis
+> where noise is worth 15× agree by coincidence, not by measurement.
+>
+> So the honest state is: **the growth claim is withdrawn as unsupported, and no
+> replacement claim about backbone size is made.** Settling it needs quiet-GPU measurements
+> on both backbones with the `gpu_witness` block recording the state — pre-registered here
+> as the follow-up, exactly as §10.3 does for the encoder comparison itself.
 
 ### Verdicts against those falsifiers
 
