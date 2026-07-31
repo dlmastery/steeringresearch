@@ -403,7 +403,7 @@ immediate-compliance setup does not exercise that drift. Reported, not hidden.
 ## 10. The confound audit — what the AUCs must clear
 
 > **Status: MEASURED 2026-07-27 — and it changes how the headline reads.**
-> The strongest trivial baseline is **prompt character length at AUC 0.7354**
+> The strongest trivial baseline is **COMPLETION character length at AUC 0.7354**
 > (directionless); hidden-state `final_norm` reaches **0.588** and token count **0.514**.
 >
 > So a raw AUC of 0.944 is **not** a 0.944-sized result. The claimable quantity is the
@@ -438,12 +438,12 @@ The four scalars audited, each carrying **no trajectory information whatsoever**
 
 | trivial feature | why it could separate the classes without any real signal | directionless AUC |
 |---|---|---|
-| `tokencount` | generated-token count. Nominally capped at `MAX_NEW_TOKENS`, but **early EOS** is class-informative — a benign completion that stops short is a free label. | **+0.209** |
-| `charlen` | the completion's raw character length — the classic prompt-harm confound, one level downstream. | **+0.209** |
-| `mean_norm` | **the important one.** Mean over tokens of `‖h_t‖` at layer 12. If harmful and benign completions simply sit at different residual-stream *magnitudes*, one scalar separates them and **every sequence model's margin is illusory** — no drift, no shape, no trajectory. | **+0.209** |
-| `final_norm` | `‖h_last‖` alone, the single cheapest such scalar. | **+0.209** |
-| `prompt_charlen` | prompt length — a deployable prompt-side rule that needs no hidden states at all. | **+0.209** |
-| **worst (the bar)** | `max` of the above; the number every headline must clear | **+0.209** |
+| `tokencount` | generated-token count. Nominally capped at `MAX_NEW_TOKENS`, but **early EOS** is class-informative — a benign completion that stops short is a free label. | **0.5138** |
+| `charlen` | **the bar.** The COMPLETION's raw character length. Harmful completions run longer (184.7 vs 157.4 chars). | **0.7354** |
+| `mean_norm` | **the important one.** Mean over tokens of `‖h_t‖` at layer 12. If harmful and benign completions simply sit at different residual-stream *magnitudes*, one scalar separates them and **every sequence model's margin is illusory** — no drift, no shape, no trajectory. | **0.5772** |
+| `final_norm` | `‖h_last‖` alone, the single cheapest such scalar. | **0.5880** |
+| `prompt_charlen` | prompt length — a deployable prompt-side rule needing no hidden states. **At chance**, which is the interesting part: you cannot call this from the prompt alone. | **0.5032** |
+| **worst (the bar)** | `max` of the above &rarr; `charlen`; the number every headline must clear | **0.7354** |
 
 **Why the norms are the right confound for *this* lesson.** The siblings audit
 length and count because their inputs are text. Here the detector's input is a
