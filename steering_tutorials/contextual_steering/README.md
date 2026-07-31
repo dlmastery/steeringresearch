@@ -11,9 +11,12 @@
 > prompt points *along* `v`), so we scale `alpha` by that alignment — benign
 > prompts get `alpha ~ 0`, harmful prompts get the full push; the direction
 > **gates itself**. **Spoiler (see [Results](#6-results--measured-vs-the-claim)):**
-> on this 1B the premise only *weakly* holds — even after fixing the projection, a
-> bare diff-of-means cosine separates harmful from benign only weakly (the gate has
-> little real signal), and it *sharpens with more extract data*. An honest partial.
+> on this 1B the premise **fails**. The bare diff-of-means cosine separates harmful
+> from benign at only **ROC-AUC 0.6132** (Cohen's d 0.130) and its calibrated ramp
+> comes out flagged `ramp_degenerate: true` — a hard step, not a ramp. The run's
+> headline gate is therefore lesson-1's **trained probe** (`"gate": "probe"` in
+> `results.json`), which separates at **ROC-AUC 0.8876** (d 1.673). Input-adaptive
+> strength works; the probe-free shortcut does not.
 
 Fixed-strength steering is wasteful and risky: it shoves a harmless "what's a
 good pasta recipe?" exactly as hard as "how do I build a bomb?", so benign
@@ -257,51 +260,82 @@ gets the full push.
 ## 6. Results — measured vs. the claim
 
 First honest run: abliterated Gemma-3-1B, layer 12, α_base = 0.1, off-family
-Qwen-3B judge (`Qwen/Qwen2.5-3B-Instruct`), n = 60 held-out prompts/class,
-screening tier. Numbers from `artifacts/results.json`. Artifacts:
-`fixed_vs_contextual.png`, `alpha_schedule.png`.
+Qwen-3B judge (`Qwen/Qwen2.5-3B-Instruct`), extract 300/class, **n = 150 held-out
+prompts/class**, screening tier. Numbers from `artifacts/results.json`. Artifacts:
+`fixed_vs_contextual.png`, `alpha_schedule.png`, `alpha_schedule_probe.png`,
+`alpha_schedule_diffmean_cos.png`.
 
-**A fixed instrument bug first.** The projection was `cos(mean_pool(h), v)` with
-**no centering**. On Gemma the mean-pooled state is dominated by a huge
+**Which gate is the headline.** The run evaluated **two** gate signals and
+`results.json` records `"gate": "probe"` as the headline — the `contextual` arm in
+that file *is* the probe-gated arm. The bare diff-of-means cosine is kept as the
+secondary `gates.diffmean_cos` arm. The table below therefore leads with the probe
+gate; the cosine gate follows, and the two are not interchangeable.
+
+**A fixed instrument bug first.** The cosine projection was `cos(mean_pool(h), v)`
+with **no centering**. On Gemma the mean-pooled state is dominated by a huge
 prompt-independent common component (high-norm attention-sink dims), so that
 cosine was a near-**constant −0.816 for every prompt** (std 0.002) — the gate had
 no signal, and the schedule collapsed (τ ≈ ref). Fixed by **centering on the
 extract benign mean** before the cosine (`cos(h − benign_mean, v)`, the same trick
 `gavel` uses). That restored real spread: projection std **0.002 → 0.74**.
 
+**Headline arms** (`arms` in `results.json`; `contextual` = the **probe** gate):
+
 | Arm | Harmful refusal (want high) | Benign over-refusal (want low) | Harmful gibberish | mean α (harm / benign) |
 |---|---|---|---|---|
 | `unsteered` | 0.347 | 0.513 | 0.233 | 0 / 0 |
 | `fixed` (α = 0.1 always) | 0.227 | 0.400 | 0.480 | 0.10 / 0.10 |
-| `contextual` (per-input α) | **0.327** | 0.487 | **0.293** | 0.031 / 0.012 |
+| **`contextual` — probe gate** | **0.293** | 0.500 | **0.360** | **0.064 / 0.011** |
 
-| Claim | What we measured (centered projection, extract 300, n=150) | Verdict |
+**Secondary arm** (`gates.diffmean_cos` — the bare centered cosine gate):
+
+| Arm | Harmful refusal | Benign over-refusal | Harmful gibberish | mean α (harm / benign) |
+|---|---|---|---|---|
+| `contextual` — diffmean_cos gate | 0.327 | 0.487 | 0.293 | 0.031 / 0.012 |
+
+**How well each gate signal actually separates the classes** (measured on the
+held-out eval, `gates.<name>.separation`) — this is the part that decides whether
+"the direction gates itself" is even viable:
+
+| gate signal | ROC-AUC | Cohen's d | harmful proj mean | benign proj mean | `ramp_degenerate` |
+|---|---|---|---|---|---|
+| **probe** (`probe_logit`, lesson-1 trained probe) | **0.8876** | **1.673** | 0.121 | −3.428 | `false` |
+| diffmean_cos (`diffmean_cosine`) | 0.6132 | 0.130 | 0.143 | 0.049 | **`true`** |
+
+**The `ramp_degenerate` flag matters and was previously unreported.** For the
+cosine gate the calibrated schedule came out with `ref = 0.0877` *below*
+`tau = 0.7908`, so the ramp cannot be a ramp — `contextual_alpha` falls back to its
+degenerate hard-step branch. The cosine arm's "per-input α" is therefore a binary
+on/off threshold, not the smooth schedule §2 describes. The probe gate's schedule
+is well-ordered (`tau = −0.681`, `ref = −0.492`) and `ramp_degenerate` is `false`,
+so only the probe arm actually exercises the mechanism this lesson is about.
+
+| Claim | What we measured (probe gate = headline, extract 300, n=150/class) | Verdict |
 |---|---|---|
-| Fixed-alpha wrecks coherence | fixed harmful gibberish 0.48 (vs unsteered 0.23), refusal falls 0.35 → 0.23 | **Supported** — a constant α=0.1 breaks this 1B |
-| Contextual does less damage than fixed | contextual harm refusal 0.327 (≈ unsteered 0.347) & gibberish 0.29 vs fixed 0.23 / 0.48 | **Supported** — but see *why* below |
-| Contextual selectively spares benign (the CLAS promise) | benign over-refusal 0.487 (ctx) vs 0.400 (fixed) vs 0.513 (unsteered) — no benign-sparing | **Not supported** — benign cost is base+judge-dominated |
-| The direction is a usable implicit gate | centered, harmful proj mean **0.088** vs benign **0.014** (separation **+0.074**, right direction) against within-class std 0.737 | **Weak** — it now separates the classes, but the signal is ~10% of the noise |
+| Fixed-alpha wrecks coherence | fixed harmful gibberish 0.480 (vs unsteered 0.233), refusal falls 0.347 → 0.227 | **Supported** — a constant α=0.1 breaks this 1B |
+| Contextual does less damage than fixed | probe-gated harm refusal 0.293 vs fixed 0.227, gibberish 0.360 vs fixed 0.480 | **Supported** — but mostly because it steers less on average (mean α 0.064 vs 0.10) |
+| Contextual selectively spares benign (the CLAS promise) | benign over-refusal 0.500 (probe ctx) vs 0.400 (fixed) vs 0.513 (unsteered) | **Not supported** — the fixed arm is the *least* over-refusing; benign cost is base+judge-dominated |
+| A gate signal can genuinely separate harmful from benign | **probe AUC 0.8876, Cohen's d 1.673**; diffmean_cos AUC 0.6132, d 0.130 | **Supported for the probe; not for the bare cosine** |
+| The steering *direction* is a usable implicit gate (this lesson's premise) | the cosine gate reaches only AUC 0.6132 / d 0.130, and its calibrated ramp is flagged **`ramp_degenerate: true`** | **Not supported** — the self-gating premise fails; the separation comes from the *separate trained probe*, which is the thing this lesson set out to drop |
 
-**Verdict: partially supported (screening) — and honest about why.** Contextual
-steering *does* beat fixed α (it preserves refusal at 0.327 vs 0.23 and holds
-gibberish at 0.29 vs 0.48). **The reason is mostly that contextual steers less on
-average** (mean α 0.031 vs the fixed 0.10). It applies ~2.6× more α to harmful than
-benign (0.031 vs 0.012), so there *is* now some selective gating — but weak.
+**Verdict: the mechanism works, but only when driven by lesson-1's trained probe —
+which falsifies the lesson's own premise.** The probe gate delivers a real
+separation (AUC **0.8876**, d **1.673**) and applies **~6× more α to harmful than
+benign** (0.064 vs 0.011), which is the selective behaviour contextual steering is
+supposed to produce. The bare diff-of-means cosine — the "the direction gates
+itself, no second model needed" idea in the header — reaches AUC **0.6132** with
+Cohen's d **0.130**, and its schedule degenerates into a hard step. So the honest
+conclusion is the inverse of the premise: **input-adaptive strength is worth
+having, and a trained probe is what makes it possible.** That is the CAST design
+(lesson 2's explicit gate), not the probe-free shortcut.
 
-**Why (mechanism + honest read), and what the larger extract changed.** Two layers.
-(1) The old near-constant projection was an artifact of Gemma's dominant component;
-centering (the fix, now default) restored real spread. (2) **How well the centered
-projection separates the classes improved with more extract data**: at extract 200
-the separation was ~0 (−0.006, classes fully overlapping); at **extract 300 it is
-+0.074** — harmful now projects *higher* than benign, in the right direction — but
-still only ~10% of the within-class std (0.737), so it is a **weak** gate. That is
-enough to bias α ~2.6× toward harmful, but not enough to deliver real benign-sparing
-(over-refusal 0.49/0.40/0.51 across arms, base+judge-dominated). The honest next step
-is still to drive the schedule from lesson-1's *trained* probe (AUC 0.87, the CAST
-design) rather than a bare cosine. The base is **abliterated**, so *any* steering
-lowers refusal below the 0.35 baseline; "contextual breaks less" is the real story,
-not "contextual makes it safer." Screening tier (1B, n=150,
-single seed, 3B judge) — no n≥7/Wilcoxon/CI per [CLAUDE.md §7](../../CLAUDE.md).
+Two limits on even the positive half. The base is **abliterated**, so *any*
+steering lowers harmful refusal below the 0.347 unsteered baseline — "contextual
+breaks less than fixed" is the real story, never "contextual makes it safer." And
+benign over-refusal does not improve for any arm (0.500 / 0.487 / 0.400 / 0.513),
+so the promised benign-sparing does not materialise even with the good gate.
+Screening tier (1B, n=150/class, single seed, 3B judge) — no n≥7/Wilcoxon/CI per
+[CLAUDE.md §7](../../CLAUDE.md).
 
 ---
 
@@ -346,8 +380,9 @@ required.
   the extract split; if that split is unrepresentative the schedule transfers
   poorly. The 90th-percentile `tau` is a deliberate, conservative choice, not a
   tuned optimum.
-- **Screening only.** `n = 25`/class, one seed, a 1B model, a 3B judge. No
-  seed-stability bars, no significance test. Directional demo, not a result.
+- **Screening only.** `n = 150`/class held out (`N_EVAL_PER_CLASS`), one seed, a
+  1B model, a 3B judge. No seed-stability bars, no significance test. Directional
+  demo, not a result.
 - **A single projection can be fooled.** An adversarial prompt engineered to have
   low projection but harmful intent would slip under `tau` — the implicit gate has
   no independent view of the input the way a separately-trained probe does. This

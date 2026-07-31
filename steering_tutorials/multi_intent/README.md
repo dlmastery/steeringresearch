@@ -56,15 +56,19 @@ Full file-by-file walkthrough below.
 
 ## Dataset
 
-We treat **JailbreakBench harm categories as the K concepts** (`data.py`,
-`load_multi_intent`). JailbreakBench (Chao et al. 2024, arXiv:2404.01318) ships
-`harmful-behaviors.csv` with a `Category` column — 10 categories × 10 prompts.
-We pick **four** distinct categories as concepts (`config.CONCEPTS`):
-Malware/Hacking, Fraud/Deception, Harassment/Discrimination, Physical harm.
-Every concept is contrasted against **one shared benign baseline** (40 prompts
-from `benign-behaviors.csv`) so the K raw directions share an origin and their
-cosine overlap measures *concept* similarity, not baseline drift. Labels are
-**prompt-level** (the `Goal` column), never response-level.
+We treat **toxic-chat `openai_moderation` harm categories as the K concepts**
+(`common.data.load_concepts`). The run in `artifacts/results.json` uses the
+**three** well-populated categories recorded there (`sexual`, `harassment`,
+`violence`), ordered most-distinct-first — so the ladder this lesson can walk is
+**K = 1, 2, 3**, and no more. Every concept is contrasted against **one shared
+benign baseline** so the K raw directions share an origin and their cosine
+overlap measures *concept* similarity, not baseline drift. Labels are
+**prompt-level**, never response-level.
+
+The three raw directions overlap heavily — the measured cosine matrix in
+`results.json` is `sexual·harassment = 0.937`, `sexual·violence = 0.920`,
+`harassment·violence = 0.905`. That near-collinearity is precisely the condition
+under which orthogonalization should matter.
 
 | item | value |
 |---|---|
@@ -251,28 +255,48 @@ python -c "from steering_tutorials.multi_intent.run_multi_intent import main; ma
 
 ## Results — measured vs. the claim
 
-The screening run (`artifacts/results.json`, K = 1..5, one abliterated 1B target
-graded by an **off-family Qwen-3B judge** on the shared toxic-chat-derived concept
-prompts) walks the ladder for both arms:
+The screening run (`artifacts/results.json`, one abliterated 1B target graded by
+an **off-family Qwen-3B judge** on the shared toxic-chat-derived concept prompts,
+per-concept α = 0.06) walks the ladder for both arms. **The ladder that actually
+ran is K = 1, 2, 3** — the run used three toxic-chat concepts, so **K = 4 and
+K = 5 never ran** and no number is reported for them anywhere on this page.
 
-| Claim | What we measured (off-family Qwen-3B judge, K=1..5) | Verdict |
+Every rung, both arms, straight out of `results.json`:
+
+| K | active concepts | raw success | raw gibberish | ortho success | ortho gibberish | budget √(Σα²) | cross-talk (raw / ortho) |
+|---|---|---|---|---|---|---|---|
+| 1 | sexual | 0.333 | 0.267 | 0.333 | 0.267 | 0.060 | 0.186 / 0.186 |
+| 2 | + harassment | 0.193 | 0.316 | **0.216** | 0.294 | 0.085 | 0.265 / 0.412 |
+| 3 | + violence | 0.137 | 0.523 | **0.237** | **0.217** | 0.104 | n/a / n/a |
+
+At K = 1 the two arms are identical by construction (Gram-Schmidt leaves the first
+vector untouched). Cross-talk is `NaN` at K = 3 because no inactive concept
+remains to probe — it is not a measurement, and we do not report one.
+
+| Claim | What we measured (off-family Qwen-3B judge, K=1..3) | Verdict |
 |---|---|---|
-| Naive summation interferes — raw-sum success collapses as K grows | raw success **0.00 at every K**; gibberish 1.00 / 0.99 / 0.99 / 1.00 / 0.99 | Vacuously consistent — raw-sum never succeeds, but it already fails at K=1, so there is no collapse *curve* to read |
-| Gram-Schmidt orthogonalization cuts the interference | ortho success **0.00 at every K**, gibberish ~1.00 — identical to raw | Not shown — with both arms pinned at 0 success, orthogonalization cannot be seen to beat raw-sum here |
-| The N5 norm budget bounds how many concepts you can stack | budget = sqrt(Σα²) climbs 0.060 → 0.085 → 0.104 → 0.120 → 0.134, monotone in K | Supported — the budget grows exactly as the quadrature formula predicts |
+| Naive summation interferes — raw-sum success collapses as K grows | raw success decays **0.333 → 0.193 → 0.137** while raw gibberish climbs **0.267 → 0.316 → 0.523** | **Supported (screening)** — success roughly halves and gibberish roughly doubles across the ladder |
+| Gram-Schmidt orthogonalization cuts the interference | ortho success **0.333 → 0.216 → 0.237** at gibberish **0.267 → 0.294 → 0.217**; at K=3 ortho is **1.7× raw success (0.237 vs 0.137) at 0.42× the gibberish (0.217 vs 0.523)** | **Shown (screening)** — the contrast is present and in the predicted direction at both K=2 and K=3 |
+| The N5 norm budget bounds how many concepts you can stack | budget climbs **0.060 → 0.085 → 0.104**, i.e. exactly 0.06·√K | **Supported** — the budget grows as the quadrature formula predicts |
+| Orthogonalization also reduces cross-talk onto inactive concepts | the only rung with an inactive concept is K=2: raw **0.265** vs ortho **0.412** | **Not supported** — ortho cross-talk is *higher* at the single rung where it can be measured |
 
-This is the most deflationary re-run. The old self-judge numbers showed a raw arm
-at 0.40 success at K=1 decaying with K and an ortho arm beating it at most rungs.
-Under the off-family Qwen-3B judge on the harder toxic-chat-derived prompts,
-*every* steered generation at per-concept α=0.06 is graded gibberish — success is
-0.00 for both arms at all K. The honest reading: at this α and 1B scale the summed
-refusal-category vectors push the residual stream off-manifold even at K=1, so the
-interference-vs-orthogonalization contrast the lesson is built around never gets a
-chance to appear — you cannot separate two arms that both score zero. The 1B
-self-judge had been crediting hedged/degenerate outputs as "success"; the honest
-judge does not. Only the budget-grows-as-sqrt(Σα²) prediction survives. Recovering
-any signal needs a lower α or a larger/stronger model. Screening tier, off-family
-judge, tiny per-concept sets — noise (here, uniform collapse) dominates.
+**Honest read.** On the numbers this run produced, the lesson's central contrast
+**does appear**: the raw-sum arm degrades monotonically in both success and
+coherence as concepts are added, while the orthogonalized arm holds its success
+near the K=1 level and — strikingly — ends the ladder with *less* gibberish
+(0.217) than it started with (0.267). The three raw directions are near-collinear
+(cosines 0.91–0.94), so the shared component the raw sum triple-counts at K=3 is
+large; removing it is what keeps the ortho arm on-manifold. That is the mechanism
+the lesson predicts, visible in one screening run.
+
+Two things to hold against it. First, the one cross-talk rung that exists points
+the *other* way (ortho 0.412 vs raw 0.265) — orthogonalization bought coherence
+and success here, not off-target cleanliness. Second, this is screening tier: one
+seed, `N_EVAL_PER_CONCEPT = 30` per concept, a 1B target, and a judge measured at
+ROC-AUC 0.665–0.751 (see the instrument caveat above). Differences of a few
+points sit inside the judge's noise floor; the K=1→K=3 *trends* (a 0.20 success
+drop, a 0.26 gibberish rise in the raw arm) are the part large enough to read.
+None of this reaches the CLAUDE.md §7 evaluation bar.
 
 ---
 

@@ -179,9 +179,18 @@ arms on matched held-out prompts and report every one:
 | *(SAE)* | — | — | — | *out of scope here — see caveats* |
 
 We do **not** claim ReFT-r1 wins. The honest outcome AxBench reports is that the
-simple baselines are hard to beat; our job is to measure whether that replicates
-on one small abliterated model, and to show the comparison transparently rather
-than cherry-picking the learned method. Two questions frame the whole lesson:
+simple baselines are hard to beat, and our job is to show the comparison
+transparently rather than cherry-pick the learned method.
+
+**One structural caveat, stated up front so §7 is not misread:** our base model is
+abliterated, so its instruction-following refusal has been removed. That is the
+exact faculty the **Prompting** arm depends on, and no other arm depends on it.
+The steering bake-off below is therefore **not a like-for-like test of AxBench's
+headline** — a learned residual-stream edit beating prompting on a model that
+cannot be prompted into refusing is close to a tautology. The **detection**
+comparison is unaffected and remains a fair contest.
+
+Two questions frame the whole lesson:
 
 1. **Steering:** which arm most reliably induces refusal **at matched
    coherence** (no gibberish tax)?
@@ -361,58 +370,75 @@ generation samples. Serves on **port 8004** (lessons 1–2 use their own ports).
 ## 7. Results
 
 The GPU run wrote `artifacts/results.json` and two plots. Numbers below are the
-**measured** values on a small held-out set (n=5 harmful, n=5 benign per arm) —
-screening tier, not evaluation tier.
+**measured** values from that file: **n = 200 harmful and n = 200 benign per arm**
+(the disjoint eval split of the 500/class set), single seed — screening tier, not
+evaluation tier.
 
 **Q1 — Steering: which arm refuses most at matched coherence?**
-`steering_compare.png` + `results.json`.
+`steering_compare.png` + `results.json` → `steering`.
 
-| arm | harmful refusal | benign over-refusal | gibberish |
-|---|---|---|---|
-| Prompting | 0.60 | 0.80 | 0.10 |
-| DiffMean (L2) | 0.40 | 0.60 | 0.10 |
-| ReFT-r1 | 0.60 | 0.60 | 0.20 |
+| arm | harmful refusal | benign over-refusal | gibberish | n (harm / benign) |
+|---|---|---|---|---|
+| Prompting | 0.325 | 0.475 | 0.1375 | 200 / 200 |
+| DiffMean (L2) | 0.285 | 0.475 | 0.1825 | 200 / 200 |
+| ReFT-r1 | **0.605** | 0.495 | **0.090** | 200 / 200 |
 
-ReFT-r1 and Prompting tie on harmful refusal (0.60), both above DiffMean (0.40).
-But Prompting is **unconditional** — it over-refuses benign prompts at 0.80, the
-highest of the three, because "just ask it to refuse" fires regardless of intent.
-ReFT-r1 matches Prompting's harmful refusal with less benign over-refusal (0.60).
+ReFT-r1 refuses roughly twice as often as either baseline (0.605 vs 0.325 and
+0.285) and does it with the *lowest* gibberish (0.090). Benign over-refusal is
+essentially flat across all three arms (0.475–0.495), so no arm here is more
+selective than another — that floor is set by the abliterated base plus the judge,
+not by the method. Read the steering column with the like-for-like caveat in the
+claim table below: the Prompting arm is running on a model whose instruction-
+following refusal was deliberately ablated.
 
 **Q2 — Detection: which direction reads the concept best (AUC)?**
-`detection_auc.png` + `results.json`.
+`detection_auc.png` + `results.json` → `detection`.
 
-| direction | ROC-AUC |
-|---|---|
-| DiffMean · h | 0.68 |
-| r_unit · h (ReFT-r1) | 0.68 |
+| direction | ROC-AUC | n (harm / benign) |
+|---|---|---|
+| DiffMean · h | **0.748** | 200 / 200 |
+| r_unit · h (ReFT-r1) | 0.568 | 200 / 200 |
 
-The learned direction and the fixed diff-of-means **tie** as detectors (AUC 0.68
-each) — exactly AxBench's "the simple baseline is strong" point.
+The two directions **do not tie**. The fixed diff-of-means is much the better
+detector (0.748 vs 0.568) — the learned direction is optimized to *write* refusal,
+not to *read* harm, and the gap is the price of that specialization. This is
+AxBench's "the simple baseline is strong" point, and it is a clean one-directional
+result, not a tie.
 
 ### Results — measured vs. the claim
 
 | Claim (AxBench, Wu et al. 2025, arXiv:2501.17148) | What we measured (train 300/class, **eval 200/class**, off-family Qwen-3B judge, 500/class toxic-chat) | Verdict |
 |---|---|---|
-| A **learned** intervention beats a fixed vector at **steering** | ReFT-r1 harmful-refusal **0.605** > Prompting **0.325** > DiffMean **0.285** | **Reproduced** |
-| A simple diff-of-means is the stronger **detector** | DiffMean AUC **0.748** > ReFT-r1 AUC **0.568** | **Reproduced** |
+| AxBench's headline: **prompting outperforms existing steering methods** | ReFT-r1 harmful-refusal **0.605** > Prompting **0.325** > DiffMean **0.285** — our ordering is the *opposite* | **Not a like-for-like test — see below.** Our base model is **abliterated**, which structurally cripples the prompting arm. This neither reproduces nor refutes the paper's claim. |
+| A simple diff-of-means is the stronger **detector** | DiffMean AUC **0.748** > ReFT-r1 AUC **0.568** | **Consistent with AxBench** — this arm *is* like-for-like (both directions read the same frozen activations; no instruction-following involved) |
 | The fixed diff-of-means vector is genuinely weak at steering | DiffMean refusal **0.285** — close to lesson 2's honest ~0.10–0.33 range | **Consistent across lessons** |
 | SAEs underperform | not tested (no SAE arm at this scale) | Out of scope |
 
-**Honest read.** This faithfully reproduces AxBench's central split at 1B, graded
-by an **off-family Qwen-3B judge** on the shared 500/class toxic-chat set
-(**train 300/class, eval 200/class** — the ≥500/class rubric; screening tier,
-single seed). The **learned** rank-1 ReFT-r1 edit wins *steering* (harmful-refusal
-**0.605**, ~2× the fixed DiffMean vector's **0.285** and ~2× prompting's **0.325**,
-with the lowest gibberish 0.09), because it is *trained* to install refusal rather
-than reusing one untrained subtraction. But the simple diff-of-means wins
-*detection* (AUC **0.748** vs ReFT-r1's **0.568**): the linear harm direction is a
-better probe than a better steer — exactly AxBench's "the simple baseline is hard
-to beat *as a detector*" point. The ordering is **robust to the larger N** (it held
-from the earlier n≈50 run: ReFT-r1 0.54 > DiffMean 0.26; DiffMean detection 0.71 >
-0.61), just firmer. One honest cost: benign over-refusal is high across all arms
-(~0.48–0.50 — ReFT-r1 slightly the highest at 0.495), dominated by the abliterated
-base + judge, so no arm is meaningfully *more selective* here. Raw numbers and
-side-by-side generations live in `artifacts/results.json`.
+**Why the steering row is not a reproduction.** AxBench's uncomfortable finding is
+that *prompting* — just telling the model to behave — beats the learned and
+sparse-autoencoder steering methods it benchmarks. Our target is
+`DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated`: a model whose
+refusal behaviour has been **deliberately ablated**. Prompting steers by invoking
+exactly the instruction-following refusal circuitry that abliteration removed,
+while ReFT-r1 steers by writing into the residual stream, which abliteration does
+not touch. So the two arms are not competing on equal footing — we have handicapped
+one of them at the model level, before any measurement. ReFT-r1 scoring 0.605
+against prompting's 0.325 on this base is the expected consequence of that choice,
+not evidence about the paper's claim. A like-for-like test needs a non-abliterated
+instruct model, where prompting's arm is intact. Until then, treat the steering
+ordering on this page as a fact about *this* model, not about the methods.
+
+**What does survive.** The detection split is a fair comparison — both arms are
+scalar read-outs of the same frozen hidden states, and abliteration gives neither
+an advantage. There the simple diff-of-means clearly wins (AUC **0.748** vs
+**0.568**), which is genuinely the "simple baselines are strong" spirit of AxBench.
+The ordering also held at the earlier smaller run (ReFT-r1 0.54 > DiffMean 0.26 on
+steering; DiffMean detection 0.71 > 0.61), so the larger n = 200/class eval firmed
+it up rather than changing it. One honest cost across the board: benign
+over-refusal is high in every arm (0.475–0.495, ReFT-r1 marginally the highest),
+dominated by the abliterated base + judge, so no arm is meaningfully *more
+selective* here. Raw numbers and side-by-side generations live in
+`artifacts/results.json`.
 
 ---
 
@@ -461,10 +487,14 @@ too, just slower. Datasets download automatically.
 - **The gate inherits lesson-1's OOD limits.** The probe ranks harm well but its
   0.5 threshold miscalibrates off-distribution; a gate that misses a harmful
   prompt simply won't apply the edit.
-- **AxBench's finding may not replicate at 1B.** The paper's headline — simple
-  baselines beat SAEs and rival learned methods — was measured on larger models
-  and many concepts. We report what we see here; a single small model can go
-  either way. No SAE arm is included (out of scope at this scale).
+- **The prompting arm is handicapped by design, so AxBench's headline is not
+  tested here.** The paper's finding — prompting outperforms existing steering
+  methods — presumes a model whose instruction-following refusal is intact. Ours
+  is abliterated, precisely so that external refusal vectors have something to
+  re-install. That makes the ReFT-r1-beats-prompting result on this page a
+  property of the base model, not a verdict on the paper (see §7). The paper was
+  also measured on larger models and many concepts, and no SAE arm is included
+  here (out of scope at this scale).
 - **This is pedagogy, not a safety product.** It shows *how* a learned rank-1
   steer works end-to-end and how to compare it honestly. Do not deploy it as a
   real-world guardrail.

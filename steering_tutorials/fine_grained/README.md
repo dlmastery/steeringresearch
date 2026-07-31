@@ -151,23 +151,44 @@ Host-constrained overrides: `FG_N_EVAL` (prompts/class), `FG_SPARSITY`
 First honest run: abliterated Gemma-3-1B, layer 12, α = 0.1, off-family Qwen-3B
 judge (`Qwen/Qwen2.5-3B-Instruct`), from `artifacts/results.json`.
 
+**The full sweep, including the unsteered control** (`results.json` → `baseline`
+plus `sweep`; n = 100 harmful / 100 benign at every row):
+
+| keep-frac | coords | α | harmful refusal | benign over-refusal | gibberish |
+|---|---|---|---|---|---|
+| **— (unsteered baseline)** | **0** | **0.0** | **0.32** | **0.50** | **0.00** |
+| 1.0 (dense) | 1152 | 0.1 | 0.20 | 0.42 | 0.01 |
+| 0.5 | 576 | 0.1 | 0.19 | 0.36 | 0.01 |
+| 0.25 | 288 | 0.1 | 0.16 | 0.33 | 0.005 |
+| 0.1 | 115 | 0.1 | 0.16 | 0.39 | 0.01 |
+| 0.05 | 58 | 0.1 | 0.23 | 0.40 | 0.01 |
+| 0.02 | 23 | 0.1 | 0.29 | 0.49 | 0.00 |
+
 | | |
 |---|---|
 | **Claim** (inspired by AUSteer, arXiv:2602.04428) | A sparse edit keeping ~5–10% of the steering vector's coordinates **matches** dense refusal at matched strength, with **lower** benign over-refusal and gibberish. (Our top-k magnitude mask is a simplification of the paper's activation-momentum AU selection with adaptive per-input strength.) |
-| **Measured** (extract 300, n=100/class, Qwen judge) | Sparsity sweep (keep-frac → refusal / benign-over-refusal / gibberish): 1.0 (dense) 0.20 / 0.42 / **0.01**; 0.5 → 0.19 / 0.36 / 0.01; 0.25 → 0.16 / 0.33 / 0.005; 0.1 → 0.16 / 0.39 / 0.01; 0.05 → **0.23** / 0.40 / 0.01; 0.02 → **0.29** / 0.49 / 0.00. Gibberish stays ~0.01 **at every level**; the 2%-sparse edit refuses *more* than dense (0.29 vs 0.20). |
-| **Verdict** | **Weakly supported (both halves) — the ≥500/class re-run flips the earlier null.** "Steering **less**" clearly holds: keeping just 2–5% of the coordinates preserves coherence (gibberish ~0.01 throughout) — sparsification is free. "Achieving **more**" now weakly holds too: the sparsest edits (0.02–0.05 keep) reach the *highest* refusal (0.29 / 0.23) — above the dense 0.20 — though benign over-refusal also rises (to 0.49 at 2%). Best sparse level = 5% keep (58 of 1152 coords), refusal 0.23. |
+| **Measured** (extract 300, n=100/class, Qwen judge) | **Unsteered baseline refusal is 0.32.** Every steered row lands *below* it: dense 0.20, and the sparse rows 0.19 / 0.16 / 0.16 / 0.23 / 0.29. The sparsest edit (2% keep) is the closest to baseline at 0.29 but still does not reach it. Gibberish stays ≤0.01 at every level. Benign over-refusal also falls below its 0.50 baseline everywhere (0.33–0.49). |
+| **Verdict** | **"Steering less" supported; "achieving more" NOT supported — the α=0 baseline overturns the earlier read.** Sparsification is genuinely free on coherence: keeping 23 of 1152 coordinates costs nothing in gibberish (≤0.01 throughout, same as the unsteered 0.00). But the sparse-vs-dense comparison (0.29 vs 0.20) is a comparison **between two arms that both underperform doing nothing**. At α=0.1 this direction *reduces* refusal relative to unsteered on every row; the sparsest edits win the sweep only by being the *least* disruptive — i.e. by approaching the no-op. That is not "achieving more," it is losing less. |
 
-**Why the change from the earlier null.** An earlier extract-200 / n=60 run found
-refusal **0.00 at every level** (an honest null: the vector didn't steer). At the
-≥500/class config the diff-of-means direction is estimated from **300/class** — a
-better vector — and it now induces a **modest but real** refusal (0.16–0.29) that
-sparsification *preserves and even slightly sharpens*, all at ~0.01 gibberish. So
-"steering less, achieving more" is weakly demonstrated here — but read it as
-screening: the absolute refusal is still low, benign over-refusal is high (~0.4,
-dominated by the base + judge), and the sparse-beats-dense gap (0.29 vs 0.20) is
-within screening noise. The honest lesson: a better-estimated vector is what turned
-the null positive, and sparsification rides on the vector it thins. (Our top-k
-magnitude mask is still a simplification of AUSteer's activation-momentum selection.)
+**Why the earlier read was wrong.** A previous version of this section reported
+the sweep without the `baseline` row that sits in the same `results.json`, and so
+scored "sparse 0.29 > dense 0.20" as a weak win for AUSteer's headline. Against
+the unsteered control (**0.32**) both numbers are regressions, and the monotone
+story is simply that *less* steering (fewer surviving coordinates) means less
+damage: refusal recovers toward baseline as keep-frac falls from 0.25 to 0.02, and
+benign over-refusal recovers toward *its* baseline (0.50) in the same direction.
+The identical pattern in both columns is the tell — this is the edit backing off,
+not the edit getting sharper.
+
+The honest lesson stands, but it is the *first* half only: on this 1B, at layer 12
+and α=0.1, the diff-of-means refusal direction does not install refusal at all
+(the abliterated base already refuses 32% of the time under this judge, and every
+steered arm sits under that), so the sweep cannot arbitrate "achieving more."
+What it does show cleanly is that **support can be cut by 98% with no coherence
+cost**, which is the mechanism AUSteer relies on. Testing the paper's actual claim
+needs a configuration where steering first beats the α=0 control. (Our top-k
+magnitude mask is also a simplification of AUSteer's activation-momentum
+selection.)
 
 **Caveats (read before quoting any number this produces):**
 
@@ -176,7 +197,9 @@ magnitude mask is still a simplification of AUSteer's activation-momentum select
   Holm-Bonferroni). It surfaces a direction; it does not certify a "winner."
 - **Judge is the instrument.** Even the off-family Qwen-3B judge is small; the
   benign over-refusal floor is dominated by the abliterated base model + judge
-  noise, not the steering method. Compare rows to each other, not to zero.
+  noise, not the steering method. Compare rows to the **α=0 baseline row**, never
+  to zero and never only to each other — reading the sweep without the baseline is
+  exactly the error corrected above.
 - **Matched strength is enforced, not assumed** — `sparsify` renormalizes to
   `||v||`, so the sweep isolates sparsity. But `relative_add` re-normalizes the
   direction to unit internally, so the renorm mainly matters for the contract and

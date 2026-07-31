@@ -6,12 +6,21 @@
 > refusal direction back into the residual stream. This lesson asks a question
 > that sits underneath both: **why is plain prompting such a strong steering
 > baseline?** AxBench (arXiv:2501.17148) found that a well-written instruction
-> often matches a learned intervention. The paper's proposed explanation: a
-> prompt's effect on the activation stream is, in large part, a **single shared
-> translation** — and a translation of the residual stream is exactly what an
-> activation-steering vector *is*. We **test** that explanation at 1B — and find it
-> only *partly* holds (the translation tier recovers **0%** of the refusal gain
-> here; the effect lives in the higher affine tier). See [Results](#5-results).
+> often matches a learned intervention. Cheng & Kriegeskorte (arXiv:2606.03093)
+> decompose a prompt's effect on the activation stream into nested geometric
+> tiers, and report that **much prompt-induced activation *variance* is captured
+> by shape-preserving maps — especially translation and rigid+uniform-scale — but
+> that the *affine* tier is the first to nearly recover target-prompt task
+> geometry and yield corresponding behavioural gains.** In other words the paper
+> already places the behaviour above the translation tier.
+>
+> **What this lesson tests is therefore OUR construction, not the paper's claim:**
+> a translation of the residual stream is exactly what an activation-steering
+> vector *is*, so we ask whether the translation component of a refusal
+> instruction, re-injected as a steering vector, reproduces prompting's refusal
+> gain. It does not — recovery is **0%** here. That is a negative result about the
+> steering-vector shortcut, and it is **consistent with**, not a test of, the
+> paper's affine-tier finding. See [Results](#5-results).
 
 We take the activation change a **refusal instruction** induces per prompt,
 decompose it against the diff-of-means refusal direction, and then test — by
@@ -51,15 +60,29 @@ Prompting steers a model without touching a single weight. Cheng & Kriegeskorte
 instruction moves the activation cloud toward the instructed task structure. They
 fit a nested hierarchy of alignment maps — translation, then rigid rotation with
 uniform scaling, then per-axis scaling, then a full **affine** (cross-dimensional
-linear mixing) map, then nonlinear — and ask which tier is needed to explain the
-shift. Their headline: much of the change is a **shape-preserving map**
-(translation + rigid/uniform-scale); the richer affine tier (cross-dimensional
-mixing) is what finally recovers the *full* target task geometry.
+linear mixing) map, then nonlinear — and causally test each tier by *replacing* a
+layer's prompt-A hidden state for held-out stimuli with its mapped counterpart,
+measuring recovery of prompt-B geometry **and** behaviour. Their two-part headline,
+quoted in substance from the abstract: much prompt-induced activation change is
+captured by **shape-preserving maps, especially translation and rigid+uniform
+scaling**; but although those low tiers "already improve behavioral agreement,
+**affine transformation is the first tier to nearly recover target-prompt task
+geometry and yields corresponding behavioral gains**."
 
-The translation tier is the interesting one for us: **a constant shift added to
-the residual stream is an activation-steering vector.** So the part of prompting
-that is a translation is a steering vector the model is applying to itself. This
-lesson measures that fraction directly and then checks it by steering.
+Read that carefully, because it sets what this lesson can and cannot claim. The
+paper's variance result is about translation; the paper's **behaviour** result is
+about affine. **The paper nowhere claims that an activation-steering vector
+reproduces prompting's behavioural gain.**
+
+The translation tier is nonetheless the interesting one for a steering
+practitioner: **a constant shift added to the residual stream is an
+activation-steering vector.** So we ask **our own** question — is the translation
+component of a refusal instruction, re-injected the way a practitioner would
+inject a steering vector, enough to carry the behaviour? This lesson measures that
+fraction directly and then checks it by steering. Two operational differences from
+the paper are worth naming: we **add** a mean translation at every position rather
+than **replacing** a hidden state with its mapped counterpart, and we fit only the
+translation tier, not the nested hierarchy.
 
 ---
 
@@ -136,7 +159,7 @@ mechanically, mostly one self-applied steering vector.
 ```
   harmful/benign (>=500/class, shared loader)
         |
-        |  extract split (150/class)         decompose split (80 harmful)
+        |  extract split (300/class)        decompose split (150 harmful)
         v                                          v
    diff-of-means  ---> u (refusal direction)   per-prompt delta d(x) =
    (CAA vector)             |                   act(WITH instr) - act(WITHOUT)
@@ -150,7 +173,7 @@ mechanically, mostly one self-applied steering vector.
                         |
                         |  mean over prompts -> v_proj (raw units)
                         v
-   WRITE check (24 held-out harmful):   baseline | prompting | steer(v_proj) | steer(v_shared)
+   WRITE check (100 held-out harmful):  baseline | prompting | steer(v_proj) | steer(v_shared)
                         |                                   |
                         v                                   v
               off-family Qwen judge  --------------->  recovery = gain reproduced
@@ -179,33 +202,50 @@ Run at the ≥500/class config: abliterated Gemma-3-1B, layer 12, off-family
 Qwen2.5-3B judge, **N_DECOMP=150 deltas, N_WRITE=100 judged/condition**, from
 `artifacts/results.json`.
 
-| quantity | predicted (per arXiv:2606.03093) | **measured (n=150/100)** |
+**Whose prediction is being tested.** The column below is headed *our* predicted
+range, not the paper's. arXiv:2606.03093 makes **no prediction that a steering
+vector reproduces prompting's behavioural gain** — its behaviour result is the
+opposite, that the **affine** tier is the first to deliver behavioural gains. Our
+falsifier is a pre-registered test of **our own construction** ("re-inject the
+translation component as a steering vector and see if the behaviour follows"),
+and its firing is evidence about that construction.
+
+| quantity | **our** pre-registered expectation | **measured (n=150 decomp / 100 write)** |
 |---|---|---|
-| on-direction energy fraction | moderate–high — a real chunk of prompting is the refusal axis | **0.202** — *low*; ~80% of the prompt's delta is off the refusal axis |
+| on-direction energy fraction | moderate–high — a real chunk of prompting lies on the refusal axis | **0.202** — *low*; ~80% of the prompt's delta is off the refusal axis |
 | cross-prompt consistency | high but < 1 — mostly a shared translation | **0.401** — *moderate*; the shift is substantially input-dependent |
 | shared-translation fraction | high — the common shift dominates the averaged delta | **0.411** — *moderate*; under half survives averaging |
-| `recovery_proj` (WRITE) | substantial (well above 0) — a steering vector reproduces prompting's gain | **0.00** — re-applying the on-direction translation *lowers* refusal (0.33 → 0.26) |
+| `recovery_proj` (WRITE) | substantial (well above 0) **if** the translation shortcut works | **0.00** — re-applying the on-direction translation *lowers* refusal (0.33 → 0.26) |
 | `recovery_shared` vs `recovery_proj` | `shared >= proj` — the residual adds a little | both **0.00**; shared 0.27 ≈ proj 0.26 but *both below the 0.33 baseline* |
 
-**Verdict — the falsifier triggers (robust at 500/class).** The prompt does raise
+**Verdict — our falsifier triggers (robust at 500/class).** The prompt does raise
 refusal (baseline **0.33** → prompting **0.40**, a +0.07 gain), but that gain is
 **not** reproduced by the translation-tier steering vector: `recovery_proj` and
 `recovery_shared` are both **0.00** (both steered arms sit *below* baseline, at 0.26
 and 0.27). With `on_direction_frac = 0.202` and `recovery ≈ 0` *while prompting
-still refuses*, this is exactly the pre-registered falsifier: **at 1B layer 12,
-prompting's effect is not translation-tier-steering-vector-like.** The larger N
-ticks on-direction-fraction up slightly (0.175 → 0.202) but the conclusion is
-unchanged.
+still refuses*, this is exactly the pre-registered falsifier for our construction:
+**at 1B layer 12, the refusal instruction's effect is not reproducible by adding
+its translation component as a steering vector.** The larger N ticks
+on-direction-fraction up slightly (0.175 → 0.202) but the conclusion is unchanged.
+
+**What this does and does not say about the paper.** It does **not** falsify
+arXiv:2606.03093 — the paper never claimed the translation tier carries the
+behaviour. It claimed translation and rigid maps capture much of the activation
+*variance* while **affine** is the first tier to nearly recover target-prompt task
+geometry *and* behaviour. Our result sits comfortably inside that picture: we
+measured only the lowest tier, injected it in a weaker way than the paper's causal
+replacement test (we add a mean shift at every position; they substitute a mapped
+hidden state), and found it insufficient — which is what the paper's own tier
+ordering would lead you to expect. The contribution here is the *practitioner's*
+version of the negative: **the cheapest, most steering-like reading of "prompting
+is a steering vector" does not hold at 1B layer 12.**
 
 **Honest read.** Only ~20% of the prompt's activation footprint lies along the
 refusal direction; the residual dominates, and a constant shift extracted from it
-doesn't carry the behavior. This is consistent with the paper's own hierarchy — the
-headline mechanism is the **affine** tier (cross-dimensional scaling + rotation),
-not the plain **translation** this lesson implements. So the lesson honestly
-demonstrates the *lower bound*: the simplest (translation) component of "prompting
-as steering" is insufficient here, which is itself the point — decomposing prompting
-shows the effect is richer than one additive vector. Screening-tier (single 1B,
-n=100/condition, one layer/seed).
+doesn't carry the behaviour. So the lesson honestly demonstrates a *lower bound*:
+the simplest (translation) component of "prompting as steering" is insufficient
+here — decomposing prompting shows the effect is richer than one additive vector.
+Screening-tier (single 1B, n=100/condition, one layer/seed).
 
 ---
 
@@ -256,12 +296,19 @@ Cap the cost on a laptop with the env knobs, e.g.
 ## 8. Citation
 
 > Fan L. Cheng and Nikolaus Kriegeskorte, 2026, "Decomposing how prompting steers
-> behavior" (arXiv:2606.03093) — introduces a nested geometric decomposition of
-> prompt-induced representational change (translation → rigid+uniform-scale →
-> axis-scaling → affine cross-dimensional mixing → nonlinear), finding that
-> prompts reshape representations toward the instructed task and that much of the
-> change is a shape-preserving map. **Verified** (title/authors/arXiv id
-> confirmed via arXiv, 2026-07).
+> behavior" (arXiv:2606.03093, submitted 2026-06-02) — introduces a nested
+> geometric decomposition of prompt-induced representational change (translation →
+> rigid+uniform-scale → axis-scaling → affine cross-dimensional mixing →
+> nonlinear), causally tested by replacing a layer's prompt-A hidden state with its
+> mapped counterpart. Across 3 LLMs, 3 VLMs and 6 datasets it finds that prompts
+> reshape representations toward the instructed task, that much of the activation
+> *change* is captured by shape-preserving maps (especially translation and
+> rigid+uniform scaling), and — crucially — that **affine transformation is the
+> first tier to nearly recover target-prompt task geometry and yield corresponding
+> behavioral gains**, i.e. cross-dimensional linear mixing is the key mechanism.
+> It makes **no claim** that an activation-steering vector reproduces prompting's
+> behavioural gain; that is this lesson's own construction. **Verified**
+> (title/authors/date/abstract confirmed against arXiv, 2026-07).
 
 Supporting: Wu et al. 2025, "AxBench: Steering LLMs? Even Simple Baselines
 Outperform Sparse Autoencoders" (arXiv:2501.17148) — prompting is a strong
