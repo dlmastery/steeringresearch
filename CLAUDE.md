@@ -555,19 +555,36 @@ conditioned on gate AUC, so our probe result *strengthens* rather than scoops it
   the effect is direction-specific, not geometry-generic. Power: n=8, m=1, min p=0.0078,
   power ~1.00. Artifact `autoresearch_results/FINDING_Ma_matched_budget_n8.md`.
   **Contradicts the norm-preservation premise of GEMS (2606.19946), ORBIT (2606.22357)
-  and Selective Steering (2601.19375) — but ONLY for the single-vector case. See M-b.**
+  and Selective Steering (2601.19375). M-b extends this to N=8: the advantage is
+  INVARIANT to stacking on a properly controlled basis.**
 
-- **M-b (n=8, EVALUATION): the challenge does NOT survive stacking, and GEMS/ORBIT are
-  VINDICATED.** At a matched TOTAL displacement (N orthonormal directions, each f/√N),
-  the additive advantage collapses and inverts: gap **+88.89** (8/8 seeds) at N=1 →
-  **+24.63** at N=2 → **−45.99** at N=4 → **−44.47** at N=8, the last two with CIs
-  excluding zero. The additive arm degrades 1.09× → 3.35× base PPL as vectors stack while
-  rotation holds — exactly the compounding norm-growth mechanism those papers argue for.
-  **All three pre-registered predictions failed**, and P2 failed *deceptively*: coded as
-  "not strictly monotonically decreasing", it returned TRUE only because of a 1.5-PPL
-  uptick at N=8 sitting deep inside its own CI. A discriminating prediction must be
-  operationalised on the EFFECT, not on a brittle ordering a single noisy point can flip.
+- **M-b (n=8, EVALUATION): the additive advantage is INVARIANT to N. Reaching that took
+  THREE bases, and the first two gave opposite wrong answers.**
+
+  | basis | realised displacement | directions exchangeable? | measured trend |
+  |---|---|---|---|
+  | `gs` (Gram-Schmidt) | 1.000×f ✓ | **NO** — direction *i*>1 is a residual, quality decays | gap **shrinks** +88.89 → −44.47 |
+  | `raw` (unit diff-of-means) | 1.00→**2.81×f** ✗ | YES | gap **grows** +88.89 → +621.95 |
+  | **`rawnorm`** | **1.000×f** ✓ | **YES** ✓ | **FLAT** |
+
+  Both early trends were artifacts of whichever variable the basis left free. Proof `gs`
+  is non-exchangeable: at N=1, where permuting direction order MUST be a no-op,
+  `add/base` moved **1.09× → 3.72×**. Proof `raw` breaks the budget: refusal directions
+  are correlated, so displacement nearly TRIPLES by N=8.
+
+  **On `rawnorm` (both controlled): gap +88.89 / +86.59 / +85.95 / +85.92 at N=1/2/4/8,
+  sd 6.51/5.96/3.51/1.87, additive winning 32/32 cells.** Flat — a 3-PPL drift against
+  seed sd of 2–7. So M-a's result is invariant to stacking, and the GEMS/ORBIT premise
+  (norm preservation becomes MORE valuable as edits compose) is challenged on solid
+  ground: it becomes no more valuable at all. Also `add/base` stays 1.02–1.09× at every N
+  and FALLS as N grows — stacking 8 vectors at a matched budget is essentially free; the
+  coherence collapse on the other bases was entirely unmatched displacement.
+
+  **All three pre-registered predictions hold on `rawnorm` and were FALSE/misleading/FALSE
+  on `gs`. The predictions never changed; the control did.** Earlier verdicts are kept in
+  git history because that sequence IS the finding.
   Artifact `autoresearch_results/FINDING_Mb_nstack_matched_budget.md`.
+
 - Dashboard REGENERATED and now renders the hill-climb (52 HC refs, 19 new per-experiment
   pages). It had been stale since 2026-06-06 and silently dropped every v2 row because
   `load_rows()` requires legacy schema fields -- see `scripts/adapt_v2_for_dashboard.py`.
