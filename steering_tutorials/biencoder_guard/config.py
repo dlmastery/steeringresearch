@@ -151,6 +151,27 @@ CONTRASTIVE_TEMP = _env_float("BG_TEMP", 0.05)     # InfoNCE temperature
 LABEL_SCALES = [16, 64, 256, 1024]
 SCALE_BATCH = _env_int("BG_SCALE_BATCH", 64)    # texts per throughput measurement
 
+# --- Large-label-scale ACCURACY (the paper's SECOND scaling claim) -----------
+# arXiv:2602.18487 claims BOTH that bi-encoder latency stays flat AND that its
+# ACCURACY is MAINTAINED as the label bank grows to ~1000. LABEL_SCALES above
+# tests only the latency half. This block tests the ACCURACY half: pad the 16
+# real policies with SYNTHETIC DISTRACTOR policies (distractors.py) up to K, score
+# the test set against all K, and compute the metrics over ONLY the 16 real
+# columns -- the distractors are competing candidates that can steal rank/argmax
+# but are never scored as answers, so the numbers stay comparable to EXP-A/EXP-B.
+LABEL_SCALE_ACC = _env_int("BG_LS_ON", 1)          # 1 = run the accuracy-at-scale EXP-G
+_ls_env = _env_str("BG_LS_K", "")
+LABEL_SCALE_ACC_K = ([int(x) for x in _ls_env.replace(",", " ").split()]
+                     if _ls_env else [16, 64, 256, 900])
+LABEL_SCALE_TOP_T = _env_int("BG_LS_TOPT", 3)      # top-T competitive routing rule
+LABEL_SCALE_PROTO = _env_int("BG_LS_PROTO", POLICY_PARAPHRASES)  # prototypes per distractor
+LABEL_SCALE_ARMS = ["bi_encoder", "bi_encoder_trained"]          # frozen vs trained
+# Distractor generation: fixed seed => a reproducible bank; the Jaccard gate keeps
+# a distractor from being a covert paraphrase of a real policy (which would show up
+# as a FALSE NEGATIVE and be misread as accuracy lost at scale).
+DISTRACTOR_SEED = _env_int("BG_DISTRACTOR_SEED", 12345)
+DISTRACTOR_MAX_JACCARD = _env_float("BG_LS_MAXJAC", 0.20)
+
 # --- Paths -------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent
 ARTIFACTS = ROOT / "artifacts"
@@ -165,5 +186,10 @@ HELDOUT_PNG = ARTIFACTS / "heldout_zeroshot.png"   # zero-shot on unseen policie
 SCALE_PNG = ARTIFACTS / "latency_vs_labels.png"    # the scaling claim
 ADAPTER_CACHE = ARTIFACTS / "contrastive_adapter.pt"   # trained hard-negative adapter
 HARDNEG_PNG = ARTIFACTS / "hardneg_fpr.png"        # FPR@recall: frozen vs adapter
+# Distractor policy bank, cached per embedder. The cache stores the generator
+# FINGERPRINT alongside the matrix; a mismatch invalidates it (stamp your inputs).
+DISTRACTOR_CACHE = {m: ARTIFACTS / f"distractor_bank_{m}.npz"
+                    for m in ("embeddinggemma", "minilm")}
+LABEL_SCALE_PNG = ARTIFACTS / "label_scale_accuracy.png"   # accuracy vs #labels
 
 ARTIFACTS.mkdir(exist_ok=True)

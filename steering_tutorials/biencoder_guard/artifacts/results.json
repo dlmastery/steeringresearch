@@ -94,16 +94,16 @@
       1024
     ],
     "bi_sec": [
-      0.4391232000052696,
-      0.440015800006222,
-      0.43988370000442956,
-      0.4416275000112364
+      0.38958410001941957,
+      0.39049080001132097,
+      0.3905036000069231,
+      0.3915492000087397
     ],
     "uni_sec": [
-      0.2703767000057269,
-      0.8876780999999028,
-      4.5523524999880465,
-      17.636470099998405
+      0.26925279998977203,
+      0.9010981000028551,
+      3.811054299992975,
+      15.77822429999651
     ]
   },
   "ood": {
@@ -142,6 +142,210 @@
     "delta": 0.5583333333333333,
     "n_counterfactuals": 8985,
     "n_false_neg_dropped": 22
+  },
+  "label_scale_accuracy": {
+    "k_grid": [
+      16,
+      64,
+      256,
+      900
+    ],
+    "n_real_policies": 16,
+    "top_t": 3,
+    "n_test_rows": 1710,
+    "distractor_proto": 4,
+    "distractors": {
+      "seed": 12345,
+      "n_candidates": 1080,
+      "n_survived_filters": 1080,
+      "n_used": 884,
+      "dropped_harm_stem": 0,
+      "dropped_jaccard": 0,
+      "dropped_duplicate": 0,
+      "max_jaccard_gate": 0.2,
+      "max_jaccard_observed": 0.125,
+      "mean_jaccard_observed": 0.009221619883384588,
+      "fingerprint": "8c3fc96b2b05",
+      "examples": [
+        "Content that consists of support tickets whose title promises something the body never delivers.",
+        "Content that consists of support tickets that mix incompatible measurement units without conversion.",
+        "Content that consists of library catalogue entries tagged with dozens of irrelevant topic labels."
+      ],
+      "embedding": {
+        "mean_max_cos_to_real": 0.7650474905967712,
+        "p95_max_cos_to_real": 0.7944645285606384,
+        "max_max_cos_to_real": 0.8109706044197083,
+        "n_above_0.90": 0,
+        "n_above_0.95": 0
+      }
+    },
+    "arms": {
+      "bi_encoder": [
+        {
+          "n_labels": 16,
+          "n_distractors": 0,
+          "macro_ap": 0.27550947666168213,
+          "macro_f1": 0.16987913305753075,
+          "micro_ap": 0.2651465151509894,
+          "macro_ap_seen_cols": 0.2398841381072998,
+          "mean_rank_true": 4.461335345152772,
+          "median_rank_true": 3.0,
+          "mean_pct_rank": 0.2307556896768515,
+          "n_positive_pairs": 2651,
+          "mean_rank_chance": 8.5,
+          "rank_lift_vs_chance": 0.5248629817826791,
+          "macro_f1_top_t": 0.3572504280044861,
+          "mean_real_predicted_per_row": 3.0,
+          "micro_precision_top_t": 0.2777777777777778,
+          "micro_recall_top_t": 0.5375330064126744,
+          "distractor_steal_top1": 0.0
+        },
+        {
+          "n_labels": 64,
+          "n_distractors": 48,
+          "macro_ap": 0.27550947666168213,
+          "macro_f1": 0.16987913305753075,
+          "micro_ap": 0.2651465151509894,
+          "macro_ap_seen_cols": 0.2398841381072998,
+          "mean_rank_true": 7.593738211995474,
+          "median_rank_true": 3.0,
+          "mean_pct_rank": 0.10466251130151545,
+          "n_positive_pairs": 2651,
+          "mean_rank_chance": 32.5,
+          "rank_lift_vs_chance": 0.23365348344601458,
+          "macro_f1_top_t": 0.36689133234933824,
+          "mean_real_predicted_per_row": 2.687719298245614,
+          "micro_precision_top_t": 0.2983028720626632,
+          "micro_recall_top_t": 0.5171633345907205,
+          "distractor_steal_top1": 0.043142305215711524
+        },
+        {
+          "n_labels": 256,
+          "n_distractors": 240,
+          "macro_ap": 0.27550947666168213,
+          "macro_f1": 0.16987913305753075,
+          "micro_ap": 0.2651465151509894,
+          "macro_ap_seen_cols": 0.2398841381072998,
+          "mean_rank_true": 19.801584307808373,
+          "median_rank_true": 4.0,
+          "mean_pct_rank": 0.07373170316787597,
+          "n_positive_pairs": 2651,
+          "mean_rank_chance": 128.5,
+          "rank_lift_vs_chance": 0.1540979323564854,
+          "macro_f1_top_t": 0.3778020279630584,
+          "mean_real_predicted_per_row": 2.386549707602339,
+          "micro_precision_top_t": 0.3222249448664543,
+          "micro_recall_top_t": 0.4960392304790645,
+          "distractor_steal_top1": 0.0927237604636188
+        },
+        {
+          "n_labels": 900,
+          "n_distractors": 884,
+          "macro_ap": 0.27550947666168213,
+          "macro_f1": 0.16987913305753075,
+          "micro_ap": 0.2651465151509894,
+          "macro_ap_seen_cols": 0.2398841381072998,
+          "mean_rank_true": 62.5465861938891,
+          "median_rank_true": 4.0,
+          "mean_pct_rank": 0.06846116373068865,
+          "n_positive_pairs": 2651,
+          "mean_rank_chance": 450.5,
+          "rank_lift_vs_chance": 0.13883814915402687,
+          "macro_f1_top_t": 0.3770789074155442,
+          "mean_real_predicted_per_row": 2.1976608187134503,
+          "micro_precision_top_t": 0.3358169238956892,
+          "micro_recall_top_t": 0.4760467748019615,
+          "distractor_steal_top1": 0.13329040566645203
+        }
+      ],
+      "bi_encoder_trained": [
+        {
+          "n_labels": 16,
+          "n_distractors": 0,
+          "macro_ap": 0.5045809149742126,
+          "macro_f1": 0.3050162505494145,
+          "micro_ap": 0.4223994873137542,
+          "macro_ap_seen_cols": 0.5746641755104065,
+          "mean_rank_true": 3.7963032817804603,
+          "median_rank_true": 3.0,
+          "mean_pct_rank": 0.18642021878536402,
+          "n_positive_pairs": 2651,
+          "mean_rank_chance": 8.5,
+          "rank_lift_vs_chance": 0.44662391550358355,
+          "macro_f1_top_t": 0.43035992446944793,
+          "mean_real_predicted_per_row": 3.0,
+          "micro_precision_top_t": 0.3115009746588694,
+          "micro_recall_top_t": 0.6027913994718974,
+          "distractor_steal_top1": 0.0
+        },
+        {
+          "n_labels": 64,
+          "n_distractors": 48,
+          "macro_ap": 0.5045809149742126,
+          "macro_f1": 0.3050162505494145,
+          "micro_ap": 0.4223994873137542,
+          "macro_ap_seen_cols": 0.5746641755104065,
+          "mean_rank_true": 9.85326291965296,
+          "median_rank_true": 3.0,
+          "mean_pct_rank": 0.14052798285163431,
+          "n_positive_pairs": 2651,
+          "mean_rank_chance": 32.5,
+          "rank_lift_vs_chance": 0.3031773206047065,
+          "macro_f1_top_t": 0.44768656974753845,
+          "mean_real_predicted_per_row": 2.627485380116959,
+          "micro_precision_top_t": 0.3358557756510127,
+          "micro_recall_top_t": 0.5692191625801585,
+          "distractor_steal_top1": 0.015453960077269801
+        },
+        {
+          "n_labels": 256,
+          "n_distractors": 240,
+          "macro_ap": 0.5045809149742126,
+          "macro_f1": 0.3050162505494145,
+          "micro_ap": 0.4223994873137542,
+          "macro_ap_seen_cols": 0.5746641755104065,
+          "mean_rank_true": 33.60467748019615,
+          "median_rank_true": 3.0,
+          "mean_pct_rank": 0.1278614803144947,
+          "n_positive_pairs": 2651,
+          "mean_rank_chance": 128.5,
+          "rank_lift_vs_chance": 0.26151499984588444,
+          "macro_f1_top_t": 0.45585957049923476,
+          "mean_real_predicted_per_row": 2.4198830409356726,
+          "micro_precision_top_t": 0.3537941034316095,
+          "micro_recall_top_t": 0.5522444360618635,
+          "distractor_steal_top1": 0.03541532517707663
+        },
+        {
+          "n_labels": 900,
+          "n_distractors": 884,
+          "macro_ap": 0.5045809149742126,
+          "macro_f1": 0.3050162505494145,
+          "micro_ap": 0.4223994873137542,
+          "macro_ap_seen_cols": 0.5746641755104065,
+          "mean_rank_true": 113.01433421350434,
+          "median_rank_true": 3.0,
+          "mean_pct_rank": 0.12459881447553318,
+          "n_positive_pairs": 2651,
+          "mean_rank_chance": 450.5,
+          "rank_lift_vs_chance": 0.2508642268890218,
+          "macro_f1_top_t": 0.4593419618356221,
+          "mean_real_predicted_per_row": 2.252046783625731,
+          "micro_precision_top_t": 0.36587899246948846,
+          "micro_recall_top_t": 0.5314975480950584,
+          "distractor_steal_top1": 0.04829362524146812
+        }
+      ]
+    },
+    "notes": {
+      "per_column_invariance_verified": true,
+      "per_column_max_spread_over_k": {
+        "bi_encoder": 0.0,
+        "bi_encoder_trained": 0.0
+      },
+      "per_column_invariance_explanation": "macro_ap / macro_f1 are computed per policy column from cosine(content, bank[j]), which does not depend on any other column, so they are EXACTLY invariant in K for both bi-encoder arms. Their flatness is arithmetic, not evidence. The paper's 'accuracy maintained at scale' claim is only falsifiable under a COMPETITIVE decision rule, which is what mean_rank_true, mean_pct_rank, macro_f1_top_t and distractor_steal_top1 measure.",
+      "top_t_f1_confound": "macro_f1_top_t is NOT a clean scaling metric. The top-T rule emits exactly T predictions per row; at K=n_real all T land on real columns, but as distractors enter they consume slots, so mean_real_predicted_per_row falls and precision rises for free. macro_f1_top_t can therefore INCREASE with K while the ranking underneath degrades. Read it only alongside mean_real_predicted_per_row, micro_precision_top_t and micro_recall_top_t. The uncontaminated degradation measures are distractor_steal_top1 and mean_rank_true vs mean_rank_chance."
+    }
   },
   "examples": [
     {
@@ -191,6 +395,7 @@
     "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\biencoder_guard\\artifacts\\pr_by_method.png",
     "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\biencoder_guard\\artifacts\\heldout_zeroshot.png",
     "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\biencoder_guard\\artifacts\\latency_vs_labels.png",
-    "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\biencoder_guard\\artifacts\\hardneg_fpr.png"
+    "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\biencoder_guard\\artifacts\\hardneg_fpr.png",
+    "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\biencoder_guard\\artifacts\\label_scale_accuracy.png"
   ]
 }

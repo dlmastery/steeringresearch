@@ -501,6 +501,60 @@ so the off-family-judge discipline of the steering lessons does not apply here
 > *(Kept deliberately: `bi_encoder` frozen cosine remains as the labelled ablation it
 > actually is, so the comparison stays visible instead of being silently replaced.)*
 
+> ### 10.1 The label-scale test (EXP-G) — and a metric that cannot answer the question
+>
+> The paper's scaling experiment runs to **~1000 labels** and makes **two** claims:
+> latency stays flat (already tested here by `scaling_latency`), and **accuracy is
+> maintained**. EXP-G tests the second: pad the 16 real policies with **884 synthetic
+> distractor policies** and re-score at K = 16 / 64 / 256 / **900**, computing metrics
+> over the 16 real columns only.
+>
+> **First, a warning that changes how you read the table.** `macro_AP` and `macro_F1` are
+> **exactly** flat across K — spread `0.00e+00`, asserted in code. That is not a
+> measurement, it is **arithmetic**: a bi-encoder's score for column *j* is
+> `cos(content, bank[j])`, which does not depend on any other column. Adding 884
+> competitors cannot move a per-column average by construction. **Anyone reporting that
+> flatness as "accuracy is maintained at scale" would be reporting a tautology.**
+>
+> The question only has content under a **competitive** rule — where distractors can
+> outrank the true policy:
+>
+> | arm | K=16 | K=64 | K=256 | **K=900** | degradation |
+> |---|---|---|---|---|---|
+> | `bi_encoder` mean rank of true policy | 4.46 | 7.59 | 19.80 | **62.55** | **14×** |
+> | `bi_encoder_trained` mean rank | 3.80 | 9.85 | 33.60 | **113.01** | **30×** |
+> | *(chance)* | 8.5 | 32.5 | 128.5 | 450.5 | 53× |
+> | `bi_encoder` **rank / chance** | 0.525 | 0.234 | 0.154 | **0.139** | improves |
+> | `bi_encoder_trained` **rank / chance** | 0.447 | 0.303 | 0.262 | **0.251** | improves |
+>
+> **The trained arm starts better and ends worse.** At K=16 it ranks the true policy
+> 3.80 vs 4.46. At K=900 it ranks it **113.0 vs 62.6** — nearly twice as deep. Relative
+> to chance the ordering flips too: frozen ends at 0.139, trained at 0.251.
+>
+> **This is the same weakness EXP-B found, seen from another angle.** The projection is
+> fitted to 12 policies; 884 policies it has never seen are exactly what it has no
+> machinery to reject. Frozen cosine has no such bias — it was never told which twelve
+> mattered — so it degrades more gracefully among strangers. Trained wins where it was
+> trained and loses where it was not, in both experiments.
+>
+> **Two further honesty notes recorded in the artifact:**
+> - `top-3 F1` *rises* with K, which is an artifact: distractors consume top-3 slots, so
+>   real predictions per row fall 3.00 → 2.20 and precision improves for free. It is
+>   excluded from the plot and flagged as `notes.top_t_f1_confound`.
+> - Distractors are screened **lexically** (disjoint domain grid, harm-stem blocklist,
+>   Jaccard ≤ 0.20 vs every real description *and* paraphrase; max observed 0.125), with
+>   the embedding audit **report-only**. Filtering by cosine under the encoder being
+>   tested would delete precisely the hard competitors and rig the result. Bank is
+>   seed-12345 deterministic, fingerprint `8c3fc96b2b05`, prefix-nested so each smaller
+>   K is a strict prefix of the larger.
+>
+> **Verdict on the paper's claim (2):** *not reproduced at this label diversity.* Both
+> arms stay well above chance, so accuracy is "maintained" only in the weak relative
+> sense; in absolute ranking both degrade, and the trained arm degrades more. The paper
+> trains at million-label scale — again, that scale is the thing we cannot replicate,
+> and again it is the thing that would matter.
+
+
 
 
 **MEASURED — the HEADLINE run: EmbeddingGemma-300M at 500/class.** Numbers below are

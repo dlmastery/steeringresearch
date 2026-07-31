@@ -23,7 +23,7 @@ strong on SEEN labels, cannot score an UNSEEN one) -- on a hard, multi-dataset,
 many-label safety corpus (BeaverTails + toxic-chat + wildguardmix).
 
 ------------------------------------------------------------------------------
-THE SIX EXPERIMENTS
+THE SEVEN EXPERIMENTS
 ------------------------------------------------------------------------------
   EXP-A  seen-policy multilabel : per-method macro/micro AP + F1 on SEEN cols.
   EXP-B  held-out ZERO-SHOT     : score policies never seen in training. bi &
@@ -45,6 +45,18 @@ THE SIX EXPERIMENTS
                                   false-negative filter -> train a small
                                   ContrastiveAdapter -> does it cut FPR@recall
                                   0.90 vs the frozen bi-encoder on hard negatives?
+  EXP-G  ACCURACY vs #labels     : the OTHER half of the arXiv:2602.18487 scaling
+                                  claim. EXP-D shows latency stays flat; this asks
+                                  whether ACCURACY survives. Pad the 16 real
+                                  policies with deterministic synthetic DISTRACTOR
+                                  policies (distractors.py) to K in {16,64,256,900},
+                                  score the test set against all K, and measure ONLY
+                                  the 16 real columns. Per-column AP/F1 are invariant
+                                  in K by construction, so the claim is judged on the
+                                  COMPETITIVE metrics: rank of the true policy among
+                                  all K, top-T routing F1, and argmax steal rate.
+                                  (Requested as "EXP-F"; that tag was already used by
+                                  the hard-negative module, hence EXP-G.)
 
 Detection task -> NO generation judge (results["judge"] is null). CPU-only from
 the orchestrator's view: the embedder loads inside the encoders module. Sibling
@@ -276,6 +288,60 @@ def _plot_latency(scaling, out_path):
     plt.close(fig)
 
 
+def _plot_label_scale(block, out_path):
+    """Accuracy vs #labels: the ranking metrics that CAN move, for both bi arms.
+
+    Left  -- mean absolute rank of the true policy among all K candidates, drawn
+             against the (K+1)/2 CHANCE line so the reader can separate "the bank
+             got bigger" from "the encoder got worse".
+    Right -- distractor steal rate at top-1: how often a synthetic distractor
+             out-scores EVERY real policy on a genuinely harmful row.
+
+    Two metrics are deliberately NOT plotted. Per-column macro-AP/F1 are invariant
+    in K by construction, so a flat line would be arithmetic rather than evidence.
+    macro_f1_top_t is confounded -- distractors consume top-T slots, cutting the
+    number of real predictions per row and raising precision for free -- so
+    plotting it would advertise an artifact as a scaling win.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    arms = block.get("arms", {})
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.6))
+    styles = {"bi_encoder": ("o-", "tab:green"), "bi_encoder_trained": ("s-", "tab:blue")}
+    chance_ks, chance_v = [], []
+    for arm, rows in arms.items():
+        if not isinstance(rows, list) or not rows:
+            continue
+        ks = [r["n_labels"] for r in rows]
+        st, col = styles.get(arm, ("^-", "tab:gray"))
+        axes[0].plot(ks, [r["mean_rank_true"] for r in rows], st, color=col, label=arm)
+        axes[1].plot(ks, [r["distractor_steal_top1"] for r in rows], st, color=col, label=arm)
+        chance_ks, chance_v = ks, [r["mean_rank_chance"] for r in rows]
+    if chance_ks:
+        axes[0].plot(chance_ks, chance_v, "k--", alpha=0.5, label="chance ((K+1)/2)")
+        axes[0].set_yscale("log")
+    for ax, ylab, title in (
+        (axes[0], "mean rank of the true policy (log, lower better)",
+         "Rank of the TRUE policy vs bank size"),
+        (axes[1], "P(a distractor beats every real policy)",
+         "Top-1 steal rate on harmful rows"),
+    ):
+        ax.set_xscale("log", base=2)
+        ax.set_xlabel("Number of policy labels K (16 real + distractors)")
+        ax.set_ylabel(ylab, fontsize=8)
+        ax.set_title(title, fontsize=10)
+        ax.grid(True, which="both", alpha=0.3)
+        ax.legend(fontsize=8)
+    fig.suptitle("Large-label-scale ACCURACY (metrics over the 16 REAL columns only)",
+                 fontsize=11)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=120)
+    plt.close(fig)
+
+
 def _plot_hardneg(hardneg_block, out_path):
     """FPR@recall0.90 bars: frozen bi-encoder vs the trained contrastive adapter."""
     import matplotlib
@@ -409,6 +475,280 @@ def _run_hardneg(hardneg, encoders, policies, policy_bank,
 
 
 # ===========================================================================
+# EXP-G helper: ACCURACY under LARGE-LABEL SCALING (the paper's 2nd claim)
+# ===========================================================================
+def _distractor_bank_cached(encoders, distractors, embedder, n_needed, policies):
+    """Build (and cache) the synthetic distractor half of the policy tower.
+
+    Cached per embedder, and the cache carries the generator FINGERPRINT: if the
+    distractor list changes (new grid, new seed, different count) the fingerprint
+    moves and the stale matrix is REJECTED rather than silently reused. An
+    artifact that cannot be tied to the code beside it is not evidence.
+    """
+    built = distractors.build_distractors(policies, n_needed)
+    dpols = built["policies"]
+    fp = built["audit"]["fingerprint"]
+
+    path = C.DISTRACTOR_CACHE.get(C.EMBEDDER)
+    if path is not None and path.exists():
+        try:
+            data = np.load(path, allow_pickle=False)
+            B = data["B"].astype(np.float32)
+            cached_fp = str(data["fingerprint"].item()) if "fingerprint" in data else ""
+            if B.shape[0] == len(dpols) and cached_fp == fp:
+                print("[distract] loaded cache %s shape=%s fp=%s" % (path.name, B.shape, fp))
+                return B, dpols, built["audit"]
+            print("[distract] cache REJECTED (shape %s vs %d, fp %r vs %r); rebuilding"
+                  % (B.shape, len(dpols), cached_fp, fp))
+        except Exception as exc:
+            print("[distract] cache reload failed (%s); rebuilding" % exc)
+
+    t0 = time.perf_counter()
+    B = np.asarray(encoders.build_policy_bank(dpols, embedder, n_proto=C.LABEL_SCALE_PROTO),
+                   dtype=np.float32)
+    print("[distract] embedded %d distractor policies x %d prototypes in %.1fs -> %s"
+          % (len(dpols), C.LABEL_SCALE_PROTO, time.perf_counter() - t0, B.shape))
+    if path is not None:
+        try:
+            np.savez_compressed(path, B=B, fingerprint=np.array(fp))
+        except Exception as exc:
+            print("[distract] cache save failed: %s" % exc)
+    return B, dpols, built["audit"]
+
+
+def _competition_ranks(S):
+    """Rank every column per row, 1 = highest score. Returns int32 [n, K].
+
+    Ties are broken by column index, and the 16 REAL columns occupy indices
+    0..15, so a tie is resolved in the REAL policy's favour. With float cosines
+    exact ties are effectively nonexistent; the convention is stated so the
+    (mildly optimistic) direction of the bias is on the record rather than hidden.
+    """
+    S = np.asarray(S, dtype=np.float32)
+    n, K = S.shape
+    order = np.argsort(-S, axis=1, kind="stable")          # best -> worst
+    ranks = np.empty((n, K), dtype=np.int32)
+    np.put_along_axis(ranks, order, np.arange(1, K + 1, dtype=np.int32)[None, :], axis=1)
+    return ranks
+
+
+def _label_scale_metrics(encoders, Y_real, S_K, n_real, top_t, seen_pos):
+    """Metrics for ONE arm at ONE label count K, scored over the REAL columns only.
+
+    TWO FAMILIES, and the distinction is the whole point of the experiment:
+
+    * PER-COLUMN metrics (macro_ap, macro_f1 at a fixed per-policy threshold) ask
+      "does policy j fire on this text?" independently of every other column. For
+      a bi-encoder that score is cosine(content, bank[j]) -- a function of column j
+      ALONE -- so adding distractor columns cannot change it. These are therefore
+      EXACTLY invariant in K, by construction rather than by measurement, and the
+      runner asserts that invariance instead of presenting it as a finding.
+    * COMPETITIVE metrics (rank of the true policy among all K, top-T routing F1,
+      argmax steal rate) ask "which of the K policies does this text match best?"
+      -- the retrieval-shaped decision a production router actually makes. THESE
+      can degrade as distractors are added, so this is where the paper's
+      "accuracy is maintained at scale" claim carries empirical content.
+    """
+    from sklearn.metrics import f1_score
+
+    S_K = np.asarray(S_K, dtype=np.float32)
+    Y_real = np.asarray(Y_real)
+    K = S_K.shape[1]
+    S_real = S_K[:, :n_real]
+
+    # --- per-column family (K-invariant by construction) ---
+    mm = encoders.macro_micro(Y_real, S_real, thresholds=None)
+    out = {
+        "n_labels": int(K),
+        "n_distractors": int(K - n_real),
+        "macro_ap": float(mm.get("macro_ap", float("nan"))),
+        "macro_f1": float(mm.get("macro_f1", float("nan"))),
+        "micro_ap": float(mm.get("micro_ap", float("nan"))),
+    }
+    # macro-AP restricted to the SEEN columns, so this row is directly comparable
+    # to EXP-A (which scores seen columns only).
+    if seen_pos:
+        mm_seen = encoders.macro_micro(Y_real[:, seen_pos], S_real[:, seen_pos], thresholds=None)
+        out["macro_ap_seen_cols"] = float(mm_seen.get("macro_ap", float("nan")))
+    else:
+        out["macro_ap_seen_cols"] = float("nan")
+
+    # --- competitive family (this is what K can move) ---
+    ranks = _competition_ranks(S_K)
+    r_real = ranks[:, :n_real]
+    pos = Y_real > 0
+    if pos.any():
+        rp = r_real[pos].astype(float)
+        out["mean_rank_true"] = float(np.mean(rp))
+        out["median_rank_true"] = float(np.median(rp))
+        # scale-free: 0.0 => the true policy is always ranked first among all K.
+        out["mean_pct_rank"] = float(np.mean((rp - 1.0) / max(K - 1, 1)))
+        out["n_positive_pairs"] = int(pos.sum())
+    else:
+        out.update({"mean_rank_true": float("nan"), "median_rank_true": float("nan"),
+                    "mean_pct_rank": float("nan"), "n_positive_pairs": 0})
+
+    # chance calibration for the absolute rank: a random bank ranks the true policy
+    # at (K+1)/2 on average, so the raw mean rank MUST be read against it.
+    out["mean_rank_chance"] = float((K + 1) / 2.0)
+    out["rank_lift_vs_chance"] = (float(out["mean_rank_true"] / out["mean_rank_chance"])
+                                  if out["mean_rank_true"] == out["mean_rank_true"] else float("nan"))
+
+    # top-T routing: flag policy j iff it is among the T best of ALL K candidates.
+    pred = (r_real <= int(top_t)).astype(int)
+    f1s = []
+    for j in range(n_real):
+        y = Y_real[:, j].astype(int)
+        if y.sum() == 0:
+            continue                      # undefined column -> excluded, as elsewhere
+        f1s.append(f1_score(y, pred[:, j], zero_division=0))
+    out["macro_f1_top_t"] = float(np.mean(f1s)) if f1s else float("nan")
+
+    # CONFOUND DIAGNOSTIC -- read this before reading macro_f1_top_t.
+    # At K = n_real the top-T rule always fires on exactly T REAL columns. As
+    # distractors enter, some of those T slots go to distractors, so the rule
+    # predicts FEWER real columns per row. Where precision is the binding
+    # constraint (T predictions for ~1-2 true labels), that pruning can RAISE F1
+    # even as the underlying ranking gets worse -- an improvement that is an
+    # artifact of the decision rule, not of the encoder. These three fields expose
+    # the mechanism so macro_f1_top_t can never be read naively as "accuracy held".
+    out["mean_real_predicted_per_row"] = float(pred.sum(axis=1).mean())
+    tp = float((pred * (Y_real > 0)).sum())
+    out["micro_precision_top_t"] = float(tp / pred.sum()) if pred.sum() else float("nan")
+    out["micro_recall_top_t"] = (float(tp / (Y_real > 0).sum())
+                                 if (Y_real > 0).sum() else float("nan"))
+
+    # how often does a DISTRACTOR win the argmax on a row that really is harmful?
+    rows = np.where(pos.any(axis=1))[0]
+    if len(rows):
+        top1 = np.argmin(ranks[rows], axis=1)
+        out["distractor_steal_top1"] = float(np.mean(top1 >= n_real))
+    else:
+        out["distractor_steal_top1"] = float("nan")
+    return out
+
+
+def _run_label_scale_accuracy(encoders, distractors, guards, policies, embedder,
+                              policy_bank, Xc_te, texts_te, Y_te, seen_cols):
+    """EXP-G: does bi-encoder ACCURACY survive a ~900-label policy bank?
+
+    Method. Pad the 16 real policies with synthetic distractors (distractors.py,
+    fixed seed, four disjointness guards) to K in C.LABEL_SCALE_ACC_K. Score the
+    test set against the full bank, then compute every metric over the FIRST 16
+    (real) columns only -- distractors compete for rank but are never scored as
+    answers, so the numbers stay on the same footing as EXP-A/EXP-B.
+
+    Efficiency + exactness. The bank is [16 real | 884 distractors] in a FIXED
+    order, so the K-label condition is the first K columns of the K_max score
+    matrix. We therefore score ONCE at K_max and SLICE. That is not an
+    approximation: it is the same matrix the K-th run would have produced, and it
+    also guarantees the nested-scale property (no resampling between K values).
+    """
+    ks = sorted({int(k) for k in C.LABEL_SCALE_ACC_K})
+    n_real = len(policies)
+    ks = [k for k in ks if k >= n_real]
+    if not ks:
+        raise ValueError("LABEL_SCALE_ACC_K has no K >= n_real=%d" % n_real)
+    k_max = ks[-1]
+    n_needed = k_max - n_real
+
+    D, dpols, audit = _distractor_bank_cached(encoders, distractors, embedder,
+                                              n_needed, policies)
+    real_bank = np.asarray(policy_bank, dtype=np.float32)
+    full_bank = np.vstack([real_bank, D]).astype(np.float32)
+    assert full_bank.shape[0] == k_max, "bank assembly produced %d rows, expected %d" % (
+        full_bank.shape[0], k_max)
+
+    # G4: report-only proximity audit of the distractors in the encoder's geometry.
+    audit = dict(audit)
+    audit["embedding"] = distractors.embedding_audit(D, real_bank)
+    ea = audit["embedding"]
+    print("[EXP-G] distractor proximity: mean_max_cos=%.3f p95=%.3f max=%.3f "
+          "(n>=0.90: %d, n>=0.95: %d)"
+          % (ea.get("mean_max_cos_to_real", float("nan")),
+             ea.get("p95_max_cos_to_real", float("nan")),
+             ea.get("max_max_cos_to_real", float("nan")),
+             ea.get("n_above_0.90", -1), ea.get("n_above_0.95", -1)))
+
+    Y_real = np.asarray(Y_te)
+    seen_pos = [int(c) for c in seen_cols if 0 <= int(c) < n_real]
+
+    block = {
+        "k_grid": [int(k) for k in ks],
+        "n_real_policies": int(n_real),
+        "top_t": int(C.LABEL_SCALE_TOP_T),
+        "n_test_rows": int(Xc_te.shape[0]),
+        "distractor_proto": int(C.LABEL_SCALE_PROTO),
+        "distractors": audit,
+        "arms": {},
+        "notes": {},
+    }
+
+    for arm in C.LABEL_SCALE_ARMS:
+        g = guards.get(arm)
+        if g is None:
+            block["arms"][arm] = {"error": "fit failed"}
+            continue
+        try:
+            t0 = time.perf_counter()
+            S_max = _guard_scores(g, Xc_te, texts_te, full_bank, list(range(k_max)))
+            print("[EXP-G/%s] scored %d texts x %d labels in %.2fs"
+                  % (arm, S_max.shape[0], S_max.shape[1], time.perf_counter() - t0))
+            rows = []
+            for k in ks:
+                rows.append(_label_scale_metrics(encoders, Y_real, S_max[:, :k],
+                                                 n_real, C.LABEL_SCALE_TOP_T, seen_pos))
+            block["arms"][arm] = rows
+            for r in rows:
+                print("[EXP-G/%s] K=%4d  macroAP=%.3f  top%dF1=%.3f (P=%.3f R=%.3f "
+                      "nreal/row=%.2f)  meanRank=%.2f (chance %.1f, lift %.3f)  steal@1=%.3f"
+                      % (arm, r["n_labels"], r["macro_ap"], C.LABEL_SCALE_TOP_T,
+                         r["macro_f1_top_t"], r["micro_precision_top_t"],
+                         r["micro_recall_top_t"], r["mean_real_predicted_per_row"],
+                         r["mean_rank_true"], r["mean_rank_chance"],
+                         r["rank_lift_vs_chance"], r["distractor_steal_top1"]))
+        except Exception as exc:
+            block["arms"][arm] = {"error": str(exc)}
+            print("[EXP-G/%s] FAILED: %s" % (arm, exc))
+
+    # ASSERT THE ANCHOR. The per-column metrics MUST be bit-identical across K for
+    # these arms (cosine against column j ignores every other column). If they ever
+    # differ, the scoring path has picked up a cross-column dependency -- a bug that
+    # would otherwise masquerade as "accuracy degrades at scale". We verify rather
+    # than assume, and we record the verdict so a reader can see it was checked.
+    inv_ok, inv_detail = True, {}
+    for arm, rows in block["arms"].items():
+        if not isinstance(rows, list) or len(rows) < 2:
+            continue
+        aps = [r["macro_ap"] for r in rows]
+        f1s = [r["macro_f1"] for r in rows]
+        spread = max(max(aps) - min(aps), max(f1s) - min(f1s))
+        inv_detail[arm] = float(spread)
+        if spread > 1e-9:
+            inv_ok = False
+    block["notes"]["per_column_invariance_verified"] = bool(inv_ok)
+    block["notes"]["per_column_max_spread_over_k"] = inv_detail
+    block["notes"]["per_column_invariance_explanation"] = (
+        "macro_ap / macro_f1 are computed per policy column from cosine(content, "
+        "bank[j]), which does not depend on any other column, so they are EXACTLY "
+        "invariant in K for both bi-encoder arms. Their flatness is arithmetic, not "
+        "evidence. The paper's 'accuracy maintained at scale' claim is only "
+        "falsifiable under a COMPETITIVE decision rule, which is what mean_rank_true, "
+        "mean_pct_rank, macro_f1_top_t and distractor_steal_top1 measure.")
+    block["notes"]["top_t_f1_confound"] = (
+        "macro_f1_top_t is NOT a clean scaling metric. The top-T rule emits exactly T "
+        "predictions per row; at K=n_real all T land on real columns, but as distractors "
+        "enter they consume slots, so mean_real_predicted_per_row falls and precision "
+        "rises for free. macro_f1_top_t can therefore INCREASE with K while the ranking "
+        "underneath degrades. Read it only alongside mean_real_predicted_per_row, "
+        "micro_precision_top_t and micro_recall_top_t. The uncontaminated degradation "
+        "measures are distractor_steal_top1 and mean_rank_true vs mean_rank_chance.")
+    print("[EXP-G] per-column invariance in K verified=%s (max spread %s)"
+          % (inv_ok, {k: "%.2e" % v for k, v in inv_detail.items()}))
+    return block
+
+
+# ===========================================================================
 # Orchestrator
 # ===========================================================================
 def main():
@@ -520,6 +860,7 @@ def main():
         "scaling": {},
         "ood": {},
         "hardneg": {},
+        "label_scale_accuracy": {},
         "examples": [],
         "plots": [],
     }
@@ -656,6 +997,21 @@ def main():
             results["hardneg"] = {"error": str(exc)}
             print("[EXP-F] FAILED: %s" % exc)
 
+    # --- EXP-G: ACCURACY under large-label scaling ------------------------
+    # Requested as "EXP-F"; that tag was already taken by the hard-negative
+    # module above, so this one is EXP-G. It closes the other half of the
+    # arXiv:2602.18487 scaling claim -- EXP-D tests LATENCY at scale, this tests
+    # ACCURACY at scale.
+    if C.LABEL_SCALE_ACC:
+        try:
+            from . import distractors
+            results["label_scale_accuracy"] = _run_label_scale_accuracy(
+                encoders, distractors, guards, policies, embedder,
+                policy_bank, Xc_te, texts_te, Y_te, seen_cols)
+        except Exception as exc:
+            results["label_scale_accuracy"] = {"error": str(exc)}
+            print("[EXP-G] FAILED: %s" % exc)
+
     # --- examples: one harmful + one benign, top matched policies (bi) -----
     try:
         results["examples"] = _build_examples(guards, policy_bank, Xc_te, texts_te,
@@ -681,6 +1037,8 @@ def main():
                                   results.get("multiproto_ablation", {}), C.HELDOUT_PNG)),
         ("scaling", C.SCALE_PNG, lambda: _plot_latency(results.get("scaling", {}), C.SCALE_PNG)),
         ("hardneg", C.HARDNEG_PNG, lambda: _plot_hardneg(results.get("hardneg", {}), C.HARDNEG_PNG)),
+        ("label_scale", C.LABEL_SCALE_PNG,
+         lambda: _plot_label_scale(results.get("label_scale_accuracy", {}), C.LABEL_SCALE_PNG)),
     ):
         try:
             fn()
@@ -826,11 +1184,58 @@ def _print_summary(results):
               % (fpr.get("frozen_bi", float("nan")), fpr.get("adapter", float("nan")),
                  hn.get("delta", float("nan"))))
 
+    # EXP-G
+    ls = results.get("label_scale_accuracy", {})
+    if isinstance(ls, dict) and ls.get("arms"):
+        t = int(ls.get("top_t", 3))
+        print(line)
+        print("EXP-G  ACCURACY vs #labels (16 real policies padded with synthetic distractors)")
+        da = ls.get("distractors", {})
+        ea = da.get("embedding", {}) if isinstance(da, dict) else {}
+        print("  distractors: n=%d seed=%s fp=%s  max lexical Jaccard to a real policy=%.3f"
+              % (da.get("n_used", 0), da.get("seed", "?"), da.get("fingerprint", "?"),
+                 da.get("max_jaccard_observed", float("nan"))))
+        print("  distractor-to-real cosine: mean_max=%.3f p95=%.3f max=%.3f (n>=0.95: %s)"
+              % (ea.get("mean_max_cos_to_real", float("nan")),
+                 ea.get("p95_max_cos_to_real", float("nan")),
+                 ea.get("max_max_cos_to_real", float("nan")),
+                 ea.get("n_above_0.95", "?")))
+        print("%-20s %5s %8s %8s %8s %8s %8s %8s %8s"
+              % ("arm", "K", "macroAP", "macroF1", "top%dF1" % t, "nreal/row",
+                 "meanRank", "chance", "steal@1"))
+        for arm in C.LABEL_SCALE_ARMS:
+            rows = ls["arms"].get(arm)
+            if not isinstance(rows, list) or not rows:
+                print("%-20s   [FAILED]" % arm)
+                continue
+            for r in rows:
+                print("%-20s %5d %8.3f %8.3f %8.3f %8.2f %8.2f %8.1f %8.3f"
+                      % (arm, r["n_labels"], r["macro_ap"], r["macro_f1"],
+                         r["macro_f1_top_t"], r["mean_real_predicted_per_row"],
+                         r["mean_rank_true"], r["mean_rank_chance"],
+                         r["distractor_steal_top1"]))
+        nt = ls.get("notes", {})
+        print("  per-column invariance in K verified: %s" % nt.get("per_column_invariance_verified"))
+        print("  HOW TO READ -- two traps, both live in this table:")
+        print("   1. macroAP/macroF1 are per-column cosine metrics: EXACTLY invariant in K")
+        print("      by construction. Their flatness is arithmetic, not evidence.")
+        print("   2. top%dF1 can RISE with K without accuracy improving: distractors take"
+              % t)
+        print("      slots in the top-%d, so fewer REAL columns are predicted per row"
+              % t)
+        print("      (see nreal/row) and precision goes up for free. Not a scaling win.")
+        print("  The uncontaminated verdict is steal@1 (a distractor beating every real")
+        print("  policy on a genuinely harmful row) and meanRank read against chance.")
+
     print(line)
     print("READ: bi_encoder caches the policy tower -> O(1) per request in #labels and "
           "scores UNSEEN policies zero-shot. FALSIFIERS -- (i) uni latency flat => scaling "
           "claim FALSE; (ii) bi held-out macroAP <= 0.5 => zero-shot claim FALSE; (iii) adapter "
-          "does NOT lower FPR@recall0.90 => hard-negative sharpening does not help here.")
+          "does NOT lower FPR@recall0.90 => hard-negative sharpening does not help here; "
+          "(iv) the top-1 distractor STEAL RATE rises materially from K=16 to K=900 "
+          "=> the 'accuracy is MAINTAINED at scale' half of arXiv:2602.18487 is FALSE "
+          "under a competitive decision rule. Judge (iv) on steal@1 and on meanRank read "
+          "against its chance line -- NOT on top-T F1, which distractors inflate for free.")
     print(line)
 
 
