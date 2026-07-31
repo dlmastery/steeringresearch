@@ -204,7 +204,7 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 | [`cross_trajectory`](cross_trajectory/README.md) · DEFEND | **aggregation recovers fractured intent** (n=500/class, MiniLM): on leakage-free HARD negatives the per-trajectory baseline collapses to **0.607** while set-aggregators recover (mean 0.936, attn 0.863, gnn 0.812) and clear the 0.704 length confound — but **OOD to real CSTM-Bench is near chance (0.48–0.57)**, reported as a negative |
 | [`rogue_scalpel`](rogue_scalpel/README.md) · DEFEND | attack strips refusal **0.70→0.00** (n=200); the **norm-clamp guard recovers it (0.735)**; lock/dual guards don't |
 | [`hello_world`](hello_world/README.md) · READ | probe 5-fold CV **0.87 ± 0.03**; leakage clean; XSTest OOD AUC 0.89 |
-| [`hello_world_steering`](hello_world_steering/README.md) · WRITE | **fixed steering barely works** (n=200/arm): refusal *falls* 0.33→0.07 as α rises, gibberish 0.225→**0.755** — the honest negative |
+| [`hello_world_steering`](hello_world_steering/README.md) - WRITE | **the extraction source was the bug** (n=200, off-family judge): extracting the refusal direction from the *abliterated* model gives a vector cos **0.905** to the correct one - close, but the old **"Not supported"** verdict on ActAdd/CAA/Arditi is **withdrawn as an extraction artifact**. Re-extracted from the *aligned base* (cos **0.99999988** to `realignment`'s), compliance falls monotonically **0.445 to 0.115** across alpha. Refusal still does not *rise* at alpha <= 0.15 |
 
 **Honest 2026-frontier negatives** (reported as prominently as the wins): `gavel`
 — block rates **0.135 harmful / 0.085 benign** at 500/class (the earlier 0.26/0.26
