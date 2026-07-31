@@ -313,6 +313,40 @@ rung**, extract 300/class, graded by an **off-family Qwen-3B judge** on the shar
 | The all-on hybrid OVER-STACKS — gibberish rises | rung 3 gibberish **0.88** (highest), refusal **0.04** (lowest); norm budget highest at 0.274 | Supported — the all-on hybrid is the most degenerate rung, most gibberish + most budget spent |
 | The N5 norm budget grows with the stack | budget 0.079 → 0.218 → 0.141 → 0.274 across the rungs | Supported — the disjoint and all-on stacks spend the most budget |
 
+### The measured single prior this table used to omit — `B_refusal_rate`
+
+`results.json` also carries `single.B_refusal_rate = 0.2533` (with
+`B_gibberish_rate = 0.4133`): **prior B alone, at L8**, measured on the same 150
+held-out prompts at a cost of 150 extra generations. Until now it appeared in no
+table on this page, and it is read by no code — `classify_ladder()` takes only
+the rungs, `_plot_ladder()` takes only the rungs. Git history shows it was
+**never** consumed: it enters `run_stacking.py` in the lesson's first commit
+(`1bc1192`) already orphaned, in the same shape, and is unchanged through
+`9fbc8ba` and `b1ed2ec`. It is not a leftover from a comparison that was removed
+— the comparison it enables was never written.
+
+| single prior | refusal | gibberish |
+|---|---|---|
+| **A @L12** (the ladder's base rung) | 0.200 | 0.433 |
+| **B @L8** (`single.B_refusal_rate`) | **0.253** | **0.413** |
+
+Two consequences, both of which qualify the claims above:
+
+1. **The ladder is anchored on the worse of its two single priors.** B alone
+   nominally beats A on *both* axes. The gap itself is inside noise
+   (Δ=+0.053, z=1.11 at n=150 — do not read it as "B beats A"), but it means
+   the row above labelled "no gain over the **best single** prior" was never
+   actually checked against the best single prior that was measured.
+2. **The marginals are understated.** `decision.stack_marginal = −0.14` is
+   `refusal(A+B) − refusal(A)`. Against the *best* single prior it is
+   **−0.193** (z=−4.78) — a 38 % larger collapse. And A+B (0.060) is worse than
+   **both** of its constituents, which is competition at B's own site, not
+   merely "the disjoint-site add failed to stack".
+
+The `hillclimb_results.json` run below re-measures every standalone prior
+against an unsteered baseline for exactly this reason, and reproduces the
+ordering (B alone 0.175 > A alone 0.100 at n=40 with the off-family judge).
+
 **Honest read (robust at 500/class, n=150/rung).** The clean stack-vs-compete
 *separation* still does not appear, so `decision.verdict` stays honestly
 **"INCONCLUSIVE at this scale"** — but the mechanism it warns about is clearly
@@ -326,6 +360,140 @@ budget and is the most gibberish — exactly the "all-on hybrid is forbidden"
 collapse (CLAUDE.md §9). The finding held from the earlier n≈50 run; the larger N
 just firms the numbers. Screening tier (n=150/rung, single seed) — the mechanism is
 the lesson; the numbers measure rather than certify it.
+
+---
+
+## 8b. The stacking hill-climb — a wider ladder, pre-registered
+
+`run_stacking.py` tests two of the three clauses of the CLAUDE.md §9 decision
+rule (different site; same site + same direction + different operation). It
+never tests the third (**near-orthogonal direction**), never runs the two
+**meta-layers** §9 says stack on almost anything (norm clamp, CAST gate), and
+has no unsteered baseline — so a "marginal" can never be compared to a prior's
+standalone effect, and competition is undetectable.
+
+`run_hillclimb.py` closes that. Classifications were written to
+[`PREREGISTRATION_hillclimb.md`](PREREGISTRATION_hillclimb.md) **before** the
+run; they are reported below unrevised, whether or not the measurement agreed.
+
+```bash
+STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
+  python -m steering_tutorials.stacking.run_hillclimb          # measure (resumable)
+python -m steering_tutorials.stacking.run_hillclimb --report   # rebuild report, no GPU
+python -m steering_tutorials.stacking.run_hillclimb --selftest # CPU, no model
+python -m steering_tutorials.stacking.hillclimb                # CPU, no model
+```
+
+### The site inventory (what a prior actually *is*)
+
+| id | site (tower · layer) | operation | training signal |
+|---|---|---|---|
+| **A** | residual stream, block **12** | `relative_add`, α=0.08 | CAA diff-of-means, 300 harmful vs 300 benign |
+| **B** | residual stream, block **8** | `relative_add`, α=0.08 | same vector as A (only the SITE varies) |
+| **B′** | residual stream, block **12** (A's site) | `add` (raw ActAdd), rescaled to A's magnitude | same vector as A |
+| **C** | residual stream, block **12** (A's site) | `relative_add`, α=0.08 | top PC of the extract activations **after projecting out the refusal axis** — cos(C, v)=**3.0e-08** |
+| **CLAMP** | A/B/C's layers, running **after** every injector hook | constraint: `δ ← δ·min(1, 0.10·‖h‖/‖δ‖)` | none — a geometric guard (N5) |
+| **GATE** | **before** the forward pass, reading pooled L12 acts | condition: multiply the whole stack by 0/1 | lesson-1 MLP probe |
+
+C is an **orthogonality control, not a second concept** — this lesson's pool
+carries one labelled contrast, so a genuine second concept vector is not
+available honestly.
+
+### Pre-registered STACK/COMPETE matrix (unrevised)
+
+Exactly one unconditional **COMPETE** was predicted — **A × B′** (same site,
+same direction, different operation). Every other pair was predicted **STACK**;
+A × C and B′ × C were predicted "STACK *until the norm budget is spent*".
+
+### The measured ladder — n=40 held-out harmful, off-family Qwen-3B judge, SCREENING
+
+Each rung adds exactly one prior. The forbidden all-on hybrid is not built: the
+ladder contains only priors pre-classified STACK, and the COMPETE pair is a
+control outside it.
+
+| rung | added | refusal | p(refusal) | gibberish | N5 budget | **marginal** Δrefusal | added prior's **standalone** effect | benign gibberish |
+|---|---|---|---|---|---|---|---|---|
+| R0 | — (unsteered) | 0.275 | 0.250 | 0.500 | 0.000 | — | — | 0.000 |
+| R1 | A | 0.100 | 0.125 | 0.800 | 0.079 | −0.175 | −0.175 | 0.250 |
+| R2 | B (disjoint site) | 0.025 | 0.039 | 0.950 | 0.218 | **−0.075** | −0.100 | 0.800 |
+| R3 | C (orthogonal dir) | 0.000 | 0.021 | 0.975 | 0.236 | **−0.025** | −0.175 | 0.900 |
+| R4 | CLAMP (meta) | 0.075 | 0.071 | 0.925 | 0.223 | **+0.075** | n/a (not an injector) | 0.900 |
+| R5 | GATE (meta) | 0.125 | 0.130 | 0.775 | 0.223 | **+0.050** | n/a (not an injector) | **0.000** |
+
+Standalone controls, same 40 prompts: **B alone 0.175** / gib 0.675 · **C alone
+0.100** / gib 0.700 · **B′ alone 0.175** / gib 0.725 · **[A,B′] 0.000** / gib
+0.975, budget 0.141.
+
+### What contradicted the pre-registration
+
+1. **Direction specificity is absent — the biggest result here.** At the same
+   site and the same α, the refusal diff-of-means (A, 0.100) and an **exactly
+   orthogonal** direction (C, cos=3e-08, 0.100) are **indistinguishable**
+   (Δ=0.000). Likewise B′ alone (0.175) equals B alone (0.175). **No rung of
+   this ladder can be attributed to the refusal concept** — what is being
+   measured is coherence damage, which any direction of this magnitude
+   produces. This also invalidates the premise that C would be a "second,
+   different prior": at α=0.08 the two are the same intervention in all but
+   name.
+2. **No prior helps at all.** Every single prior scores *below* the unsteered
+   baseline (0.275): A 0.100, B 0.175, C 0.100, B′ 0.175. Steering "refusal
+   back in" *reduces* measured refusal, because gibberish rises 0.500 → 0.800
+   and takes the mass. A ladder cannot show gains adding when there are no
+   gains.
+3. **The pre-registered competition test is degenerate here.** *marginal <
+   standalone* returns **False** for both R2 and R3 — a prior that harms *less*
+   inside the stack than alone reads as "not competing". By the README's own
+   criterion (*no gain over the best single prior*) every stack rung competes:
+   R2 −0.150, R3 −0.175, R4 −0.100, R5 −0.050 versus B alone (all z≤−1.37,
+   R2/R3 z≤−2.31). Both criteria are reported; the pre-registered one was not
+   swapped out after the fact.
+4. **P4 failed on magnitude, but the CLAMP classification held.** The clamp was
+   predicted to cut gibberish by ≥0.10; it cut it by **0.050** (and *raised*
+   refusal +0.075, so it did not compete). The mechanism is visible in the
+   budget: 0.236 → 0.223 only. The clamp captures `h_base` *inside the same
+   forward pass*, so at L12 its reference is already perturbed by the upstream
+   L8 injector — it is a **per-site local** constraint, not a global manifold
+   constraint, and it cannot claw back accumulated cross-layer drift.
+5. **P5 failed on the harmful clause, and the cause is the gate, not the
+   stack.** The probe fires on only **53 %** of harmful prompts (and **0 %** of
+   benign), so R5 is a 53/47 mixture of steered and unsteered — harmful refusal
+   moved +0.050, just over the |0.05| falsifier. The gate is **not
+   behaviourally inert** on harmful here.
+6. **The ladder anchor.** Replicated at n=40: the base rung [A] (0.100) is not
+   the best single prior (B, 0.175).
+
+### What the pre-registration got right
+
+- **A × B′ = COMPETE — confirmed.** `[A,B′]` scores **0.000**, below *both*
+  constituents (A 0.100, B′ 0.175; z=−2.91 vs the best), with the highest
+  gibberish of any two-prior cell (0.975).
+- **P3 held.** Adding the orthogonal direction cost less coherence
+  (Δgibberish **+0.025**) than adding the disjoint-site prior (**+0.150**) — the
+  direction clause is gentler than the site clause. Read with care: 0.950 →
+  0.975 is near the ceiling.
+- **GATE = STACK — upheld as a classification.** It is the only prior on this
+  page that improves an axis without costing another: benign gibberish
+  **0.900 → 0.000**, benign refusal restored to the unsteered 0.550, harmful
+  refusal *up* 0.075 → 0.125. It stacks because it consumes no norm budget
+  (0.223 unchanged) — it decides *whether*, never *what*.
+- **The committed artifact regenerates.** `refusal_vector.pt` was recomputed
+  from the code beside it: cosine **1.0**, norm 342.3414 identical, n=300
+  identical (`vector_check.reproduces = true`).
+
+### Reading this honestly
+
+**SCREENING tier**: n=40 harmful / 20 benign, single seed, one α. The judge is
+below its own 0.85 validity bar. The unsteered gibberish rate is already 0.500,
+so this ladder is measured on a substrate with almost no coherence headroom —
+which is itself the finding: **at α=0.08 on this abliterated 1B, the norm-budget
+clause of §9 dominates every other clause, and the site/direction distinctions
+the lesson is built to demonstrate are not resolvable.** The right next
+experiment is an α sweep down to where a single prior is coherent, then rebuild
+the ladder there — not more rungs at this α.
+
+*(`AUDIT.md` on this lesson is **stale**: its check #3 verifies the README
+against refusal 0.667/0.333/0.667/0.50 at n≈12, numbers that no longer exist in
+`results.json` (now 0.20/0.06/0.073/0.04 at n=150). It should be re-run.)*
 
 ---
 
