@@ -470,9 +470,21 @@ def main():
     # thresholds against the cached policy bank before we score EXP-A.
     guards = {}
     for method, ctor in (("bi_encoder", encoders.BiEncoderGuard),
+                         ("bi_encoder_trained", encoders.ContrastiveBiEncoderGuard),
                          ("uni_encoder", encoders.UniEncoderGuard),
                          ("trained_head", encoders.TrainedHeadGuard)):
         try:
+            if method == "bi_encoder_trained":
+                # The papers' actual method: a CONTRASTIVELY TRAINED projection over the
+                # frozen backbone. Trained on SEEN policies only, and it still scores an
+                # unseen policy from that policy's TEXT -- so the held-out evaluation
+                # remains a real zero-shot test. `bi_encoder` (frozen cosine) is kept
+                # beside it as the ablation it actually is.
+                g = encoders.ContrastiveBiEncoderGuard(embedder=embedder, policies=policies)
+                g.fit(Xc_tr, Y_tr, policy_bank, seen_cols)
+                guards[method] = g
+                print("[fit] %s ready (InfoNCE, final loss %.4f)" % (method, g.final_loss))
+                continue
             g = encoders.UniEncoderGuard(embedder=embedder) if method == "uni_encoder" else ctor()
             g.fit(Xc_tr, Y_tr, seen_cols, policies, texts_train=texts_tr)
             if method == "bi_encoder":
@@ -534,7 +546,11 @@ def main():
 
     # --- EXP-B: held-out ZERO-SHOT (the headline) -------------------------
     Y_held_te = Y_te[:, heldout_cols]
-    for method in ("bi_encoder", "uni_encoder"):
+    # bi_encoder_trained belongs here above all: the whole claim of a bi-encoder guard
+    # is that it handles an UNSEEN policy from that policy's text. A trained
+    # projection that only worked on seen policies would be trained_head with extra
+    # steps, so this is the arm's real test, not a bonus column.
+    for method in ("bi_encoder", "bi_encoder_trained", "uni_encoder"):
         g = guards.get(method)
         if g is None:
             results["heldout_zeroshot"][method] = {"error": "fit failed"}

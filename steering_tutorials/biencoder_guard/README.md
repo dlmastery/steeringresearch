@@ -443,6 +443,66 @@ so the off-family-judge discipline of the steering lessons does not apply here
 
 ## 10. Results — measured vs. the claim
 
+> ### 10.0 The bi-encoder arm was measuring the wrong thing, and this is the fix
+>
+> **What was wrong.** `bi_encoder` scored with raw cosine between **frozen** content and
+> policy embeddings. That is *not* what the papers this lesson cites actually do.
+> GLiNER-bi-Encoder ([arXiv:2602.18487](https://arxiv.org/abs/2602.18487)) and GLiNER
+> Guard ([arXiv:2605.05277](https://arxiv.org/abs/2605.05277)) **fine-tune** their label
+> and context encoders with an InfoNCE-style contrastive loss and hard-negative mining.
+> 2602.18487 says plainly that frozen encoders give only *"baseline performance"* and
+> that task-adapted encoders *"significantly outperform static frozen representations."*
+> So the weak numbers were real — but they were the numbers of a **degenerate ablation**
+> being reported as the method.
+>
+> **The fix.** `ContrastiveBiEncoderGuard` learns two linear maps `W_content` and
+> `W_policy` with multi-positive InfoNCE over the frozen backbone. Full backbone
+> fine-tuning is out of budget on one laptop GPU, so it adapts the **space** rather than
+> the backbone — but it keeps the property that makes a bi-encoder a guard: a policy is
+> scored **from its text, never its index**, so unseen policies remain zero-shot.
+> Initialised near-identity, so the learned space *starts at* frozen cosine and any gain
+> is attributable to training rather than a lucky random projection. Trained on **seen
+> policies only**, so the held-out evaluation stays a genuine zero-shot test.
+>
+> | arm | EXP-A seen | EXP-B **unseen policy** | EXP-E **OOD content** |
+> |---|---|---|---|
+> | `bi_encoder` (frozen cosine) | 0.240 | **0.382** | 0.184 |
+> | `bi_encoder_trained` (InfoNCE) | **0.575** *(+140%)* | **0.294** *(−23%)* | **0.397** *(+116%)* |
+> | `uni_encoder` | 0.169 | 0.115 | 0.146 |
+> | `trained_head` | 0.658 | *abstains* | 0.496 |
+>
+> *(macro-AP; EmbeddingGemma-300M, 500/class, 12 seen + 4 held-out policies.)*
+>
+> ### The result splits in a way worth pausing on
+>
+> Contrastive training **more than doubles** seen-policy AP — reproducing the papers'
+> central "trained ≫ frozen" claim. It also **more than doubles** AP under
+> *content* shift (BeaverTails OOD). But it **degrades** on *unseen policies*.
+>
+> Those two shifts are different, and the split is the lesson:
+>
+> - **EXP-E holds the policies fixed and changes the content.** Training transfers. ✔
+> - **EXP-B holds the content distribution and changes the policies.** Training does not
+>   transfer, and is *worse* than frozen cosine. X
+>
+> **Why.** The projection is trained on **12 policies**. A 768→256 map fitted to twelve
+> policy vectors learns *those twelve directions*, not a general notion of
+> "text-matches-policy". The papers get zero-shot policy generalisation by training at
+> **million-label scale** — that scale, not the architecture, is what buys the zero-shot
+> property. On this host we can demonstrate the trained-vs-frozen gap honestly; we cannot
+> manufacture the label diversity that makes it generalise.
+>
+> **So the corrected headline for this lesson is:** a bi-encoder's zero-shot ability is a
+> property of **label-scale training**, not of the bi-encoder architecture. Reporting the
+> frozen arm as "the bi-encoder" understated the method; reporting the trained arm as
+> zero-shot-capable at 12 policies would overstate it. Both numbers are now shown side by
+> side, which is the only honest presentation of the two.
+>
+> *(Kept deliberately: `bi_encoder` frozen cosine remains as the labelled ablation it
+> actually is, so the comparison stays visible instead of being silently replaced.)*
+
+
+
 **MEASURED — the HEADLINE run: EmbeddingGemma-300M at 500/class.** Numbers below are
 from `artifacts/results.json` for the real dual-encoder backbone
 (`google/embeddinggemma-300m`, 768-dim, n_per_class = n_benign = 500). The earlier

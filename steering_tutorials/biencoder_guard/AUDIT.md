@@ -91,3 +91,37 @@ run and marked as such.
 
 *Internal QA pass — independent external review pending (auditor shares a model
 family with the author).*
+
+---
+
+## Addendum 2026-07-28 — the bi-encoder arm was a degenerate ablation of the cited method
+
+**Defect.** `bi_encoder` scored with raw cosine between **frozen** content and policy
+embeddings. Both cited papers **fine-tune** their encoders with InfoNCE + hard negatives:
+GLiNER-bi-Encoder ([2602.18487](https://arxiv.org/abs/2602.18487)) states frozen encoders
+give only *"baseline performance"* and that task-adapted encoders *"significantly
+outperform static frozen representations"*; GLiNER Guard ([2605.05277](https://arxiv.org/abs/2605.05277))
+likewise fine-tunes. The lesson's weak numbers were therefore **correctly measured and
+wrongly attributed** — an ablation reported as the method.
+
+**Fix.** `ContrastiveBiEncoderGuard`: learned `W_content` / `W_policy` projections,
+multi-positive InfoNCE, near-identity init (so the learned space starts at frozen
+cosine), trained on **seen policies only**, scoring any policy from its **text**.
+
+| arm | EXP-A seen | EXP-B unseen policy | EXP-E OOD content |
+|---|---|---|---|
+| frozen cosine | 0.240 | 0.382 | 0.184 |
+| **InfoNCE-trained** | **0.575** | **0.294** | **0.397** |
+
+**The finding, and its limit.** Training more than doubles AP under *content* shift and
+on seen policies — the papers' claim reproduces. It **degrades** under *policy* shift.
+The projection is fitted to **12 policies**, so it learns those twelve directions rather
+than a general text-matches-policy relation. The papers buy zero-shot generalisation with
+**million-label-scale** training; that scale, not the architecture, is the source of the
+property. This is stated in README §10.0 rather than tuned away.
+
+**Not done:** backbone fine-tuning (out of budget), and training at a label scale where
+zero-shot transfer could plausibly emerge. Both are the honest blockers, not oversights.
+
+*Internal QA pass — independent external review pending (auditor shares a model family
+with the author).*

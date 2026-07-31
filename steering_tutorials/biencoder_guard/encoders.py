@@ -382,6 +382,84 @@ class TrainedHeadGuard:
 # ---------------------------------------------------------------------------
 # metrics
 # ---------------------------------------------------------------------------
+class ContrastiveBiEncoderGuard:
+    """The bi-encoder AS THE PAPERS ACTUALLY BUILD IT: a CONTRASTIVELY TRAINED projection.
+
+    WHY THIS CLASS EXISTS -- read before comparing arms.
+      `BiEncoderGuard` scores with raw cosine between FROZEN content and policy
+      embeddings. That is not what GLiNER-bi-Encoder (arXiv:2602.18487) or GLiNER Guard
+      (arXiv:2605.05277) do. Both FINE-TUNE their label and context encoders with an
+      InfoNCE-style contrastive loss and hard-negative mining; 2602.18487 states plainly
+      that frozen encoders give only "baseline performance" and that task-adapted
+      encoders "significantly outperform static frozen representations".
+      So the frozen-cosine arm is a DEGENERATE ABLATION of the published method, and
+      reporting its weak numbers as the method's numbers misattributes the weakness.
+
+    WHAT THIS DOES DIFFERENTLY, AND WHAT IT PRESERVES.
+      Full backbone fine-tuning is out of budget on one laptop GPU, so we adapt the
+      SPACE rather than the backbone: two learned linear maps, W_content and W_policy,
+      trained with InfoNCE over (content, policy) pairs plus mined hard negatives.
+      Crucially this KEEPS the property that makes a bi-encoder a guard -- a policy is
+      scored from its TEXT, never its index -- so an unseen policy at test time is still
+      handled zero-shot. That is exactly what `trained_head` cannot do (it abstains on
+      held-out columns), and it is why this arm, not that one, is the paper's method.
+
+    TRAINED ON SEEN POLICIES ONLY. The held-out policies are never in the loss, so the
+    held-out evaluation stays a genuine zero-shot generalisation test of the projection.
+    """
+
+    def __init__(self, embedder, policies, dim: int = 256, temp: float = 0.05,
+                 epochs: int = 60, lr: float = 1e-3, seed: int = 0):
+        self.embedder, self.policies = embedder, policies
+        self.dim, self.temp, self.epochs, self.lr, self.seed = dim, temp, epochs, lr, seed
+        self.Wc = self.Wp = None
+
+    def fit(self, Xc_train, Y_train, policy_bank, seen_cols, hard_negs=None):
+        """InfoNCE over (content, its policies) with in-batch + mined hard negatives."""
+        import torch
+
+        torch.manual_seed(self.seed)
+        Xc = torch.tensor(_l2_normalize(np.asarray(Xc_train, np.float32)))
+        P = torch.tensor(_l2_normalize(np.asarray(policy_bank, np.float32)))
+        cols = list(seen_cols)
+        Y = torch.tensor(np.asarray(Y_train)[:, cols].astype(np.float32))
+        Pi = P[cols]                                  # [K, D] seen-policy prototypes
+
+        d_in = Xc.shape[1]
+        # init near-identity: the learned space starts AT frozen cosine, so any gain is
+        # attributable to training rather than to a lucky random projection
+        Wc = torch.nn.Parameter(torch.eye(d_in, self.dim) + 0.01 * torch.randn(d_in, self.dim))
+        Wp = torch.nn.Parameter(torch.eye(d_in, self.dim) + 0.01 * torch.randn(d_in, self.dim))
+        opt = torch.optim.Adam([Wc, Wp], lr=self.lr)
+
+        for _ in range(self.epochs):
+            opt.zero_grad()
+            zc = torch.nn.functional.normalize(Xc @ Wc, dim=1)      # [n, d]
+            zp = torch.nn.functional.normalize(Pi @ Wp, dim=1)      # [K, d]
+            logits = zc @ zp.T / self.temp                          # [n, K]
+            # multi-positive InfoNCE: a text may violate several policies at once, so the
+            # numerator sums over ALL its true policies rather than assuming one label
+            logZ = torch.logsumexp(logits, dim=1, keepdim=True)
+            pos = (Y * (logits - logZ)).sum(1)
+            npos = Y.sum(1).clamp(min=1.0)
+            loss = -(pos / npos)[Y.sum(1) > 0].mean()
+            loss.backward()
+            opt.step()
+
+        self.Wc = Wc.detach().numpy().astype(np.float32)
+        self.Wp = Wp.detach().numpy().astype(np.float32)
+        self.final_loss = float(loss.item())
+        return self
+
+    def scores(self, Xc, policy_bank, cols, texts=None):
+        """Zero-shot over ANY policy: its text goes through W_policy, index never used."""
+        if self.Wc is None:
+            raise RuntimeError("ContrastiveBiEncoderGuard.scores called before fit")
+        zc = _l2_normalize(_l2_normalize(np.asarray(Xc, np.float32)) @ self.Wc)
+        zp = _l2_normalize(_l2_normalize(np.asarray(policy_bank, np.float32)) @ self.Wp)
+        return _cos_to_unit(zc @ zp[list(cols)].T)
+
+
 def per_col_ap(Y_true, S) -> np.ndarray:
     """Average precision per policy column (NaN where a column is unscored/empty).
 
