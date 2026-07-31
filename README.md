@@ -52,6 +52,28 @@ applies the same process to voice-health claims. Headline: on a 1,679-speaker cl
 corpus, **patient age alone** reaches ROC-AUC **0.874** while WavLM reaches 0.744 — and
 once age is matched away, **88 handcrafted features beat a 1536-dim self-supervised model**.
 
+## Outcome and success criterion (the ORIGINAL goal - NOT reached)
+
+> Restored verbatim from history. These rows are kept because the
+> pre-registration is kept: the conditional-safety method was never validated,
+> and after the forensic audit the program stopped pursuing it rather than
+> quietly redefining success. `not yet measured` here means **never measured**,
+> not *in progress*.
+
+| Axis | Current (measured) | Target (pre-registered) |
+|---|---|---|
+| JailbreakBench ASR reduction | not yet measured | >= X pp vs no-steer baseline |
+| XSTest over-refusal | not yet measured | <= 1% absolute |
+| MMLU drop | not yet measured | <= 2 pp |
+| Pareto vs CAST + prompting | not yet measured | Pareto-dominates on ASR vs over-refusal |
+| AxBench direction-specificity (E7) | +0.004 at 2B (weak; ordinal gate fails) | >10% advantage over shuffled control |
+
+Success = the conditional safety method Pareto-dominates CAST and a prompting
+baseline on the JailbreakBench ASR vs XSTest over-refusal frontier at <= 2 pp
+MMLU drop, confirmed at n >= 7 seeds with a paired Wilcoxon p < 0.05 and a
+bootstrap 95% CI excluding zero.
+
+
 ## Start here
 
 | link | what |
