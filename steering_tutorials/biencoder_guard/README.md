@@ -554,13 +554,181 @@ so the off-family-judge discipline of the steering lessons does not apply here
 > trains at million-label scale — again, that scale is the thing we cannot replicate,
 > and again it is the thing that would matter.
 
+> ### 10.2 The Opir taxonomy test (EXP-H) — the same scale, but the competitors are *relatives*
+>
+> EXP-G's 884 distractors are **strangers by construction**: a disjoint content-operations
+> domain, a harm-stem blocklist, and a hard gate that *drops* any candidate scoring above
+> Jaccard 0.20 against a real policy. That makes EXP-G a test of whether the guard survives
+> a bank full of obviously-off-topic policies.
+>
+> Opir ([arXiv:2605.29659](https://arxiv.org/abs/2605.29659)) trains against something much
+> less forgiving: *"a three-level taxonomy containing 996 categories across 16 top-level
+> labels, 126 mid-level labels, and 854 leaf labels."* In a taxonomy like that, a label's
+> competitors are its own **siblings and descendants** — plausible near-misses, not strangers.
+> `taxonomy.py` builds exactly that shape below our 16 real policies (7–8 mids per policy,
+> 6–7 leaves per mid, **16 + 126 + 854 = 996**), and EXP-H re-runs EXP-G's protocol against
+> it. Everything else is held fixed — same test rows, same two arms, same 16 scored columns,
+> same prototype count, same fp32 backbone — so the manipulated variable is the
+> **relatedness of the competitors**.
+>
+> **The construction is measured, not asserted.** Where `distractors.py` *drops* anything
+> above Jaccard 0.20, `taxonomy.py` targets the opposite and reports what it got:
+>
+> | adjacency of the ~900 competitors | EXP-G (unrelated) | **EXP-H (related)** |
+> |---|---|---|
+> | mean lexical Jaccard to the true policy's own text | ≤ 0.20 *(hard gate; max observed 0.125)* | **0.381** *(min 0.150)* |
+> | …vs. to the nearest **other** top-level policy | — | 0.067 → **5.7× closer to its own parent** |
+> | share of competitors **above EXP-G's drop gate** | 0 *(by definition)* | **94.9 %** |
+> | mean embedding cosine to a real policy | 0.765 *(max over the 16)* | **0.865** *(to its own parent; 0.805 to the best other parent)* |
+> | share lexically closest to its own parent | — | **100 %** (99.9 % in embedding space) |
+>
+> **One row of that table deserves more attention than it first gets.** The *lexical*
+> contrast between the two experiments is enormous — a 0.125 ceiling versus a 0.381 mean —
+> but the *embedding* contrast is not: EmbeddingGemma already places EXP-G's deliberately
+> unrelated content-operations distractors at **0.765** mean cosine to a real safety policy,
+> against **0.865** for EXP-H's actual relatives. In this backbone's geometry, cosines are
+> compressed into a narrow high band, and "obviously off-topic" is only ~0.1 further away
+> than "sibling of the truth". So EXP-H is a large manipulation of *semantics* and a modest
+> one of *cosine* — which is worth knowing before reading any of the degradations below as
+> proportional to distance.
+>
+> As in EXP-G, the embedding audit is **report-only**. Filtering by cosine under the encoder
+> being tested would delete precisely the confusable relatives — which is the entire
+> phenomenon EXP-H exists to measure. Bank fingerprint `8611952dba23`, fully deterministic.
+>
+> #### Lead with the breakdown, not a steal rate
+>
+> A single "steal rate" would be a confident number that means nothing here, because the
+> competitors are not interchangeable. When something outranks the true policy it is one of
+> three quite different events:
+>
+> - a **descendant** — e.g. `Violence / threats of assault against a named individual`
+>   beating `Violence`. The router picked a *narrower rule under the same policy*: an
+>   over-specification, arguably not an error at all.
+> - a **sibling** — a different top-level policy. A genuine mis-route.
+> - an **other-branch cousin** — some *other* policy's mid or leaf. Also a genuine mis-route,
+>   and the closest analogue of an EXP-G distractor stealing rank.
+>
+> Every share below is printed against the share a **uniformly random** competitor would
+> produce, because the buckets differ ~15× in size (a policy has ~61 descendants but ~919
+> cousins). Raw shares would be a picture of bucket sizes; only the enrichment has content.
+>
+> **What wins the argmax on a genuinely harmful row** (K = 996, n = 1,553 harmful rows;
+> *share [chance] enrichment*):
+>
+> | arm | true top-level | **descendant** | sibling | other-branch |
+> |---|---|---|---|---|
+> | `bi_encoder` (frozen) | 0.074 [0.002] **43×** | **0.509** [0.104] **4.9×** | 0.069 [0.014] 4.8× | 0.348 [0.880] 0.40× |
+> | `bi_encoder_trained` | 0.354 [0.002] **207×** | 0.203 [0.104] 1.9× | **0.231** [0.014] **16.1×** | 0.212 [0.880] 0.24× |
+>
+> **The two arms fail in completely different ways, and only the breakdown shows it.**
+> The frozen arm's dominant failure is **over-specification**: half its top-1 picks are the
+> true policy's *own descendants*, enriched 4.9× over chance. The trained arm's dominant
+> failure is a real **mis-route to a sibling top-level policy**, enriched **16×**. Collapsed
+> into one number these look like the same kind of error. They are not: the first is a
+> router being too specific about the right policy, the second is a router choosing the
+> wrong policy.
+>
+> Across the *whole* violation pool the same effect is present but diluted — descendants are
+> enriched 1.56× (frozen) and 0.96× (trained) — because ~92 % of the bank is cousins.
+> Kinship concentrates **at the very top of the ranking**, which is exactly where a router
+> reads.
+>
+> #### The ranking table
+>
+> | arm | mean rank of true policy | median | **excl. own descendants** | rank-1 rate | rank-1 excl. desc. |
+> |---|---|---|---|---|---|
+> | `bi_encoder` | 208.56 | 98 | **188.81** | 0.043 | **0.195** |
+> | `bi_encoder_trained` | **134.90** | **36** | **126.94** | **0.208** | **0.284** |
+> | *(chance)* | 498.5 | — | — | 0.001 | — |
+>
+> #### Head-to-head against EXP-G — and EXP-G's headline does not survive it
+>
+> Steal figures use **EXP-G's own predicate on both sides** (an *added* column wins the
+> argmax). EXP-H's stricter "any column that is not a true top-level policy" rate is a
+> different rule and is reported separately in the artifact, never against EXP-G.
+>
+> | arm | EXP-G rank (K=900, unrelated) | EXP-H rank (K=996, related) | EXP-H at **matched K=900** | ratio | EXP-G steal | EXP-H steal | EXP-H steal, descendants forgiven |
+> |---|---|---|---|---|---|---|---|
+> | `bi_encoder` | 62.55 | 208.56 | 185.68 | **2.97×** | 0.133 | 0.857 | **0.348** |
+> | `bi_encoder_trained` | 113.01 | 134.90 | 123.66 | **1.09×** | 0.048 | 0.415 | **0.212** |
+>
+> **The ordering flips, and that is the finding.** EXP-G concluded that the trained arm
+> "starts better and ends worse" — 113.01 vs 62.55 at K=900 — and read that as the same
+> weakness EXP-B found. Against *related* competitors the conclusion reverses: the frozen
+> arm degrades **2.97×** while the trained arm barely moves (**1.09×**), and the trained arm
+> ends up ranking the true policy at **134.9 vs 208.6**. So EXP-G's headline was a property
+> of its distractors being **strangers**, not a general property of contrastive training.
+>
+> That reversal is also mechanistically the expected one, which is why it is worth trusting
+> more than the EXP-G ordering: InfoNCE with hard negatives is *training to separate
+> semantically adjacent things*. Strangers are not what it was fitted to reject, and
+> relatives are. The arm that looked worse on the easy test is the one that holds up on the
+> hard one.
+>
+> #### Two variables move here, not one — and the breakdown separates them
+>
+> Honesty requires saying that EXP-H changes the competitors along **two** axes at once:
+> they are *kin of the truth*, and they are *harm-domain content at all* (EXP-G's were
+> ordinary content-operations policies). The bucket breakdown is what lets the two be told
+> apart:
+>
+> - **Domain effect.** The frozen arm's other-branch (cousin) top-1 rate alone is **0.348** —
+>   already **2.6×** EXP-G's *entire* competitor steal rate of 0.133. Much of the added
+>   difficulty is simply that the competitors are harm-flavoured, independent of kinship.
+> - **Kinship effect.** On top of that, descendants are enriched **4.9×** and siblings
+>   **4.8×** (frozen) / **16.1×** (trained) over chance at rank 1. That part *is* kinship.
+>
+> Reporting only the aggregate would have attributed all of it to relatedness. It is the
+> same one-change-at-a-time discipline §10.3 applies to the MiniLM-vs-EmbeddingGemma
+> comparison, applied to our own new experiment.
+>
+> #### Metrics that cannot answer the question (the EXP-G trap, twice over)
+>
+> As in EXP-G, `macro_AP` / `macro_F1` are **exactly** the EXP-A and EXP-G values
+> (0.2755 frozen, 0.5046 trained; asserted in code, delta `0.0e+00`) — a bi-encoder's
+> column-*j* score is `cos(content, bank[j])` and cannot notice the other 980 columns.
+> EXP-H adds a **second** such pair: `mean_rank_true_top16` (4.461 / 3.796) and
+> `top1_acc_top16` reproduce EXP-G's K=16 row bit-for-bit, because restricting to the 16
+> real columns deletes every competitor *either* experiment added. All four are reported
+> **only as cross-experiment anchors** proving the two experiments score the same thing —
+> the runner asserts them and records the verdict — and none is evidence about relatedness.
+>
+> `macro_f1_top_t` inherits EXP-G's confound and here it runs to its limit: the top-3 of 996
+> columns contains a real policy only **0.27** times per row (frozen), so the metric collapses
+> to 0.124 while telling you nothing about the encoder. Excluded from the plot.
+>
+> #### Verdict
+>
+> A **996-category taxonomy of relatives is a materially harder bank than a 900-label bank of
+> strangers** — but only for the frozen arm, and only if you count a descendant win as an
+> error. Three statements, each carrying its own qualifier:
+>
+> 1. **Frozen cosine degrades ~3× at matched K** when competitors become relatives. Its top-1
+>    behaviour is dominated by its own descendants (0.509), so **whether this is a failure at
+>    all depends on the deployment**: a router that acts on the *top-level* policy has been
+>    mis-routed 0.857 of the time; one that acts on the matched *leaf* has been mis-routed
+>    0.348 of the time. This experiment cannot settle which — that is a question about the
+>    downstream system, not about the encoder — so both numbers are reported and neither is
+>    promoted to *the* answer.
+> 2. **Contrastive training is nearly immune to the change** (1.09×) and overtakes the frozen
+>    arm. EXP-G's contrary ordering does not generalise past unrelated distractors.
+> 3. **Neither arm is usable as a 996-way router as-is.** Best true-top-level top-1 accuracy
+>    is 0.354, and mean rank 134.9 against a chance line of 498.5 — well above chance, nowhere
+>    near deployable.
+>
+> *Screening tier: one embedder, one seed, one corpus (n = 1,710 test rows, 2,651 positive
+> pairs). The competitor set is templated from handwritten narrowings, not Opir's real
+> taxonomy, so this reproduces the label-space **shape** and the sibling/descendant
+> **relation** — not that paper's categories.*
+
 
 
 
 **MEASURED — the HEADLINE run: EmbeddingGemma-300M at 500/class.** Numbers below are
 from `artifacts/results.json` for the real dual-encoder backbone
 (`google/embeddinggemma-300m`, 768-dim, n_per_class = n_benign = 500). The earlier
-MiniLM@150 substitute run is retained in §10.1 for comparison.
+MiniLM@150 substitute run is retained in §10.3 for comparison.
 
 The falsifiers were pre-registered **before** the run, and **one of them trips** —
 reported below without softening.
@@ -601,10 +769,31 @@ prototypes):
 
 | #labels | `bi_encoder` (sec) | `uni_encoder` (sec) |
 |---|---|---|
-| 16 | 0.422 | 0.301 |
-| 64 | 0.422 | 1.575 |
-| 256 | 0.423 | 6.502 |
-| **1024** | **0.424** *(flat)* | **27.06** *(**64×** the bi-encoder)* |
+| 16 | 0.390 | 0.269 |
+| 64 | 0.391 | 0.901 |
+| 256 | 0.391 | 3.811 |
+| **1024** | **0.392** *(flat)* | **15.78** *(**40×** the bi-encoder)* |
+
+> **CORRECTION (2026-07-31): this table previously read 0.422 → 0.424 s and 27.06 s,
+> quoted as "64×". That ratio was wrong and is corrected here to ~40×.** The numbers
+> above are read directly from the `scaling` block of the **committed** (git HEAD)
+> `artifacts/results.json`, which gives **40.3×**. A second, independent run — measured
+> while another job shared the GPU — gave **39.2×**.
+> The old `0.424 / 27.06` pair reproduces *no* artifact: no run on record has a
+> `bi_encoder` of 0.424 *together with* a `uni_encoder` of 27.06.
+>
+> **The mechanism of the error is worth more than the correction.** These are wall-clock
+> timings on a single shared GPU, so the *absolute* numbers move a lot with contention —
+> across the two runs `bi_encoder` ranged 0.39 → 0.69 s and `uni_encoder` 15.8 → 27.0 s.
+> But contention scales **both** arms by nearly the same factor (1.76× and 1.71×), so the
+> **ratio is the stable quantity** (40.3× and 39.2×) and the absolute latencies are not.
+> The retracted 64× is what you get by dividing a *contended* uni-encoder measurement by
+> an *uncontended* bi-encoder one — two different machine states in a single ratio.
+>
+> **The scaling claim itself is unaffected and still SURVIVES:** the bi-encoder is flat to
+> three decimal places while the uni-encoder grows linearly. It survives at ~40×, not 64×.
+> Absolute seconds here should be read as indicative only; the flat-vs-linear *shape* and
+> the ratio are the findings.
 
 **EXP-E — OOD transfer** (train on the constructed set, evaluate the disjoint OOD
 shard with no further fitting):
@@ -640,11 +829,18 @@ No reclassification-after-the-fact, and no swapping to an easier condition to
 rescue a failed ordering.
 
 
-### 10.1 MiniLM@150 vs EmbeddingGemma@500 — and why this comparison is NOT clean
+### 10.3 MiniLM@150 vs EmbeddingGemma@500 — and why this comparison is NOT clean
+
+> **RENUMBERED 2026-07-31: this section was previously also numbered "10.1".** The file
+> carried *two* sections with that number — the EXP-G label-scale test above and this one
+> — which is not merely untidy: an instruction of the form "do not alter 10.1" becomes
+> ambiguous, and that ambiguity actually occurred while the EXP-H section was being added.
+> Renumbered to 10.3 so the next reader cannot inherit the trap. Cross-references
+> elsewhere in this file were updated with it.
 
 | quantity | MiniLM @150/class | **EmbeddingGemma @500/class** |
 |---|---|---|
-| EXP-D scaling at 1024 labels | bi 0.044 s / uni 1.786 s = **43×** | bi **0.424** s / uni **27.06** s = **64×** |
+| EXP-D scaling at 1024 labels | bi 0.044 s / uni 1.786 s = **40.6×** *(was quoted 43×)* | bi **0.392** s / uni **15.78** s = **40.3×** *(was quoted 64×)* |
 | EXP-B zero-shot (bi, macro-AP) | 0.408 | **0.382** |
 | EXP-A seen (bi, macro-AP) | 0.355 | **0.240** |
 | EXP-F adapter FPR@recall0.90 | 0.850 → 0.613 | **1.000 → 0.438** |
@@ -666,18 +862,43 @@ That violates this course's own one-change-at-a-time rule. **No backbone conclus
 be drawn from it.** A clean test would pin the held-out column set and n_per_class and
 vary only the encoder — pre-registered here as the follow-up, not claimed now.
 
-What the change *does* establish cleanly is the **architectural** result, because that
-is backbone-independent by construction: the uni-encoder's cost grew from 43× to **64×**
-the bi-encoder at 1024 labels, precisely because a *larger* encoder makes every one of
-its `n_texts × n_labels` forward passes more expensive — while the bi-encoder's cached
-policy tower keeps per-request cost flat at 0.42 s regardless. **Scaling the backbone up
-makes the bi-encoder's advantage larger, not smaller.**
+What the change *does* establish cleanly is the **architectural** result: the bi-encoder's
+cached policy tower keeps per-request cost **flat** in the label count while the
+uni-encoder's grows linearly, on both backbones. That shape is backbone-independent by
+construction, and it is the finding.
+
+> **CORRECTION (2026-07-31) — this paragraph previously drew a stronger conclusion that
+> the arithmetic does not support.** It read: *"the uni-encoder's cost grew from 43× to
+> **64×** the bi-encoder at 1024 labels, precisely because a larger encoder makes every one
+> of its `n_texts × n_labels` forward passes more expensive … **Scaling the backbone up
+> makes the bi-encoder's advantage larger, not smaller.**"*
+>
+> Both ratios were wrong, and correcting them **removes the effect entirely**:
+>
+> | backbone | quoted ratio | ratio from the same row's own latencies | source |
+> |---|---|---|---|
+> | MiniLM @150 | 43× | **40.6×** (1.786 / 0.044) | arithmetic on this table's own figures |
+> | EmbeddingGemma @500 | 64× | **40.3×** (15.778 / 0.3915) | `artifacts/results.json` (`scaling`) |
+>
+> **40.6× versus 40.3× is no growth at all.** The uni-encoder's relative cost is
+> essentially *the same* on a 22M-parameter MiniLM and a 300M-parameter EmbeddingGemma, so
+> the claim that scaling the backbone up widens the bi-encoder's advantage is **not
+> supported and is withdrawn**. In hindsight it should have been suspect on its face: both
+> towers use the *same* backbone, so making that backbone more expensive multiplies the
+> numerator and the denominator alike and largely cancels. The ratio is set by the
+> *architecture* (re-encode per label vs. one cached matmul), not by the encoder's size.
+>
+> That the corrected numbers agree to within 0.3× across a ~13× change in model size
+> (22M-parameter MiniLM-L6 → 300M-parameter EmbeddingGemma) is a
+> **stronger** result than the one being withdrawn — it says the flat-vs-linear advantage
+> is a property of the design rather than of a particular backbone. It is just not the
+> result that was claimed.
 
 ### Verdicts against those falsifiers
 
 | falsifier | outcome | evidence |
 |---|---|---|
-| **(i) Scaling** | **SURVIVES — claim upheld** | bi-encoder is flat at 0.422 → 0.424 s from 16 → 1024 labels; uni-encoder rises 0.301 → 27.06 s, **64×** the bi-encoder at 1024. The predicted flat-vs-linear split is exactly what was measured. |
+| **(i) Scaling** | **SURVIVES — claim upheld** | bi-encoder is flat at 0.390 → 0.392 s from 16 → 1024 labels; uni-encoder rises 0.269 → 15.78 s, **40×** the bi-encoder at 1024. The predicted flat-vs-linear split is exactly what was measured. *(Corrected 2026-07-31 from a mis-stated 64× — see the EXP-D table. The verdict is unchanged; only the ratio was wrong.)* |
 | **(ii) Zero-shot** | ⚠️ **TRIPS as literally written** | bi-encoder held-out macro-AP = **0.382 ≤ 0.5**. By the pre-registered rule, the claim is FALSE. |
 | **(iii) Hard-negative sharpening** | **SURVIVES — claim upheld** | FPR@recall0.90 falls **1.000 → 0.438** with the contrastive adapter (−0.562) — a larger gain than the substitute run showed. |
 

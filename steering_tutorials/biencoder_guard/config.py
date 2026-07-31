@@ -172,6 +172,30 @@ LABEL_SCALE_ARMS = ["bi_encoder", "bi_encoder_trained"]          # frozen vs tra
 DISTRACTOR_SEED = _env_int("BG_DISTRACTOR_SEED", 12345)
 DISTRACTOR_MAX_JACCARD = _env_float("BG_LS_MAXJAC", 0.20)
 
+# --- The OPIR TAXONOMY test (EXP-H): RELATED competitors, not strangers -------
+# EXP-G's 884 distractors are UNRELATED by construction (disjoint domain grid,
+# harm-stem blocklist, Jaccard <= DISTRACTOR_MAX_JACCARD against every real phrasing).
+# Opir (Stepanov & Smechov, arXiv:2605.29659) trains against "a three-level taxonomy
+# containing 996 categories across 16 top-level labels, 126 mid-level labels, and 854
+# leaf labels" -- where a category's competitors are its SIBLINGS and DESCENDANTS, i.e.
+# plausible near-misses. taxonomy.py builds exactly that shape below our 16 real
+# policies, and EXP-H scores the test set against all 996.
+#
+# The counts below are Opir's, not ours; changing them changes the experiment, so they
+# are named constants rather than magic numbers, and taxonomy.build_taxonomy ASSERTS
+# n_top + OPIR_N_MID + OPIR_N_LEAF == OPIR_TOTAL rather than trusting them.
+OPIR_MODULE = _env_int("BG_OPIR_ON", 1)            # 1 = run the taxonomy test EXP-H
+OPIR_N_MID = _env_int("BG_OPIR_MID", 126)          # Opir's mid-level label count
+OPIR_N_LEAF = _env_int("BG_OPIR_LEAF", 854)        # Opir's leaf label count
+OPIR_TOTAL = _env_int("BG_OPIR_TOTAL", 996)        # 16 + 126 + 854, asserted
+OPIR_SEED = _env_int("BG_OPIR_SEED", 20265)        # recorded; used only if subsampling
+OPIR_ARMS = list(LABEL_SCALE_ARMS)                 # same two arms as EXP-G (frozen/trained)
+OPIR_PROTO = _env_int("BG_OPIR_PROTO", POLICY_PARAPHRASES)   # prototypes per node
+# The matched-K comparison against EXP-G: EXP-G's largest bank is 900 columns, EXP-H's
+# is 996, so we ALSO slice EXP-H to this many columns for an exact-K head-to-head
+# (and report the scale-free percentile rank, which needs no matching at all).
+OPIR_MATCH_K = _env_int("BG_OPIR_MATCH_K", 900)
+
 # --- Paths -------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent
 ARTIFACTS = ROOT / "artifacts"
@@ -191,5 +215,10 @@ HARDNEG_PNG = ARTIFACTS / "hardneg_fpr.png"        # FPR@recall: frozen vs adapt
 DISTRACTOR_CACHE = {m: ARTIFACTS / f"distractor_bank_{m}.npz"
                     for m in ("embeddinggemma", "minilm")}
 LABEL_SCALE_PNG = ARTIFACTS / "label_scale_accuracy.png"   # accuracy vs #labels
+# EXP-H: the 980 mid+leaf taxonomy vectors, cached per embedder with the generator
+# fingerprint stored alongside (a mismatch invalidates the cache, as in EXP-G).
+TAXONOMY_CACHE = {m: ARTIFACTS / f"opir_taxonomy_{m}.npz"
+                  for m in ("embeddinggemma", "minilm")}
+OPIR_PNG = ARTIFACTS / "opir_taxonomy.png"                 # related vs unrelated, EXP-H
 
 ARTIFACTS.mkdir(exist_ok=True)
