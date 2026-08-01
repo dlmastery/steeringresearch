@@ -4,7 +4,35 @@
 not offered as one. Pre-registration written before running and left unrevised:
 `PREREGISTRATION_hillclimb.md`. Artifact: `artifacts/hillclimb_results.json`.
 
-## The ladder
+## METHODOLOGY VIOLATION — read this before the table
+
+**This ladder should never have been built past rung 1, and I approved it anyway.**
+
+CLAUDE.md §1: *"Change exactly ONE thing. **Keep iff the composite improves at matched
+coherence. Revert otherwise.** Never wander."*
+CLAUDE.md §9: *"The **'everything on' hybrid is forbidden**."*
+
+Applying the revert rule to the measured numbers:
+
+| candidate rung-1 prior | refusal | vs unsteered 0.275 | correct action |
+|---|---|---|---|
+| A (refusal @ b12) | 0.100 | worse | **REVERT** |
+| B (same vector @ b8) | 0.175 | worse | **REVERT** |
+| C (orthogonal PC @ b12) | 0.100 | worse | **REVERT** |
+| B′ (raw add @ b12) | 0.175 | worse | **REVERT** |
+
+**No prior clears rung 1.** Under the constitution the climb terminates immediately at
+R0 and **no ladder legitimately exists**. Instead the run kept every failing rung and
+stacked on top of it, so R2 was built on a config that should have been reverted, R3 on
+that, and by **R5 all five priors were active simultaneously — exactly the "everything on"
+hybrid §9 forbids.** The hybrid was reached *because* nothing was ever reverted; those two
+violations are the same mistake seen twice.
+
+The table below is therefore **kept as a record of what was run, not as a ladder**. Its
+marginals are uninterpretable as stacking evidence: each is measured from a baseline the
+rule says should not have existed.
+
+## The run as executed (NOT a valid ladder)
 
 | rung | + prior | refusal | gibberish | **marginal** | standalone |
 |---|---|---|---|---|---|
