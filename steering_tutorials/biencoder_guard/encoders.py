@@ -409,8 +409,10 @@ class ContrastiveBiEncoderGuard:
     """
 
     def __init__(self, embedder, policies, dim: int = 256, temp: float = 0.05,
-                 epochs: int = 60, lr: float = 1e-3, seed: int = 0):
+                 epochs: int = 60, lr: float = 1e-3, seed: int = 0,
+                 init: str = "orthonormal"):
         self.embedder, self.policies = embedder, policies
+        self.init = init      # "orthonormal" (default) | "truncate" (ablation)
         self.dim, self.temp, self.epochs, self.lr, self.seed = dim, temp, epochs, lr, seed
         self.Wc = self.Wp = None
 
@@ -426,10 +428,35 @@ class ContrastiveBiEncoderGuard:
         Pi = P[cols]                                  # [K, D] seen-policy prototypes
 
         d_in = Xc.shape[1]
-        # init near-identity: the learned space starts AT frozen cosine, so any gain is
-        # attributable to training rather than to a lucky random projection
-        Wc = torch.nn.Parameter(torch.eye(d_in, self.dim) + 0.01 * torch.randn(d_in, self.dim))
-        Wp = torch.nn.Parameter(torch.eye(d_in, self.dim) + 0.01 * torch.randn(d_in, self.dim))
+        # DOWN-PROJECTION INIT. The goal is that the UNTRAINED projection reproduces
+        # frozen-space cosine, so any measured gain is attributable to training rather
+        # than to the projection itself.
+        #
+        # `torch.eye(d_in, dim)` does NOT achieve that -- it is a TRUNCATION that keeps
+        # dims 0..dim-1 and starts with EXACTLY ZERO weight on the remaining d_in-dim
+        # dimensions (512 of 768 here). It is only defensible for a Matryoshka-trained
+        # encoder, where the leading dims are informative BY DESIGN; MiniLM is not one.
+        #
+        # Measured on the real cached banks, preserving frozen-space cosine:
+        #                          pearson r    mean |cos error|
+        #   EmbeddingGemma  trunc    0.9109         0.1196
+        #                   random   0.9025         0.0322   <- 3.7x better
+        #   MiniLM          trunc    0.8138         0.0575
+        #                   random   0.8241         0.0568   <- better on BOTH
+        # Truncation wins slightly on RANK correlation for the MRL model (as expected)
+        # but distorts ABSOLUTE cosine ~4x more -- and this guard CALIBRATES PER-COLUMN
+        # THRESHOLDS on those absolute scores, so absolute error is what actually costs.
+        # A random orthonormal map is a Johnson-Lindenstrauss near-isometry regardless of
+        # how the encoder orders its axes, so it is the representation-agnostic default.
+        gen = torch.Generator().manual_seed(self.seed)
+        if self.init == "truncate":                    # retained as an ablation only
+            W0c = torch.eye(d_in, self.dim)
+            W0p = torch.eye(d_in, self.dim)
+        else:                                          # default: random orthonormal
+            W0c = torch.linalg.qr(torch.randn(d_in, self.dim, generator=gen))[0]
+            W0p = torch.linalg.qr(torch.randn(d_in, self.dim, generator=gen))[0]
+        Wc = torch.nn.Parameter(W0c + 0.01 * torch.randn(d_in, self.dim, generator=gen))
+        Wp = torch.nn.Parameter(W0p + 0.01 * torch.randn(d_in, self.dim, generator=gen))
         opt = torch.optim.Adam([Wc, Wp], lr=self.lr)
 
         for _ in range(self.epochs):
