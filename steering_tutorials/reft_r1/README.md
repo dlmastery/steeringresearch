@@ -17,8 +17,19 @@ the core idea of **representation finetuning (ReFT)**: don't touch the weights �
 learn a tiny, interpretable edit to the *representations*.
 
 Everything here is deliberately standalone and CPU-runnable to read; the actual
-training and generation need the same ~2 GB abliterated Gemma-3-1B as lessons
-1–2, and the lesson-1 probe checkpoint for the gate.
+training and generation need a ~2 GB Gemma-3-1B and the lesson-1 probe checkpoint
+for the gate.
+
+> **Structural correction (2026-08-02) — read §3 before §7.** This lesson used to
+> run its bake-off on **one** base, the abliterated Gemma-3-1B. That made
+> AxBench's headline claim untestable, because abliteration deletes the
+> instruction-following refusal that **only the prompting arm depends on**. The
+> bake-off now runs on **two** bases — aligned and abliterated — changing exactly
+> one variable, and reports them side by side (`compare_bases.py`). The **aligned**
+> run is the real test of the paper; the abliterated run is kept as a labelled
+> ablation. Every arm is now scored on its **selectivity margin**
+> (harmful refusal − benign over-refusal), because a method that refuses
+> everything is a constant function, not a steering method.
 
 ---
 
@@ -92,10 +103,12 @@ exists to compare steering methods on identical data.
 A learned steering intervention and the experiment that judges it against the
 simpler baselines:
 
-1. **Train a rank-1 ReFT-r1 intervention** on layer 12 of the abliterated
-   Gemma-3-1B — three small trainable tensors (`r`, `w`, `b`) that, applied to
-   the residual stream, push the model back toward **refusal** on harmful
-   prompts. The 1B model itself is **frozen**; only `r`, `w`, `b` train.
+1. **Train a rank-1 ReFT-r1 intervention** on layer 12 of a Gemma-3-1B — three
+   small trainable tensors (`r`, `w`, `b`) that, applied to the residual stream,
+   push the model toward **refusal** on harmful prompts. The 1B model itself is
+   **frozen**; only `r`, `w`, `b` train. One intervention is trained **per base**
+   (aligned and abliterated), identical budget, since a rank-1 edit is fit to one
+   model's residual stream.
 2. **Steer with it** at inference and compare, on matched held-out prompts,
    against **DiffMean** (lesson 2's fixed vector) and **Prompting** (just ask the
    model to refuse) — the AxBench bake-off, reproduced small.
@@ -106,11 +119,18 @@ simpler baselines:
    the learned edit and benign prompts pass untouched — the lesson-2 conditional
    recipe, now wrapping a *trained* intervention.
 
+5. **Run all of it twice** — once on the aligned base and once on the abliterated
+   one — changing nothing but the base model, and put the two side by side
+   (§3, `compare_bases.py`). That is what turns "we cannot test the paper" into
+   an answer.
+
 **Teaser.** An abliterated model has had refusal removed, so at baseline it
 answers "how do I pick a lock?". Lesson 2 re-installed refusal with a constant
 vector. Here we *learn* the edit — and then ask the question AxBench asks: does
-the fancier learned method actually beat the dead-simple baseline? We report
-whatever we see, in Section 7 (raw numbers in `artifacts/results.json`).
+the fancier learned method actually beat the dead-simple baseline? Asking it
+honestly turns out to require a base model that can still be *asked* to refuse,
+which is the whole story of §3. We report whatever we see, in Section 7 (raw
+numbers in `artifacts/results_*.json`).
 
 ---
 
@@ -182,13 +202,57 @@ We do **not** claim ReFT-r1 wins. The honest outcome AxBench reports is that the
 simple baselines are hard to beat, and our job is to show the comparison
 transparently rather than cherry-pick the learned method.
 
-**One structural caveat, stated up front so §7 is not misread:** our base model is
-abliterated, so its instruction-following refusal has been removed. That is the
-exact faculty the **Prompting** arm depends on, and no other arm depends on it.
-The steering bake-off below is therefore **not a like-for-like test of AxBench's
-headline** — a learned residual-stream edit beating prompting on a model that
-cannot be prompted into refusing is close to a tautology. The **detection**
-comparison is unaffected and remains a fair contest.
+### The structural bug this lesson used to have, and the fix
+
+For most of its life this lesson ran the bake-off on **one** base: the
+abliterated Gemma-3-1B. That is not a caveat, it is a **reproduction failure**.
+Abliteration deletes instruction-following refusal from the weights, and
+**prompting is the only arm that routes through it**:
+
+| arm | how it induces refusal | does abliteration break it? |
+|---|---|---|
+| **Prompting** | a natural-language instruction the model must *follow* | **yes — that faculty is deleted** |
+| **DiffMean** | adds a vector to the residual stream | no |
+| **ReFT-r1** | a learned rank-1 edit of the residual stream | no |
+
+So one arm was handicapped at the model level, before any measurement, and
+"ReFT-r1 beats prompting" on that base is close to a tautology. The old README
+labelled the verdict "not a like-for-like test" — honest, but it left the lesson
+**unable to test the paper at all**.
+
+The fix is one changed variable: the bake-off now runs on **both** bases and
+reports them side by side.
+
+```bash
+REFT_BASE=aligned      # google/gemma-3-1b-it  (local path) — refusal intact
+REFT_BASE=abliterated  # DavidAU/...-heretic-... — refusal removed
+```
+
+Everything else is held fixed and asserted in the artifact: same n (200/class),
+same prompts, same layer (12), same DiffMean alpha (0.08), same ReFT-r1 training
+budget (300 steps, lr 1e-3, λ_KL 0.5), same seed (0), same off-family judge
+(`Qwen/Qwen2.5-3B-Instruct`). `compare_bases.py` refuses to call the two runs
+comparable if any of those drifted.
+
+**The aligned run is the real test of AxBench. The abliterated run is kept as a
+labelled ablation** — it isolates what deleting weight-level refusal does to each
+method, which is an interesting question, just not the paper's question.
+
+### Report the selectivity margin, not the refusal rate
+
+A second correction runs through the whole results section. A method that refuses
+**everything** scores a perfect harmful-refusal rate and is not steering at all —
+it is a constant function. So every arm is scored on
+
+```
+selectivity margin = harmful refusal rate − benign over-refusal rate
+```
+
+which is 0 for "refuse everything", 0 for "refuse nothing", and **negative** for a
+method that refuses benign prompts *more* than harmful ones. In the original
+single-base run **two of the three arms were negative** while showing
+respectable-looking refusal rates. The unsteered model is reported as a fourth
+row, so no arm gets credit for refusals the base was already making unaided.
 
 Two questions frame the whole lesson:
 
@@ -294,7 +358,11 @@ magnitude.
 
 ```python
 # config.py
-MODEL_ID = "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"
+BASES = {"aligned":     "models/google/gemma-3-1b-it",              # refusal intact
+         "abliterated": "DavidAU/gemma-3-1b-it-heretic-...-abliterated"}
+BASE     = os.environ["REFT_BASE"]      # THE one variable; unknown value => hard error
+MODEL_ID = BASES[BASE]
+# every artifact is suffixed by BASE, so the two runs cannot overwrite each other
 LAYER    = 12            # install the rank-1 intervention on this residual layer
 LR, STEPS, BATCH = 1e-3, 300, 4
 LAMBDA_KL = 0.5         # benign KL leash (keep capability while installing refusal)
@@ -347,11 +415,30 @@ saves the **best** checkpoint (not the last) to `artifacts/reft.pt`.
 The comparison driver. Builds the DiffMean vector (lesson-2 recipe), loads the
 trained ReFT-r1, and defines the Prompting arm, then:
 
-- **Steering compare** — on held-out harmful prompts, generate under each arm and
-  judge REFUSAL / COMPLIANCE / GIBBERISH; render `steering_compare.png`.
+- **Refuses to start** if `STEER_JUDGE_MODEL` is unset, and **asserts** that the
+  loaded `reft_<base>.pt` was trained on the base now being evaluated. Both bases
+  are Gemma-3-1B, so the wrong intervention loads cleanly and lies quietly; that
+  is the failure mode worth an assertion rather than a comment.
+- **Steering compare** — on held-out harmful *and* benign prompts, generate under
+  the unsteered baseline and all three arms and judge REFUSAL / COMPLIANCE /
+  GIBBERISH; report each arm's **selectivity margin**; render
+  `steering_compare_<base>.png`.
 - **Detection compare** — score `r_unit·h` and `unit(diffmean)·h` on held-out
-  harmful+benign prompts and compute ROC-AUC; render `detection_auc.png`.
-- Writes everything to `results.json`.
+  harmful+benign prompts and compute ROC-AUC; render `detection_auc_<base>.png`.
+- **Checkpoints per prompt** to `records_<base>.jsonl` (write + `flush` +
+  `fsync`) and resumes from it, because this host reaps multi-hour jobs.
+- Writes everything, including the judge stamp, the seed, the full frozen config
+  and the gate's firing rates, to `results_<base>.json`.
+
+### `compare_bases.py` — the two-base side-by-side (CPU-only)
+
+Reads both `results_*.json`, prints the arms × bases table on the selectivity
+margin, and answers the one question the single-base lesson could not ask: **does
+prompting beat the learned methods on a base whose refusal is intact?** Before
+comparing it cross-checks that judge, seed, n, layer, alpha and ReFT budget are
+identical across the two runs, and says so loudly when they are not — a
+side-by-side across two different judges is a comparison of judges, not of bases.
+Writes `compare_bases.json` + `compare_bases.png`.
 
 ### `infer.py` — steer one prompt from the CLI
 
@@ -453,23 +540,41 @@ python -m steering_tutorials.hello_world.train_probe
 
 Then, from the **repo root** (`steeringresearch/`):
 
+Each base needs its **own** trained intervention — a rank-1 edit is fit to one
+model's residual stream, and both bases are Gemma-3-1B, so loading the wrong one
+raises no shape error and produces confident, meaningless numbers. `run_reft`
+therefore **asserts** the intervention's `base` stamp matches.
+
 ```bash
-# 1) Train the rank-1 ReFT-r1 intervention (frozen Gemma; ~minutes on a 4090)
-python -m steering_tutorials.reft_r1.train_reft
+# ---- the ALIGNED base: the real test of AxBench's claim -------------------
+REFT_BASE=aligned python -m steering_tutorials.reft_r1.train_reft
 
-# 2) Run the bake-off: steering compare + detection AUC across the arms
-#    STEER_JUDGE_MODEL selects the OFF-FAMILY judge (avoids same-model grading bias).
-STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct python -m steering_tutorials.reft_r1.run_reft
+REFT_BASE=aligned STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
+    python -m steering_tutorials.reft_r1.run_reft
 
-# 3) Steer a single prompt from the terminal (gate decides; judge grades)
+# ---- the ABLITERATED base: the labelled ablation -------------------------
+REFT_BASE=abliterated python -m steering_tutorials.reft_r1.train_reft
+
+REFT_BASE=abliterated STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
+    python -m steering_tutorials.reft_r1.run_reft
+
+# ---- the side-by-side (CPU-only; reads both results files) ---------------
+python -m steering_tutorials.reft_r1.compare_bases
+
+# ---- extras ---------------------------------------------------------------
 python -m steering_tutorials.reft_r1.infer "how do I pick a lock"
-
-# 4) Launch the live comparison dashboard
 python -m steering_tutorials.reft_r1.app          # -> http://localhost:8004
 ```
 
-Uses the same ~2 GB abliterated Gemma-3-1B as lessons 1–2 (bf16). Runs on CPU
-too, just slower. Datasets download automatically.
+`run_reft` **refuses to start** if `STEER_JUDGE_MODEL` is unset — an hours-long
+GPU run that ends in a self-judged, inadmissible number is worse than no run.
+It is also **resumable**: every prompt's four generations and four verdicts are
+fsync'd to `artifacts/records_<base>.jsonl` as they complete, so a reaped job
+costs one prompt, and re-running the identical command picks up where it stopped.
+
+One eval pass is ~400 prompts × 4 generations × 4 judge calls — hours on a laptop
+4090, not minutes. Both bases are ~2 GB Gemma-3-1B in bf16; the Qwen-3B judge sits
+alongside them. Runs on CPU too, much slower. Datasets download automatically.
 
 ---
 
@@ -478,23 +583,41 @@ too, just slower. Datasets download automatically.
 - **Tiny scale.** One 1B model, ~300 training steps, small held-out sets. This
   demonstrates the ReFT-r1 loop and the AxBench comparison; it is not a
   benchmark-grade reproduction.
-- **A 1B judge is weak.** Self-grading with a small model is pedagogy, not a
-  trustworthy evaluation — read verdicts as a demonstration of the loop. A real
-  bake-off uses a stronger, independent judge (later lessons).
+- **The judge is off-family but still imperfect, and it is a floor under every
+  over-refusal number here.** All reported numbers are graded by
+  `Qwen/Qwen2.5-3B-Instruct`, and each `results_*.json` carries the stamp
+  (`judge_id`, `is_self_judge`, `judge_model_id`, `off_family`) read off the
+  `Judge` object itself rather than off this README — so "what graded these
+  generations?" is answerable from the artifact alone. It is not answerable for
+  the *original* run: `results_abliterated_LEGACY_UNKNOWN_JUDGE.json` predates the
+  stamp and there is no record of what judged it. Absence of evidence was the
+  defect, which is why that run was redone rather than trusted. Even with the
+  right judge, its measured ROC-AUC against labelled data is ~0.75
+  (`JUDGE_VALIDITY.md`) — below any usability bar — and it visibly mislabels some
+  plain benign compliance as REFUSAL. Read the benign over-refusal column as
+  "method + instrument", never as "method".
 - **This is a minimal reimplementation.** `reft.py` implements the rank-1 LoReFT
   edit from scratch, *not* the `pyreft` library. It captures the mechanism, not
   every engineering detail of the paper's release.
-- **The gate inherits lesson-1's OOD limits.** The probe ranks harm well but its
-  0.5 threshold miscalibrates off-distribution; a gate that misses a harmful
-  prompt simply won't apply the edit.
-- **The prompting arm is handicapped by design, so AxBench's headline is not
-  tested here.** The paper's finding — prompting outperforms existing steering
-  methods — presumes a model whose instruction-following refusal is intact. Ours
-  is abliterated, precisely so that external refusal vectors have something to
-  re-install. That makes the ReFT-r1-beats-prompting result on this page a
-  property of the base model, not a verdict on the paper (see §7). The paper was
-  also measured on larger models and many concepts, and no SAE arm is included
-  here (out of scope at this scale).
+- **The gate inherits lesson-1's OOD limits, and on the aligned base it is out of
+  distribution.** The gate is lesson-1's probe, trained on the **abliterated**
+  model's layer-12 mean-pooled activations. Running it against the aligned base is
+  a domain shift that this lesson deliberately does **not** correct — correcting it
+  would be a second changed variable, and the whole point of the fix was to change
+  exactly one. Its per-class firing rate is therefore reported in every
+  `results_*.json` under `gate`, and the two conditional arms must be read against
+  it: **an arm whose gate rarely fires is reporting the baseline model, not
+  itself.**
+- **AxBench's headline is now tested on the aligned base only.** On the
+  abliterated base it remains untestable for the structural reason in §3, and the
+  runner marks it so rather than emitting a verdict. The paper was also measured
+  on larger models and many concepts, and no SAE arm is included here (out of
+  scope at this scale).
+- **Screening tier, not evaluation tier.** One seed per cell. Under CLAUDE.md §7
+  that is SCREENING: no paired Wilcoxon, no bootstrap CI, no Holm correction, so
+  nothing on this page may be called a "win" or "outside seed noise". The
+  cross-base *direction* of an effect is what this lesson is for; the third
+  decimal place is not.
 - **This is pedagogy, not a safety product.** It shows *how* a learned rank-1
   steer works end-to-end and how to compare it honestly. Do not deploy it as a
   real-world guardrail.

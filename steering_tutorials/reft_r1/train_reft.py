@@ -158,8 +158,8 @@ def main() -> None:
     opt = Adam(reft.parameters(), lr=C.LR)
 
     print(
-        f"[train] steps={C.STEPS} batch={C.BATCH} lr={C.LR} "
-        f"lambda_kl={C.LAMBDA_KL} grad_clip={C.GRAD_CLIP} layer={C.LAYER}",
+        f"[train] base={C.BASE} ({C.MODEL_ID}) steps={C.STEPS} batch={C.BATCH} "
+        f"lr={C.LR} lambda_kl={C.LAMBDA_KL} grad_clip={C.GRAD_CLIP} layer={C.LAYER}",
         file=sys.stderr,
     )
 
@@ -228,8 +228,20 @@ def main() -> None:
         meta={
             "layer": C.LAYER,
             "model_id": C.MODEL_ID,
+            # Which of the two bases this intervention belongs to. A rank-1 edit
+            # is fit to ONE model's residual stream; loading the abliterated
+            # intervention into the aligned model (or vice versa) would silently
+            # produce a plausible, meaningless number. run_reft asserts on this.
+            "base": C.BASE,
             "concept": "refusal",
             "steps": C.STEPS,
+            "batch": C.BATCH,
+            "lr": C.LR,
+            "lambda_kl": C.LAMBDA_KL,
+            "grad_clip": C.GRAD_CLIP,
+            "seed": C.SEED,
+            "best_step": best_step,
+            "best_total": best_total,
         },
     )
 
@@ -239,7 +251,7 @@ def main() -> None:
     matplotlib.use("Agg")  # headless: write a PNG, never open a window
     import matplotlib.pyplot as plt
 
-    curve_path = C.ARTIFACTS / "training_curve.png"
+    curve_path = C.ARTIFACTS / C.TRAINING_PLOT
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.plot(losses, lw=1.2)
     ax.set_xlabel("step")

@@ -30,13 +30,48 @@ plumbing (``hello_world_steering.model_utils``); everything else lives here.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
-# --- The model we steer ------------------------------------------------------
-# The SAME uncensored / abliterated Gemma-3-1B used in lessons 1 and 2. Refusal
-# has been ablated out of it, so there is behaviour to RE-INSTALL from outside —
-# here with a learned rank-1 intervention instead of a fixed diff-of-means vector.
-MODEL_ID = "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"
+# --- The model we steer: TWO bases, one variable -----------------------------
+# STRUCTURAL FIX (2026-08-02). This lesson used to run its three-way bake-off on
+# ONE base: the abliterated Gemma-3-1B. That makes AxBench's actual claim
+# ("prompting outperforms existing steering methods") UNTESTABLE here, because
+# abliteration removes exactly the instruction-following refusal that the
+# PROMPTING arm depends on and that the other two arms do not. The prompting arm
+# was structurally crippled while ReFT-r1 and DiffMean were not; a bake-off whose
+# baseline is lobotomised cannot reproduce or refute the paper.
+#
+# So the bake-off now runs on BOTH bases and reports them side by side. Exactly
+# ONE thing differs between the two runs — the base model. Same n, same prompts,
+# same layer, same DiffMean alpha, same ReFT training budget, same off-family
+# judge, same seed.
+#
+#   aligned      — google/gemma-3-1b-it, loaded from the LOCAL path (the HF id
+#                  401s without a token). Refusal intact. This is the base on
+#                  which AxBench's prompting-vs-learned-methods claim is
+#                  MEANINGFUL, so it is the headline arm.
+#   abliterated  — DavidAU/...-heretic-extreme-uncensored-abliterated. Refusal
+#                  removed. Kept as a LABELLED ABLATION: it isolates what happens
+#                  to each method when instruction-following refusal is deleted
+#                  from the weights. It is NOT a test of AxBench.
+BASES = {
+    "aligned": "models/google/gemma-3-1b-it",
+    "abliterated": "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated",
+}
+
+# Which base this process runs. Set REFT_BASE=aligned|abliterated. The default is
+# the ABLITERATED one purely for backward compatibility with the pre-existing
+# artifacts (results.json / reft.pt) and the webapp that reads them; the aligned
+# run is the one the README headlines.
+BASE = (os.environ.get("REFT_BASE", "abliterated") or "abliterated").strip().lower()
+if BASE not in BASES:
+    raise ValueError(
+        f"REFT_BASE={BASE!r} is not one of {sorted(BASES)}. "
+        "This is a hard error on purpose: a typo must not silently fall back to "
+        "the other base and mislabel a whole run's artifacts."
+    )
+MODEL_ID = BASES[BASE]
 
 # Which residual-stream layer we install the rank-1 intervention on — the same
 # middle-ish layer lessons 1-2 read/wrote, so the learned edit acts on the same
@@ -80,9 +115,31 @@ N_EVAL = 200            # per class, held out for eval (train = 300/class)
 SEED = 0
 
 # --- Paths -------------------------------------------------------------------
+# Per-base artifact names, so the two runs can never overwrite each other. The
+# abliterated run keeps the ORIGINAL names (reft.pt / results.json) so the webapp
+# and every existing link still resolve; the aligned run gets suffixed names.
 ROOT = Path(__file__).parent
 ARTIFACTS = ROOT / "artifacts"
-REFT_PATH = ARTIFACTS / "reft.pt"
-RESULTS_PATH = ARTIFACTS / "results.json"
+
+_SUFFIX = "" if BASE == "abliterated" else f"_{BASE}"
+REFT_PATH = ARTIFACTS / f"reft{_SUFFIX}.pt"
+RESULTS_PATH = ARTIFACTS / f"results{_SUFFIX}.json"
+
+# Append-only per-prompt checkpoint. This host REAPS long jobs, and one eval pass
+# is ~400 prompts x 4 generations x 4 judge calls — hours. Every prompt's record
+# is flushed here the moment it is graded, and a restart resumes by skipping the
+# prompts already present. Checkpointing at the granularity of the most expensive
+# irreversible step (one prompt's four generations), not at whatever is
+# convenient to write.
+RECORDS_PATH = ARTIFACTS / f"records{_SUFFIX}.jsonl"
+
+# Plot filenames are per-base too (the two runs produce different bars).
+STEERING_PLOT = f"steering_compare{_SUFFIX}.png"
+DETECTION_PLOT = f"detection_auc{_SUFFIX}.png"
+TRAINING_PLOT = f"training_curve{_SUFFIX}.png"
+
+# The cross-base comparison written by ``compare_bases.py`` (base-independent).
+COMPARE_PATH = ARTIFACTS / "compare_bases.json"
+COMPARE_PLOT = ARTIFACTS / "compare_bases.png"
 
 ARTIFACTS.mkdir(exist_ok=True)
