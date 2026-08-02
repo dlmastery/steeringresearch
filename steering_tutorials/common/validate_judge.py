@@ -181,6 +181,10 @@ def build_card(scored: dict[str, Any], n_input: int, judge_id: str,
     auc_cont = roc_auc(y, cont)
     return {
         "judge_model": judge_id,
+        # Metadata only: a card that says "self" is a card for the target model
+        # grading itself. Made explicit so a reader never has to know that "self"
+        # is the sentinel (CLAUDE.md sec.17, rubric item 3).
+        "is_self_judge": judge_id == "self",
         "labels_file": labels_path,
         "n_input": int(n_input),
         "n_scored": int(len(y)),
