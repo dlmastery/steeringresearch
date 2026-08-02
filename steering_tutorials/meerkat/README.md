@@ -138,7 +138,10 @@ so the claim below is the *hypothesis*, not the finding.
 
 The embedder is the paper's own: **`BAAI/bge-base-en-v1.5`** (`bge`), a general
 text embedder loaded via `transformers` + mean pooling (a faster `minilm`
-substitute is available for quick runs). Unlike the other lessons, the signal here
+substitute is available for quick runs). **The shipped `results.json` is a
+`minilm` run** — `sentence-transformers/all-MiniLM-L6-v2`, not `bge`; the
+artifact's `embed_model` field says otherwise and is wrong about what was loaded
+(§9.2 explains exactly why). Unlike the other lessons, the signal here
 is read off a **general sentence embedder**, not Gemma's residual stream — the
 clustering, not the representation, is the object of study.
 
@@ -308,9 +311,21 @@ could separate the classes on character count alone and clustering would earn no
 credit. `confound_report()` measures the AUC of raw **trace character-length**
 against the label (`length_auc`). The bar is the **directionless** value
 `max(auc, 1−auc)` — an AUC *below* 0.5 is not clean, it is a tell with the sign
-flipped. **Measured here: `length_auc` = 0.325 raw ⇒ 0.675 directionless**, i.e. a
-real 0.675 length tell in the *benign-is-longer* direction, which every headline in
+flipped. **Measured on the current artifact: `length_auc` = 0.4511 raw ⇒ 0.5489
+directionless** (attack mean **104.5** chars vs benign mean **106.5** — a
+2-character gap), i.e. essentially no length tell, which is what every headline in
 [Section 9](#9-results--measured-vs-the-claim) is discounted against there.
+
+> **Withdrawn, not deleted.** This paragraph previously read "`length_auc` = 0.325
+> raw ⇒ 0.675 directionless … a real 0.675 length tell in the *benign-is-longer*
+> direction". **That claim is WITHDRAWN.** It described the pool produced *before*
+> the benign length-matching fix in `data.py`; the artifact beside this README
+> (`artifacts/results.json`, `confound.pool_fingerprint = caa8fc99716b9824`) now
+> carries the post-fix block, so the prose was describing a bar that no longer
+> exists on disk. Section 9.1 was corrected first and this section had been left
+> behind — the same defect, twice in one file. The withdrawn number is still worth
+> knowing: removing that tell cost `kmeans_enrich` **65%** of its sparse AP
+> (§9.2), which is the single most informative result in the lesson.
 
 ---
 
@@ -434,16 +449,28 @@ for the AP column and the **AUC** bar for the AUC column. Never cross them.
 
 ### 9.2 The measured results, priced against the bar
 
-Averaged over `n_repos = 6` sampled repositories of 300 traces, a `SEED_FRAC`
-labelled seed, bootstrap 95% CIs, from `artifacts/results.json`. The **sparse
-(5%)** AP column is the one that matters (balanced is the sanity control where
-per-trace can already do fine).
+Averaged over `n_repos = 6` sampled repositories of `repo_size = 400` traces, a
+`SEED_FRAC` labelled seed, bootstrap 95% CIs, from `artifacts/results.json`. The
+**sparse (5%)** AP column is the one that matters (balanced is the sanity control
+where per-trace can already do fine).
 
-> **Run config caveat, stated up front:** this run used the **`minilm`** fallback
-> embedder (not the `bge-base-en-v1.5` the lesson describes) and a pool of
-> **200 attack + 200 benign** — *below* the ≥500/class floor
-> ([`DATA_SUFFICIENCY.md`](../DATA_SUFFICIENCY.md)). Provisional numbers on both
-> counts.
+> **Which embedder produced these numbers — the artifact's two fields disagree.**
+> `results.json` carries **both** `"embed_model": "BAAI/bge-base-en-v1.5"` **and**
+> `"embedder": "minilm"`. They are not describing the same thing, and only one of
+> them gated the run. `run_meerkat.py` writes each field straight from config
+> (`C.EMBED_MODEL`, `C.EMBEDDER`) but loads the model via
+> `cluster.get_embedder(C.EMBEDDER)`, which branches: `"bge"` → `C.EMBED_MODEL`,
+> `"minilm"` → `C.MINILM_ID`. With `EMBEDDER = "minilm"` the `embed_model` field is
+> **never read** — it is an inert echo of an unused default. **Every number in this
+> section was produced by `sentence-transformers/all-MiniLM-L6-v2` (384-dim), not
+> by `bge-base-en-v1.5` (768-dim).** The artifact is left exactly as written; this
+> note says what it means. (A future run should stamp the *resolved* model id, not
+> the config default — an artifact that names a model it did not load is the §18.8
+> "stamp your inputs" failure in miniature.)
+>
+> **Second caveat:** the pool is **200 attack + 200 benign** — *below* the
+> ≥500/class floor ([`DATA_SUFFICIENCY.md`](../DATA_SUFFICIENCY.md)). Provisional
+> on both counts.
 
 | method | Sparse (5%) **AP** [95% CI] | **AP margin** over the 0.076 length bar | Sparse ROC-AUC | AUC margin over the 0.549 bar | Balanced AP |
 |---|---|---|---|---|---|
@@ -516,8 +543,10 @@ buried.
   cells flagged as missing in earlier revisions are now measured (§9.1): the
   length-only AP bar, and a re-run on the length-matched pool.
 - **Screening tier, not evaluation** — and below the data floor. One embedder
-  (the `minilm` fallback, not the `bge` this README describes), one seed fraction,
-  6 repositories of 300 traces drawn from a **200/class** pool, under the ≥500/class
+  (`sentence-transformers/all-MiniLM-L6-v2`, the `minilm` fallback — **not** the
+  `bge-base-en-v1.5` this README describes, despite the `embed_model` field in
+  `results.json` naming it; see the caveat in §9.2), one seed fraction,
+  6 repositories of 400 traces drawn from a **200/class** pool, under the ≥500/class
   rubric. A directional demo, not the n ≥ 7 seeds + rigor contract CLAUDE.md
   reserves the word "winner" for. Do not over-read the ordering — including the
   negative one.
