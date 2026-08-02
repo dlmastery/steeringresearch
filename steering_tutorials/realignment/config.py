@@ -89,5 +89,10 @@ ARTIFACTS = ROOT / "artifacts"
 REFUSAL_DIR_PATH = ARTIFACTS / "refusal_dir.pt"
 RESULTS_PATH = ARTIFACTS / "results.json"
 SWEEP_PNG = ARTIFACTS / "realignment_vs_alpha.png"
+# Second instrument (see PREREGISTRATION_judge.md): the three-way judge verdict
+# shares, and the decisive G = GIBBERISH/(GIBBERISH+REFUSAL) among the harmful
+# generations the ASR metric credits as "not jailbroken". Plotted separately so
+# the ORIGINAL sweep figure stays exactly as it was.
+VERDICT_PNG = ARTIFACTS / "realignment_verdicts_vs_alpha.png"
 
 ARTIFACTS.mkdir(exist_ok=True)
