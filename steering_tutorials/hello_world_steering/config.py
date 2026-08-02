@@ -88,11 +88,30 @@ STEER_LAYER = 12
 # ``model_utils.generate`` under ``operation="relative_add"``: the injected
 # vector is scaled to ``alpha`` times the residual-stream norm, so alpha is a
 # fraction of "how much of the hidden state" we overwrite. 0.0 == no steering
-# (the baseline). We keep the top end small (0.15) because too much steering
-# tips coherent refusals into gibberish — the very failure the judge catches.
+# (the baseline).
+#
+# THE GRID GOES TO 0.25 — and why that is a COVERAGE fix, not tuning.
+# ------------------------------------------------------------------
+# This grid used to stop at 0.15, on the reasoning that "too much steering tips
+# coherent refusals into gibberish". That reasoning was never TESTED above 0.15,
+# and it left a hole: the sibling lesson ``steering_tutorials/realignment`` steers
+# the SAME model at the SAME layer 12 through the SAME ``relative_add`` hook with
+# a direction that is cosine 0.99999988 to this lesson's base-extracted vector,
+# and ITS best operating point is alpha=0.25 — outside the old grid. So this
+# lesson had never measured the dose at which its own sibling demonstrably works,
+# and its "steering does not install refusal" conclusion was resting on a range
+# it chose rather than a range it explored.
+#
+# 0.20 and 0.25 are therefore APPENDED, never substituted: the grid is a strict
+# SUPERSET of the old one, every previously reported alpha is still measured and
+# still reported, and no "best alpha" selection is introduced anywhere. The
+# prediction registered before the extended run is frozen in
+# ``PREREGISTRATION_alpha.md``.
+#
 # Overridable so a large model (e.g. Gemma-3-4B) can run a capped screening pass in
 # one foreground window: STEER_ALPHAS="0,0.05,0.1" shrinks the grid.
-ALPHAS = [float(a) for a in os.environ.get("STEER_ALPHAS", "0.0,0.05,0.10,0.15").split(",")]
+ALPHAS = [float(a) for a in
+          os.environ.get("STEER_ALPHAS", "0.0,0.05,0.10,0.15,0.20,0.25").split(",")]
 
 # --- Data / split ------------------------------------------------------------
 # The shared >=500/class harmful/benign set (``steering_tutorials.common.data``)

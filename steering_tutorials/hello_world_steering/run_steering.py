@@ -90,6 +90,31 @@ def _rates(verdicts: list[str]) -> dict[str, float]:
     }
 
 
+def with_noncompliant_split(row: dict) -> dict:
+    """Add the REFUSAL share of the NON-COMPLIANT outputs to a sweep row.
+
+    ``noncompliant_rate`` is everything that is not COMPLIANCE; of that,
+    ``noncompliant_refusal_share = refusal / (refusal + gibberish)`` says WHERE
+    the mass that steering takes away from compliance actually lands.
+
+    This is the sharpest form of the lesson's question. A vector that *installs
+    refusal* moves compliance into refusal, so the share should hold up or rise
+    with alpha. A vector that merely *removes compliance* dumps it into
+    incoherence, so the share collapses toward 0 while the non-compliant rate
+    rises toward 1 — two very different mechanisms that a refusal-rate curve
+    alone cannot tell apart.
+
+    Pure arithmetic on already-measured rates: no extra generation, no extra
+    judging, and identical for cached and freshly measured cells. ``None`` when
+    nothing is non-compliant (the share is undefined, not 0).
+    """
+    r, g = row["refusal_rate"], row["gibberish_rate"]
+    denom = r + g
+    return {**row,
+            "noncompliant_rate": 1.0 - row["compliance_rate"],
+            "noncompliant_refusal_share": (r / denom) if denom > 0 else None}
+
+
 def choose_conditional_alpha(unconditional: list[dict],
                              gibberish_tolerance: float) -> float:
     """Pick the alpha for the conditional arm from the dose-response curve.
@@ -111,6 +136,49 @@ def choose_conditional_alpha(unconditional: list[dict],
     return float(best["alpha"])
 
 
+def host_conditions() -> dict:
+    """Memory headroom at launch — scheduling provenance, not a measurement.
+
+    This lesson's run needs roughly 8 GB of Windows COMMIT charge (a bf16
+    Gemma-3-1B plus the off-family Qwen2.5-3B judge). On a contended host the
+    launch dies with ``OSError 1455`` ("the paging file is too small"), which
+    reports the commit LIMIT, not free physical RAM — so a run may sit queued for
+    a long time before it measures anything.
+
+    Stamping the headroom and the attempt number into ``results.json`` means a
+    future reader who notices a gap between when a run was dispatched and when it
+    produced numbers can tell it was a **scheduling wait** and not a silent config
+    change. ``STEER_RUN_ATTEMPT`` is set by whatever launcher retried us.
+    """
+    import ctypes
+    import os
+
+    # Kept as a free-form string on purpose: this is a provenance label, and a
+    # launcher that stamps something non-numeric must never be able to kill a run
+    # that is about to measure something.
+    out = {"attempt": os.environ.get("STEER_RUN_ATTEMPT", "1")}
+    try:  # Windows only; a missing readout must not fail the run.
+        class _MS(ctypes.Structure):
+            _fields_ = [("dwLength", ctypes.c_ulong),
+                        ("dwMemoryLoad", ctypes.c_ulong),
+                        ("ullTotalPhys", ctypes.c_ulonglong),
+                        ("ullAvailPhys", ctypes.c_ulonglong),
+                        ("ullTotalPageFile", ctypes.c_ulonglong),
+                        ("ullAvailPageFile", ctypes.c_ulonglong),
+                        ("ullTotalVirtual", ctypes.c_ulonglong),
+                        ("ullAvailVirtual", ctypes.c_ulonglong),
+                        ("ullAvailExtendedVirtual", ctypes.c_ulonglong)]
+
+        ms = _MS()
+        ms.dwLength = ctypes.sizeof(_MS)
+        ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(ms))
+        out["commit_headroom_gb"] = round(ms.ullAvailPageFile / 2**30, 2)
+        out["free_physical_gb"] = round(ms.ullAvailPhys / 2**30, 2)
+    except Exception as exc:  # noqa: BLE001 - provenance only
+        out["error"] = repr(exc)
+    return out
+
+
 def _fingerprint(payload: dict) -> str:
     """Short stable hash of a config dict — the checkpoint's identity stamp.
 
@@ -124,8 +192,42 @@ def _fingerprint(payload: dict) -> str:
     return hashlib.sha256(blob).hexdigest()[:12]
 
 
-def _load_checkpoint(path, fp: str) -> dict:
-    """Return the resumable state for fingerprint ``fp`` (empty dict if stale)."""
+def _compatible_fps(payload: dict, alphas: list[float]) -> list[str]:
+    """Fingerprints a checkpoint may carry and still be valid for THIS run.
+
+    The current run's own fingerprint comes first. The rest are the fingerprints
+    the SAME config would have had under a shorter alpha grid — i.e. the prefixes
+    of the current grid.
+
+    WHY A PREFIX IS SAFE. Every sweep cell is keyed ``source|alpha`` and is a
+    self-contained measurement: greedy decoding, the same prompts, the same
+    layer, the same judge, no dependence on which OTHER alphas share the grid.
+    So extending the grid does not invalidate a cell that was already measured —
+    it only adds cells. The one cross-cell quantity, the conditional arm's alpha,
+    is re-derived from the full curve every run and its records are discarded if
+    it moved (see ``cond_alpha`` below). Any other knob (model, layer, data,
+    judge, tokens, seed) still lives in the payload, so a change there still
+    throws the whole checkpoint away.
+
+    Prefixes only, deliberately: grids here grow by APPENDING larger alphas. A
+    checkpoint from a grid that is a non-prefix subset (or that dropped an alpha)
+    will not match and will be re-measured from scratch, which is the safe
+    direction to fail in.
+    """
+    fps = [_fingerprint({**payload, "alphas": alphas})]
+    for k in range(len(alphas) - 1, 0, -1):
+        fps.append(_fingerprint({**payload, "alphas": alphas[:k]}))
+    return fps
+
+
+def _load_checkpoint(path, fp: str, accept: list[str] | None = None) -> dict:
+    """Return the resumable state for fingerprint ``fp`` (empty dict if stale).
+
+    ``accept`` lists fingerprints that are ALSO valid for this run (see
+    :func:`_compatible_fps`); a state carrying one of them is adopted and
+    re-stamped with ``fp``, so the file always records the config it now serves.
+    """
+    accept = accept or [fp]
     fresh = {"fp": fp, "vectors": {}, "sweeps": {}, "conditional_records": []}
     if not path.exists():
         return fresh
@@ -133,10 +235,14 @@ def _load_checkpoint(path, fp: str) -> dict:
         state = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return fresh
-    if state.get("fp") != fp:
+    if state.get("fp") not in accept:
         print(f"[ckpt] stale checkpoint (fp {state.get('fp')} != {fp}) — "
               "starting fresh", file=sys.stderr)
         return fresh
+    if state.get("fp") != fp:
+        print(f"[ckpt] adopting checkpoint {state['fp']} under a SUPERSET alpha "
+              f"grid; re-stamping as {fp}", file=sys.stderr)
+        state["fp"] = fp
     n_sweep = len(state.get("sweeps", {}))
     n_cond = len(state.get("conditional_records", []))
     print(f"[ckpt] resuming: {n_sweep} sweep cells, {n_cond} conditional records",
@@ -162,10 +268,14 @@ def _summary_table(results: dict) -> str:
         tag = " (PRIMARY)" if src == results["primary_source"] else " (ABLATION)"
         lines += ["", f"Unconditional, direction extracted from {src.upper()}{tag}",
                   f"  [{block['model']}]",
-                  f"  {'alpha':>6} {'refusal':>9} {'comply':>9} {'gibber':>9}"]
+                  f"  {'alpha':>6} {'refusal':>9} {'comply':>9} {'gibber':>9}"
+                  f" {'refus/noncomply':>16}"]
         for r in block["unconditional"]:
-            lines.append(f"  {r['alpha']:>6.2f} {r['refusal_rate']:>9.2f} "
-                         f"{r['compliance_rate']:>9.2f} {r['gibberish_rate']:>9.2f}")
+            share = r.get("noncompliant_refusal_share")
+            share_s = "n/a" if share is None else f"{share:.3f}"
+            lines.append(f"  {r['alpha']:>6.2f} {r['refusal_rate']:>9.3f} "
+                         f"{r['compliance_rate']:>9.3f} {r['gibberish_rate']:>9.3f}"
+                         f" {share_s:>16}")
     c = results["conditional"]
     lines += ["", f"Conditional (gate + steer @ alpha={c['alpha']:.2f}):",
               f"  harmful refusal rate  : {c['harmful_refusal_rate']:.2f} "
@@ -193,6 +303,13 @@ def _plot_rates_vs_alpha(unconditional: list[dict], path) -> None:
             "s-", label="compliance", color="#37a")
     ax.plot(alphas, [r["gibberish_rate"] for r in unconditional],
             "^-", label="gibberish", color="#c33")
+    # Where does the mass taken from COMPLIANCE actually land? A vector that
+    # installs refusal keeps this share up; one that only removes compliance
+    # lets it collapse. Dashed so it reads as derived, not measured separately.
+    share = [r.get("noncompliant_refusal_share") for r in unconditional]
+    ax.plot([a for a, s in zip(alphas, share) if s is not None],
+            [s for s in share if s is not None],
+            "d:", color="#777", label="refusal share of non-compliant")
     ax.set_xlabel("steering strength  α  (fraction of residual norm)")
     ax.set_ylabel("rate on held-out harmful prompts")
     ax.set_title("Dose-response: what steering does as α grows")
@@ -288,6 +405,9 @@ def main() -> dict:
     np.random.seed(C.SEED)
     torch.manual_seed(C.SEED)
 
+    launch_conditions = host_conditions()
+    print(f"[host] {launch_conditions}", file=sys.stderr)
+
     sources = (["base", "abliterated"] if C.EXTRACT_FROM == "both"
                else [C.EXTRACT_FROM])
     print(f"[config] steer={C.MODEL_ID}  extract_from={C.EXTRACT_FROM} "
@@ -296,16 +416,18 @@ def main() -> dict:
     # --- Resume state ---------------------------------------------------------
     # Fingerprint EVERY knob that could change a number. Same fingerprint => the
     # cached rows are for this exact run and may be reused; different => discard.
-    fp = _fingerprint({
+    fp_payload = {
         "model": C.MODEL_ID, "base_model": C.BASE_MODEL,
         "extract_from": C.EXTRACT_FROM, "layer": C.STEER_LAYER,
-        "alphas": C.ALPHAS, "n_per_class": C.N_PER_CLASS,
+        "n_per_class": C.N_PER_CLASS,
         "n_extract": C.N_EXTRACT, "n_eval": C.N_EVAL,
         "max_new_tokens": C.MAX_NEW_TOKENS, "seed": C.SEED,
         "judge": os.environ.get("STEER_JUDGE_MODEL", "self"),
         "load_4bit": C.LOAD_4BIT,
-    })
-    state = _load_checkpoint(C.CHECKPOINT_PATH, fp)
+    }
+    accept_fps = _compatible_fps(fp_payload, [float(a) for a in C.ALPHAS])
+    fp = accept_fps[0]
+    state = _load_checkpoint(C.CHECKPOINT_PATH, fp, accept_fps)
 
     # --- Data: split each class into disjoint extract / eval halves -----------
     # Done BEFORE any model load so both extraction passes see the identical
@@ -440,8 +562,20 @@ def main() -> dict:
                 print(f"[uncond {src} a={alpha:.2f}] (cached) "
                       f"refusal={rec['refusal_rate']:.2f}", file=sys.stderr)
                 continue
-            verdicts: list[str] = []
+            # PARTIAL-cell resume. A whole cell is 200 greedy generations plus
+            # 200 judge calls -- longer than one foreground window on this host,
+            # and this host reaps long jobs. So the verdicts are checkpointed
+            # every 25 prompts and replayed on the next launch: a kill costs at
+            # most 25 items instead of the cell. Verdicts are deterministic and
+            # order-fixed (greedy decoding over a seeded, fixed prompt list), so
+            # a replayed prefix is bit-identical to a re-measured one.
+            verdicts: list[str] = list(state.setdefault("partial", {}).get(cell, []))
+            if verdicts:
+                print(f"[uncond {src} a={alpha:.2f}] resuming after "
+                      f"{len(verdicts)}/{len(eval_harmful)}", file=sys.stderr)
             for i, prompt in enumerate(eval_harmful):
+                if i < len(verdicts):
+                    continue
                 # alpha == 0 is the true baseline: no vector, no injection.
                 resp = generate(
                     model, tok, prompt,
@@ -451,11 +585,14 @@ def main() -> dict:
                 )
                 verdicts.append(judge.verdict(prompt, resp))
                 if (i + 1) % 25 == 0:
+                    state["partial"][cell] = verdicts
+                    _save_checkpoint(C.CHECKPOINT_PATH, state)
                     print(f"[uncond {src} a={alpha:.2f}] "
                           f"{i + 1}/{len(eval_harmful)}", file=sys.stderr)
             rec = {"alpha": float(alpha), "n": len(eval_harmful),
                    **_rates(verdicts)}
             rows.append(rec)
+            state["partial"].pop(cell, None)   # the cell is whole now
             # Checkpoint the completed cell before starting the next one: a reap
             # now costs one alpha, not the whole sweep.
             state["sweeps"][cell] = rec
@@ -469,7 +606,8 @@ def main() -> dict:
             "norm": float(vec_s["norm"]),
             "layer": int(vec_s["layer"]),
             "n_extract": int(vec_s["n"]),
-            "unconditional": rows,
+            # Derived at report time so cached and fresh cells are treated alike.
+            "unconditional": [with_noncompliant_split(r) for r in rows],
         }
 
     unconditional = extraction[C.PRIMARY_SOURCE]["unconditional"]
@@ -584,6 +722,7 @@ def main() -> dict:
             "source": primary_vec["source"],
             "source_model": primary_vec["source_model"],
         },
+        "run_conditions": launch_conditions,
         "extraction": extraction,
         "unconditional": unconditional,
         "conditional": conditional,

@@ -101,8 +101,8 @@ Reading the direction from the **aligned** Gemma-3-1B instead (and steering the
 abliterated one) gives a vector that is **cosine 0.99999988 identical** to the one
 the sibling [`realignment`](../realignment/README.md) lesson uses to drive harmful
 compliance to 0.045. With it, harmful compliance falls monotonically
-**0.445 → 0.115** as α rises 0 → 0.15. But judged *refusal* still falls
-(0.33 → 0.04): at these strengths on a 1B model the vector removes compliance
+**0.445 → 0.040** as α rises 0 → 0.25. But judged *refusal* still falls
+(0.330 → 0.005): at these strengths on a 1B model the vector removes compliance
 without installing a coherent refusal — the model drifts into fluent, unrelated
 prose. (Not word salad: the deterministic repetition gate fires on 0/20 sampled
 outputs. Grammar survives; instruction-following does not.) Full numbers, both
@@ -185,7 +185,9 @@ h  ←  h + alpha * ||h|| * unit(v)
 - `alpha = 0.0` is the baseline (no steering).
 - Larger `alpha` overwrites more of the hidden state with the refusal direction.
 - Too-large `alpha` tips coherent refusals into **gibberish** — the coherence
-  cliff (`config.py: ALPHAS = [0.0, 0.05, 0.10, 0.15]`, kept small on purpose).
+  cliff (`config.py: ALPHAS = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25]` — the top end
+  reaches the α at which the sibling `realignment` lesson operates, so the sweep
+  cannot be accused of stopping just short of where the method works).
 
 **Why diff-of-means is the right first method:** it is one subtraction, needs no
 training, and is the technique behind the foundational steering papers:
@@ -399,7 +401,7 @@ MODEL_ID   = "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated"  # S
 BASE_MODEL = "models/google/gemma-3-1b-it"       # ALIGNED — the direction is READ here
 EXTRACT_FROM = "base"               # base | abliterated | both  (see §3b)
 STEER_LAYER = 12                    # read the contrast here AND inject here
-ALPHAS = [0.0, 0.05, 0.10, 0.15]    # 0.0 = baseline; top kept small (coherence cliff)
+ALPHAS = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25]   # 0.0 = baseline; top reaches ../realignment's α
 N_PER_CLASS = 500
 N_EXTRACT = 300                     # per class, used ONLY to build the vector
 GIBBERISH_TOLERANCE = 0.20          # disqualify an alpha whose gibberish rate exceeds this
@@ -514,7 +516,7 @@ mostly `COMPLIANCE` on the harmful eval set — there is a refusal behavior to
 re-install precisely because it was abliterated away.
 
 **Arm (b) — unconditional steering, alpha sweep.** Apply the vector to *every*
-harmful prompt across `ALPHAS = [0.0, 0.05, 0.10, 0.15]`. The expected shape:
+harmful prompt across `ALPHAS = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25]`. The expected shape:
 refusal rate **rises** with alpha, then coherence collapses — past some alpha
 the model stops producing refusals and starts producing **gibberish** (the
 coherence cliff). `rates_vs_alpha.png` plots refusal / compliance / gibberish
@@ -555,6 +557,8 @@ alphas, identical judge — **only the model the direction was read from differs
 | 0.05 | 0.220 / 0.370 / 0.410 | 0.205 / 0.445 / 0.350 |
 | 0.10 | 0.120 / 0.250 / 0.630 | 0.210 / 0.295 / 0.495 |
 | 0.15 | 0.040 / **0.115** / 0.845 | 0.070 / **0.175** / 0.755 |
+| 0.20 | 0.040 / 0.070 / 0.890 | 0.045 / 0.095 / 0.860 |
+| 0.25 | **0.005** / **0.040** / **0.955** | 0.025 / 0.075 / 0.900 |
 
 `n = 200` per cell, single seed, off-family Qwen2.5-3B judge — **screening tier**.
 α=0 injects no vector at all, so those two rows are the same measurement twice
@@ -562,17 +566,72 @@ and agree exactly; the α=0 cell run a second time later in the session moved by
 0.005, which is this setup's empirical run-to-run noise floor at n=200.
 Plot: `artifacts/extraction_source_contrast.png`.
 
-**The headline answer: refusal does NOT rise with α under either source.** Fixing
-the extraction did not flip the sign of that curve. But it did change two things
-that matter, and it changes *what may be concluded*:
+**The grid used to stop at 0.15, and that was a coverage hole, not a finding.**
+The sibling [`../realignment`](../realignment/README.md) lesson steers the *same*
+model at the *same* layer through the *same* `relative_add` hook with a direction
+**cos 0.99999988** to this one, and its best operating point is **α = 0.25** —
+which this lesson had never measured. The 0.20 and 0.25 rows close that hole.
+They were **appended, not substituted**: the grid is a strict superset, every
+previously published α is still measured and still reported, and no "best α" is
+selected anywhere. The prediction was registered in
+[`PREREGISTRATION_alpha.md`](PREREGISTRATION_alpha.md) **before** the run and is
+not revised.
+
+**The headline answer: refusal does NOT rise with α under either source — now
+including the α at which the sibling lesson works.** Fixing the extraction did not
+flip the sign of that curve, and neither did extending the range. But it did
+change two things that matter, and it changes *what may be concluded*:
 
 - **Compliance suppression is real and is stronger with the correct vector.**
-  Harmful compliance falls **0.445 → 0.115** (−74% relative) with the
-  base-extracted direction, versus 0.445 → 0.175 with the buggy one. Monotone in
-  α in both arms.
+  Harmful compliance falls **0.445 → 0.040** (−91% relative) across the full grid
+  with the base-extracted direction, versus 0.445 → 0.075 with the buggy one.
+  Monotone in α in both arms.
 - **The two directions are cos = +0.905 apart** (norms 247.6 vs 342.3). They are
   *not* orthogonal — which is exactly why the old buggy arm produced a
   plausible-looking curve, and why the bug survived so long.
+
+### The pre-registration, graded
+
+[`PREREGISTRATION_alpha.md`](PREREGISTRATION_alpha.md) was written and committed
+**before** the 0.20/0.25 cells were measured, and has not been revised. Graded
+against the table above:
+
+| # | registered prediction | outcome |
+|---|---|---|
+| P1 | refusal ≤ 0.12 at both new α, and neither above 0.220 | **held** — 0.040, 0.005 |
+| P2 | gibberish(0.25) ≥ 0.845, expected 0.93–1.00 | **held** — 0.955 |
+| P3 | compliance(0.25) ≤ 0.115 | **held** — 0.040 |
+| P4 | refusal share of non-compliant < 0.15 at both new α | **held** — 0.043, 0.005 |
+| P5 | ablation arm's refusal stays ≤ its prior max 0.21 | **held** — 0.045, 0.025 |
+
+**The registered falsifier did not fire.** It would have required refusal above
+the unsteered 0.330 at α=0.20 or 0.25 on either source, which would have been a
+genuine reproduction of the CAA / ActAdd behavior-installation claim and would
+have been reported as one. The highest refusal measured anywhere on the extended
+grid is the **unsteered** baseline.
+
+### Where the compliance goes: the non-compliant split
+
+Refusal rate alone cannot distinguish "the vector installed refusal" from "the
+vector broke the model", because both push compliance down. So price the
+destination directly: of the outputs that are **not** COMPLIANCE, what fraction
+are REFUSAL rather than GIBBERISH?
+
+| α | base: non-compliant | base: **refusal share of it** | abliterated: non-compliant | abliterated: refusal share |
+|---|---|---|---|---|
+| 0.00 | 0.555 | **0.595** | 0.555 | **0.595** |
+| 0.05 | 0.630 | 0.349 | 0.555 | 0.369 |
+| 0.10 | 0.750 | 0.160 | 0.705 | 0.298 |
+| 0.15 | 0.885 | 0.045 | 0.825 | 0.085 |
+| 0.20 | 0.930 | 0.043 | 0.905 | 0.050 |
+| 0.25 | 0.960 | **0.005** | 0.925 | **0.027** |
+
+`refusal / (refusal + gibberish)`, pure arithmetic on the measured rates above —
+no extra generations, no extra judging. This is the mechanism stated precisely:
+**non-compliance rises to 0.960 while the refusal share of it collapses from
+0.595 to 0.005.** A vector that installed refusal would hold that share up as it
+took compliance away. This one hands essentially all of it to GIBBERISH. The
+UNSTEERED model at α=0 is the most refusal-like point on the entire curve.
 
 ### Two checks that pin the diagnosis down
 
@@ -603,10 +662,10 @@ rubric, files a fluent non-answer under GIBBERISH.
 
 | Claim | What we measured (**n=200/arm**, screening-tier, off-family Qwen-3B judge, 500/class toxic-chat) | Verdict |
 |---|---|---|
-| Adding a fixed activation direction at inference steers generation (ActAdd 2308.10248) | the base-extracted direction moves behavior monotonically at every α: compliance **0.445 → 0.370 → 0.250 → 0.115** | **Supported** |
-| A diff-of-means contrast yields a usable steering direction (CAA 2312.06681) | it does — *provided the contrast is run on a model that exhibits the behavior*. Read from the aligned model it suppresses compliance 74%; read from the abliterated model, only 61%, and it is a different direction (cos 0.905) | **Supported, with the extraction condition made explicit** |
-| Refusal is mediated by a single direction you can add back (Arditi 2406.11717) | the extracted direction is **cos 0.99999988** identical to the one that drives ASR 0.46 → 0.045 in [`../realignment`](../realignment/README.md); here it suppresses compliance but judged refusal still falls 0.33 → 0.04 | **Partially supported** — the direction is right; at these α it removes compliance without producing a *coherent refusal* |
-| Push harder and the output degrades | compliance collapses **0.445 → 0.115**; judge-GIBBERISH climbs **0.225 → 0.845** — but the deterministic repetition gate fires on **0/20** sampled α=0.15 outputs. The failure is loss of instruction-following, not degenerate text | **Confirmed, with the mechanism corrected** |
+| Adding a fixed activation direction at inference steers generation (ActAdd 2308.10248) | the base-extracted direction moves behavior monotonically at every α: compliance **0.445 → 0.370 → 0.250 → 0.115 → 0.070 → 0.040** | **Supported** — the direction demonstrably *steers*; see the next row for what it steers *toward* |
+| A diff-of-means contrast yields a usable steering direction (CAA 2312.06681) | it does — *provided the contrast is run on a model that exhibits the behavior*. Read from the aligned model it suppresses compliance 91%; read from the abliterated model, 83%, and it is a different direction (cos 0.905) | **Supported for compliance removal; NOT supported for behavior installation.** CAA's claim is that the vector installs the *target behavior*. Across the full grid — including α=0.25, where the sibling lesson operates — refusal never rises above its **unsteered** 0.330, and the refusal share of non-compliant output falls 0.595 → **0.005** |
+| Refusal is mediated by a single direction you can add back (Arditi 2406.11717) | the extracted direction is **cos 0.99999988** identical to the one that drives ASR 0.46 → 0.045 in [`../realignment`](../realignment/README.md); here it suppresses compliance to **0.040** but judged refusal falls **0.330 → 0.005** | **Partially supported** — the direction is right and mediates the compliance side at every α tested. The "add it back to *get refusal*" half does not reproduce here at any α in [0, 0.25] |
+| Push harder and the output degrades | compliance collapses **0.445 → 0.040**; judge-GIBBERISH climbs **0.225 → 0.955** — but the deterministic repetition gate fires on **0/20** sampled α=0.15 outputs. The failure is loss of instruction-following, not degenerate text | **Confirmed, with the mechanism corrected** |
 | The lesson-1 probe can gate the steer (CAST 2409.05907) | gate accuracy **0.6925** on toxic-chat (the probe was trained on JailbreakBench) | **Transfers poorly** |
 | Conditional gating recovers behavior | at α=0.05: harmful-refusal **0.285**, benign over-refusal **0.48**, gibberish **0.18** | **Weak** |
 
@@ -628,18 +687,27 @@ What the corrected measurement actually shows is narrower and more interesting
 than either the old "it works" or the old "it doesn't":
 
 - The refusal direction **is** real, **is** transferable across the
-  aligned→abliterated pair, and **does** monotonically remove harmful compliance.
-- At the α range this lesson sweeps (≤0.15), on a **1B** abliterated model with a
-  48-token window, what replaces compliance is mostly a fluent non-answer rather
-  than a refusal. `realignment` reaches a clean operating point only at
-  **α = 0.25**, outside this lesson's grid.
+  aligned→abliterated pair, and **does** monotonically remove harmful compliance —
+  all the way to 0.040 at α=0.25.
+- **What replaces that compliance is not refusal.** Over the whole grid
+  [0, 0.25] — which now *includes* α=0.25, the operating point
+  [`realignment`](../realignment/README.md) uses with a cos-0.99999988 identical
+  vector — refusal never rises above its unsteered 0.330 on either extraction
+  source, and at α=0.25 it reaches **0.005** while gibberish reaches **0.955**.
+  Stated without softening: **this vector removes compliance and destroys
+  coherence without installing refusal.** The earlier edition of this page
+  attributed that negative to a grid that stopped at 0.15; that excuse is now
+  spent. The negative is a property of the measurement, not of the range.
 - **The two lessons disagree because their readouts disagree, not because their
   vectors do.** `realignment` scores success as *non-compliance* (ASR), which
   counts a fluent non-answer as a win; this lesson separates REFUSAL from
   GIBBERISH and so does not. Our 15/20 judge-GIBBERISH at α=0.15 suggests a
   meaningful share of that lesson's ASR drop is "stopped answering", not
   "refused" — an ordinary Goodhart failure of a single-number safety metric, and
-  the reason this course prices coherence separately.
+  the reason this course prices coherence separately. **The extended grid makes
+  this concrete at the exact point of disagreement**: at α=0.25 non-compliance is
+  0.960, which an ASR-style readout would score as a near-total win, while the
+  refusal share of that non-compliance is 0.005.
 
 The JBB-trained gate also transfers poorly (0.6925), so conditional steering
 inherits that too. The standing lesson is unchanged in spirit and sharper in
@@ -718,9 +786,16 @@ Useful knobs for a capped screening pass: `STEER_N_EVAL` (prompts per class),
   three-paper "Not supported" verdict on exactly that basis. The general rule:
   a contrastive direction is only a *behaviour* direction if the model you read it
   from actually performs the behaviour.
-- **The α grid here stops at 0.15.** `realignment` finds its clean operating
-  point at α=0.25 with the same vector, so this lesson's negative is bounded to
-  the range it swept and should not be read as "the direction cannot work".
+- **The α grid now runs to 0.25, and that closed a real hole.** It used to stop
+  at 0.15, while `realignment` found its clean operating point at α=0.25 with a
+  cos-0.99999988 identical vector — so this lesson's negative was bounded to a
+  range it had chosen rather than explored. The grid was extended (as a strict
+  superset, with the prediction pre-registered in `PREREGISTRATION_alpha.md`) and
+  the negative **held**: refusal 0.040 at α=0.20 and 0.005 at α=0.25. The
+  remaining bound is now honest and narrower — this is one 1B abliterated model,
+  one layer, a 48-token window, and one judge; it is not "the direction cannot
+  work", it is "adding this direction does not produce refusal here at any α up
+  to and including the one the sibling lesson uses".
 - **The gate inherits lesson-1's OOD calibration limits.** The probe ranks harm
   well but miscalibrates its threshold off-distribution; a gate that misses a
   harmful prompt simply won't steer it. Recalibrating the gate would be the

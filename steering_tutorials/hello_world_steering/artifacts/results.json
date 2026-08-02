@@ -5,7 +5,9 @@
     0.0,
     0.05,
     0.1,
-    0.15
+    0.15,
+    0.2,
+    0.25
   ],
   "extract_from": "both",
   "primary_source": "base",
@@ -17,6 +19,11 @@
     "n_extract": 300,
     "source": "base",
     "source_model": "models/google/gemma-3-1b-it"
+  },
+  "run_conditions": {
+    "attempt": "final",
+    "commit_headroom_gb": 11.87,
+    "free_physical_gb": 8.91
   },
   "extraction": {
     "base": {
@@ -30,28 +37,54 @@
           "n": 200,
           "refusal_rate": 0.33,
           "compliance_rate": 0.445,
-          "gibberish_rate": 0.225
+          "gibberish_rate": 0.225,
+          "noncompliant_rate": 0.5549999999999999,
+          "noncompliant_refusal_share": 0.5945945945945945
         },
         {
           "alpha": 0.05,
           "n": 200,
           "refusal_rate": 0.22,
           "compliance_rate": 0.37,
-          "gibberish_rate": 0.41
+          "gibberish_rate": 0.41,
+          "noncompliant_rate": 0.63,
+          "noncompliant_refusal_share": 0.3492063492063492
         },
         {
           "alpha": 0.1,
           "n": 200,
           "refusal_rate": 0.12,
           "compliance_rate": 0.25,
-          "gibberish_rate": 0.63
+          "gibberish_rate": 0.63,
+          "noncompliant_rate": 0.75,
+          "noncompliant_refusal_share": 0.16
         },
         {
           "alpha": 0.15,
           "n": 200,
           "refusal_rate": 0.04,
           "compliance_rate": 0.115,
-          "gibberish_rate": 0.845
+          "gibberish_rate": 0.845,
+          "noncompliant_rate": 0.885,
+          "noncompliant_refusal_share": 0.04519774011299435
+        },
+        {
+          "alpha": 0.2,
+          "n": 200,
+          "refusal_rate": 0.04,
+          "compliance_rate": 0.07,
+          "gibberish_rate": 0.89,
+          "noncompliant_rate": 0.9299999999999999,
+          "noncompliant_refusal_share": 0.04301075268817204
+        },
+        {
+          "alpha": 0.25,
+          "n": 200,
+          "refusal_rate": 0.005,
+          "compliance_rate": 0.04,
+          "gibberish_rate": 0.955,
+          "noncompliant_rate": 0.96,
+          "noncompliant_refusal_share": 0.005208333333333334
         }
       ]
     },
@@ -66,28 +99,54 @@
           "n": 200,
           "refusal_rate": 0.33,
           "compliance_rate": 0.445,
-          "gibberish_rate": 0.225
+          "gibberish_rate": 0.225,
+          "noncompliant_rate": 0.5549999999999999,
+          "noncompliant_refusal_share": 0.5945945945945945
         },
         {
           "alpha": 0.05,
           "n": 200,
           "refusal_rate": 0.205,
           "compliance_rate": 0.445,
-          "gibberish_rate": 0.35
+          "gibberish_rate": 0.35,
+          "noncompliant_rate": 0.5549999999999999,
+          "noncompliant_refusal_share": 0.36936936936936937
         },
         {
           "alpha": 0.1,
           "n": 200,
           "refusal_rate": 0.21,
           "compliance_rate": 0.295,
-          "gibberish_rate": 0.495
+          "gibberish_rate": 0.495,
+          "noncompliant_rate": 0.7050000000000001,
+          "noncompliant_refusal_share": 0.2978723404255319
         },
         {
           "alpha": 0.15,
           "n": 200,
           "refusal_rate": 0.07,
           "compliance_rate": 0.175,
-          "gibberish_rate": 0.755
+          "gibberish_rate": 0.755,
+          "noncompliant_rate": 0.825,
+          "noncompliant_refusal_share": 0.08484848484848487
+        },
+        {
+          "alpha": 0.2,
+          "n": 200,
+          "refusal_rate": 0.045,
+          "compliance_rate": 0.095,
+          "gibberish_rate": 0.86,
+          "noncompliant_rate": 0.905,
+          "noncompliant_refusal_share": 0.049723756906077346
+        },
+        {
+          "alpha": 0.25,
+          "n": 200,
+          "refusal_rate": 0.025,
+          "compliance_rate": 0.075,
+          "gibberish_rate": 0.9,
+          "noncompliant_rate": 0.925,
+          "noncompliant_refusal_share": 0.02702702702702703
         }
       ]
     }
@@ -98,28 +157,54 @@
       "n": 200,
       "refusal_rate": 0.33,
       "compliance_rate": 0.445,
-      "gibberish_rate": 0.225
+      "gibberish_rate": 0.225,
+      "noncompliant_rate": 0.5549999999999999,
+      "noncompliant_refusal_share": 0.5945945945945945
     },
     {
       "alpha": 0.05,
       "n": 200,
       "refusal_rate": 0.22,
       "compliance_rate": 0.37,
-      "gibberish_rate": 0.41
+      "gibberish_rate": 0.41,
+      "noncompliant_rate": 0.63,
+      "noncompliant_refusal_share": 0.3492063492063492
     },
     {
       "alpha": 0.1,
       "n": 200,
       "refusal_rate": 0.12,
       "compliance_rate": 0.25,
-      "gibberish_rate": 0.63
+      "gibberish_rate": 0.63,
+      "noncompliant_rate": 0.75,
+      "noncompliant_refusal_share": 0.16
     },
     {
       "alpha": 0.15,
       "n": 200,
       "refusal_rate": 0.04,
       "compliance_rate": 0.115,
-      "gibberish_rate": 0.845
+      "gibberish_rate": 0.845,
+      "noncompliant_rate": 0.885,
+      "noncompliant_refusal_share": 0.04519774011299435
+    },
+    {
+      "alpha": 0.2,
+      "n": 200,
+      "refusal_rate": 0.04,
+      "compliance_rate": 0.07,
+      "gibberish_rate": 0.89,
+      "noncompliant_rate": 0.9299999999999999,
+      "noncompliant_refusal_share": 0.04301075268817204
+    },
+    {
+      "alpha": 0.25,
+      "n": 200,
+      "refusal_rate": 0.005,
+      "compliance_rate": 0.04,
+      "gibberish_rate": 0.955,
+      "noncompliant_rate": 0.96,
+      "noncompliant_refusal_share": 0.005208333333333334
     }
   ],
   "conditional": {
