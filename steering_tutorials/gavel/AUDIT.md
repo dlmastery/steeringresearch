@@ -41,3 +41,43 @@ asserts its own WebFetch verification — harmless, and it checks out.)*
 
 *Internal QA pass — independent external review pending (auditor shares a model
 family with the author).*
+
+---
+
+## Addendum (2026-08-02) — the "Results honesty" PASS above is SUPERSEDED
+
+The audit above was performed while the results table still read
+**"[PENDING THE GPU RUN]"**. It therefore graded the lesson's *documented intent*
+— which did specify the off-family `Qwen2.5-3B-Instruct` judge — and could not
+have graded the artifact, because no artifact existed yet. The GPU run happened
+afterwards, **without `STEER_JUDGE_MODEL` set**, and `results.json` recorded
+`"judge_id": "self"`: the abliterated 1B graded its own generations.
+
+| item | revised finding |
+|---|---|
+| Results honesty (pass-through) | **FAIL at the time of the run.** Self-judged numbers were published under a README that claimed an off-family judge — a CLAUDE.md §17.3 violation. |
+| Results honesty (monitor half) | **Still PASS.** Block rates, broad baseline and per-CE firing are judge-free (thresholded dot products vs ground-truth labels); no grader is involved. |
+| Current state | README now carries a judge-provenance correction, marks the pass-through figures **inadmissible pending re-judge**, and retains the self-judged column labelled as superseded. `rejudge.py` implements the single-variable judge swap; the measurement is pending a host memory window. |
+
+**Process lesson (worth more than the fix).** An audit that clears a *pending*
+results section grants a PASS that silently transfers to whatever numbers land
+later. The audit's own evidence line — "off-family `Qwen2.5-3B-Instruct` judge
+documented (l.198, l.244-247)" — cites the README's *instructions*, not the run's
+*provenance*. **Verify the artifact, never the intent** (§18.8: "verify contents,
+never listings"). A results-honesty check should be re-run against `results.json`
+once it exists, and should assert `judge_id` explicitly.
+
+**This is a class of bug, not one lesson's slip.** `Judge.__init__` falls back to
+the self-judge branch whenever `STEER_JUDGE_MODEL` is unset, so the correct
+instrument depends on an env var that no runner enforces. A sweep of the course
+found the provenance stamped correctly in `contextual_steering`, `curveball`,
+`fine_grained`, `flas`, `realignment`, `talan` and `stacking/hillclimb_results.json`
+(all `Qwen/Qwen2.5-3B-Instruct`), `gavel` as the only artifact stamped `self` — and
+several generation-judged lessons stamping **no judge id at all**, including
+`stacking/artifacts/results.json` (which also records no seed), `hello_world_steering`,
+`reft_r1`, `rogue_scalpel`, `multi_intent`, `non_identifiability`,
+`decomposing_prompting` and `prompt_activation_duality`. An unstamped artifact is
+*worse* than gavel's: gavel recorded its wrong judge honestly and was therefore
+catchable, whereas an unstamped one cannot be shown to be either compliant or
+violating. The durable fix is to stamp `judge_id` unconditionally and fail the
+build when a generation-judged lesson's artifact lacks an off-family id.
