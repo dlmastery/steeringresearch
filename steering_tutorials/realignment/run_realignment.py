@@ -805,6 +805,11 @@ def main() -> dict:
             "over_refusal_tolerance": C.OVER_REFUSAL_TOLERANCE,
             "coherence_floor": C.COHERENCE_FLOOR,
         },
+        # PROVENANCE (metadata only -- changes no metric): promoted to the top
+        # level so a self-judged run is greppable at a fixed key across every
+        # lesson, not buried under a per-lesson nesting.
+        **judge.stamp(),
+        "seed": int(C.SEED),
         "judge": {
             "judge_id": judge.judge_id,
             "off_family": bool(off_family),

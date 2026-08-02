@@ -573,6 +573,11 @@ def main():
         "n_attack": n_attack,
         "n_benign": n_benign,
         "seed": int(C.SEED),
+        # Detection task -> NO generation judge, stated explicitly rather than
+        # left absent, so "no judge key" can never be read as "judge not
+        # recorded". Matches the sibling detection lessons (trajguard,
+        # cross_trajectory, multiturn_jailbreak, biencoder_guard).
+        "judge": None,
         "confound": {
             "length_auc": float(conf.get("length_auc", float("nan"))),
             "len_pos_mean": float(conf.get("len_pos_mean", float("nan"))),

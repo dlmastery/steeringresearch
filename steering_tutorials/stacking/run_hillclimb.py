@@ -462,7 +462,11 @@ def main() -> dict:
             "ortho_alpha": ORTHO_ALPHA, "compete_add_alpha": compete_add_alpha,
             "clamp_cap": CLAMP_CAP, "n_harm": len(ev_h), "n_benign": len(ev_b),
             "n_extract": len(ex_h), "n_budget_prompts": N_BUDGET,
-            "seed": C.SEED, "judge_id": judge.judge_id,
+            "seed": C.SEED,
+            # PROVENANCE (metadata only -- changes no metric): judge_id as
+            # before, plus is_self_judge / judge_model_id so a self-judged run
+            # is unmistakable on disk (CLAUDE.md sec.17, rubric item 3).
+            **judge.stamp(),
             "tier": "SCREENING (single seed, small n, judge below 0.85 AUC bar)",
             "preregistration": "PREREGISTRATION_hillclimb.md",
         },

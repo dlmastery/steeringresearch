@@ -358,7 +358,12 @@ def main() -> dict:
         "mixer": str(C.MIXER),
         "methods": list(methods),
         "diffmean_alpha": DIFFMEAN_ALPHA,
-        "judge": getattr(judge, "judge_id", "self"),
+        "judge": getattr(judge, "judge_id", "self"),   # legacy key, kept for readers
+        # PROVENANCE (metadata only -- changes no metric): the FULL judge
+        # self-description plus the seed, so a self-judged run is visible on disk
+        # rather than only inferable from an unset env var.
+        **judge.stamp(),
+        "seed": int(C.SEED),
         "steering": steering,
         "examples": examples,
         "plots": {"steering_compare": "steering_compare.png"},

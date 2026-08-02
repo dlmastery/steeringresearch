@@ -502,7 +502,14 @@ def main() -> dict:
         "norm_relative": bool(ckpt_norm_relative),
         "train_t_max": train_t_max,
         "skip_special": bool(C.SKIP_SPECIAL),
-        "judge_model": os.environ.get("STEER_JUDGE_MODEL", "") or "self (target model)",
+        # PROVENANCE (metadata only -- changes no metric). This used to read the
+        # env var directly, which describes what was REQUESTED, not what the
+        # judge object ended up being. Ask the judge itself instead; the legacy
+        # judge_model key is preserved for existing readers.
+        "judge_model": (judge.judge_id if not judge.stamp()["is_self_judge"]
+                        else "self (target model)"),
+        **judge.stamp(),
+        "seed": int(C.SEED),
         "n_eval_cap": int(C.N_EVAL_CAP),
         "n_benign_eval_cap": int(C.N_BENIGN_EVAL_CAP),
         "tier": "SCREENING" if (C.N_EVAL_CAP or C.N_BENIGN_EVAL_CAP) else "FULL_POOL",

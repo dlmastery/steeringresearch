@@ -268,6 +268,13 @@ def main() -> dict:
         })
 
     results = {
+        # PROVENANCE (metadata only -- changes no metric). judge.stamp() reports
+        # what ACTUALLY graded these generations, taken from the judge object
+        # rather than from the README or the env var. A run that fell back to
+        # self-judging lands here as judge_id="self" / is_self_judge=true and is
+        # therefore inadmissible as a headline (CLAUDE.md sec.17, rubric item 3).
+        **judge.stamp(),
+        "seed": int(C.SEED),
         "model_id": C.MODEL_ID,
         "layer": int(layer),
         "alpha": float(C.ALPHA),

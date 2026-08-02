@@ -146,6 +146,70 @@ def _load_judge(model_id: str):
     return _JUDGE_CACHE[model_id]
 
 
+# The label written into every artifact when no off-family judge was configured.
+SELF_JUDGE_ID = "self"
+
+# Named in the warning so the reader can look the rule up rather than guess at it.
+_RUBRIC_RULE = (
+    "CLAUDE.md section 17, HARD DATA & RIGOR RUBRIC item 3: "
+    "off-family judge (STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct) is required "
+    "for ALL reported numbers; the target model grading its own output inflates "
+    "refusal and must never be headlined."
+)
+
+
+def resolve_judge_id() -> str:
+    """The judge id this process WILL use, read once from the environment.
+
+    Returns the value of ``STEER_JUDGE_MODEL`` if it is set and non-empty,
+    otherwise :data:`SELF_JUDGE_ID`. Loads nothing — a runner can call this
+    before touching a GPU to decide whether the run is even reportable.
+    """
+    import os
+    return os.environ.get("STEER_JUDGE_MODEL", "").strip() or SELF_JUDGE_ID
+
+
+def _model_name_of(model) -> str:
+    """Best-effort HF id of a loaded model, for the artifact stamp."""
+    for probe in (lambda: model.name_or_path,
+                  lambda: model.config._name_or_path,
+                  lambda: model.config.name_or_path):
+        try:
+            val = probe()
+        except Exception:
+            continue
+        if val:
+            return str(val)
+    return "<unknown>"
+
+
+def warn_if_self_judged(judge_id: str, model_id: str = "<target model>") -> bool:
+    """Emit a LOUD warning when ``judge_id`` means "the target grades itself".
+
+    Silence is the actual defect this guards: a lesson could claim the
+    off-family judge in its README, fall back to the 1B grading its own output
+    because ``STEER_JUDGE_MODEL`` was unset, and leave no trace anywhere. This
+    never raises — some lessons legitimately smoke-test self-judged — but it is
+    never quiet either. Returns True when self-judging.
+    """
+    if judge_id != SELF_JUDGE_ID:
+        return False
+    import sys
+    import warnings
+    msg = (
+        "SELF-JUDGE: STEER_JUDGE_MODEL is unset, so the target model "
+        f"({model_id}) is grading its own output. This VIOLATES {_RUBRIC_RULE} "
+        "Any number produced by this run is SMOKE-TIER ONLY and is inadmissible "
+        "as a headline. The artifact will be stamped judge_id="
+        f"'{SELF_JUDGE_ID}' so this is visible on disk."
+    )
+    warnings.warn(msg, RuntimeWarning, stacklevel=3)
+    # warnings can be filtered to once-per-location or off entirely; stderr is
+    # the belt to that suspenders, because this must never be missed.
+    print("[judge][WARNING] " + msg, file=sys.stderr, flush=True)
+    return True
+
+
 class Judge:
     """Grades steered generations as REFUSAL / COMPLIANCE / GIBBERISH.
 
@@ -155,18 +219,54 @@ class Judge:
     model with a tight one-word rubric.
     """
 
+    #: Re-exported so callers can compare without importing the module constant.
+    SELF_JUDGE_ID: str = "self"
+
     def __init__(self, model, tok):
-        import os
-        judge_id = os.environ.get("STEER_JUDGE_MODEL", "").strip()
-        if judge_id:
+        judge_id = resolve_judge_id()
+        if judge_id != SELF_JUDGE_ID:
             # Off-family judge (recommended): grade with an independent model.
             self.model, self.tok = _load_judge(judge_id)
             self.judge_id = judge_id
+            self.is_self_judge = False
+            self.judge_model_id = judge_id
         else:
-            # Backward-compatible self-judge (weak; pedagogical only).
+            # Backward-compatible self-judge (weak; pedagogical only). LOUD, never
+            # silent: a self-judged run must be identifiable from the console AND
+            # from the artifact it writes.
             self.model = model
             self.tok = tok
-            self.judge_id = "self"
+            self.judge_id = SELF_JUDGE_ID
+            self.is_self_judge = True
+            self.judge_model_id = (_model_name_of(model) if model is not None
+                                   else "<target model>")
+            warn_if_self_judged(self.judge_id, self.judge_model_id)
+
+    # ------------------------------------------------------------------
+    # Self-description. Every runner embeds this verbatim into results.json so
+    # "what actually graded these generations?" is answerable from the artifact
+    # alone, without re-reading the code or trusting the README.
+    # ------------------------------------------------------------------
+    def stamp(self) -> dict:
+        """Provenance dict for ``results.json``: what this judge ACTUALLY is.
+
+        Keys:
+          ``judge_id``        -- ``"self"`` or the off-family HF id (the field the
+                                 rubric is enforced on).
+          ``is_self_judge``   -- bool; True means the target graded itself.
+          ``judge_model_id``  -- the model id actually loaded and queried.
+          ``off_family``      -- convenience negation of ``is_self_judge``.
+        """
+        return {
+            "judge_id": getattr(self, "judge_id", SELF_JUDGE_ID),
+            "is_self_judge": bool(getattr(self, "is_self_judge",
+                                          getattr(self, "judge_id", SELF_JUDGE_ID)
+                                          == SELF_JUDGE_ID)),
+            "judge_model_id": getattr(self, "judge_model_id", "<unknown>"),
+            "off_family": not bool(getattr(self, "is_self_judge",
+                                           getattr(self, "judge_id", SELF_JUDGE_ID)
+                                           == SELF_JUDGE_ID)),
+        }
 
     def verdict(self, prompt: str, response: str) -> str:
         """Return exactly one of ``"REFUSAL"``, ``"COMPLIANCE"``, ``"GIBBERISH"``."""
@@ -370,5 +470,53 @@ if __name__ == "__main__":
     else:  # pragma: no cover
         raise AssertionError("a judge with no verdict mass must raise, not default")
 
+    # ------------------------------------------------------------------
+    # CPU-only unit for the SELF-DESCRIPTION surface. The class bug this guards
+    # is not a wrong number, it is a MISSING one: a self-judged run that looks
+    # identical on disk to an off-family one.
+    # ------------------------------------------------------------------
+    import os as _os
+    import warnings as _warnings
+
+    _saved = _os.environ.pop("STEER_JUDGE_MODEL", None)
+    try:
+        assert resolve_judge_id() == SELF_JUDGE_ID, "unset env must resolve to self"
+        _os.environ["STEER_JUDGE_MODEL"] = "  Qwen/Qwen2.5-3B-Instruct  "
+        assert resolve_judge_id() == "Qwen/Qwen2.5-3B-Instruct", "env must be stripped"
+        _os.environ["STEER_JUDGE_MODEL"] = "   "
+        assert resolve_judge_id() == SELF_JUDGE_ID, "whitespace-only env is not a judge"
+    finally:
+        _os.environ.pop("STEER_JUDGE_MODEL", None)
+        if _saved is not None:
+            _os.environ["STEER_JUDGE_MODEL"] = _saved
+
+    # Falling back to self-judging must WARN. Silence is the defect.
+    with _warnings.catch_warnings(record=True) as _caught:
+        _warnings.simplefilter("always")
+        assert warn_if_self_judged(SELF_JUDGE_ID, "gemma-3-1b-it") is True
+    assert len(_caught) == 1, "self-judge fallback must emit exactly one warning"
+    assert "CLAUDE.md section 17" in str(_caught[0].message), \
+        "the warning must name the rubric it violates"
+    with _warnings.catch_warnings(record=True) as _caught_off:
+        _warnings.simplefilter("always")
+        assert warn_if_self_judged("Qwen/Qwen2.5-3B-Instruct", "x") is False
+    assert not _caught_off, "an off-family judge must not warn"
+
+    # The stamp is what lands on disk; it must distinguish the two cases.
+    j_self = Judge.__new__(Judge)
+    j_self.judge_id, j_self.is_self_judge = SELF_JUDGE_ID, True
+    j_self.judge_model_id = "google/gemma-3-1b-it"
+    st = j_self.stamp()
+    assert st["judge_id"] == "self" and st["is_self_judge"] and not st["off_family"]
+    assert st["judge_model_id"] == "google/gemma-3-1b-it"
+
+    j_off = Judge.__new__(Judge)
+    j_off.judge_id = j_off.judge_model_id = "Qwen/Qwen2.5-3B-Instruct"
+    j_off.is_self_judge = False
+    st_off = j_off.stamp()
+    assert st_off["off_family"] and not st_off["is_self_judge"]
+    assert set(st_off) == {"judge_id", "is_self_judge", "judge_model_id", "off_family"}
+
     print("judge.py self-test OK: gibberish heuristic + continuous readout behave "
-          "as expected (hard readout untouched).")
+          "as expected (hard readout untouched); self-judge fallback warns loudly "
+          "and stamps itself.")

@@ -270,7 +270,12 @@ def main() -> dict:
         "layer": int(layer),
         "alpha": C.ALPHA,
         "n_curve_steps": C.N_CURVE_STEPS,
-        "judge": getattr(judge, "judge_id", "self"),
+        "judge": getattr(judge, "judge_id", "self"),   # legacy key, kept for readers
+        # PROVENANCE (metadata only -- changes no metric): the FULL judge
+        # self-description plus the seed, so a self-judged run is visible on disk
+        # rather than only inferable from an unset env var.
+        **judge.stamp(),
+        "seed": int(C.SEED),
         "n_extract_per_class": len(ex_harm),
         "n_eval_per_class": len(ev_harm),
         "direction": {"layer": int(vec["layer"]), "n": int(vec["n"]),

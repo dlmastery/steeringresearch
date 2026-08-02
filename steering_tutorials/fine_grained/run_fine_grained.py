@@ -269,7 +269,12 @@ def main() -> dict:
 
     results = {
         "model_id": C.MODEL_ID,
-        "judge_id": judge.judge_id,
+        # PROVENANCE (metadata only -- changes no metric): judge_id as before,
+        # now with the rest of the judge's self-description and the seed, so a
+        # self-judged run is visible on disk rather than only inferable from an
+        # unset env var.
+        **judge.stamp(),
+        "seed": int(C.SEED),
         "layer": C.LAYER,
         "alpha": alpha,
         "hidden": hidden,

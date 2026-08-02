@@ -454,7 +454,12 @@ def main() -> dict:
         "alpha_base": C.ALPHA_BASE,
         "n_extract_per_class": len(ex_harm),
         "n_eval_per_class": len(ev_harm),
-        "judge": getattr(judge, "judge_id", "self"),
+        "judge": getattr(judge, "judge_id", "self"),   # legacy key, kept for readers
+        # PROVENANCE (metadata only -- changes no metric): the FULL judge
+        # self-description plus the seed, so a self-judged run is visible on disk
+        # rather than only inferable from an unset env var.
+        **judge.stamp(),
+        "seed": int(C.SEED),
         "gate": head,                              # headline gate name
         "schedule": scheds[head],                  # legacy slot = headline schedule
         "arms": arms,                              # unsteered / fixed / contextual(head)
