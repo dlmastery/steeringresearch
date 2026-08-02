@@ -544,72 +544,85 @@ conditioned on gate AUC, so our probe result *strengthens* rather than scoops it
   negative — at T=0.02 coherence is intact yet refusal already falls 0.32→0.26.
 - **Voice F1.** On SVD, **age alone → ROC-AUC 0.871**; 200/1853 speakers have >1 session.
 
-## 18.6 LOOP PROGRESS (updated 2026-07-27, autonomous /loop running)
+## 18.6 SESSION CHECKPOINT — 2026-08-02 (read this first on a new machine)
 
-**Steering — the loop is RUNNING and has produced its first EVALUATION-tier result.**
-- HC-1 (15 cells) -> HC-2 (4 cells) -> **M-a (n=8, EVALUATION-eligible)**.
-- **M-a**: at fixed chord displacement, rotation costs **+91.24 PPL** more than addition,
-  bootstrap CI95 **[87.98, 94.71]**, ordering stable **8/8** resamples, direction from
-  **340 harmful / 120 harmless REAL benchmark prompts** (JailbreakBench+HarmBench+
-  AdvBench / XSTest). Norm-matched **random control +16.80** (~0 in 6 of 8 draws) proves
-  the effect is direction-specific, not geometry-generic. Power: n=8, m=1, min p=0.0078,
-  power ~1.00. Artifact `autoresearch_results/FINDING_Ma_matched_budget_n8.md`.
-  **Contradicts the norm-preservation premise of GEMS (2606.19946), ORBIT (2606.22357)
-  and Selective Steering (2601.19375). M-b extends this to N=8: the advantage is
-  INVARIANT to stacking on a properly controlled basis.**
+### What this session did, in one line
+Audited the 22-lesson course against the papers it cites, found **6 lessons
+misattributing results**, fixed them, and hill-climbed the research program onto a new
+champion. **Most of the value is corrections, not new claims.**
 
-- **M-b (n=8, EVALUATION): the additive advantage is INVARIANT to N. Reaching that took
-  THREE bases, and the first two gave opposite wrong answers.**
+### Landed and pushed (all on `master`)
 
-  | basis | realised displacement | directions exchangeable? | measured trend |
-  |---|---|---|---|
-  | `gs` (Gram-Schmidt) | 1.000×f ✓ | **NO** — direction *i*>1 is a residual, quality decays | gap **shrinks** +88.89 → −44.47 |
-  | `raw` (unit diff-of-means) | 1.00→**2.81×f** ✗ | YES | gap **grows** +88.89 → +621.95 |
-  | **`rawnorm`** | **1.000×f** ✓ | **YES** ✓ | **FLAT** |
+**Research program**
+- **HC-3**: champion moved **layer 12 -> 11** (paired -1.812 PPL, CI [-2.383,-1.346], 8/8
+  seeds). EVALUATION-eligible, **NOT external-ready** — the ordinal gate FAILS. The
+  norm-matched random control at every layer is what made it a win: L17 looked competitive
+  on PPL (73.9 vs 73.3) but its random control was also nearly free, so its low perplexity
+  was layer INSENSITIVITY. L23 is a true null, L25 is worse than random.
+- **HC-S**: `diffmean` DEFENDED on the source axis (pca +3.334, lda +24.202, random
+  +46.900, all CIs excluding zero, 8/8). Key: **cos(diffmean,pca)=0.966 is above the usual
+  0.95 "same direction" bar and STILL costs +3.33 PPL** — a 0.95 cosine bar is NOT
+  sufficient to call two steering directions interchangeable.
+- **M-b**: took THREE bases to get one answer. `gs` (displacement fixed, directions NOT
+  exchangeable) says the gap SHRINKS; `raw` (exchangeable, displacement triples) says it
+  GROWS; only `rawnorm` (both controlled) is right: **FLAT**, +88.89/+86.59/+85.95/+85.92
+  at N=1/2/4/8, additive winning 32/32 cells.
+- **best_config.json**: the discredited Qwen-0.5B champion was still in it and is now
+  quarantined to `best_config_LEGACY_QUARANTINED.json`.
 
-  Both early trends were artifacts of whichever variable the basis left free. Proof `gs`
-  is non-exchangeable: at N=1, where permuting direction order MUST be a no-op,
-  `add/base` moved **1.09× → 3.72×**. Proof `raw` breaks the budget: refusal directions
-  are correlated, so displacement nearly TRIPLES by N=8.
+**Course corrections (6 lessons were misattributing results)**
+- `biencoder_guard`: the bi-encoder arm was FROZEN cosine while its papers FINE-TUNE.
+  Added `ContrastiveBiEncoderGuard` (InfoNCE over frozen backbone). Then the **projection
+  init was wrong too** — `torch.eye` truncation zeroes 512/768 dims; random orthonormal is
+  now default (measured: 3.7x better absolute-cosine preservation). Added **EXP-G**
+  (~900 unrelated distractors) and **EXP-H** (Opir's 996-category 3-level taxonomy).
+- `hello_world_steering`: extracted its refusal direction from the ABLITERATED model (no
+  refusal to difference). Fixed to extract from the aligned base. Alpha grid extended to
+  0.25. **Refusal rises NOWHERE** — the vector removes compliance and destroys coherence.
+- `realignment`: **headline FALSIFIED.** ASR 0.46->0.045 is **99% incoherence, not
+  refusal** — at alpha=0.25, of 191 non-jailbroken outputs only **2 are REFUSAL, 189
+  GIBBERISH**. Its "coherence" was distinct-token ratio, which REWARDS the failure
+  (whitespace collapses, one huge token is trivially 100% distinct).
+- Plus doc corrections in `multi_intent`, `reft_r1`, `fine_grained`, `contextual_steering`,
+  `decomposing_prompting`, `trajguard`, `meerkat`, `cross_trajectory`, `stacking`,
+  `curveball`, `flas`, `prompt_activation_duality`, `probe_tuning`, `talan`.
 
-  **On `rawnorm` (both controlled): gap +88.89 / +86.59 / +85.95 / +85.92 at N=1/2/4/8,
-  sd 6.51/5.96/3.51/1.87, additive winning 32/32 cells.** Flat — a 3-PPL drift against
-  seed sd of 2–7. So M-a's result is invariant to stacking, and the GEMS/ORBIT premise
-  (norm preservation becomes MORE valuable as edits compose) is challenged on solid
-  ground: it becomes no more valuable at all. Also `add/base` stays 1.02–1.09× at every N
-  and FALLS as N grows — stacking 8 vectors at a matched budget is essentially free; the
-  coherence collapse on the other bases was entirely unmatched displacement.
+**Judge provenance (a class bug)**
+`Judge` silently self-judged when `STEER_JUDGE_MODEL` was unset, making R17.3
+unenforceable by inspection. Now `Judge.stamp()` records
+`{judge_id,is_self_judge,judge_model_id,off_family}`; 16 runners stamp it plus seed.
+Inventory: **7 verified off-family**, **1 confirmed self-judged (`gavel`)**, **8 UNKNOWN**
+(decomposing_prompting, hello_world_steering, multi_intent, non_identifiability,
+prompt_activation_duality, reft_r1, rogue_scalpel, stacking/run_stacking). *Absence of
+evidence is the defect, not a clean bill.*
 
-  **All three pre-registered predictions hold on `rawnorm` and were FALSE/misleading/FALSE
-  on `gs`. The predictions never changed; the control did.** Earlier verdicts are kept in
-  git history because that sequence IS the finding.
-  Artifact `autoresearch_results/FINDING_Mb_nstack_matched_budget.md`.
+### PENDING — what to run next on the new machine
 
-- Dashboard REGENERATED and now renders the hill-climb (52 HC refs, 19 new per-experiment
-  pages). It had been stale since 2026-06-06 and silently dropped every v2 row because
-  `load_rows()` requires legacy schema fields -- see `scripts/adapt_v2_for_dashboard.py`.
-- `biencoder_guard` headline run done on the REAL backbone (EmbeddingGemma-300M @500/class):
-  scaling: **the 43x -> 64x widening claim is WITHDRAWN, and so is its replacement.** 64x was a *contended* uni divided by an *uncontended* bi; 43x was arithmetic error (1.786/0.044 = 40.6x). I then replaced it with '~40x, INVARIANT across backbone size' - **also withdrawn**. A third measurement falsified the premise both rested on: quiet **40.30x**, contended **39.23x**, contended **25.13x**. Contention is NOT a uniform tax - in run 2 bi inflated 1.87x while uni inflated only 1.17x, collapsing the ratio. So **neither the seconds NOR the ratio survives contention; only a quiet measurement is quotable**, and two backbone numbers agreeing to 0.3x on an axis where co-tenancy is worth **15x** agree by coincidence. NO replacement claim is made; a quiet-GPU re-measure on both backbones is pre-registered. Only the a-priori argument survives: both towers share a backbone, so the ratio cannot grow with encoder size. **Never form a latency ratio from two machine states, and never infer robustness from n=2.** EXP-D now stamps a `gpu_witness` (co-tenants, memory, utilisation, before AND after) plus a `contended` boolean - that instrumentation is what caught this; hard-negative adapter FPR **1.000 -> 0.438**. Accuracy
-  fell vs the MiniLM substitute, but that comparison changes THREE things at once
-  (encoder, n, held-out policy set) so no backbone conclusion is drawn -- see README 10.1.
-- All 14 judge-scored lessons now cross-link `JUDGE_VALIDITY.md`.
+All of these are BLOCKED ONLY BY HOST MEMORY on the old box, not by missing code:
 
-**Voice — full corpus decoded, benchmark verdict still pending.**
-- **28,509 recordings / 1,679 speakers / 60.6 h** (was 667/49). Two bugs fixed en route:
-  preprocessing globbed the 22-zip PARTIAL while reporting `complete:True`, and the
-  manifest carried duplicate rows (61,170 for 28,509 unique paths, ~2x inflation;
-  verified within-speaker and within-label, so not leakage).
-- WavLM embeddings extracted and cached for all 28,509 (`cache/` is gitignored -- 151 MB,
-  over GitHub's limit, and derived).
-- **The full-corpus benchmark has NOT yet produced a verdict** -- the run is long and has
-  been interrupted repeatedly; `bench_svd_wavlm_mean_std.json` is still the 49-speaker
-  PILOT (F2). Do not read it as a full-corpus result.
-- 6 audits now exist (was 2). The data-split audit **FAILS** the pre-registered V1 design
-  (only 9 age-matched pairs at 49 speakers) and **FAILS** Coswara (pre-registered label has
-  zero positive rows). Re-check V1 feasibility now that the corpus is 34x larger.
+1. `gavel/rejudge.py` — code is written, CPU-verified, 3-phase, one model resident at a
+   time, hard anchor assertion. Run the four commands in gavel README "Run it".
+   Only the LEAKAGE row is inadmissible; block rates and per-CE firing are judge-free.
+2. `realignment` benign half — only 25/200 measured; `over_refusal` is carried from the
+   prior run and labelled as such.
+3. Unrun alpha sweeps wired but never executed: `fine_grained`, `non_identifiability`,
+   `rogue_scalpel` (+ its `negative_add` mode and per-layer guard A-E ablation).
+4. `meerkat` — `bge` is the config default AND the paper's own encoder, never run;
+   all numbers are MiniLM.
+5. `probe_tuning` — the promised layer sweep has NO code and NO artifact (marked KNOWN GAP).
+6. `hello_world` 4B conditional arm — crashes on dim mismatch (1152 vs 2560).
+7. Re-run the 8 UNKNOWN-judge lessons under the new stamping to establish provenance.
+8. Research: budget_f axis (f<0.02, f>0.10 unexplored), span axis, HC-3's open L17/L20
+   cells, and a quiet-GPU backbone re-measure for the withdrawn scaling claim.
 
-**yoganext — COMPLETE.** 24 tools, 25/25 UI parity, verified failing-then-passing;
-`_recovered` surfaced in `get_progress`.
+### Host traps that cost the most time here
+- Windows **COMMIT LIMIT**, not free RAM, is usually binding. `OSError 1455` = commit
+  exhausted. A **silent exit with no traceback** = physical memory gone mid-mmap of judge
+  shards. Gate on BOTH (commit >= 8.5 GB, physical >= 7.5 GB).
+- The harness **REAPS** long background jobs. Checkpoint at the granularity of the most
+  expensive irreversible step, not what is convenient to write.
+- Latency ratios formed across two machine states are meaningless — see the withdrawn
+  64x / 40x / 43.91x sequence. Quote only a run with `contended:false` in BOTH witnesses.
 
 ## 18.3 KNOWN DEFICIENCIES — status as of 2026-07-28
 
