@@ -235,9 +235,18 @@ skips it and says so.
   **not** a reproduction of arXiv:2606.06902 and carries none of the paper's
   post-training / backbone-LoRA machinery. Do not cite this lesson's numbers as
   TALAN's.
-- **Screening scale, not evaluation.** n is small; this is screening (CLAUDE.md
-  Sec. 7). No paired-Wilcoxon / bootstrap / Holm-Bonferroni contract is run here,
-  so nothing here is "statistically significant" or a "winner."
+- **Screening scale, not evaluation.** n = 150 held-out per class per arm (the
+  `n_harmful` / `n_benign` fields in `artifacts/results.json`); this is screening
+  (CLAUDE.md Sec. 7). No paired-Wilcoxon / bootstrap / Holm-Bonferroni contract is
+  run here, so nothing here is "statistically significant" or a "winner."
+- **The seed and the training schedule are not stamped in the artifact.** The
+  judge *is* stamped (`"judge": "Qwen/Qwen2.5-3B-Instruct"` in `results.json`),
+  but `results.json` carries **no `seed` field and no training-step / loss
+  record**. The "single seed" and "300 train steps (best-checkpointed)" statements
+  above are read off `config.py` (`SEED = 0`, `STEPS = 300`) as it stands *today*,
+  not off the run that produced these numbers — so the run is not reproducible to
+  the seed from its own artifact. Treat the config values as the intended, not the
+  verified, provenance.
 - **Weak judge unless you set Qwen.** Without `STEER_JUDGE_MODEL` the target
   self-grades, which misreads hedged compliance as refusal. Set the Qwen judge for
   a trustworthy read.

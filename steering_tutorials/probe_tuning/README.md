@@ -1,6 +1,15 @@
-# probe_tuning — layer & hyperparameter search for the safety probe
+# probe_tuning — MLP-head hyperparameter search for the safety probe
 
-> **Reference:** [Understanding intermediate layers using linear classifier probes (arXiv:1610.01644)](https://arxiv.org/abs/1610.01644) — the layer/hyperparameter search behind lesson 1's probe.
+> **Reference:** [Understanding intermediate layers using linear classifier probes (arXiv:1610.01644)](https://arxiv.org/abs/1610.01644) — the model-selection search behind lesson 1's probe.
+
+> **Scope, stated up front.** This lesson currently implements **one** search: the
+> **MLP-head hyperparameter sweep** (`sweep_mlp.py` →
+> `artifacts/sweep_mlp.{json,md,png}`). A **layer sweep** — which residual-stream
+> layer to read the activation from — is **planned but NOT implemented**: there is
+> no code and no artifact for it in this directory, and nothing on this page is a
+> layer-selection result. Lesson 1's layer 12 is an inherited default, not a
+> validated choice. This page previously titled itself "layer & hyperparameter
+> search"; that framing is **withdrawn** until the sweep exists.
 
 This lesson is the **model-selection** work that was intentionally kept **out of
 `hello_world`**. Lesson 1 (`hello_world`) trains and ships ONE fixed probe head so
@@ -41,8 +50,10 @@ once through the frozen Gemma-3-1B and stored as their layer-12 mean-pooled
 vectors: an `X` matrix of shape `[200, 1152]` with the matching label vector `y`.
 Because the expensive forward pass was done in lesson 1, this lesson is
 **CPU-only — the Gemma model is never loaded**. It uses those features purely to
-do **layer / MLP-head model selection by 5-fold cross-validation**, never by
-peeking at lesson-1's held-out test slice.
+do **MLP-head model selection by 5-fold cross-validation**, never by peeking at
+lesson-1's held-out test slice. (A *layer* sweep would need activations from
+layers other than 12, which this cache does not contain — one reason it is still
+unimplemented; see the gap note below.)
 
 ## What lives here
 
@@ -58,9 +69,16 @@ peeking at lesson-1's held-out test slice.
   reuses lesson 1's exact train recipe. It **writes** only into
   `probe_tuning/artifacts/` — nothing is written back into `hello_world`.
 
-- (later) a **layer sweep** — which residual-stream layer to read the activation
-  from — will join this lesson, since it is the same kind of model-selection
-  search over a hyperparameter that does not belong in the minimal lesson 1.
+- **KNOWN GAP — the layer sweep does not exist.** A sweep over which
+  residual-stream layer to read from belongs here (same kind of model selection,
+  same reason it is kept out of the minimal lesson 1), but **no code and no
+  artifact for it are present**: the only script in this directory is
+  `sweep_mlp.py`, and `artifacts/` holds only `sweep_mlp.{json,md,png}`. It also
+  cannot be run from the current cache, which stores layer-12 activations only —
+  building it means re-running the frozen Gemma to dump every candidate layer,
+  which is GPU work this lesson has never done. Treat "layer 12" throughout the
+  course as **unvalidated by any sweep in this repository**. Nothing on this page
+  should be read as evidence about layer choice.
 
 ## The discipline (why this is a separate lesson)
 
@@ -83,7 +101,8 @@ activations.
 
 | Claim | What we measured | Verdict |
 |---|---|---|
-| Model selection is by CV, never test-set peeking | 23 MLP-head configs, each scored by StratifiedKFold(k=5) mean ROC-AUC; lesson-1's held-out slice never consulted | **Held** |
+| Model selection is by CV, never test-set peeking | 23 MLP-head configs, each scored by StratifiedKFold(k=5, `cv_seed=0`) mean ROC-AUC on `X` = [200, 1152], balanced [100, 100]; lesson-1's held-out slice never consulted | **Held** |
+| The lesson also selects the *layer* | nothing — no layer sweep is implemented and no layer artifact exists | **NOT MEASURED** (see the gap note above) |
 | A better head must clear the noise band, not just top the leaderboard | top config (64→64) CV ROC-AUC **0.945 ± 0.015** vs. the deployed default (128→32) **0.9415 ± 0.0157** — a margin of **+0.0035**, well inside the default's own 1-std band (**0.0157**) | **KEEP the default** |
 
 **Honest read.** The 23-config sweep does surface a nominal "winner" (64→64),

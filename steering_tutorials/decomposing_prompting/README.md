@@ -217,6 +217,15 @@ and its firing is evidence about that construction.
 | shared-translation fraction | high — the common shift dominates the averaged delta | **0.411** — *moderate*; under half survives averaging |
 | `recovery_proj` (WRITE) | substantial (well above 0) **if** the translation shortcut works | **0.00** — re-applying the on-direction translation *lowers* refusal (0.33 → 0.26) |
 | `recovery_shared` vs `recovery_proj` | `shared >= proj` — the residual adds a little | both **0.00**; shared 0.27 ≈ proj 0.26 but *both below the 0.33 baseline* |
+| gibberish under steering (**measured, not previously reported**) | — (not pre-registered) | `steer_proj_gibberish` **0.25**, `steer_shared_gibberish` **0.27** — a quarter of the steered generations are incoherent |
+
+**Geometry numbers behind the fractions** (also in `results.json`, previously
+unsurfaced): refusal-direction norm **309.4**; mean delta norm **379.2**; mean
+*absolute* projection **177.1** vs mean *signed* projection **171.2**; mean residual norm
+**324.1**. The signed mean sitting just below the absolute mean means a minority
+of prompts shift the **opposite** way along the refusal axis — consistent with the
+moderate 0.401 cross-prompt consistency, and another reason the averaged
+translation is a lossy summary.
 
 **Verdict — our falsifier triggers (robust at 500/class).** The prompt does raise
 refusal (baseline **0.33** → prompting **0.40**, a +0.07 gain), but that gain is
@@ -246,6 +255,24 @@ doesn't carry the behaviour. So the lesson honestly demonstrates a *lower bound*
 the simplest (translation) component of "prompting as steering" is insufficient
 here — decomposing prompting shows the effect is richer than one additive vector.
 Screening-tier (single 1B, n=100/condition, one layer/seed).
+
+**One caveat the artifact forces, in the negative's favour and against it.** Both
+steered arms run at **~25–27% gibberish** (`steer_proj_gibberish` 0.25,
+`steer_shared_gibberish` 0.27) while `results.json` records **no gibberish rate
+for the baseline or prompting arms**, so we cannot say how much of the refusal
+drop (0.33 → 0.26 / 0.27) is "the translation doesn't carry refusal" versus "the
+add-at-every-position injection partly broke the generation." The recovery-is-zero
+finding stands — the translation demonstrably failed to reproduce the gain — but
+the *mechanism* for the failure is not isolated by this run. A fair follow-up
+would alpha-match the steered arms to the prompting arm's coherence before
+declaring the translation tier insufficient.
+
+**Provenance not stamped in the artifact.** `artifacts/results.json` contains
+**no `judge` field and no `seed` field**, even though every rate on this page is
+judge-scored and the prose specifies an off-family Qwen2.5-3B judge and a single
+seed. Those attributions come from the run instructions below, not from the
+artifact, and cannot be verified against it. (Sibling lessons — `curveball`,
+`talan` — do stamp `"judge"` into `results.json`; this one does not.)
 
 ---
 
@@ -281,8 +308,12 @@ Cap the cost on a laptop with the env knobs, e.g.
   vector a steering practitioner would actually use.
 - **`steer(v_proj)`/`steer(v_shared)` use the literal `add` op at every position**,
   which can steer *harder* than prompting and tip into gibberish; the judge and
-  the reported `*_gibberish` rates catch that, and `recovery` is clamped so an
-  overshoot stays readable rather than exploding.
+  the `*_gibberish` rates catch that, and `recovery` is clamped so an overshoot
+  stays readable rather than exploding. **They did catch it**: 0.25 / 0.27 in this
+  run — now reported in section 5 (this bullet previously called them "the
+  reported `*_gibberish` rates" while no section of this README actually printed
+  them). Note the run records gibberish for the *steered* arms only, so there is
+  no baseline coherence rate to price the overshoot against.
 - **One model, one layer, one instruction.** This reproduces the *shape* of the
   paper's finding at laptop scale; it is not the paper's multi-model, multi-tier
   (translation→rigid→affine→nonlinear) fit. The nested affine/nonlinear tiers are

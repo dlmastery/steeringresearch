@@ -236,6 +236,7 @@ off-family Qwen2.5-3B judge, **extract 300, `N_EVAL_PER_CLASS = 150`**, from
 | residual refusal rate | **0.227** (unsteered 0.347) | related to attention | ✗ *down* — residual-add breaks it (gib 0.48) |
 | attention refusal rate | **0.260** (unsteered 0.347) | related to residual | ~ *down but less*, and far more coherent (gib 0.30) |
 | gibberish (residual / attention) | **0.48 / 0.30** | bounded | attention more coherent |
+| compliance rate (unsteered / residual / attention) | **0.420 / 0.293 / 0.440** | should fall under steering | ✗ attention compliance is **above** the unsteered baseline (0.44 > 0.42) — measured in `results.json` and previously unreported |
 
 | Claim | What we measured (n=150) | Verdict |
 |---|---|---|
@@ -256,6 +257,15 @@ above baseline (0.35 → 0.40) was **screening noise**: at n=150 *neither* site 
 refusal above the 0.347 baseline — attention just degrades it less. So the honest
 headline is "same vector, the attention site is gentler," not "attention installs
 refusal."
+
+**The compliance column makes that weaker still.** `results.json` also records
+compliance rates that this page did not previously surface: unsteered **0.420**,
+residual **0.293**, attention **0.440**. The attention arm ends up *more*
+compliant on harmful prompts than the unsteered model, while refusal falls
+(0.347 → 0.260). At the attention site the intervention is therefore not a
+gentler install of refusal so much as **no install at all** at this alpha — the
+only thing that clearly moves is coherence. This does not affect the READ-side
+duality result, which is judge-free.
 
 This is a **screening** design (single seed, 1B model, 3B judge, **n = 150**
 harmful/arm): a directional demonstration of the duality, not an evaluation-tier
@@ -314,9 +324,15 @@ required.
   contribution, crops it, and gates it per-token to fix *multi-turn* KV-cache
   contamination. Our attention hook shows the *site* is viable; it does not
   reproduce the gating or the multi-turn fix.
-- **Abliterated base + weak judge.** Screening only: `n = 20`/arm, one seed, a 1B
-  model graded by a 3B judge. No seed-stability bars, no significance test.
-  Directional demo, not a result. Do not deploy it.
+- **Abliterated base + weak judge.** Screening only: `n = 150`/arm (the value in
+  `artifacts/results.json`; this bullet previously said `n = 20`, which was the
+  stale pre-500/class run — **withdrawn**, the artifact on disk is n=150), one
+  seed, a 1B model graded by a 3B judge. No seed-stability bars, no significance
+  test. Directional demo, not a result. Do not deploy it.
+- **The seed is not stamped in the artifact.** The prose calls this a single-seed
+  run, but `results.json` carries no `seed` field, so the specific seed cannot be
+  recovered from the artifact. Treat the run as unreproducible-to-the-seed until
+  the runner stamps it.
 
 ---
 

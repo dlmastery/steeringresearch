@@ -117,17 +117,25 @@ transport is never graded on the prompts that defined it. v2 raises
 `N_PER_CONCEPT` to **500**, which is simply "take the whole pool" — the loader caps
 each concept at its own availability:
 
-| concept | toxic-chat category | trained? | pool | exemplars | steer | **eval `n`** |
-|---|---|---|---|---|---|---|
-| sexual (dial concept) | sexual | yes | 388 | 155 | 116 | **117** |
-| violence | violence | yes | 111 | 44 | 33 | **34** |
-| **harassment** | harassment | **no (held-out)** | 143 | 57 | 43 | **43** |
-| benign baseline | — | contrast origin + selectivity | — | — | — | **500** |
+| concept | toxic-chat category | trained? | pool | exemplars | steer | eval slice **available** | **eval `n` actually graded** |
+|---|---|---|---|---|---|---|---|
+| sexual (dial concept) | sexual | yes | 388 | 155 | 116 | 117 | **34** |
+| violence | violence | yes | 111 | 44 | 33 | 34 | **34** |
+| **harassment** | harassment | **no (held-out)** | 143 | 57 | 43 | 43 | **34** |
+| benign baseline | — | contrast origin + selectivity | — | — | — | 500 | **500** |
+
+**Read the last two columns separately.** The "available" column is what the pool
+splits allow; the shipped run in `artifacts/results.json` was launched with
+`FLAS_N_EVAL=34`, so `n_eval_cap = 34` and **every concept arm — dial sweep,
+per-concept, zero-shot — was graded at n = 34**, not at 117 / 43 / 34. (An earlier
+version of this table reported 117 / 43 / 34 as the graded `n`: **withdrawn**, it
+was the available slice, not the run.) The benign arm was uncapped
+(`n_benign_eval_cap = 0`) and did grade all **500**.
 
 *These are the honest maxima, not a choice.* **Concept lessons are pool-limited**
-(CLAUDE.md §17.2): **no toxic-chat harm category reaches 500**, so the per-concept
-eval cells are 117 / 43 / 34 — 3.2× v1's `n=36` for the dial concept, and every cell
-clears the ≥30-per-concept floor, but this is **not** a ≥500/class result and must
+(CLAUDE.md §17.2): **no toxic-chat harm category reaches 500**, so even uncapped
+the per-concept eval cells top out at 117 / 43 / 34; every cell clears the
+≥30-per-concept floor, but this is **not** a ≥500/class result and must
 not be reported as one. The benign side is *not* pool-limited, so
 `N_BENIGN_BASELINE = 500` (v1: 120) does meet the rubric. The goal: **one** field,
 conditioned on a concept, that
@@ -524,9 +532,17 @@ differences here sit near the instrument's noise floor.
 > because the bug is the most instructive thing in the lesson, not because the rates
 > mean what they appear to mean.
 
-The v1 GPU run wrote `artifacts/results.json` (now carrying a `SUPERSEDED` key) and
-two plots. Concepts are the well-populated toxic-chat categories (sexual, violence
-trained; harassment held out); the sparse hate/self_harm are dropped by the loader.
+The v1 GPU run wrote `artifacts/results.json` and two plots. Concepts are the
+well-populated toxic-chat categories (sexual, violence trained; harassment held
+out); the sparse hate/self_harm are dropped by the loader.
+
+> **The v1 artifact no longer exists on disk.** This section previously said
+> `results.json` "now carries a `SUPERSEDED` key" — **withdrawn**: the v2 re-run
+> overwrote the file in place and the current `artifacts/results.json` contains
+> only v2 data and has no `SUPERSEDED` key. Every number in §7.1 below is
+> therefore transcribed from the v1 run and **cannot be verified against any
+> artifact in this repository**. They are kept as a record of the bug, not as
+> reproducible measurements.
 
 **Q1 — Is `T` a smooth strength dial (and where's the cliff)?**
 `rates_vs_T.png` + `results.json` (dial concept: sexual, v1 `n=36`).
@@ -630,9 +646,11 @@ python -m steering_tutorials.flas.infer "how do I pick a lock" --concept sexual 
 python -m steering_tutorials.flas.app          # -> http://localhost:8005
 ```
 
-**Fitting one foreground window.** The full pass is ~5×117 + 151 + 43 + 500 ≈ 1280
-generations. On a RAM-pressured host, cap it — the result is recorded as
-`"tier": "SCREENING"` and must be reported as screening, never as a win:
+**Fitting one foreground window.** An *uncapped* pass would be ~5×117 + 151 + 43 +
+500 ≈ 1280 generations. On a RAM-pressured host, cap it — the result is recorded as
+`"tier": "SCREENING"` and must be reported as screening, never as a win. **This is
+what the shipped run did**: `artifacts/results.json` carries `n_eval_cap: 34`,
+`n_benign_eval_cap: 0`, `tier: "SCREENING"`.
 
 ```bash
 # ~350 generations: 40 eval prompts per cell, 120 benign, 3-point T grid.
@@ -675,9 +693,12 @@ too, just slower. Datasets download automatically.
   with the *current* `‖x‖`, the transport compounds slightly; at the small `T` this
   lesson now uses the effect is sub-1%, but it is not exactly linear, which is why
   `run_flas` reports the **measured** displacement rather than assuming `T`.
-- **Pool-limited `n`, and it cannot be fixed with more sampling.** v2 takes the whole
-  toxic-chat pool (eval `n` = 117 sexual / 43 harassment / 34 violence, benign 500),
-  which is the honest maximum, **not** the ≥500/class bar. One 1B model, three
+- **Pool-limited `n`, and capped on top of that.** The toxic-chat pool allows at
+  most 117 sexual / 43 harassment / 34 violence eval prompts; the shipped run then
+  capped every concept arm at **n = 34** (`FLAS_N_EVAL=34`, recorded as
+  `n_eval_cap` in `results.json`). Only the benign arm ran at its full 500. So the
+  concept numbers on this page are **not** even the pool maximum, let alone the
+  ≥500/class bar. One 1B model, three
   concepts. This demonstrates the flow loop; it is not a benchmark-grade reproduction
   of FLAS, and any capped run is marked `SCREENING` in `results.json`.
 - **The judge must be off-family.** A 1B target self-grading inflates refusal — it

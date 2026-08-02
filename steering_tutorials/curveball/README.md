@@ -229,7 +229,7 @@ now the default; see the alpha note below.)
 | A curved, geometry-aware path beats a straight global push | harmful refusal: unsteered 0.32 → straight **0.23** vs curved **0.08** — *both below baseline, curved far worse* | **Not supported** — neither installs refusal; curved is worst |
 | The straight chord's coherence cost comes from leaving the manifold | harmful gibberish: straight **0.49** vs curved **0.77** — the curved arc is *worse* | **Refuted (surprising)** |
 | The arc stays on the manifold (off-shell displacement ~0) | mean `|Δ‖h‖|/‖h‖`: straight **0.076** vs curved **1.1e-16** | **Confirmed by construction** (unit + measured) |
-| Curving the push does not wreck harmless answers | benign over-refusal: straight 0.41 vs curved 0.19; benign gibberish straight 0.23 vs curved **0.56** | **Mixed** — curved lowers over-refusal but *raises* benign gibberish |
+| Curving the push does not wreck harmless answers | benign over-refusal: **unsteered 0.50** → straight 0.41 vs curved 0.19; benign gibberish **unsteered 0.05** → straight 0.23 vs curved **0.56** | **Mixed, and weaker once the unsteered arm is shown** — *both* steered arms sit below the 0.50 unsteered over-refusal, so "curved lowers over-refusal" is refusal suppression, not selectivity |
 
 **Honest read (robust at 500/class, extract 300).** The geometry works exactly as
 designed — the curved arc adds **zero** net off-shell displacement (‖Δ‖h‖‖/‖h‖ =
@@ -247,7 +247,22 @@ metric (N5) that motivates the curved path is a real quantity but is *not* what
 predicts gibberish here — rotating on the shell is at least as disruptive as
 stepping off it, plausibly because the 8-step re-aimed rotation compounds the
 per-token perturbation. This is the honest negative: the elegant geodesic
-construction is geometrically clean and behaviorally *worse*. (The paper's own
+construction is geometrically clean and behaviorally *worse*.
+
+**The unsteered benign arm (measured, previously not surfaced).**
+`results.json` records an `unsteered` benign baseline that this page did not
+report: **benign over-refusal 0.50, benign gibberish 0.05** (n=100). Both numbers
+change how the benign column reads. First, the drop to 0.41 (straight) and 0.19
+(curved) is *not* a selectivity win — it is the same refusal suppression seen on
+the harmful side (0.32 → 0.23 → 0.08), applied indiscriminately to both classes.
+Second, benign gibberish going 0.05 → 0.23 → 0.56 puts the coherence cost in
+sharper relief than the harmful column alone: on prompts where nothing should
+happen at all, the curved arc still destroys **more than half** the generations.
+It also makes the abliterated base model's own behaviour visible — it over-refuses
+half of the benign prompts *before any steering*, which is the instrument, not the
+method.
+
+(The paper's own
 method is polynomial-kernel-PCA steering, **not** this great-circle arc — see the
 AUDIT; our construction tests the *manifold-preservation hypothesis*, which fails
 here.) Screening-tier: single 1B, n = 100/class, one alpha, one seed.

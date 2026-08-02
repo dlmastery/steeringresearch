@@ -108,9 +108,13 @@ stateless to fully stateful:
 
 Two **embedders** are compared as an ablation (`config.EMBEDDERS`):
 
-- **`gemma`** — the course's abliterated Gemma-3-1B, layer-12 mean-pooled
-  residual-stream activation (the same signal lesson 1 probed). Loaded from the
-  **local** path (the gated HF id 401s without a token).
+- **`gemma`** — Gemma-3-1B, layer-12 mean-pooled residual-stream activation (the
+  same *kind* of signal lesson 1 probed). Loaded from the **local** path
+  `models/google/gemma-3-1b-it` (the gated HF id 401s without a token). Note this
+  is the **stock instruction-tuned** build, not the abliterated one the steering
+  lessons target — the shipped run's `gemma_model_id` confirms it. Nothing here
+  generates text, so abliteration is irrelevant to the embedding; the earlier
+  "abliterated" wording was simply wrong and is **withdrawn**.
 - **`minilm`** — `sentence-transformers/all-MiniLM-L6-v2` loaded via plain
   `transformers` (AutoModel + attention-mask mean pooling, `[384]`) — **no**
   `sentence-transformers` dependency. A generic sentence embedder, to test
@@ -362,9 +366,13 @@ lesson:
   payload). Individual turns are now indistinguishable; **only the trajectory
   differs.**
 
-First honest run: abliterated Gemma-3-1B layer-12 embedder **and** MiniLM,
-n=200/class, group-aware 5-fold CV, bootstrap 95% CIs, from `artifacts/results.json`.
-AUC (95% CI); the **HARD** column is the one that matters.
+First honest run: **stock** Gemma-3-1B layer-12 embedder (`models/google/gemma-3-1b-it`,
+the value of `gemma_model_id` in the artifact — *not* the abliterated DavidAU build
+the steering lessons use; an earlier version of this line said "abliterated", which
+is **withdrawn**) **and** MiniLM, n = 200 positive / 200 negative per condition,
+seed 0, group-aware 5-fold CV, bootstrap 95% CIs, judge `null` (detection lesson),
+from `artifacts/results.json`. AUC (95% CI); the **HARD** column is the one that
+matters.
 
 | method | Gemma EASY | MiniLM EASY | **Gemma HARD** | **MiniLM HARD** |
 |---|---|---|---|---|
@@ -392,9 +400,32 @@ the failed cell, not just the wins. (2) `seq_gru` on Gemma (0.725) barely clears
 the length-only baseline (below), so its gemma result is the least convincing;
 `trajectory_mlp` (0.956) clearly exceeds it.
 
+**Operating point, not just AUC** (measured in `results.json` as `tpr_at_fpr10`,
+previously unreported here; HARD condition, the deployable read):
+
+| method | Gemma HARD TPR@FPR=0.10 | MiniLM HARD TPR@FPR=0.10 |
+|---|---|---|
+| `per_turn_max` | 0.255 | 0.200 |
+| `trajectory_mlp` | **0.885** | 0.410 |
+| `seq_gru` | 0.350 | 0.445 |
+| `hier_attn` | **0.000** ⚠ | 0.520 |
+
+This column is harder on the thesis than the AUC column. Only **one** cell —
+`trajectory_mlp` on Gemma — is usable at a 10% false-positive budget; MiniLM's
+sequence models sit at 0.41–0.52 despite AUCs of 0.83–0.85, and `hier_attn` on
+Gemma catches **nothing** at that budget. "Trajectory beats per-turn" survives; "a
+deployable multi-turn detector" does not follow from these numbers. (`f1` and
+`acc` are also in the artifact for every cell and are omitted here only because
+they are threshold-at-0.5 summaries of the same curves.)
+
 **Confound audit** (hard): `turncount_auc = 0.50` (length-matched — the turn-count
 tell is designed out), `totalchar_auc = 0.75` (attack payload turns are wordier, a
-residual tell). Read honestly: a length-only classifier gets ~0.75, so
+residual tell). **On EASY the turn-count tell is live too**: `turncount_auc = 0.723`
+(positives average 5.00 turns vs negatives' 4.32) — measured in `results.json` and
+not previously quoted alongside the easy `totalchar_auc`. So the easy condition is
+separable by *both* trivial signals, which strengthens rather than weakens the
+"EASY certifies nothing" reading. Read honestly: on hard, a length-only classifier
+gets ~0.75, so
 `trajectory_mlp` (0.956) and MiniLM's sequence models (0.83–0.85) add signal
 **beyond both** per-turn content (~0.57) **and** raw length (0.75); we claim the
 margin over 0.75, not the full gap over per-turn.
