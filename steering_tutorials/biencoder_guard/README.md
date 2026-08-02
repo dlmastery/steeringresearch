@@ -460,14 +460,29 @@ so the off-family-judge discipline of the steering lessons does not apply here
 > fine-tuning is out of budget on one laptop GPU, so it adapts the **space** rather than
 > the backbone — but it keeps the property that makes a bi-encoder a guard: a policy is
 > scored **from its text, never its index**, so unseen policies remain zero-shot.
-> Initialised near-identity, so the learned space *starts at* frozen cosine and any gain
+> The untrained projection is initialised to reproduce frozen-space cosine, so any gain
 > is attributable to training rather than a lucky random projection. Trained on **seen
 > policies only**, so the held-out evaluation stays a genuine zero-shot test.
+>
+> > **Note on the initialisation — the default is a RANDOM ORTHONORMAL map, not `torch.eye`.**
+> > The obvious way to "start at frozen cosine" is `torch.eye(d_in, dim)`, but that is a
+> > **truncation**: it keeps dims 0..dim−1 and puts *exactly zero* weight on the remaining
+> > 512 of 768 dimensions, which is only defensible for a Matryoshka-trained encoder whose
+> > leading axes are informative by design. Measured on the real cached banks, against
+> > frozen-space cosine: EmbeddingGemma mean |cos error| **0.1196** truncated vs **0.0322**
+> > random orthonormal (**~3.7× worse**); MiniLM **0.0575** vs **0.0568** (random better on
+> > both). Truncation wins slightly on *rank* correlation for the MRL model, as expected —
+> > but this guard **calibrates per-column F1 thresholds on absolute scores**, so absolute
+> > cosine error is what actually costs, and truncation distorts it ~4× more. A random
+> > orthonormal map is a Johnson–Lindenstrauss near-isometry regardless of how the encoder
+> > orders its axes, so it is the representation-agnostic default. `init="truncate"` is
+> > retained as a **labelled ablation**. Every number in §10 below is from the
+> > orthonormal-init run.
 >
 > | arm | EXP-A seen | EXP-B **unseen policy** | EXP-E **OOD content** |
 > |---|---|---|---|
 > | `bi_encoder` (frozen cosine) | 0.240 | **0.382** | 0.184 |
-> | `bi_encoder_trained` (InfoNCE) | **0.575** *(+140%)* | **0.294** *(−23%)* | **0.397** *(+116%)* |
+> | `bi_encoder_trained` (InfoNCE) | **0.575** *(+140%)* | **0.182** *(−52%)* | **0.415** *(+126%)* |
 > | `uni_encoder` | 0.169 | 0.115 | 0.146 |
 > | `trained_head` | 0.658 | *abstains* | 0.496 |
 >
@@ -475,15 +490,18 @@ so the off-family-judge discipline of the steering lessons does not apply here
 >
 > ### The result splits in a way worth pausing on
 >
-> Contrastive training **more than doubles** seen-policy AP — reproducing the papers'
-> central "trained ≫ frozen" claim. It also **more than doubles** AP under
-> *content* shift (BeaverTails OOD). But it **degrades** on *unseen policies*.
+> Contrastive training **more than doubles** seen-policy AP (0.240 → 0.575) — reproducing
+> the papers' central "trained ≫ frozen" claim. It also **more than doubles** AP under
+> *content* shift (BeaverTails OOD, 0.184 → 0.415). But on *unseen policies* it does not
+> merely degrade: it lands at **0.182 against frozen cosine's 0.382 — less than half**.
+> Training does not fail to help there; it actively destroys most of the zero-shot ability
+> the frozen backbone already had.
 >
 > Those two shifts are different, and the split is the lesson:
 >
 > - **EXP-E holds the policies fixed and changes the content.** Training transfers. ✔
 > - **EXP-B holds the content distribution and changes the policies.** Training does not
->   transfer, and is *worse* than frozen cosine. X
+>   transfer, and is *less than half* as good as frozen cosine. X
 >
 > **Why.** The projection is trained on **12 policies**. A 768→256 map fitted to twelve
 > policy vectors learns *those twelve directions*, not a general notion of
@@ -522,14 +540,15 @@ so the off-family-judge discipline of the steering lessons does not apply here
 > | arm | K=16 | K=64 | K=256 | **K=900** | degradation |
 > |---|---|---|---|---|---|
 > | `bi_encoder` mean rank of true policy | 4.46 | 7.59 | 19.80 | **62.55** | **14×** |
-> | `bi_encoder_trained` mean rank | 3.80 | 9.85 | 33.60 | **113.01** | **30×** |
+> | `bi_encoder_trained` mean rank | 4.36 | 12.98 | 47.19 | **162.49** | **37×** |
 > | *(chance)* | 8.5 | 32.5 | 128.5 | 450.5 | 53× |
 > | `bi_encoder` **rank / chance** | 0.525 | 0.234 | 0.154 | **0.139** | improves |
-> | `bi_encoder_trained` **rank / chance** | 0.447 | 0.303 | 0.262 | **0.251** | improves |
+> | `bi_encoder_trained` **rank / chance** | 0.513 | 0.399 | 0.367 | **0.361** | improves |
 >
-> **The trained arm starts better and ends worse.** At K=16 it ranks the true policy
-> 3.80 vs 4.46. At K=900 it ranks it **113.0 vs 62.6** — nearly twice as deep. Relative
-> to chance the ordering flips too: frozen ends at 0.139, trained at 0.251.
+> **The trained arm starts (barely) better and ends much worse.** At K=16 it ranks the
+> true policy 4.36 vs 4.46 — a margin of a tenth of a rank. At K=900 it ranks it
+> **162.5 vs 62.5**, **2.6× as deep**. Relative to chance the ordering flips too: frozen
+> ends at 0.139, trained at 0.361.
 >
 > **This is the same weakness EXP-B found, seen from another angle.** The projection is
 > fitted to 12 policies; 884 policies it has never seen are exactly what it has no
@@ -619,18 +638,21 @@ so the off-family-judge discipline of the steering lessons does not apply here
 > | arm | true top-level | **descendant** | sibling | other-branch |
 > |---|---|---|---|---|
 > | `bi_encoder` (frozen) | 0.074 [0.002] **43×** | **0.509** [0.104] **4.9×** | 0.069 [0.014] 4.8× | 0.348 [0.880] 0.40× |
-> | `bi_encoder_trained` | 0.354 [0.002] **207×** | 0.203 [0.104] 1.9× | **0.231** [0.014] **16.1×** | 0.212 [0.880] 0.24× |
+> | `bi_encoder_trained` | **0.492** [0.002] **287×** | 0.070 [0.104] 0.67× | **0.308** [0.014] **21.4×** | 0.130 [0.880] 0.15× |
 >
-> **The two arms fail in completely different ways, and only the breakdown shows it.**
-> The frozen arm's dominant failure is **over-specification**: half its top-1 picks are the
-> true policy's *own descendants*, enriched 4.9× over chance. The trained arm's dominant
-> failure is a real **mis-route to a sibling top-level policy**, enriched **16×**. Collapsed
-> into one number these look like the same kind of error. They are not: the first is a
-> router being too specific about the right policy, the second is a router choosing the
-> wrong policy.
+> **The two arms behave in completely different ways, and only the breakdown shows it.**
+> The frozen arm hits the true top-level policy just 0.074 of the time, and its dominant
+> outcome is **over-specification**: half its top-1 picks are the true policy's *own
+> descendants*, enriched 4.9× over chance. The trained arm's dominant outcome is simply
+> **correct** — 0.492 on the true top-level policy, 287× chance — and when it does miss, it
+> misses by **mis-routing to a sibling top-level policy**, enriched **21.4×**, while being
+> *depleted* on descendants (0.67×, i.e. below chance). Collapsed into one "steal rate"
+> these look like the same kind of error. They are not: the first is a router being too
+> specific about the right policy, the second is a router choosing the wrong policy.
 >
 > Across the *whole* violation pool the same effect is present but diluted — descendants are
-> enriched 1.56× (frozen) and 0.96× (trained) — because ~92 % of the bank is cousins.
+> enriched 1.56× (frozen) and **0.74×** (trained, i.e. depleted) — because ~92 % of the bank
+> is cousins.
 > Kinship concentrates **at the very top of the ranking**, which is exactly where a router
 > reads.
 >
@@ -639,7 +661,7 @@ so the off-family-judge discipline of the steering lessons does not apply here
 > | arm | mean rank of true policy | median | **excl. own descendants** | rank-1 rate | rank-1 excl. desc. |
 > |---|---|---|---|---|---|
 > | `bi_encoder` | 208.56 | 98 | **188.81** | 0.043 | **0.195** |
-> | `bi_encoder_trained` | **134.90** | **36** | **126.94** | **0.208** | **0.284** |
+> | `bi_encoder_trained` | **169.08** | **30** | **161.46** | **0.288** | **0.318** |
 > | *(chance)* | 498.5 | — | — | 0.001 | — |
 >
 > #### Head-to-head against EXP-G — and EXP-G's headline does not survive it
@@ -651,14 +673,22 @@ so the off-family-judge discipline of the steering lessons does not apply here
 > | arm | EXP-G rank (K=900, unrelated) | EXP-H rank (K=996, related) | EXP-H at **matched K=900** | ratio | EXP-G steal | EXP-H steal | EXP-H steal, descendants forgiven |
 > |---|---|---|---|---|---|---|---|
 > | `bi_encoder` | 62.55 | 208.56 | 185.68 | **2.97×** | 0.133 | 0.857 | **0.348** |
-> | `bi_encoder_trained` | 113.01 | 134.90 | 123.66 | **1.09×** | 0.048 | 0.415 | **0.212** |
+> | `bi_encoder_trained` | 162.49 | 169.08 | 154.31 | **0.95×** | 0.026 | 0.200 | **0.130** |
 >
 > **The ordering flips, and that is the finding.** EXP-G concluded that the trained arm
-> "starts better and ends worse" — 113.01 vs 62.55 at K=900 — and read that as the same
+> "starts better and ends worse" — 162.49 vs 62.55 at K=900 — and read that as the same
 > weakness EXP-B found. Against *related* competitors the conclusion reverses: the frozen
-> arm degrades **2.97×** while the trained arm barely moves (**1.09×**), and the trained arm
-> ends up ranking the true policy at **134.9 vs 208.6**. So EXP-G's headline was a property
-> of its distractors being **strangers**, not a general property of contrastive training.
+> arm degrades **2.97×** while the trained arm does not degrade at all (**0.95×** — it
+> actually ranks the truth *slightly better* among relatives than among strangers, 154.31 vs
+> 162.49 at matched K=900), and the trained arm ends up ahead, **169.08 vs 208.56**. So
+> EXP-G's headline was a property of its distractors being **strangers**, not a general
+> property of contrastive training.
+>
+> **The margin is narrower than an earlier draft of this section reported.** With the
+> orthonormal-init run the trained arm leads by **39.5 ranks (1.23×)** at K=996, and by
+> **31.4 ranks (1.20×)** at matched K=900 — not the ~74-rank, 1.5× gap quoted when the
+> projection was truncation-initialised. The *direction* of the flip is unchanged and so is
+> the argument; only its size is smaller, and the smaller size is the one on record.
 >
 > That reversal is also mechanistically the expected one, which is why it is worth trusting
 > more than the EXP-G ordering: InfoNCE with hard negatives is *training to separate
@@ -677,7 +707,7 @@ so the off-family-judge discipline of the steering lessons does not apply here
 >   already **2.6×** EXP-G's *entire* competitor steal rate of 0.133. Much of the added
 >   difficulty is simply that the competitors are harm-flavoured, independent of kinship.
 > - **Kinship effect.** On top of that, descendants are enriched **4.9×** and siblings
->   **4.8×** (frozen) / **16.1×** (trained) over chance at rank 1. That part *is* kinship.
+>   **4.8×** (frozen) / **21.4×** (trained) over chance at rank 1. That part *is* kinship.
 >
 > Reporting only the aggregate would have attributed all of it to relatedness. It is the
 > same one-change-at-a-time discipline §10.3 applies to the MiniLM-vs-EmbeddingGemma
@@ -686,9 +716,9 @@ so the off-family-judge discipline of the steering lessons does not apply here
 > #### Metrics that cannot answer the question (the EXP-G trap, twice over)
 >
 > As in EXP-G, `macro_AP` / `macro_F1` are **exactly** the EXP-A and EXP-G values
-> (0.2755 frozen, 0.5046 trained; asserted in code, delta `0.0e+00`) — a bi-encoder's
+> (0.2755 frozen, 0.4767 trained; asserted in code, delta `0.0e+00`) — a bi-encoder's
 > column-*j* score is `cos(content, bank[j])` and cannot notice the other 980 columns.
-> EXP-H adds a **second** such pair: `mean_rank_true_top16` (4.461 / 3.796) and
+> EXP-H adds a **second** such pair: `mean_rank_true_top16` (4.461 / 4.358) and
 > `top1_acc_top16` reproduce EXP-G's K=16 row bit-for-bit, because restricting to the 16
 > real columns deletes every competitor *either* experiment added. All four are reported
 > **only as cross-experiment anchors** proving the two experiments score the same thing —
@@ -711,10 +741,12 @@ so the off-family-judge discipline of the steering lessons does not apply here
 >    0.348 of the time. This experiment cannot settle which — that is a question about the
 >    downstream system, not about the encoder — so both numbers are reported and neither is
 >    promoted to *the* answer.
-> 2. **Contrastive training is nearly immune to the change** (1.09×) and overtakes the frozen
->    arm. EXP-G's contrary ordering does not generalise past unrelated distractors.
+> 2. **Contrastive training is immune to the change** (0.95× at matched K — no degradation at
+>    all) and overtakes the frozen arm, though by a narrower margin than an earlier draft
+>    claimed: 169.08 vs 208.56, a 1.23× lead. EXP-G's contrary ordering does not generalise
+>    past unrelated distractors.
 > 3. **Neither arm is usable as a 996-way router as-is.** Best true-top-level top-1 accuracy
->    is 0.354, and mean rank 134.9 against a chance line of 498.5 — well above chance, nowhere
+>    is 0.492, and mean rank 169.08 against a chance line of 498.5 — well above chance, nowhere
 >    near deployable.
 >
 > *Screening tier: one embedder, one seed, one corpus (n = 1,710 test rows, 2,651 positive
@@ -769,15 +801,27 @@ prototypes):
 
 | #labels | `bi_encoder` (sec) | `uni_encoder` (sec) |
 |---|---|---|
-| 16 | 0.390 | 0.269 |
-| 64 | 0.391 | 0.901 |
-| 256 | 0.391 | 3.811 |
-| **1024** | **0.392** *(flat)* | **15.78** *(**40×** the bi-encoder)* |
+| 16 | 0.974 | 0.983 |
+| 64 | 0.985 | 3.743 |
+| 256 | 0.984 | 11.366 |
+| **1024** | **0.977** *(flat)* | **42.92** *(**43.9×** the bi-encoder)* |
+
+> **UPDATE (regeneration run): the table above is re-measured, and the quotable ratio is now
+> 43.91×.** The whole lesson was regenerated after the learned down-projection's init changed
+> from truncation to random orthonormal (see §10.0), which re-ran `scaling` along with
+> everything else. The figures above are read directly from the `scaling` block of the
+> current `artifacts/results.json`, whose own `ratio_at_max_labels` is **43.91×**, measured
+> with `contended: false` in **both** `gpu_witness` snapshots — the condition this lesson's
+> own rule (below) requires before a ratio may be quoted. The absolute seconds are **2.5×**
+> the previous run's on the bi-encoder and **2.7×** on the uni-encoder, which is what a
+> whole-machine state difference looks like and is exactly why only same-state ratios are
+> quotable. The correction history below
+> is kept in full, because the rule it establishes is what licensed quoting this number.
 
 > **CORRECTION (2026-07-31): this table previously read 0.422 → 0.424 s and 27.06 s,
-> quoted as "64×". That ratio was wrong and is corrected here to ~40×.** The numbers
-> above are read directly from the `scaling` block of the **committed** (git HEAD)
-> `artifacts/results.json`, which gives **40.3×**. A second, independent run — measured
+> quoted as "64×". That ratio was wrong and was corrected to ~40×.** Those numbers were
+> read directly from the `scaling` block of the then-committed (git HEAD)
+> `artifacts/results.json`, which gave **40.3×**. A second, independent run — measured
 > while another job shared the GPU — gave **39.2×**.
 > The old `0.424 / 27.06` pair reproduces *no* artifact: no run on record has a
 > `bi_encoder` of 0.424 *together with* a `uni_encoder` of 27.06.
@@ -794,9 +838,10 @@ prototypes):
 >
 > | run | GPU state | `bi_encoder` @1024 | `uni_encoder` @1024 | ratio |
 > |---|---|---|---|---|
-> | committed HEAD | quiet throughout | 0.392 s | 15.78 s | **40.30×** |
+> | prior committed run (2026-07-31) | quiet throughout | 0.392 s | 15.78 s | **40.30×** |
 > | EXP-H run 1 | contended throughout | 0.690 s | 27.05 s | **39.23×** |
 > | EXP-H run 2 | **changed mid-benchmark** | 0.732 s | 18.39 s | **25.13×** |
+> | **current artifact** (orthonormal-init regeneration) | quiet in both witnesses | **0.977 s** | **42.92 s** | **43.91×** |
 >
 > **The `gpu_witness` block explains the outlier, and the explanation is damning for the
 > benchmark rather than for the GPU.** Run 2 recorded `contended: true` *before* the
@@ -814,20 +859,22 @@ prototypes):
 > adjacent to each `uni` point, and is noted here as a known limitation rather than
 > silently patched.
 >
-> **What this does and does not license.** The two *constant-state* runs agree closely
-> (40.30× quiet, 39.23× contended, 2.7 % apart) while the state-changing run is far off,
-> which is consistent with the ratio being robust to a **steady** machine state and broken
-> only by a **changing** one. That reading is mechanistically sensible — but it rests on
-> **two** constant-state points, and an n=2 robustness inference is precisely what failed
-> here the first time. So it is recorded as the most plausible reading and **not asserted**.
-> The operative rule stands regardless: quote only a run that is `contended: false` in
-> **both** witnesses, which makes **40.30×** the single quotable figure.
+> **What this does and does not license.** The *constant-state* runs agree to within ~12 %
+> (40.30× quiet, 39.23× contended, 43.91× quiet on the current artifact) while the
+> state-changing run is far off at 25.13×, which is consistent with the ratio being robust to
+> a **steady** machine state and broken only by a **changing** one. That reading is
+> mechanistically sensible — but it rests on **three** constant-state points, and an n=2
+> robustness inference is precisely what failed here the first time. So it is recorded as the
+> most plausible reading and **not asserted**. The operative rule stands regardless: quote
+> only a run that is `contended: false` in **both** witnesses, which makes the current
+> artifact's **43.91×** the single quotable figure.
 >
 > **The scaling claim itself is unaffected and still SURVIVES**, because it never depended
-> on either number: `bi_encoder` is flat to three decimal places in **all three** runs
-> (0.390→0.392, 0.689→0.690, 0.731→0.732) while `uni_encoder` grows ~linearly in all three.
-> The **flat-vs-linear shape** is the robust finding; the ratio is a quiet-GPU measurement
-> and the absolute seconds are indicative only.
+> on either number: `bi_encoder` is flat in **all four** runs (0.390→0.392, 0.689→0.690,
+> 0.731→0.732, and 0.974→0.977 on the current artifact — a 1.1 % spread across a 64×
+> increase in label count) while `uni_encoder` grows ~linearly in all four. The
+> **flat-vs-linear shape** is the robust finding; the ratio is a quiet-GPU measurement and
+> the absolute seconds are indicative only.
 >
 > **Scope of the contamination — measured, so it is not re-litigated later.** `scaling` is
 > the *only* wall-clock block in this lesson, and therefore the only one contention can
@@ -857,10 +904,10 @@ adapter, on held-out hard negatives):
 
 | quantity | value |
 |---|---|
-| ECIsem (`target_consistency` / `locality` / `lexical_residual` / `diversity` / **`eci`**) | 0.016 / 0.201 / 0.178 / 0.931 / **0.399** |
+| ECIsem (`target_consistency` / `locality` / `lexical_residual` / `diversity` / **`eci`**) | −0.059 / 0.492 / 0.454 / 0.711 / **0.449** |
 | FPR@recall0.90 — frozen bi-encoder | **1.000** |
-| **FPR@recall0.90 — contrastive adapter** | **0.438** |
-| **delta (frozen − adapter)** | **−0.562** (adapter is better) |
+| **FPR@recall0.90 — contrastive adapter** | **0.458** |
+| **delta (frozen − adapter)** | **+0.542** (adapter is better) |
 | hard negatives mined / counterfactuals / false-neg dropped | 240 / 8,985 / 22 |
 
 **Pre-registered falsifiers.**
@@ -888,10 +935,10 @@ rescue a failed ordering.
 
 | quantity | MiniLM @150/class | **EmbeddingGemma @500/class** |
 |---|---|---|
-| EXP-D scaling at 1024 labels | bi 0.044 s / uni 1.786 s = **40.6×** *(was quoted 43×)* | bi **0.392** s / uni **15.78** s = **40.3×** *(was quoted 64×)* |
+| EXP-D scaling at 1024 labels | bi 0.044 s / uni 1.786 s = **40.6×** *(was quoted 43×)* | bi **0.977** s / uni **42.92** s = **43.9×** *(was quoted 64×, then 40.3× from an earlier run)* |
 | EXP-B zero-shot (bi, macro-AP) | 0.408 | **0.382** |
 | EXP-A seen (bi, macro-AP) | 0.355 | **0.240** |
-| EXP-F adapter FPR@recall0.90 | 0.850 → 0.613 | **1.000 → 0.438** |
+| EXP-F adapter FPR@recall0.90 | 0.850 → 0.613 | **1.000 → 0.458** |
 | length confound | 0.517 | 0.526 |
 
 **The bigger, purpose-built backbone scored LOWER on accuracy.** That is unexpected and
@@ -926,22 +973,24 @@ construction, and it is the finding.
 > | backbone | quoted ratio | ratio from the same row's own latencies | source |
 > |---|---|---|---|
 > | MiniLM @150 | 43× | **40.6×** (1.786 / 0.044) | arithmetic on this table's own figures |
-> | EmbeddingGemma @500 | 64× | **40.3×** (15.778 / 0.3915) | `artifacts/results.json` (`scaling`) |
+> | EmbeddingGemma @500 | 64× | **43.9×** (42.924 / 0.9775) | `artifacts/results.json` (`scaling`) |
 >
-> **40.6× versus 40.3× is no growth at all**, so the claim that scaling the backbone up
-> widens the bi-encoder's advantage is **not supported and is withdrawn**. In hindsight it
-> should have been suspect on its face: both towers use the *same* backbone, so making that
-> backbone more expensive multiplies the numerator and the denominator alike and largely
-> cancels.
+> **40.6× versus 43.9× is nothing like the claimed 43× → 64× growth**, so the claim that
+> scaling the backbone up widens the bi-encoder's advantage is **not supported and is
+> withdrawn**. In hindsight it should have been suspect on its face: both towers use the
+> *same* backbone, so making that backbone more expensive multiplies the numerator and the
+> denominator alike and largely cancels.
 >
-> **What must NOT be done is to flip this into the opposite claim.** It is tempting to read
-> 40.6× vs 40.3× as positive evidence that the advantage is *invariant* to backbone size —
-> a tidier result than the one withdrawn. That inference is not available here, for two
-> reasons. First, the MiniLM figure comes from a run whose GPU contention state was never
-> recorded. Second, and decisively, the EXP-D correction note above shows this ratio moving
-> **40.30× → 25.13×** on the *same* backbone purely from a co-tenant job — a swing far
-> larger than the 0.3× gap being interpreted. Two numbers that agree to 0.3× on an axis
-> where noise is worth 15× agree by coincidence, not by measurement.
+> **What must NOT be done is to revive the claim from the 3.3× residue, or to flip it into
+> the opposite claim.** It is tempting to read 43.9× > 40.6× as a surviving trace of the
+> growth effect, or to read them as close enough to prove the advantage is *invariant* to
+> backbone size. Neither inference is available here, for two reasons. First, the MiniLM
+> figure comes from a run whose GPU contention state was never recorded. Second, and
+> decisively, the EXP-D correction note above shows this ratio moving **40.30× → 43.91×**
+> across two quiet runs of the *same* backbone, and **40.30× → 25.13×** purely from a
+> co-tenant job — swings of 3.6× and 15× respectively, both at least as large as the 3.3×
+> gap being interpreted. A difference smaller than the measurement's own run-to-run spread
+> is not evidence in either direction.
 >
 > So the honest state is: **the growth claim is withdrawn as unsupported, and no
 > replacement claim about backbone size is made.** Settling it needs quiet-GPU measurements
@@ -952,18 +1001,24 @@ construction, and it is the finding.
 
 | falsifier | outcome | evidence |
 |---|---|---|
-| **(i) Scaling** | **SURVIVES — claim upheld** | bi-encoder is flat at 0.390 → 0.392 s from 16 → 1024 labels; uni-encoder rises 0.269 → 15.78 s, **40×** the bi-encoder at 1024. The predicted flat-vs-linear split is exactly what was measured. *(Corrected 2026-07-31 from a mis-stated 64× — see the EXP-D table. The verdict is unchanged; only the ratio was wrong.)* |
+| **(i) Scaling** | **SURVIVES — claim upheld** | bi-encoder is flat at 0.974 → 0.977 s from 16 → 1024 labels; uni-encoder rises 0.983 → 42.92 s, **43.9×** the bi-encoder at 1024. The predicted flat-vs-linear split is exactly what was measured. *(Corrected 2026-07-31 from a mis-stated 64×, then re-measured at 43.91× by the orthonormal-init regeneration — see the EXP-D table. The verdict is unchanged across all of it; only the ratio moved.)* |
 | **(ii) Zero-shot** | ⚠️ **TRIPS as literally written** | bi-encoder held-out macro-AP = **0.382 ≤ 0.5**. By the pre-registered rule, the claim is FALSE. |
-| **(iii) Hard-negative sharpening** | **SURVIVES — claim upheld** | FPR@recall0.90 falls **1.000 → 0.438** with the contrastive adapter (−0.562) — a larger gain than the substitute run showed. |
+| **(iii) Hard-negative sharpening** | **SURVIVES — claim upheld** | FPR@recall0.90 falls **1.000 → 0.458** with the contrastive adapter (a 0.542 reduction) — a larger gain than the substitute run showed. |
 
 **On (ii) — reporting the trip, and a specification error I will not hide behind.**
 The falsifier is recorded as tripped because that is what the pre-registered rule
 says, and rules are not renegotiated after seeing data. But the threshold itself was
 **mis-specified**: `0.5` is a chance level for **AUC**, not for **average precision**.
 AP's chance level is the **base rate**. The four held-out policies have base rates
-0.118 / 0.180 / 0.342 / 0.102 → **chance macro-AP ≈ 0.185**. The measured 0.408 is
-therefore **2.2× chance**, and it beats the uni-encoder's 0.178 (≈ chance) on the
+0.118 / 0.180 / 0.342 / 0.102 → **chance macro-AP ≈ 0.185**. The measured **0.382** is
+therefore **2.1× chance**, and it beats the uni-encoder's **0.115** (below chance) on the
 same policies while the trained head cannot score them at all.
+
+*(This paragraph previously quoted **0.408** and **0.178** — the MiniLM@150 substitute
+run's figures — inside a section whose every other number is EmbeddingGemma@500. Corrected
+to the headline run's own `heldout_zeroshot` values. The four base rates are not recorded in
+`results.json`, so they are carried over unverified; the ratio above should be re-derived
+whenever they are.)*
 
 So the *capability* is real; the *test of it* was written wrong. Both statements go
 in the record: the pre-registered falsifier **tripped**, and the pre-registration

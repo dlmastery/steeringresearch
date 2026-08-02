@@ -30,6 +30,30 @@ actual runs need the same ~2-3 GB Gemma-3-1B models as the earlier lessons.
 ---
 
 
+> ## HEADLINE — WITHDRAWN. This lesson's result is NEGATIVE.
+>
+> **The claim "re-alignment restores refusal in an abliterated model" is withdrawn.** The
+> ASR drop it rested on is real and reproduces exactly, but a second instrument shows what
+> the drop is made of: at the headline α=0.25, of the **191 of 200** harmful generations
+> that ASR credits as *not jailbroken*, an off-family Qwen-3B judge calls **2 REFUSAL and
+> 189 GIBBERISH** — **G = 0.990**. Genuine refusals do not rise, they **fall**, 0.270 →
+> **0.010** across the sweep. The intervention did not re-install refusal; it destroyed the
+> model's ability to produce usable text, and ASR cannot tell those two events apart because
+> it counts every non-`COMPLIANCE` verdict as a success avoided.
+>
+> **Why the coherence gate did not catch it.** `coherence` was a *mean distinct-token ratio*
+> over whitespace tokens. Steering collapses the spaces: chars per whitespace token goes
+> **6.03 → 35.45** and **50.5 %** of α=0.25 outputs score a **perfect 1.000**, because one
+> 35-character run-on "word" is trivially 100 % distinct. The metric **rewards the failure**
+> — which is why coherence *rises* 0.794 (α=0.20) → **0.883** (α=0.25) as the text
+> disintegrates. It is not blind (r = 0.672 with the judge) — it is **un-gated**: the floor
+> is 0.55 and the lowest value ever observed is 0.794, so the gate could not fire at any α.
+>
+> **Nothing was retuned to produce this.** `asr`, `over_refusal`, `coherence` and both gate
+> thresholds are **byte-for-byte identical** to the 2026-07-21 artifact. An instrument was
+> **added**; none was reweighted, re-seeded or re-defined. Details in
+> [§ Results](#results--measured-vs-the-claim).
+
 > **Instrument caveat — read before citing any rate on this page.** Every refusal /
 > compliance / gibberish number here is scored by a local LLM judge. That judge family
 > was calibrated against ground-truth labels and measured **ROC-AUC 0.665–0.751** — below
@@ -247,6 +271,13 @@ gates, the honest verdict is printed as such: naive unconditional steering could
 not restore refusal here without an unacceptable coherence / over-refusal tax —
 the coherence cliff won. That negative result is a legitimate outcome, not a bug.
 
+**What actually happened is worse than "no α clears the gates": the coherence gate
+never came close to firing.** `COHERENCE_FLOOR` is 0.55 and the *minimum* value
+observed anywhere in the sweep is **0.794** — at α=0.20, not at the strongest
+steering, because at α=0.25 the metric climbs back to 0.883 while the text falls
+apart. A gate that cannot fire is not a lenient gate; it is not a gate. This is the
+finding of the whole lesson, and it is why the ASR-based headline is withdrawn.
+
 ---
 
 ## 6. Run it
@@ -286,31 +317,62 @@ silently reporting rates over a short denominator. Env knobs:
 
 ## Results — measured vs. the claim
 
-The sweep (`artifacts/results.json`, **n = 200 harmful + 200 benign held-out**,
-extract 300/class, α ∈ {0.0, 0.1, 0.15, 0.2, 0.25}, graded by an **off-family
-Qwen-3B judge** on the shared ≥500/class toxic-chat pool) transplants the aligned
-base model's refusal direction into the abliterated model and measures the cost:
+The sweep (`artifacts/results.json`, **n = 200 harmful prompts per α**, extract
+300/class, α ∈ {0.0, 0.1, 0.15, 0.2, 0.25}, graded by an **off-family Qwen-3B
+judge** on the shared ≥500/class toxic-chat pool) transplants the aligned base
+model's refusal direction into the abliterated model and measures the cost.
+**The conclusion is the negative one**; the original positive reading is kept
+below, marked withdrawn, with its reason.
 
-> **READ THE NEXT SUBSECTION BEFORE USING THIS TABLE.** Every number in it is
-> reproduced exactly, but its *verdict* column is superseded. It scores the sweep
-> with the distinct-token coherence metric only, which cannot see the failure that
-> actually occurs here. At α=0.25, 99.0% of the "refusals" this table credits are
-> incoherent output.
+#### The original claim table — WITHDRAWN
 
-| Claim | What we measured (off-family Qwen-3B judge, n=200/class) | Verdict |
+> **WITHDRAWN, kept for the record. Do not cite the verdict column.** Every *number*
+> in this table reproduces exactly and none of them is retracted. What is retracted is
+> the **inference**: the table scores the sweep with the distinct-token coherence metric
+> only, which cannot see the failure that actually occurs here, so it reads a collapse
+> into gibberish as a restoration of refusal. At α=0.25, **99.0 %** of the "refusals"
+> this table credits are incoherent output, and the coherence gate it cites as cleared
+> could not have fired at any α.
+
+| Claim | What we measured (off-family Qwen-3B judge, n=200 harmful/α) | Verdict |
 |---|---|---|
-| Transplanting the aligned model's refusal direction restores refusal (ASR ↓) | ASR 0.46 (α=0) → 0.215 → 0.11 → 0.09 → **0.045** (α=0.25) — monotone down | Supported — the transplant drives harmful compliance from 0.46 toward zero |
-| The restoration has a coherence / over-refusal cost | coherence 0.91 → 0.86 → 0.82 → 0.79 → 0.88; over-refusal 0.455 → 0.285 → 0.07 → 0.05 → **0.01** | Cost is mild — coherence stays well above the 0.55 floor, and over-refusal *falls* sharply as α rises |
-| Some α cleanly restores refusal within budget | best = **α=0.25**: ASR 0.045, over-refusal 0.01 (≤0.10 gate), coherence 0.88 (≥0.55 gate) — both gates cleared | Cleared — clean operating point |
+| Transplanting the aligned model's refusal direction restores refusal (ASR ↓) | ASR 0.46 (α=0) → 0.215 → 0.11 → 0.09 → **0.045** (α=0.25) — monotone down | ~~Supported~~ **WITHDRAWN** — the ASR drop is real, but 99.0 % of it is incoherence, not refusal (G = 0.990 at α=0.25) |
+| The restoration has a coherence / over-refusal cost | coherence 0.91 → 0.86 → 0.82 → 0.79 → 0.88; over-refusal 0.455 → 0.285 → 0.07 → 0.05 → **0.01** *(over-refusal carried from the prior run — see the note below)* | ~~Cost is mild~~ **WITHDRAWN** — coherence stays above the 0.55 floor only because the metric *rises* as the text collapses; the floor never fires |
+| Some α cleanly restores refusal within budget | best = **α=0.25**: ASR 0.045, over-refusal 0.01 (≤0.10 gate), coherence 0.88 (≥0.55 gate) — both gates cleared | ~~Cleared~~ **WITHDRAWN** — both gates are cleared by a model emitting word-salad; `best` is `null` in the current artifact because the benign half is unjudged |
+
+**On `over_refusal` — it is carried from the prior run, not re-measured.** Every
+`over_refusal` value in the table above comes from
+`artifacts/results_2026-07-21_pre_judge_instrument.json`. In the current run the
+benign half was **not** re-measured: `over_refusal` is `null` at all five α,
+`n_benign` is `0`, and the only benign cell on disk
+(`generations/gen_a0.00_benign.json`) holds **25 of 200** items with
+`complete: false`. `results.json` lists all five α under `pending_cells` as
+`missing: benign`, and sets `complete: false` and `best: null` accordingly. Read
+every over-refusal number on this page as a **prior-run** figure.
 
 ### The second instrument overturns the headline above
 
 Everything in the table above is **reproduced exactly** — the re-run regenerated all
-1000 harmful completions and recomputed `asr` and `coherence` at all five α, and
-matched the stored 2026-07-21 values with **0 mismatching cells** (α=0 coherence
+**1000 harmful completions** (5 α × 200) and recomputed `asr` and `coherence` at all
+five α, and matched the stored 2026-07-21 values with **0 mismatching cells**
+(`reconciliation.mismatches` is empty, `reproduces: true`; α=0 coherence
 `0.9111867624131433` vs `0.9111867624131433`, difference exactly 0.0). So the
-numbers below describe *the same data* the headline was built from — nothing was
-re-tuned, re-seeded, or re-defined.
+numbers below describe *the same data* the headline was built from.
+
+**An instrument was ADDED; nothing was retuned. Stated precisely:**
+
+- **`asr`** — same definition, same code path, **byte-for-byte identical** at all five α
+  (0.46 / 0.215 / 0.11 / 0.09 / 0.045 in both files).
+- **`coherence`** — same distinct-token-ratio definition, **byte-for-byte identical** at
+  all five α to the full 16 significant figures stored.
+- **`over_refusal`** — definition untouched; simply **not re-measured** this run (`null`,
+  `n_benign: 0`). The values quoted anywhere on this page are the prior run's.
+- **Both gates** — `over_refusal_tolerance: 0.1` and `coherence_floor: 0.55` are
+  **unchanged**, and neither was re-derived, relaxed, or tightened after seeing G.
+- **What is new** is exactly three fields the old code computed and threw away or never
+  computed at all: `harmful_shares`, `gibberish_share_of_non_jailbroken` (**G**), and the
+  judge-free `degeneracy` block. No existing metric was reweighted, re-seeded, or
+  re-defined, and the decisive metric was **pre-registered before the run**.
 
 What the discarded third verdict shows (off-family **Qwen2.5-3B-Instruct** judge,
 n=200 harmful/α):
@@ -390,8 +452,17 @@ uses no model at all. (3) Single seed, n=200/α — SCREENING tier.
 
 ---
 
-**SUPERSEDED — the original read, kept for the record.** It was written from the
-first instrument alone; the three-way judge above overturns its conclusion.
+**WITHDRAWN — the original read, kept in full for the record, not deleted.**
+
+**Reason for withdrawal:** it was written from the first instrument alone, and every one
+of its three load-bearing numbers is now known to mean something other than what it was
+read to mean. "ASR 0.46 → 0.045" is **99.0 % incoherence and 1.0 % refusal**; "coherence
+holding at 0.88" is the distinct-token ratio *rewarding* space-collapse (chars per token
+6.03 → 35.45, half the outputs scoring a perfect 1.000); and "over-refusal collapsing to
+0.01" is a **prior-run** figure that the current run did not re-measure. The stated
+mechanism — "re-erects the refusal-formation subspace" — is contradicted by genuine
+refusals *falling* 0.270 → 0.010 across the same sweep. No number below is retracted; the
+inference drawn from them is.
 
 > **Honest read (a positive, robust at 500/class).** Re-alignment works: transplanting
 the aligned base model's refusal direction into the abliterated one drives harmful
@@ -409,20 +480,31 @@ with a clean operating point at α=0.25," not yet an n≥7-seed evaluation claim
 
 ## 7. Honest caveats
 
-- **The judge is weak, and it is the abliterated model itself.** Phase 2 reuses
-  the one loaded (abliterated) model as its `REFUSAL/COMPLIANCE/GIBBERISH` judge
-  to stay within the one-model-per-process budget. Grading is not refusing, so
-  this works pedagogically, but a publication-grade evaluation would use a
-  stronger **off-family** judge (e.g. a Qwen-3B), exactly as the research driver
-  `scripts/run_realign_abliterated.py` does.
+- **The judge is weak — though it is no longer the abliterated model itself.** Every
+  number on this page is graded by the **off-family `Qwen/Qwen2.5-3B-Instruct`**
+  (`results.json` → `judge.off_family: true`), selected via `STEER_JUDGE_MODEL`; the
+  run aborts rather than falling back to the 1B self-judge. What remains weak is the
+  judge *family's* calibration: ROC-AUC **0.751**, below this course's 0.85 bar (see
+  [`../JUDGE_VALIDITY.md`](../JUDGE_VALIDITY.md)). That is why the decisive claim above
+  leans on the **judge-free** `degeneracy` probe (chars per whitespace token, share
+  scoring a perfect 1.000), which uses no model at all and moves in the same direction.
+  *(This bullet previously described a self-judged run; that configuration is not what
+  produced `results.json`.)*
 - **Unconditional arm only.** We steer *every* prompt at a fixed α. That is why
   over-refusal is a first-class metric: cranking α to kill ASR will eventually
   start refusing benign requests too. A conditional gate (steer only when the
   prompt reads as harmful) is the natural next step and is covered by the
   conditional-steering lessons.
-- **Small N, screening tier.** With ~20 held-out prompts per class this is
+- **Single seed, screening tier.** The sweep is **200 held-out harmful prompts per α**
+  (1000 completions in total), extracted from 300/class — but it is one seed, so it is
   SCREENING, not EVALUATION (per `CLAUDE.md` §7): enough to see the shape of the
-  ASR-vs-α curve, not enough for a significance claim.
+  ASR-vs-α curve and to establish the gibberish mechanism, not enough for a
+  significance claim. *(This bullet previously said "~20 held-out prompts per class",
+  which was the size of a much earlier run.)*
+- **The benign half is unmeasured in this run.** `n_benign: 0`, `over_refusal: null`
+  at all five α, `best: null`, `complete: false`, and all five α listed under
+  `pending_cells`. Every over-refusal figure on this page is carried from the
+  2026-07-21 artifact, and P4 (benign gibberish) is **NOT MEASURED**.
 
 ---
 
@@ -432,8 +514,9 @@ with a clean operating point at α=0.25," not yet an n≥7-seed evaluation claim
 - Lesson 2 — [`hello_world_steering`](../hello_world_steering/README.md): WRITE a
   fixed refusal vector, gated by the probe. (Supplies `model_utils`, `judge`,
   `data` reused here.)
-- Lesson 3 — [`hypersteer`](../hypersteer/README.md): GENERATE the vector with a
-  hypernetwork.
+- Lesson 3 — [`reft_r1`](../reft_r1/README.md): GENERATE the intervention with a
+  learned rank-1 ReFT. *(This link previously pointed at `hypersteer/`, a retired
+  draft that no longer exists in the tree.)*
 - Research driver — `scripts/run_realign_abliterated.py`: the harness-integrated
   version of this experiment (off-family Qwen judge, harness data/eval), which
   this lesson mirrors in miniature.
