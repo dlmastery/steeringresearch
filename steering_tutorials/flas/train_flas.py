@@ -94,6 +94,7 @@ from steering_tutorials.flas import config as C
 from steering_tutorials.flas.data import load_concepts
 from steering_tutorials.flas.flow import (
     VelocityField,
+    all_position_activations,
     concept_embedding,
     save_flow,
 )
@@ -170,7 +171,19 @@ def main() -> None:
     h0_prompts = list(baseline)
     for name in train_names:
         h0_prompts += concepts[name]["steer_prompts"]
-    h0_bank_np = last_token_activations(model, tok, h0_prompts, C.LAYER)  # [N, hidden]
+    #
+    #     v3: sample ALL token positions, not just the last one. FlowContext
+    #     transports every non-special position at generation time, so a
+    #     last-token-only bank trained the field on a distribution it is never
+    #     applied to — the mismatch that let ||v|| reach 11.7 off-distribution and
+    #     diverge to NaN. See flow.all_position_activations for the full chain.
+    if C.TRAIN_ALL_POSITIONS:
+        h0_bank_np = all_position_activations(
+            model, tok, h0_prompts, C.LAYER,
+            max_per_prompt=C.TRAIN_POS_PER_PROMPT, seed=C.SEED,
+        )
+    else:
+        h0_bank_np = last_token_activations(model, tok, h0_prompts, C.LAYER)
     h0_bank = torch.from_numpy(h0_bank_np).to(device=device, dtype=torch.float32)
     n_bank = h0_bank.shape[0]
     mean_h_norm = float(h0_bank.norm(dim=-1).mean())
@@ -294,6 +307,14 @@ def main() -> None:
             "train_t_max": float(C.TRAIN_T_MAX),
             "delta_norms": {n: float(delta_norms[n]) for n in train_names},
             "mean_h_norm": mean_h_norm,
+            # v3 provenance: WHICH activation distribution the field was fitted on.
+            # A last-token-only field is evaluated off-distribution by FlowContext
+            # (which transports every position) — the mismatch behind the v2
+            # divergence — so run_flas warns when it loads one.
+            "train_all_positions": bool(C.TRAIN_ALL_POSITIONS),
+            "train_pos_per_prompt": int(C.TRAIN_POS_PER_PROMPT),
+            "n_h0_bank": int(n_bank),
+            "flas_version": 3,
         },
     )
 

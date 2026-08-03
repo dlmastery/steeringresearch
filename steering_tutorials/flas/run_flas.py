@@ -93,12 +93,26 @@ N_ZERO_SHOT_EXAMPLES = 4
 # Pure helpers (no model / no flow) — safe to unit-test in isolation.
 # --------------------------------------------------------------------------- #
 def _rates(verdicts: list[str]) -> dict[str, float]:
-    """Fraction of REFUSAL / COMPLIANCE / GIBBERISH among a list of verdicts."""
-    n = max(1, len(verdicts))
+    """Behavioural rates over the GRADEABLE verdicts, plus the broken fraction.
+
+    ``BROKEN`` (empty completion or a non-finite residual — see :func:`_grade`) is
+    NOT a behaviour, so it is excluded from the denominator of refusal /
+    compliance / gibberish and reported separately as ``broken``. Diluting the
+    behavioural rates with failed generations is how v2 turned an arithmetic
+    overflow into a "gibberish 1.0" finding.
+
+    ``n_graded`` travels with the rates so a cell whose behavioural numbers rest
+    on a handful of survivors cannot be read as if it rested on all of them.
+    """
+    broken = verdicts.count("BROKEN")
+    gradeable = [v for v in verdicts if v != "BROKEN"]
+    n = max(1, len(gradeable))
     return {
-        "refusal": verdicts.count("REFUSAL") / n,
-        "compliance": verdicts.count("COMPLIANCE") / n,
-        "gibberish": verdicts.count("GIBBERISH") / n,
+        "refusal": gradeable.count("REFUSAL") / n,
+        "compliance": gradeable.count("COMPLIANCE") / n,
+        "gibberish": gradeable.count("GIBBERISH") / n,
+        "broken": broken / max(1, len(verdicts)),
+        "n_graded": len(gradeable),
     }
 
 
@@ -270,11 +284,31 @@ def _flow_generate(gen, model, tok, prompt, FlowContext, vfield, concept_vec,
     caller reads it from the checkpoint's metadata.
     """
     if T <= 0.0:
-        return gen(model, tok, prompt, max_new_tokens=MAX_NEW_TOKENS)
+        return gen(model, tok, prompt, max_new_tokens=MAX_NEW_TOKENS), 0
     with FlowContext(model, vfield, concept_vec, C.LAYER, T=T,
                      n_steps=C.N_STEPS, norm_relative=norm_relative,
-                     skip_special=C.SKIP_SPECIAL):
-        return gen(model, tok, prompt, max_new_tokens=MAX_NEW_TOKENS)
+                     skip_special=C.SKIP_SPECIAL,
+                     unit_velocity=C.UNIT_VELOCITY) as ctx:
+        out = gen(model, tok, prompt, max_new_tokens=MAX_NEW_TOKENS)
+        return out, ctx.nonfinite_steps
+
+
+def _grade(judge, prompt: str, resp: str, nonfinite: int) -> str:
+    """Judge one completion, but never let a BROKEN generation become a verdict.
+
+    v2 graded the empty string as ``GIBBERISH``. That is a category error: an
+    empty completion is a FAILED generation, not a coherence judgement about a
+    steered one. At T>=0.10 the v2 flow diverged to a NaN residual, the model
+    emitted EOS immediately, and 100% of the cell came back empty — which
+    ``results.json`` then reported as "gibberish 1.0", a behavioural-looking
+    number produced entirely by an arithmetic overflow.
+
+    ``BROKEN`` is therefore its own verdict, excluded from the behavioural rates
+    and counted separately, so a cell that failed reads as failed.
+    """
+    if nonfinite > 0 or not resp.strip():
+        return "BROKEN"
+    return judge.verdict(prompt, resp)
 
 
 def _cap(prompts: list, n: int) -> list:
@@ -300,7 +334,8 @@ def main() -> dict:
     from ..hello_world_steering.model_utils import load_model, generate, num_layers
     from ..hello_world_steering.judge import Judge
     from ..hello_world_steering.gate import HarmGate
-    from .flow import concept_embedding, FlowContext, integrate_flow, load_flow
+    from .flow import (all_position_activations, concept_embedding, FlowContext,
+                       integrate_flow, load_flow)
     from .data import load_concepts
 
     # Reproducibility: pin every RNG before anything stochastic happens.
@@ -334,6 +369,18 @@ def main() -> dict:
             f"(python -m steering_tutorials.flas.train_flas) or set "
             f"FLAS_NORM_RELATIVE={'1' if ckpt_norm_relative else '0'} to match it. "
             "Mixing the two conventions mis-scales the flow-time dial by ~||h||.")
+    # v3 provenance. A v2 field was trained on last-token activations only; the
+    # v3 field is trained on the all-position distribution FlowContext actually
+    # transports. Integrating a v2 field under v3 rules is not an error (the
+    # unit_velocity guard makes it stable either way) but it IS a different
+    # experiment, so it must be recorded rather than silently assumed.
+    ckpt_all_positions = bool(meta.get("train_all_positions", False))
+    if C.TRAIN_ALL_POSITIONS and not ckpt_all_positions:
+        print("[flow] WARNING: this checkpoint was trained on LAST-TOKEN activations "
+              "only (a v2 field), but generation transports every non-special "
+              "position. Its velocity is off-distribution at inference — the defect "
+              "that produced the v2 divergence. Retrain with "
+              "python -m steering_tutorials.flas.train_flas", file=sys.stderr)
     train_t_max = float(meta.get("train_t_max", 0.0))
     if C.NORM_RELATIVE and train_t_max and max(T_SWEEP) > train_t_max + 1e-9:
         print(f"[flow] WARNING: T_SWEEP tops out at {max(T_SWEEP)} but the field only "
@@ -378,21 +425,45 @@ def main() -> dict:
     # integrate the flow on real eval activations and report ||x_T - h0|| / ||h0||,
     # the SAME quantity lesson 2 calls alpha. It makes the claim "T is the strength
     # dial" auditable instead of asserted, and costs one batched forward pass.
-    from ..hello_world_steering.model_utils import last_token_activations
-    _probe_acts = last_token_activations(model, tok, dial_eval[:16], layer,
-                                         log_every=0)
+    #
+    # v3: the probe now samples ALL token positions, not just the last one. The v2
+    # probe used last_token_activations, which is precisely the distribution the
+    # field was trained on and therefore the ONE place it is well behaved — so it
+    # reported a healthy 0.0605 at T=0.10 while generation, which transports every
+    # position, was diverging to NaN and returning empty strings in the same cell.
+    # An audit that samples only the benign case is not an audit. We also record
+    # the RAW ||v||, so under-training stays visible even though unit_velocity now
+    # normalises it away at integration time.
+    _probe_acts = all_position_activations(model, tok, dial_eval[:16], layer,
+                                           max_per_prompt=C.TRAIN_POS_PER_PROMPT,
+                                           seed=C.SEED, log_every=0)
     _h0 = torch.from_numpy(_probe_acts).float()
     _cvec = torch.from_numpy(np.asarray(dial_vec)).float().reshape(-1)
     displacement: list[dict] = []
     with torch.no_grad():
         _vf_cpu = vfield.to("cpu")
         for T in T_SWEEP:
+            _stats: dict = {}
             _xT = integrate_flow(_vf_cpu, _h0, _cvec, T=float(T),
                                  n_steps=C.N_STEPS,
-                                 norm_relative=ckpt_norm_relative)
-            _rel = ((_xT - _h0).norm(dim=-1) / _h0.norm(dim=-1)).mean()
-            displacement.append({"T": float(T), "rel_displacement": float(_rel)})
-            print(f"[geometry] T={T:.3f} -> ||dh||/||h|| = {float(_rel):.4f}",
+                                 norm_relative=ckpt_norm_relative,
+                                 unit_velocity=C.UNIT_VELOCITY,
+                                 stats=_stats)
+            _finite = torch.isfinite(_xT).all(dim=-1)
+            _rel = ((_xT - _h0).norm(dim=-1) / _h0.norm(dim=-1))[_finite].mean()
+            _raw = _stats.get("raw_velocity_norms", [])
+            displacement.append({
+                "T": float(T),
+                "rel_displacement": float(_rel) if _finite.any() else float("nan"),
+                # |raw ||v|| - 1| is the residual under-training the unit_velocity
+                # guard is compensating for. At 1.0 the field needs no guard.
+                "raw_velocity_norm_mean": float(np.mean(_raw)) if _raw else None,
+                "raw_velocity_norm_max": float(np.max(_raw)) if _raw else None,
+                "nonfinite_frac": float((~_finite).float().mean()),
+            })
+            print(f"[geometry] T={T:.3f} -> ||dh||/||h|| = {float(_rel):.4f}  "
+                  f"raw||v||={np.mean(_raw) if _raw else float('nan'):.3f}  "
+                  f"nonfinite={float((~_finite).float().mean()):.3f}",
                   file=sys.stderr)
     vfield.to(next(model.parameters()).device)
 
@@ -400,9 +471,9 @@ def main() -> dict:
     for T in T_SWEEP:
         verdicts: list[str] = []
         for i, prompt in enumerate(dial_eval):
-            resp = _flow_generate(generate, model, tok, prompt, FlowContext,
-                                  vfield, dial_vec, float(T), ckpt_norm_relative)
-            verdicts.append(judge.verdict(prompt, resp))
+            resp, nf = _flow_generate(generate, model, tok, prompt, FlowContext,
+                                      vfield, dial_vec, float(T), ckpt_norm_relative)
+            verdicts.append(_grade(judge, prompt, resp, nf))
             if (i + 1) % 5 == 0:
                 print(f"[payoff-1 T={T:.2f}] {i + 1}/{len(dial_eval)}", file=sys.stderr)
         rec = {"T": float(T), "n": len(dial_eval), **_rates(verdicts)}
@@ -420,9 +491,9 @@ def main() -> dict:
         eval_prompts = _cap(train[name]["eval"], C.N_EVAL_CAP)
         verdicts = []
         for prompt in eval_prompts:
-            resp = _flow_generate(generate, model, tok, prompt, FlowContext,
-                                  vfield, vec, C.T_DEFAULT, ckpt_norm_relative)
-            verdicts.append(judge.verdict(prompt, resp))
+            resp, nf = _flow_generate(generate, model, tok, prompt, FlowContext,
+                                      vfield, vec, C.T_DEFAULT, ckpt_norm_relative)
+            verdicts.append(_grade(judge, prompt, resp, nf))
         r = _rates(verdicts)
         per_concept[name] = {
             "refusal_rate": r["refusal"], "compliance_rate": r["compliance"],
@@ -442,9 +513,9 @@ def main() -> dict:
         z_examples: list[dict] = []
         verdicts = []
         for prompt in z_eval:
-            resp = _flow_generate(generate, model, tok, prompt, FlowContext,
-                                  vfield, zvec, C.T_DEFAULT, ckpt_norm_relative)
-            v = judge.verdict(prompt, resp)
+            resp, nf = _flow_generate(generate, model, tok, prompt, FlowContext,
+                                      vfield, zvec, C.T_DEFAULT, ckpt_norm_relative)
+            v = _grade(judge, prompt, resp, nf)
             verdicts.append(v)
             if len(z_examples) < N_ZERO_SHOT_EXAMPLES:
                 z_examples.append({"prompt": prompt, "steered": resp, "verdict": v})
@@ -474,20 +545,41 @@ def main() -> dict:
         for i, prompt in enumerate(benign_eval):
             fired, _prob = gate.is_harmful(prompt)
             fired_flags.append(bool(fired))
-            resp = _flow_generate(generate, model, tok, prompt, FlowContext,
-                                  vfield, dial_vec,
-                                  C.T_DEFAULT if fired else 0.0, ckpt_norm_relative)
-            verdicts.append(judge.verdict(prompt, resp))
+            resp, nf = _flow_generate(generate, model, tok, prompt, FlowContext,
+                                      vfield, dial_vec,
+                                      C.T_DEFAULT if fired else 0.0,
+                                      ckpt_norm_relative)
+            verdicts.append(_grade(judge, prompt, resp, nf))
             if (i + 1) % 20 == 0:
                 print(f"[selectivity] {i + 1}/{len(benign_eval)}", file=sys.stderr)
+        # The pooled benign refusal rate is NOT a measure of steering-induced
+        # over-refusal: the gate fires on only a few percent of benign prompts, so
+        # the pooled number is dominated by prompts that were never steered at all
+        # (T=0) and mostly reports the base model's own refusal rate. v2 headlined
+        # it anyway. Splitting by gate state costs nothing — the unfired prompts
+        # ALREADY ran unsteered — and turns one uninterpretable number into the
+        # controlled contrast the selectivity claim actually needs.
+        _fired_v = [v for v, f in zip(verdicts, fired_flags) if f]
+        _unfired_v = [v for v, f in zip(verdicts, fired_flags) if not f]
         over_refusal = {
-            "benign_refusal_rate": _rates(verdicts)["refusal"],
+            "benign_refusal_rate": _rates(verdicts)["refusal"],   # pooled (legacy)
             "gate_fire_rate": sum(fired_flags) / max(1, len(fired_flags)),
             "n": len(benign_eval),
+            # The contrast that licenses a selectivity claim:
+            "steered_refusal_rate": _rates(_fired_v)["refusal"] if _fired_v else None,
+            "n_steered": len(_fired_v),
+            "unsteered_refusal_rate": (_rates(_unfired_v)["refusal"]
+                                       if _unfired_v else None),
+            "n_unsteered": len(_unfired_v),
+            "broken_rate": _rates(verdicts)["broken"],
         }
-        print(f"[selectivity] benign over-refusal="
+        print(f"[selectivity] pooled benign refusal="
               f"{over_refusal['benign_refusal_rate']:.2f} "
-              f"gate fire-rate={over_refusal['gate_fire_rate']:.2f}", file=sys.stderr)
+              f"gate fire-rate={over_refusal['gate_fire_rate']:.2f} | "
+              f"steered(n={len(_fired_v)})="
+              f"{over_refusal['steered_refusal_rate']} "
+              f"unsteered(n={len(_unfired_v)})="
+              f"{over_refusal['unsteered_refusal_rate']}", file=sys.stderr)
 
     # --- Assemble, persist, plot, print --------------------------------------
     rates_png = C.ARTIFACTS / "rates_vs_T.png"
@@ -502,6 +594,12 @@ def main() -> dict:
         "norm_relative": bool(ckpt_norm_relative),
         "train_t_max": train_t_max,
         "skip_special": bool(C.SKIP_SPECIAL),
+        # v3 provenance — the two guards against the v2 divergence, and which
+        # activation distribution the loaded field was actually fitted on.
+        "flas_version": 3,
+        "unit_velocity": bool(C.UNIT_VELOCITY),
+        "train_all_positions_ckpt": bool(ckpt_all_positions),
+        "train_all_positions_config": bool(C.TRAIN_ALL_POSITIONS),
         # PROVENANCE (metadata only -- changes no metric). This used to read the
         # env var directly, which describes what was REQUESTED, not what the
         # judge object ended up being. Ask the judge itself instead; the legacy

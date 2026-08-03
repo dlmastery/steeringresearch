@@ -41,6 +41,7 @@ Standalone: reuses only the lesson-2 model plumbing; third-party deps are
 from __future__ import annotations
 
 import math
+import sys
 from typing import Any
 
 import numpy as np
@@ -49,12 +50,63 @@ import torch.nn as nn
 
 # Reuse lesson-2 plumbing verbatim — do NOT reimplement model access here.
 from steering_tutorials.hello_world_steering.model_utils import (  # noqa: F401
+    _forward_capture,
     hidden_size,
     last_token_activations,
     load_model,
     num_layers,
     residual_layers,
 )
+
+
+# ---------------------------------------------------------------------------
+# 0. The activation bank the field is TRAINED on
+# ---------------------------------------------------------------------------
+@torch.no_grad()
+def all_position_activations(
+    model: Any,
+    tok: Any,
+    prompts: list[str],
+    layer: int,
+    max_per_prompt: int = 16,
+    seed: int = 0,
+    log_every: int = 25,
+) -> np.ndarray:
+    """Return an ``[n, hidden]`` bank sampled from ALL token positions.
+
+    v3 — THE FIX FOR THE TRAIN/APPLY DISTRIBUTION MISMATCH.
+
+    v2 built the training bank from :func:`last_token_activations` alone, so the
+    velocity field only ever saw ONE position per prompt: the
+    ``<start_of_turn>model`` slot. But :class:`FlowContext` transports EVERY
+    non-special position during generation. The field was therefore evaluated far
+    off its training distribution at inference, where an unnormalised MLP has no
+    reason to return the unit vector it was regressed onto — measured ``||v||``
+    reached 11.7 instead of 1.0, and since the Euler step scales with ``||x||``
+    that error compounded into divergence and NaN residuals.
+
+    Training on the same distribution we apply to is the structural half of the
+    fix (``integrate_flow(unit_velocity=True)`` is the belt-and-braces half).
+
+    We sample at most ``max_per_prompt`` positions per prompt rather than taking
+    every one, so a long prompt cannot dominate the bank, and we always KEEP the
+    last-token position so the v2 regime stays covered rather than replaced.
+    """
+    rng = np.random.default_rng(seed)
+    feats: list[np.ndarray] = []
+    for i, prompt in enumerate(prompts):
+        h = _forward_capture(model, tok, prompt, layer)      # [seq, hidden]
+        seq = h.shape[0]
+        # Always keep the last token (the v2 regime); sample the rest.
+        idx = {seq - 1}
+        n_extra = min(max(0, max_per_prompt - 1), seq - 1)
+        if n_extra > 0:
+            idx.update(rng.choice(seq - 1, size=n_extra, replace=False).tolist())
+        sel = sorted(idx)
+        feats.append(h[sel].float().cpu().numpy())
+        if log_every and (i + 1) % log_every == 0:
+            print(f"[acts-all] {i + 1}/{len(prompts)}", file=sys.stderr)
+    return np.concatenate(feats, axis=0).astype(np.float32)
 
 
 # ---------------------------------------------------------------------------
@@ -193,6 +245,8 @@ def integrate_flow(
     T: float = 1.0,
     n_steps: int = 8,
     norm_relative: bool = True,
+    unit_velocity: bool = True,
+    stats: "dict | None" = None,
 ) -> torch.Tensor:
     """Explicit-Euler integration of ``dx/dt = v(x, t, c)`` from ``t=0`` to ``T``.
 
@@ -208,14 +262,51 @@ def integrate_flow(
         norm_relative=True :   x <- x + dt * ||x||_pos * v(x, t, c)
         norm_relative=False:   x <- x + dt *            v(x, t, c)      # v1
 
-    Under the v2 trainer the field regresses onto a UNIT direction, so ``||v|| ~= 1``
-    and the accumulated displacement is ``~= T * ||h||``: **flow-time T is then
-    literally the fractional displacement**, the same dial as lesson 2's
-    ``relative_add`` alpha. The v1 (absolute) path applies the same displacement to
-    every position regardless of that position's norm, which is why a raw
-    ``||delta_c|| = 561`` against ``||h|| ~= 5e3`` blew past the coherence cliff.
-    The two modes are NOT interchangeable — a field must be integrated in the mode
-    it was trained under (``meta['norm_relative']`` records which).
+    The v2 trainer regresses the field onto a UNIT direction, so ``||v||`` was
+    ASSUMED to be ~1 and the accumulated displacement ~= ``T * ||h||``.
+
+    v3 — THAT ASSUMPTION WAS FALSE, AND UNCHECKED IT DIVERGES
+    ---------------------------------------------------------
+    ``||v|| ~= 1`` holds only where the field was TRAINED. The v2 trainer built its
+    ``h0`` bank from :func:`last_token_activations` alone, while :class:`FlowContext`
+    transports EVERY non-special position — so at generation time the field is
+    evaluated far off its training distribution, where an unnormalised MLP has no
+    reason to return a unit vector. Measured on the shipped v2 field: ``||v|| = 11.7``
+    on off-distribution states, i.e. 11.7x the intended magnitude.
+
+    That alone would only mis-scale the dial. What makes it fatal is the FEEDBACK
+    LOOP: the step is ``dt * ||x|| * v(x)``, so a large ``||v||`` inflates ``||x||``,
+    which inflates the next step, which inflates ``||v||`` again. Integrating the
+    shipped field on off-distribution states::
+
+        T=0.05  ||v||: 11.74 -> 15.38     rel displacement    0.69
+        T=0.10  ||v||: 11.74 -> 54.58     rel displacement    6.09
+        T=0.15  ||v||: 11.74 -> 2907.3    rel displacement   99694
+
+    At ~10x the mean residual norm it overflows to NaN outright. A NaN residual
+    yields garbage logits, the model emits EOS immediately, and generation returns
+    the EMPTY STRING — which the v2 eval then graded as a ``GIBBERISH`` verdict and
+    reported as a behavioural finding. The v2 geometry probe missed all of this
+    because it probed only last-token activations: the one distribution on which
+    the field is well behaved. That is why ``results.json`` simultaneously reports a
+    gentle 0.0605 displacement and 100% empty generations at the same ``T``.
+
+    Two guards make the claim true rather than hoped-for:
+
+    ``unit_velocity`` (default ON)
+        Normalise ``v`` to unit norm before stepping. The regression target IS a
+        unit vector, so this discards no learned signal — it only removes error —
+        and it makes the displacement ``T * ||h||`` hold BY CONSTRUCTION at every
+        position, on- or off-distribution, which also breaks the feedback loop.
+        The field then supplies the DIRECTION and ``T`` supplies the MAGNITUDE.
+
+    ``stats``
+        If a dict is passed, the RAW (pre-normalisation) ``||v||`` per step is
+        recorded into it. The normalisation must not be allowed to HIDE the
+        under-training it compensates for, so callers report this: a raw norm far
+        from 1.0 is a live defect even when the integration is now stable.
+
+    Set ``unit_velocity=False`` to reproduce the v2 (divergent) behaviour exactly.
 
     Fully differentiable (no ``.detach()``), so a training loss can backprop
     through the whole integration into ``vfield``'s parameters; equally usable
@@ -225,9 +316,15 @@ def integrate_flow(
     dt = T / n_steps
     denom = max(float(T), eps)
     x = h
+    raw_norms: list[float] = []
     for k in range(n_steps):
         t_norm = (k * dt) / denom                # canonical flow time in [0, 1)
         v = vfield(x, t_norm, c)                  # velocity at current state
+        # Record the RAW magnitude before any normalisation, so the caller can see
+        # how far the field is from its unit target even once we enforce it.
+        raw_norms.append(float(v.detach().float().norm(dim=-1).mean()))
+        if unit_velocity:
+            v = v / v.norm(dim=-1, keepdim=True).clamp_min(eps)
         # cast v to x's dtype so x keeps h's dtype (e.g. bf16 on GPU even though
         # the field's params are fp32).
         step = dt * v.to(device=x.device, dtype=x.dtype)
@@ -235,6 +332,8 @@ def integrate_flow(
             # per-position norm; keepdim so [.., 1] broadcasts over `hidden`.
             step = step * x.norm(dim=-1, keepdim=True)
         x = x + step
+    if stats is not None:
+        stats["raw_velocity_norms"] = raw_norms
     return x
 
 
@@ -278,6 +377,7 @@ class FlowContext:
         norm_relative: bool = True,
         skip_special: bool = True,
         special_ids: "set[int] | None" = None,
+        unit_velocity: bool = True,
     ) -> None:
         self.model = model
         self.vfield = vfield
@@ -287,7 +387,14 @@ class FlowContext:
         self.T = float(T)
         self.n_steps = int(n_steps)
         self.norm_relative = bool(norm_relative)
+        self.unit_velocity = bool(unit_velocity)
         self.skip_special = bool(skip_special)
+        # Set when the transported residual goes non-finite. v2 let a NaN residual
+        # flow onward, which produced an EMPTY generation that the eval then graded
+        # as a GIBBERISH verdict — a broken run reported as a behavioural result.
+        # A failure must be visible as a failure, so we record it and the caller
+        # refuses to grade the cell.
+        self.nonfinite_steps = 0
         self.special_ids = special_ids
         self._handles: list[Any] = []
         self._c: torch.Tensor | None = None  # concept tensor on the model device
@@ -323,7 +430,16 @@ class FlowContext:
         is_tuple = isinstance(output, tuple)
         h = output[0] if is_tuple else output       # [batch, seq, hidden]
         h_new = integrate_flow(self.vfield, h, self._c, self.T, self.n_steps,
-                               norm_relative=self.norm_relative)
+                               norm_relative=self.norm_relative,
+                               unit_velocity=self.unit_velocity)
+
+        # A non-finite residual is a BROKEN transport, not a steered one. Count it
+        # and pass the ORIGINAL activation through, so the run degrades to
+        # "unsteered" (visibly wrong, and flagged) instead of to an empty string
+        # that reads like a behavioural verdict.
+        if not torch.isfinite(h_new).all():
+            self.nonfinite_steps += 1
+            h_new = torch.where(torch.isfinite(h_new), h_new, h)
 
         # Zero the DISPLACEMENT (not the state) at special positions, so they pass
         # through the layer exactly as they would unsteered.
@@ -443,9 +559,18 @@ def _self_test() -> None:
     d1 = (integrate_flow(vfield, h1x, c, T=0.1, n_steps=8, norm_relative=True) - h1x).norm()
     d10 = (integrate_flow(vfield, h10x, c, T=0.1, n_steps=8, norm_relative=True) - h10x).norm()
     assert d10 > 5 * d1, "norm_relative displacement did not scale with ||h||"
-    # and the FRACTIONAL displacement is ~T (exactly so once ||v||~=1 after training)
+    # and the FRACTIONAL displacement is EXACTLY ~T under unit_velocity.
+    #
+    # v3 REGRESSION GUARD. This assertion used to read `0.0 < frac < 10.0`, which
+    # is what let the v2 divergence ship: the field's real ||v|| was 11.7, so the
+    # dial overshot by >10x and at T=0.15 the displacement reached 99694 with the
+    # residual overflowing to NaN — and this test still passed. Under
+    # unit_velocity the displacement is T*||h|| BY CONSTRUCTION, independent of
+    # how badly the field is trained, so we can hold it to a tight tolerance even
+    # here with a RANDOM (untrained) field. If this ever loosens again, the
+    # divergence comes back silently.
     frac = float(d1 / h1x.norm())
-    assert 0.0 < frac < 10.0, f"nonsensical relative displacement {frac}"
+    assert abs(frac - 0.1) < 0.01, f"unit_velocity dial is not T: {frac} != 0.1"
     # The two modes differ by EXACTLY the position's norm. With one Euler step the
     # relation is closed-form (both evaluate the field at the same state x=h), so
     # this pins the v1-vs-v2 semantics without depending on a trained field.
@@ -453,6 +578,33 @@ def _self_test() -> None:
     abs1 = integrate_flow(vfield, h1x, c, T=0.1, n_steps=1, norm_relative=False) - h1x
     assert torch.allclose(rel1, abs1 * h1x.norm(dim=-1, keepdim=True), atol=1e-4), \
         "norm_relative step is not the absolute step scaled by ||h||"
+
+    # (a3) v3: the dial must stay EXACT across the whole sweep and at the extreme
+    # residual norms that made v2 overflow. The failing v2 signature was a dial
+    # that held near T at small ||h|| and blew up at large ||h||, so a single-scale
+    # check is not enough — the scale sweep is the part that actually catches it.
+    for scale in (1.0, 10.0, 100.0, 1000.0):
+        hs = h1x * scale
+        for T_ in (0.02, 0.05, 0.10, 0.15):
+            xs = integrate_flow(vfield, hs, c, T=T_, n_steps=8, norm_relative=True)
+            assert torch.isfinite(xs).all(), f"non-finite transport at scale={scale} T={T_}"
+            f = float((xs - hs).norm() / hs.norm())
+            assert abs(f - T_) < 0.02 * max(T_, 0.02), \
+                f"dial drifted at scale={scale} T={T_}: got {f}"
+
+    # The raw ||v|| must be REPORTED so the normalisation cannot hide an
+    # under-trained field: the guard fixes the geometry, not the training.
+    _st: dict = {}
+    integrate_flow(vfield, h1x, c, T=0.1, n_steps=4, stats=_st)
+    assert len(_st.get("raw_velocity_norms", [])) == 4, "raw ||v|| not reported"
+
+    # unit_velocity=False must still reproduce the v2 behaviour exactly, so the
+    # old (divergent) convention stays available as a documented ablation.
+    _v2 = integrate_flow(vfield, h1x, c, T=0.1, n_steps=1, norm_relative=True,
+                         unit_velocity=False) - h1x
+    _raw_v = vfield(h1x, 0.0, c)
+    assert torch.allclose(_v2, 0.1 * _raw_v * h1x.norm(dim=-1, keepdim=True),
+                          atol=1e-4), "unit_velocity=False is not the v2 step"
 
     # (b) the whole integration is differentiable: a loss on h' trains the field.
     h_req = torch.randn(2, 4, hidden)

@@ -117,6 +117,28 @@ SKIP_SPECIAL = os.environ.get("FLAS_SKIP_SPECIAL", "1") == "1"
 # top of T_SWEEP or the eval integrates the field off its training distribution.
 TRAIN_T_MAX = float(os.environ.get("FLAS_TRAIN_T_MAX", "0.15"))
 
+# --- v3: the two guards against the divergence v2 shipped --------------------
+# v2 assumed ||v|| ~= 1 because the regression target is a unit vector. Measured
+# on the shipped v2 field, ||v|| = 11.7 on the states generation actually visits,
+# and because the Euler step scales with ||x|| the error compounded: at T=0.15 the
+# relative displacement reached 99694 and the residual overflowed to NaN, which
+# made the model emit EOS immediately and return the EMPTY STRING — graded
+# GIBBERISH and reported as a behavioural finding. Two independent causes:
+#
+#   1. TRAIN/APPLY MISMATCH. The h0 bank came from last-token activations only,
+#      while FlowContext transports every non-special position. TRAIN_ALL_POSITIONS
+#      trains on the distribution we actually apply to.
+#   2. NO MAGNITUDE CONTROL. UNIT_VELOCITY normalises v before stepping, so the
+#      displacement is T*||h|| BY CONSTRUCTION rather than by assumption, on- or
+#      off-distribution. The target is a unit vector, so this discards no learned
+#      signal — but the raw ||v|| is still REPORTED so the fix cannot hide the
+#      under-training it compensates for.
+#
+# Set either to 0 to reproduce the v2 (divergent) behaviour.
+TRAIN_ALL_POSITIONS = os.environ.get("FLAS_TRAIN_ALL_POSITIONS", "1") == "1"
+TRAIN_POS_PER_PROMPT = int(os.environ.get("FLAS_TRAIN_POS_PER_PROMPT", "16"))
+UNIT_VELOCITY = os.environ.get("FLAS_UNIT_VELOCITY", "1") == "1"
+
 # Default flow-time — the STRENGTH dial. Under NORM_RELATIVE this is a fractional
 # displacement, so 0.10 matches lesson 2's mid alpha (its top is 0.15).
 _T_DEFAULT_FALLBACK = "0.10" if NORM_RELATIVE else "1.0"
