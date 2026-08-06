@@ -11,7 +11,72 @@
 > space. Flow-time `T` becomes a smooth, zero-shot **strength dial**, and **one
 > field handles many concepts**, including ones it never saw during training.
 
-> ## ⚠ v2 — THE FLOW-TIME DIAL WAS MIS-SCALED. The v1 numbers below are **SUPERSEDED**.
+> ## ⚠⚠ v3 — THE v2 FLOW **DIVERGED TO NaN**. Every number in v1 AND v2 is **VOID**.
+>
+> **v2 did not fix the dial; it moved the failure somewhere the audit could not see it.**
+> The v2 artifacts are quarantined as `artifacts/*_v2_SUPERSEDED*`. Do not cite them.
+>
+> **What was wrong.** The v2 trainer built its `h0` bank from `last_token_activations`
+> **only**, while `FlowContext` transports **every** non-special position. So at
+> generation time the field was evaluated far off its training distribution, where an
+> unnormalised MLP has no reason to return the unit vector it was regressed onto.
+> Measured on the shipped v2 field: **`‖v‖ = 11.7`, not 1.0.**
+>
+> That alone would only mis-scale the dial. What makes it fatal is the **feedback loop**:
+> the Euler step is `dt·‖x‖·v(x)`, so a large `‖v‖` inflates `‖x‖`, which inflates the
+> next step, which inflates `‖v‖` again:
+>
+> | `T` | `‖v‖` over the 8 steps | relative displacement |
+> |---|---|---|
+> | 0.05 | 11.74 → 15.4 | 0.69 |
+> | 0.10 | 11.74 → 54.6 | **6.09** |
+> | 0.15 | 11.74 → 2907 | **99694** |
+>
+> At ~10× the mean residual norm it **overflows to NaN outright**. A NaN residual gives
+> garbage logits, the model emits EOS immediately, and generation returns the **empty
+> string** — which the v2 eval graded as a `GIBBERISH` verdict. **So v2's headline
+> "gibberish → 1.0 at T ≥ 0.10" is 100% arithmetic overflow and 0% coherence
+> judgement.** The `n` behind it was 34 empty strings.
+>
+> **Why the audit missed it.** The v2 geometry probe sampled **last-token activations
+> only** — precisely the one distribution on which the field is well behaved. It
+> therefore reported a reassuring `0.0605` displacement for the *same cell* that was
+> emitting empty strings. `results.json` ended up holding two irreconcilable numbers,
+> and that contradiction was the tell. *An audit that samples only the benign case is
+> not an audit.*
+>
+> **What the v3 fix is.**
+>
+> 1. **Train on the distribution we apply to** (`FLAS_TRAIN_ALL_POSITIONS=1`, default).
+>    `all_position_activations` samples every token position, not just the last. This
+>    is the root-cause fix.
+> 2. **`unit_velocity` (default on).** Normalise `v` before stepping. The regression
+>    target *is* a unit vector, so this discards no learned signal — it only removes
+>    error — and it makes displacement `= T·‖h‖` **by construction**, on- or
+>    off-distribution, which also breaks the feedback loop. Verified on the v2 field:
+>    `rel/T = 1.000` at every `T`, finite at 100× the residual norm, where v2 gives
+>    13.6 / 183 / 24,689,705 and NaN.
+> 3. **The guard must not hide what it compensates for.** The raw pre-normalisation
+>    `‖v‖` is recorded per step and reported. It is still **13.2**, still a live
+>    under-training defect; v3 makes the *geometry* correct, not the *training*.
+> 4. **`BROKEN` is its own verdict.** An empty completion or a non-finite residual is a
+>    *failed generation*, not a behaviour, and is excluded from the refusal/compliance/
+>    gibberish denominator. A cell that failed now reads as failed (`broken: 1.0,
+>    n_graded: 0`) instead of as a finding.
+> 5. **Selectivity is now a contrast.** v2's `benign_refusal_rate 0.43` was pooled over
+>    a set where the gate fired on **2.6%** of prompts — so it was almost entirely the
+>    base model's own refusal rate. Splitting by gate state costs no extra compute.
+> 6. **The self-test assertion was the enabler.** It read `0.0 < frac < 10.0`, which
+>    **passes under an 11.7× overshoot**. Now pinned to `|frac − T| < 2%` across scales
+>    1×–1000×, and verified load-bearing: 0/16 cells fail with the fix, 16/16 without.
+>
+> **Status.** The code fix is landed and verified; the **retrain + re-run is pending**
+> (host memory). Until then this lesson has **no current numbers at all** — which is
+> the honest state, and better than the numbers it used to display.
+>
+> <details><summary>The superseded v2 note (kept for the record)</summary>
+>
+> ## v2 — THE FLOW-TIME DIAL WAS MIS-SCALED. The v1 numbers below are SUPERSEDED.
 >
 > **What was wrong.** v1 defined the transport target with the **raw** diff-of-means,
 > `h1 = h0 + delta_c`, and integrated an **absolute** Euler step `x <- x + dt*v`.
@@ -53,6 +118,8 @@
 > a 1B abliterated model is now an open question the re-run answers; the honest-negative
 > framing stays until the new numbers land, and `run_flas`'s verdict check was tightened
 > so a gibberish-dialling sweep can no longer be graded as a working dial.
+>
+> </details>
 
 This is lesson 3b of the steering tutorials — the most advanced entry in the
 **GENERATE** tier. Where lesson 3 learned *one direction for one concept*, FLAS
@@ -479,50 +546,49 @@ zero-shot arm. Serves on **port 8005** (lessons 1–3 use their own ports).
 
 ## 7. Results
 
-### 7.0 v2 — the corrected run (2026-07-26). **This is the citable one.**
+### 7.0 v2 — **VOID.** The run this section called "the citable one" had diverged.
 
-The field was retrained with **norm-relative transport** and re-swept. First, proof
-that the dial is now calibrated — flow-time maps to *measured* displacement:
+> Retained in full so the retraction is auditable. **Cite nothing here.** Artifacts
+> quarantined as `artifacts/*_v2_SUPERSEDED*`.
 
-| T | measured ‖Δh‖/‖h‖ | refusal | comply | gibberish |
-|---|---|---|---|---|
-| 0.00 | 0.0000 | **0.32** (baseline) | 0.56 | 0.12 |
-| 0.02 | 0.0122 | 0.26 | 0.59 | 0.15 |
-| 0.05 | 0.0304 | 0.15 | 0.59 | 0.26 |
-| 0.10 | 0.0605 | 0.00 | 0.00 | **1.00** |
-| 0.15 | 0.0900 | 0.00 | 0.00 | 1.00 |
+The table below was published as proof that "the dial is now calibrated". It is not.
 
-*(v1's grid spanned 5.6 % → 22.5 % — every point at or past the ~5 % cliff knee. v2
-spans 1.2 % → 9.0 %, straddling it. That is the whole fix.)*
+| T | *claimed* ‖Δh‖/‖h‖ | refusal | comply | gibberish | what actually happened |
+|---|---|---|---|---|---|
+| 0.00 | 0.0000 | 0.32 | 0.56 | 0.12 | baseline, unsteered — the one sound row |
+| 0.02 | 0.0122 | 0.26 | 0.59 | 0.15 | real text, but at an **unknown dose** |
+| 0.05 | 0.0304 | 0.15 | 0.59 | 0.26 | real text, but at an **unknown dose** |
+| 0.10 | 0.0605 | 0.00 | 0.00 | 1.00 | **34/34 EMPTY strings.** NaN residual |
+| 0.15 | 0.0900 | 0.00 | 0.00 | 1.00 | **34/34 EMPTY strings.** NaN residual |
 
-**The verdict is still negative — and now it means something.** The decisive row is
-**T = 0.02**, where coherence is essentially intact (gibberish 0.15 vs a 0.12
-baseline) and refusal has *already fallen* to 0.26 from 0.32. Pushing along the
-concept direction does not install refusal in the sub-cliff band; it mildly
-*suppresses* it, and then coherence collapses completely by 6 % displacement.
+Two independent defects, both traced in the v3 banner at the top of this file:
 
-- flow-time as a strength dial **at matched coherence**: **no** — refusal never rose
-  above the 0.32 baseline while coherence held.
-- zero-shot concept (`harassment`) at 1B: **no** — refusal 0.00, gibberish 1.00.
-- one field, many concepts at `T_default`: refusal 0.00 for both `sexual` and
-  `violence`.
-- selectivity: benign over-refusal 0.43 at a gate fire-rate of 0.03 — i.e. the
-  over-refusal is the *base model's*, not the intervention's.
+**1. The bottom two rows are not measurements.** At `T ≥ 0.10` the integration
+overflowed, the model emitted EOS immediately, and every completion came back empty.
+The empty string was graded `GIBBERISH`. So "gibberish → 1.00" is an arithmetic
+overflow wearing a behavioural label; the honest reading is `broken 1.00, n_graded 0`.
 
-**Why this is worth more than the v1 negative it replaces.** v1 measured the
-coherence cliff five times and reported it as a concept dial. v2 samples the regime
-where an effect *could* appear and shows there is none — a clean negative rather than
-a confounded one. It corroborates the course's broader finding that the **WRITE**
-primitive is weak at this scale *regardless of how the push is parameterised*
-(cf. `curveball`, `hello_world_steering`, `multi_intent`), while **READ**/gating
-works (lesson 1's probe, `contextual_steering`'s probe gate).
+**2. The middle rows have no dose axis.** The `measured ‖Δh‖/‖h‖` column came from a
+probe that sampled **last-token activations only** — the one distribution where the
+field is well behaved — while generation transported *every* position, where `‖v‖`
+was 11.7×. `T = 0.02` and `T = 0.05` did produce real text, but not at 1.2 % and
+3.0 % displacement. Their true dose is unquantified and larger. **The refusal numbers
+are real observations that cannot be placed on the x-axis they were plotted against.**
 
-**Tier: SCREENING.** n = 34 eval prompts/concept, one 1B abliterated target, off-family
-Qwen2.5-3B judge. `hate` and `self_harm` were dropped by the loader for having < 100
-examples and `violence` has only 44 exemplars — below this course's own data floor.
-Directional, not publication-grade. See also `JUDGE_VALIDITY.md`: a sibling
-calibration measured this judge family at ROC-AUC 0.665–0.751, so small rate
-differences here sit near the instrument's noise floor.
+The conclusion drawn from row `T = 0.02` — "refusal falls at matched coherence" —
+therefore does not survive: the coherence was not matched to a known displacement.
+The selectivity bullet was independently unsound, since `benign over-refusal 0.43`
+was pooled over a set where the gate fired on **2.6 %** of prompts and so was almost
+entirely the base model's own refusal rate.
+
+**What was right, and is kept.** The instinct that this lesson is a *negative* is not
+overturned — it is unproven. `hello_world_steering` and `curveball` independently
+find the **WRITE** primitive weak at this scale while **READ**/gating works, and
+nothing here contradicts that. But flas no longer contributes evidence to it.
+
+**Current status: no numbers.** The v3 code fix is landed and verified; the retrain
+and re-run are pending on host memory. A lesson with no numbers is a better state
+than a lesson with diverged ones.
 
 ---
 
@@ -623,9 +689,11 @@ python -m steering_tutorials.hello_world.train_probe
 
 Then, from the **repo root** (`steeringresearch/`):
 
-**You must retrain before evaluating.** The `flow.pt` in `artifacts/` is a v1
-(raw-delta) field; `run_flas` raises rather than integrate it under the v2
-norm-relative convention.
+**You must retrain before evaluating.** `artifacts/` currently holds
+`flow_v2_LASTTOKEN_SUPERSEDED.pt` — a v2 field fitted on last-token activations only,
+which is the distribution mismatch behind the v2 divergence. There is deliberately
+**no `flow.pt` and no `results.json`**: step 1 below produces them. `run_flas` warns
+loudly if it is ever pointed at a last-token field.
 
 ```bash
 # 1) Train the velocity field by rectified flow (frozen Gemma; ~minutes on a 4090).
@@ -648,9 +716,19 @@ python -m steering_tutorials.flas.app          # -> http://localhost:8005
 
 **Fitting one foreground window.** An *uncapped* pass would be ~5×117 + 151 + 43 +
 500 ≈ 1280 generations. On a RAM-pressured host, cap it — the result is recorded as
-`"tier": "SCREENING"` and must be reported as screening, never as a win. **This is
-what the shipped run did**: `artifacts/results.json` carries `n_eval_cap: 34`,
-`n_benign_eval_cap: 0`, `tier: "SCREENING"`.
+`"tier": "SCREENING"` and must be reported as screening, never as a win. The
+superseded v2 run did exactly this (`n_eval_cap: 34`) — and n=34 is itself thin
+against this course's own data floor, independently of the divergence that voided it.
+
+**Two things to check on the v3 run before believing any of it:**
+
+1. `displacement[i].raw_velocity_norm_mean` — this is the *pre-normalisation* `‖v‖`.
+   It should approach **1.0**. On the v2 field it was **13.2**. `unit_velocity` makes
+   the geometry correct regardless, but a raw norm far from 1 means the field is
+   still under-trained and the *direction* it supplies is the thing to distrust.
+2. `strength_sweep[i].broken` — must be **0.0**. Anything above zero means
+   generations are still failing, and `n_graded` tells you how many survived to be
+   graded at all.
 
 ```bash
 # ~350 generations: 40 eval prompts per cell, 120 benign, 3-point T grid.

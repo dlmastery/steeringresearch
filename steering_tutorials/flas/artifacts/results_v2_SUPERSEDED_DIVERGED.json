@@ -1,4 +1,14 @@
 {
+  "SUPERSEDED_BY_V3": {
+    "status": "VOID - do not cite any number in this file",
+    "why": "The v2 flow integration DIVERGED. The field was trained on last-token activations only but FlowContext transports every non-special position, so at generation time ||v|| was 11.7 rather than the 1.0 its unit target implies. Because the Euler step is dt*||x||*v, that error compounded.",
+    "high_T_cells_are_overflow": "At T>=0.10 the residual overflowed to NaN, the model emitted EOS immediately, and every completion came back EMPTY. The empty string was graded GIBBERISH, so the reported gibberish=1.0 at T=0.10/0.15 is 100% arithmetic overflow and 0% coherence judgement. n_graded was 0.",
+    "low_T_cells_have_an_UNKNOWN_dose": "T=0.02 and T=0.05 did produce real text, but their effective displacement is NOT the 0.0122/0.0304 recorded below. That geometry probe sampled last-token activations only - the one distribution where the field is well behaved - while generation transported all positions. The dose those cells actually received is unquantified and larger, so the refusal numbers cannot be placed on a dose axis.",
+    "the_contradiction": "This file simultaneously reports a gentle 0.0605 displacement and 100% empty generations at T=0.10. Two irreconcilable numbers in one artifact were the tell.",
+    "over_refusal_is_not_a_steering_result": "benign_refusal_rate 0.43 is pooled over a benign set where the gate fired on only 2.6% of prompts, so it is ~entirely the base models own refusal rate, not steering-induced over-refusal.",
+    "regenerable": false,
+    "superseded_at_commit": "1d22f7f"
+  },
   "model_id": "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated",
   "layer": 12,
   "n_steps": 8,
