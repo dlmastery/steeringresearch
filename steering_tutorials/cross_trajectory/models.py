@@ -20,9 +20,16 @@ the agents must not matter. The four models form a pedagogical ladder:
      Attention (PMA, Lee et al. 2019, arXiv:1810.00825): a learned seed query attends
      over the K trajectory embeddings (optionally after one SAB self-attention block)
      -> one pooled vector -> logit. Permutation-invariant; variable K via a padding mask.
-  4. GnnAgg    -- GroupGuard-style collusion detector. A fully-connected graph over the
-     K agents; 1-2 rounds of mean message passing (new_node = ReLU(W[node, mean_all]))
-     -> mean readout -> logit. Also permutation-invariant with a padding mask.
+  4. GnnAgg    -- graph-based collusion detector, INSPIRED BY (not a reproduction of)
+     GroupGuard. A fully-connected graph over the K agents; 1-2 rounds of mean message
+     passing (new_node = ReLU(W[node, mean_all])) -> mean readout -> logit. Also
+     permutation-invariant with a padding mask.
+     FIDELITY (2026-08 audit): "GroupGuard: A Framework for Modeling and Defending
+     Collusive Attacks in Multi-Agent Systems" (Tao et al., 2026-03-14,
+     arXiv:2603.13940) is **TRAINING-FREE** and combines graph MONITORING with
+     HONEYPOT inducement and structural PRUNING. This class is a TRAINED classifier
+     with none of that machinery; only the "model the agents as a graph" idea is
+     shared. Do not read it as a GroupGuard reimplementation.
 
 Pure numpy/torch/sklearn, CPU-only. The __main__ self-test uses ONLY synthetic data
 (a hidden goal that lives in the SUM of K vectors but in no single one) -- no real
@@ -188,12 +195,27 @@ def _masked_mean(x, valid):
 # 2. MeanAgg -- mean/max/std pool -> standardized -> MLP
 # ---------------------------------------------------------------------------
 class MeanAgg(nn.Module):
-    """Permutation-invariant [mean, max, std] pool over the K embeddings -> MLP."""
+    """Permutation-invariant **[mean, max, std]** pool over the K embeddings -> MLP.
+
+    NOT a plain mean-pool (the README used to say so, and this is the TOP method
+    under both embedders, so the winner's description mattered): the feature is the
+    concatenation of the per-dimension mean, the per-dimension MAX and the
+    per-dimension STD across the K trajectories, i.e. ``3 * dim`` values.
+
+    Standardized features are CLIPPED to +/- ``C.FEATURE_CLIP`` before the MLP.
+    Without the clip, out-of-distribution samples whose text is far longer than a
+    5-sub-query training sample land tens of sigmas out and the logit saturates to
+    a CONSTANT — measured on CSTM-Bench as AUC 0.5 with CI [0.5, 0.5], which is a
+    degenerate predictor, not a near-chance one. ``last_clip_frac`` records the
+    fraction of feature values that hit the clip on the most recent
+    ``predict_proba``, so the distribution shift is logged rather than inferred.
+    """
 
     def __init__(self):
         super().__init__()
         self.mu = self.sd = None
         self.net = None
+        self.last_clip_frac = 0.0
 
     @staticmethod
     def _features(a):
@@ -218,7 +240,7 @@ class MeanAgg(nn.Module):
             nn.Linear(d, C.HIDDEN), nn.ReLU(), nn.Dropout(0.1),
             nn.Linear(C.HIDDEN, 1),
         )
-        Xs = torch.tensor((X - self.mu) / self.sd)
+        Xs = torch.tensor(self._standardize(X)[0])
         y = torch.tensor(np.asarray(train_labels, dtype=np.float32))
         opt = torch.optim.Adam(self.net.parameters(), lr=C.LR)
         loss_fn = nn.BCEWithLogitsLoss()
@@ -236,12 +258,22 @@ class MeanAgg(nn.Module):
         self.net.eval()
         return self
 
+    def _standardize(self, X):
+        """(X - mu)/sd, clipped. Returns (Xs, frac_of_values_that_hit_the_clip)."""
+        Z = (np.asarray(X, dtype=np.float32) - self.mu) / self.sd
+        clip = float(C.FEATURE_CLIP)
+        if not (clip > 0):
+            return Z.astype(np.float32), 0.0
+        frac = float(np.mean(np.abs(Z) > clip)) if Z.size else 0.0
+        return np.clip(Z, -clip, clip).astype(np.float32), frac
+
     def predict_proba(self, sets):
         sets = _as_set_list(sets)
         X = self._feat_matrix(sets)
-        Xs = torch.tensor((X - self.mu) / self.sd)
+        Xs, self.last_clip_frac = self._standardize(X)
         with torch.no_grad():
-            return torch.sigmoid(self.net(Xs).squeeze(-1)).cpu().numpy().astype(np.float32)
+            return torch.sigmoid(
+                self.net(torch.tensor(Xs)).squeeze(-1)).cpu().numpy().astype(np.float32)
 
 
 # ---------------------------------------------------------------------------

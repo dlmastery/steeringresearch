@@ -112,8 +112,8 @@ def main() -> None:
     import numpy as np  # noqa: F401  (used in helpers)
 
     from . import config as C
-    from . import data, models
-    from steering_tutorials.multiturn_jailbreak import embed as MJE
+    from . import data, embed_ct, models
+    from steering_tutorials.multiturn_jailbreak import embed as MJE  # embed_conversation
 
     infer_n = _env_int("CT_INFER_N", 40)
     k = C.K_TRAJ
@@ -123,10 +123,11 @@ def main() -> None:
     print(BAR)
     print("Loading the '%s' trajectory embedder + a small HARD training slice..."
           % C.EMBEDDER)
-    print("(loads the local Gemma-3-1B once; set CT_INFER_N to shrink the slice.)")
+    print("(loads the model once; set CT_INFER_N to shrink the slice.)")
 
-    # 1) Embedder (one model load, lazily, inside get_embedder).
-    embed_turn, dim = MJE.get_embedder(C.EMBEDDER)
+    # 1) Embedder (one model load, lazily, inside get_embedder). embed_ct adds the
+    #    mandated 'embeddinggemma' option on top of multiturn_jailbreak's two.
+    embed_turn, dim = embed_ct.get_embedder(C.EMBEDDER)
 
     # 2) A small HARD-condition training slice: positives = real Attack_600
     #    decompositions; negatives = same-style benign lead-ups (leakage-free), so

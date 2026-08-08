@@ -1,5 +1,18 @@
 # AUDIT — cross_trajectory
 
+> **STATUS 2026-08-08: THE VERDICTS BELOW ARE SUPERSEDED.** Everything from here to
+> the 2026-07-28 addendum was written against a **pre-results** version of the
+> README and was never re-issued against the shipped one. Its "Results honesty
+> (code-only): PASS — no numbers are claimed yet; table is `_pending_`" certifies a
+> file that no longer exists; §9 now carries a full results table. An audit that
+> certifies a version of a file that no longer exists is the `meerkat` staleness
+> defect relocated to the audit layer, and it is recorded here as one.
+>
+> The current audit of record is **`AUDIT_2026-08.md`** in this folder. Its
+> corrections are applied; the four headline items are summarised in
+> [§Addendum 2026-08-08](#addendum-2026-08-08--what-the-re-audit-changed) at the
+> bottom of this file. Read that first.
+
 **Auditor role:** independent paper/dataset verifier. Scope: do the cited papers
 and datasets exist, does the code implement what the lesson claims, are the
 claims/results honest. No git, no code/README edits were made. The lead will
@@ -86,3 +99,101 @@ not extend it.
 
 *Internal QA pass — independent external review pending (auditor shares a model family
 with the author).*
+
+---
+
+## Addendum 2026-08-08 — what the re-audit changed
+
+The full re-audit is `AUDIT_2026-08.md`. Six of its findings were acted on; this is
+the record of what was wrong and what the fix was. **The corrections move against the
+lesson, not for it.**
+
+### 1. The `[UNVERIFIED]` gate was declared and then skipped
+
+The section above says "the lead will WebFetch-verify every arXiv id ... before merge."
+The lesson shipped with all three tags intact. The verification has now been done — and
+it found something worse than an unverified id: **all six ids are real, but four of the
+six printed titles were paraphrased or invented**, and none carried authors or a date,
+which rubric rule 4 requires explicitly.
+
+| id | what the README printed | the actual paper (verified 2026-08-08) |
+|---|---|---|
+| 2606.09084 | "Context-Fractured Decomposition: Distributing Harmful Intent Across Cooperating Agents" | **INVENTED subtitle.** *Context-Fractured Decomposition Attacks on Tool-Using LLM Agents: Exploiting Artifact Provenance Gaps* — Lin, Yang, Guo, Nale, Fleming, Cheng; 2026-06-08. About **one** tool-using agent's provenance gaps across steps, **not** K cooperating agents. |
+| 2604.21131 | "Cross-Session Threats and the CSTM-Bench Benchmark" | PARAPHRASED (benchmark name spliced in). *Cross-Session Threats in AI Agents: Benchmark, Evaluation, and Algorithms* — Azarafrooz; 2026-04-22. Substance matches. |
+| 2603.13940 | "GroupGuard: Graph-based Detection of Colluding-Agent Attacks" | **INVENTED.** *GroupGuard: A Framework for Modeling and Defending Collusive Attacks in Multi-Agent Systems* — Tao, Zheng, Yang, Tao, Wang; 2026-03-14. **Training-free**, graph monitoring + honeypot + pruning. `gnn_agg` is a **trained** classifier with none of it. |
+| 1810.00825 | "Set Transformer" | correct short form; full title, six authors and ICML 2019 now printed. |
+| 2602.16935 | "DeepContext" | correct short form; full title, authors and date now printed. |
+| 2410.10700 | "ActorAttack (Ren et al. 2024)" | attribution right, **title never given**. *LLMs know their vulnerabilities...*; the method is named **ActorBreaker**. |
+
+Tags dropped **after** the titles were corrected, not before. Dropping them first would
+have made the file worse: over-hedged and under-verified simultaneously.
+
+### 2. The confound instrument was missing the fold — and the course doc said it was canonical
+
+The local `confound_report` returned the **raw** AUC and never folded `max(auc, 1−auc)`,
+while `CONFOUND_DISCIPLINE.md` §4 printed a folded `confound_auc` and declared this very
+function "the canonical form." It was not. Live cost: the **easy** condition's
+`totalchar_auc = 0.10975` reads *cleaner than chance* and is a **0.890** length tell with
+the sign flipped, and README §9.1 printed AUCs of 0.991–0.998 against **no bar at all** —
+a **+0.10** margin presented as +0.99. `data.confound_report` is now a thin adapter over
+`steering_tutorials/common/confound.py` (four bars, both raw and directionless), and §9.1
+prices the easy column.
+
+### 3. The 298/class ceiling was self-imposed
+
+Called "pool-limited" in four places. It was `Attack_600`'s ~596 usable rows cut in half.
+`SafeMTData_1K` — **1,680 rows in the same ungated repo** — was never loaded.
+`ATTACK_CONFIGS` now takes both. **The honest half:** the 1K config has several actors per
+`query_id`, so distinct groups are expected ~500–600, not 1,680; `n` and
+`n_distinct_groups` are now separate fields per class. The hard split is also now cut by
+**group**, not by row — with the 1K config a row-wise cut would have put the same harmful
+goal on both sides.
+
+### 4. The gemma ablation artifact is not evidence as it stands
+
+No code in the repo emits `results_gemma_ablation.json`'s keys, and `RESULTS_PATH` was a
+**constant**, so running the gemma arm would have overwritten the MiniLM headline: the
+§9.3 side-by-side **could not have been produced by that code**. `RESULTS_PATH` is now
+per-embedder; the table carries a "hand-transcribed, not regenerable" banner until a real
+run replaces it.
+
+### 5. The embedding cache could return stale vectors against new labels
+
+Keyed on `(condition, embedder)`, validated by **row count alone**. Changing `CT_SEED`
+reshuffles the hard half-split at identical count. Now handled by `embed_ct.py`: a
+SHA-256 of the texts plus seed/K/n/dim/embedder is stored **in the npz and in the
+filename** and **asserted** on load, raising rather than silently rebuilding. A CPU
+self-test proves the guard fires. **Cross-lesson note:** the same count-only validation
+still lives in `multiturn_jailbreak/embed.py:114-119` and was **not** edited from here.
+
+### 6. The EmbeddingGemma mandate was presented as a free choice
+
+CLAUDE.md §17 and the standing user instruction mandate **`google/embeddinggemma-300m`**.
+The headline is MiniLM; the "gemma" arm is a Gemma-3-1B **decoder** residual. Neither is
+EmbeddingGemma. The old justification (§18.5: "gated, this host has no HF token") is
+**stale for the model** — the weights are on disk at `models/google/embeddinggemma-300m`
+(1.2 GB safetensors, verified). So both shipped arms are **non-compliant substitutes**,
+not necessities. `CT_EMBED=embeddinggemma` is now wired and is `[PENDING RUN]`.
+
+### Also corrected
+
+- `data.py`'s docstring claimed the hard classes were "length/count-matched". Count yes
+  (0.500 by construction); **length no** — its own `confound_report` measured 0.704.
+- The falsifier was registered only against `per_traj_max`; restated against the binding
+  confound bar, under which `per_traj_max` **already fails** on hard, both embedders.
+- `mean_agg` was described as "mean-pool the K embeddings"; it pools `[mean, max, std]`.
+  It is the **top** method under both embedders, so the winner's description was wrong.
+- The OOD arm kept the **5 longest of ~26** sessions per scenario on a `dilution` split;
+  and its predictions were **degenerate** (all-positive; `mean_agg` constant at AUC 0.500,
+  CI [0.500,0.500]), not merely near chance. Selection default is now `uniform`, features
+  are clipped, degeneracy is logged — and the OOD null is caveated as not-yet-supported
+  **before** it is called a negative result.
+
+**Open / not done here:** no run was executed. Every §9 number remains the old
+`Attack_600`-only, 298/class, `longest`-5-sessions MiniLM run. The enlarged pool, the
+mandated encoder, the corrected OOD selection and the gemma re-run are all `[PENDING RUN]`.
+
+*Internal QA pass — independent external review pending (auditor and implementer share a
+model family). No git command was run and no model was loaded while applying these fixes;
+`arXiv:2409.00137` was WebFetch-verified during this pass, the other six ids by the
+`AUDIT_2026-08.md` auditor.*
