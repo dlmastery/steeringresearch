@@ -1,2 +1,14 @@
-# regenerable embedding caches (rebuild from data.py + embed.py)
-*.npz
+# CLAUDE.md section 17: "binary artifacts are force-added so each lesson reproduces
+# from the repo". The embedding caches used to be excluded here (`*.npz`), and
+# `git ls-files` confirmed none was tracked -- so no cloner could reproduce a single
+# number in the README without a GPU re-embed. That exclusion is REMOVED.
+#
+# TRACK (force-add): artifacts/seqs_<condition>_<embedder>.npz -- the ragged per-turn
+# embedding packs. Each now carries a CONTENT FINGERPRINT (embed.content_fingerprint),
+# so a tracked cache is verifiable rather than merely present. Sizes measured on this
+# host: MiniLM 2.5-2.9 MB each, Gemma-3-1B (1152-d) 7.4-8.6 MB each; EmbeddingGemma
+# (768-d) lands between the two. Every number in results.json is re-derivable on CPU
+# from these packs alone.
+#
+# Nothing is ignored here. If a future artifact is genuinely too large to track, add
+# it BY NAME with the measured size and the regeneration command, never a wildcard.

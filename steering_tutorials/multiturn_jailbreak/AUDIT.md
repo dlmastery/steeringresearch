@@ -1,5 +1,28 @@
 # AUDIT — multiturn_jailbreak
 
+> ## CORRECTION, 2026-08-08 — READ FIRST
+>
+> **This audit's overall verdict of PASS is withdrawn as over-broad, and five of its
+> individual PASS rows are downgraded.** It scoped itself to *citation existence and
+> provenance framing*, where it is correct and where all three arXiv ids verify — but
+> it graded rows it had not actually tested. `AUDIT_2026-08.md` is the current audit.
+>
+> | row below | was | now | why |
+> |---|---|---|---|
+> | Confound honesty | PASS | **PARTIAL** | Only two bars existed (turn count, total chars). No **content/TF-IDF** bar and no **shuffle** control. The bar that actually binds on HARD is the content bar at **0.8584**, not the 0.75 character bar the README priced against. |
+> | Results honesty | PASS | **FAIL** | The run it certifies used `MJ_N_POS=200 MJ_N_NEG=200`, an undocumented env override recorded nowhere, while `config.py` said 600 — so the README's own instructions could not reproduce it. Rule 1 (≥500/class) fails. This row also describes the run as "(MiniLM, n=200/class)" when `results.json` contains **both** Gemma and MiniLM. |
+> | Leakage discipline (CV) | PASS | **PASS, but now insufficient** | Correct for the single-config pool it saw. With both SafeMTData configs pooled, `query_id` collides **157/200 times** across configs; the group key is now `plain_query`. |
+> | Hard negatives leakage-free + length-matched | PASS | **PARTIAL** | True as far as it goes, but the two controls that decide the claim — `last_turn_only` and a shuffled-turn arm — did not exist, so "the trajectory is the signal" was untested. Its "not per-attack twins (future work)" note is also wrong: `tom-gibbs/multi-turn_jailbreak_attack_datasets` ships 1,200 Semi-Benign multi-turn conversations, ungated under MIT. |
+> | (not audited at all) | — | **FAIL** | No OOD arm existed (rule 5); the embedding caches were `.gitignore`d so no cloner could reproduce a number (§17); the cache validated by row count alone (§18.8); MiniLM was headlined against the EmbeddingGemma mandate. |
+>
+> **What stands unchanged:** all three arXiv ids are real and correctly characterised,
+> the "inspired-by, not a reproduction" framing is honest, and both HF dataset schemas
+> were genuinely inspected. No misattribution of any kind was found in this lesson.
+>
+> An audit that certifies a configuration the code no longer produces is the `meerkat`
+> staleness defect relocated to the audit layer. The rows below are kept verbatim as
+> the record of what was believed on 2026-07-20.
+
 **Auditor role:** independent paper verifier. Scope: do the cited papers exist,
 does the code implement what the lesson claims, is the data provenance and the
 "inspired-by vs. reproduction" framing honest. No git, no code/README edits were

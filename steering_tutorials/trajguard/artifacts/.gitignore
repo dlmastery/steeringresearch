@@ -1,3 +1,21 @@
-# regenerable token-trajectory cache (rebuild from data.py + trajectory.py)
+# --- NOT committed --------------------------------------------------------
+# The raw per-token hidden-state cache. At 500/class x 40 tokens x 1152 dims it is
+# ~90-100 MB even stored float16 + compressed; the 2026-07-22 float32 cache was
+# 101.18 MiB, OVER GitHub's 100 MiB hard per-file limit, so a push containing it is
+# rejected outright. It is a REGENERABLE cache, not evidence.
 *.npz
-*.json
+
+# The npz's text sidecar: it holds the abliterated model's completions on harmful
+# prompts. Those are new harmful generations and are deliberately not republished.
+token_trajectories*.json
+
+# --- committed (force-added; see README section 10) ------------------------
+# results_<substrate>.json      -- every measured number
+# trajectory_meta_<substrate>.json -- the TEXT-FREE reproduction sidecar: per-completion
+#   label, prompt group_id, token count, completion char length, mean/final hidden-state
+#   norm, plus the dataset fingerprint. ~100 kB. It lets a fresh clone recompute every
+#   NUMERIC confound bar with no GPU and verify that a regenerated cache is the same set.
+#   The prompts themselves are recoverable from the public dataset via
+#   data.select_prompts(), which is deterministic.
+!results_*.json
+!trajectory_meta_*.json

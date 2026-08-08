@@ -1,46 +1,215 @@
 # AUDIT — trajguard
 
-**Auditor role:** independent paper verifier. Scope: does the cited paper exist,
-does the code implement what the lesson claims, are the claims/results honest.
-No git, no code/README edits were made.
+**Auditor role:** independent paper + artifact verifier. Scope: does the cited paper
+exist, does the code implement what the lesson claims, are the claims/results honest,
+and does the lesson comply with CLAUDE.md §17.
 
-## Paper existence (the critical check)
+**Revised 2026-08-08.** The previous version of this file (2026-07-20) certified a run
+that no longer existed — *"n=80/class, 32 tokens, learned models 0.92-0.98, the paper's
+training-free projection is the WEAKEST (0.665)"* — against a shipped artifact of
+n=300/class, 40 tokens, `threshold_freeform` **0.6378**. It also graded **no confound
+bar at all**, because it predated the confound work entirely. An audit that certifies a
+version of a file that no longer exists is the `meerkat` staleness defect relocated to
+the audit layer, and it is recorded here as a finding against this document rather than
+quietly overwritten.
+
+*Internal QA pass — independent external review pending (auditor shares a model family
+with the author, CLAUDE.md §14).*
+
+---
+
+## 1. Paper existence
 
 | field | finding |
 |---|---|
-| arXiv id | **2604.07727 — VERIFIED** (WebFetch of `arxiv.org/abs/2604.07727` resolves). |
-| actual title | *TrajGuard: Streaming Hidden-state Trajectory Detection for Decoding-time Jailbreak Defense* — the lesson's earlier cited title was slightly off and has been corrected in `README.md`/`config.py` to this verified form. |
-| actual authors | **Cheng Liu, Xiaolei Liu, Xingyu Li, Bangzhou Xin, Kangyi Ding.** |
-| venue / date | ACL 2026 Findings; submitted 2026-04-09 (arXiv YYMM `2604`). Confirmed. |
-| method in abstract | Confirmed: a training-free, streaming, decoding-time defence that aggregates hidden-state trajectories via a sliding window to quantify risk in real time; jailbreak-attempted tokens progressively shift toward high-risk latent regions — matches the lesson's framing. |
-| sibling citation | DeepContext (arXiv:2602.16935, Albrethsen et al.) — **VERIFIED** (checked in the `multiturn_jailbreak` audit). |
+| arXiv id | **2604.07727 — VERIFIED** (`arxiv.org/abs/2604.07727` resolves) |
+| actual title | *TrajGuard: Streaming Hidden-state Trajectory Detection for Decoding-time Jailbreak Defense* |
+| actual authors | **Cheng Liu, Xiaolei Liu, Xingyu Li, Bangzhou Xin, Kangyi Ding** |
+| venue / date | ACL 2026 Findings; submitted 2026-04-09 (arXiv YYMM `2604`) |
+| method in abstract | Confirmed: a training-free, streaming, decoding-time defence aggregating hidden-state trajectories via a sliding window; jailbreak-attempted tokens progressively shift toward high-risk latent regions |
+| **comparative claim in abstract** | *"hidden states during decoding carry stronger risk signals than input prompts"*, evaluated across **12 jailbreak attacks** — see finding **F-2** |
 
-## Findings
+Other ids cited by the lesson, all WebFetch-verified:
 
-| check | verdict | evidence |
+| id | title | authors | date |
+|---|---|---|---|
+| 2602.16935 | *DeepContext: Stateful Real-Time Detection of Multi-Turn Adversarial Intent Drift in LLMs* | Albrethsen, Datta, Kumar, Rajasekar | 2026-02-18 |
+| 2404.01318 | *JailbreakBench: An Open Robustness Benchmark for Jailbreaking Large Language Models* | Chao, Debenedetti, Robey, Andriushchenko, Croce, Sehwag, Dobriban, Flammarion, Pappas, Tramèr, Hassani, Wong | NeurIPS 2024 D&B, 2024-03-28 |
+| 2310.17389 | *ToxicChat: Unveiling Hidden Challenges of Toxicity Detection in Real-World User-AI Conversation* | Zi Lin, Zihan Wang, Yongqi Tong, Yangkun Wang, Yuxin Guo, Yujia Wang, Jingbo Shang | EMNLP 2023 Findings, 2023-10-26 |
+
+**No bogus or misresolving id.** 4/4 correct, with full author lists and dates.
+
+---
+
+## 2. Findings
+
+### F-1. The retracted claim (highest value) — **RESOLVED, and recorded as a retraction**
+
+The lesson asserted *"prompt char-length is at chance, 0.5032 — you cannot call this
+from the prompt alone."* Both halves were false: the 0.5032 is produced by
+`common/data.py`'s length-matched benign sampler **by construction**, and prompt
+*content* separates the classes at **0.8779** (overt, 500/class) / **0.9688**
+(disguised, 181/class) — measured CPU-only in this lesson — with `hello_world`'s
+prompt-only probe independently at **0.965** on the same pool.
+
+README §3 now carries this as an explicit **retraction with the evidence**, not a
+softening. `CLAUDE.md` §18.3 item 4 repeats the same error and is **outside this
+lesson's edit scope**; it is reported to the lead.
+
+### F-2. The paper's headline comparison was out of scope — **NOW IN SCOPE, untested**
+
+The lesson built no prompt-side classifier, so it could neither support nor refute the
+paper's central comparative claim. `data.prompt_confound_report()` now measures it, the
+runner prints a `vs PROMPT` column, and **falsifier F2** binds it. Registered
+prediction: **F2 fails on both substrates** — i.e. we predict the paper's comparison
+does not reproduce on toxic-chat. Predicting against the paper is the point of a
+pre-registration.
+
+### F-3. Substrate — **RE-BASED**
+
+toxic-chat ships an unused `jailbreaking` binary column. The lesson now selects it
+directly (`overt` = `toxicity==1 ∧ jailbreaking==0`, 512 unique; `disguised` =
+`jailbreaking==1`, **181 unique — pool-limited**), through `common/data.py`'s own
+primitives, without editing the shared module. The legacy `mixed` arm is retained for
+reproducibility only.
+
+### F-4. Rule 1 (≥500/class) — **PASS on `overt`, documented FAIL on `disguised`**
+
+`overt` runs at **500/class** against a 512 pool. `disguised` is capped at **181/class**
+by a genuine corpus ceiling (204 `jailbreaking==1` annotations exist in all of
+toxic-chat), which rule 2 permits **provided the lesson says so** — it now does, in
+`config.py`, in `select_prompts`'s stderr, in `results.json → sizes`, in the runner's
+gate print and in README §3.4/§11.2, with every number from that arm labelled
+PROVISIONAL.
+
+The superseded 300/class was **not** pool-limited (693 were available) and is recorded
+as the defect it was.
+
+### F-5. The three-different-N defect — **CLOSED**
+
+`config.py` 500 / README §8 120 / artifact 300, all simultaneously "true" because
+`load_or_build()` checked no knob. Now: one authoritative `N_PER_CLASS`, a sha256
+fingerprint over the config **and the sampled prompt group-ids** stored in the npz and
+asserted on load (raises `CacheMismatch` with a diff), and an `assert_n_achieved` gate
+that runs before any metric and raises on any shortfall not explained by
+`pool_limited`. Accounting lands in `results_<substrate>.json → sizes`.
+
+### F-6. Confound discipline — **PASS, and upgraded**
+
+The lesson's own `confound_report` folded correctly (`max(auc, 1−auc)`) and ran
+**before** the CV block — the best implementation in the repo at the time, and the
+discipline the rule actually asks for. It was missing a **content** bar and a
+**label-shuffle** control. It now runs on `common/confound.py` (the shared spine),
+keeping the ordering, and adds this lesson's two geometry bars (`mean_norm`,
+`final_norm`). The prompt channel is reported **separately and never folded into the
+bar**, because a prompt-side classifier is a rival method, not a trivial confound.
+
+Remaining gaps, stated in README §12.3 rather than closed: no multivariate trivial
+baseline, no matched-bin control within `charlen` quantiles, and no paired CI when the
+`content` bar binds (the spine exposes no per-item score, so `paired_margin_ci` returns
+`None` and the runner records why instead of fabricating an interval). Scalar bars do
+get a paired bootstrap CI over the same resample indices.
+
+### F-7. Early-detection bar — **CLOSED**
+
+The streaming headline was the lesson's entire pitch and its one unpriced number.
+`data.early_k_confound(K)` now computes the bar on the same first-K truncation, the
+runner prints it as a row under the early-detection table, it is plotted, and
+**falsifier F4** binds it. A K-token prefix has no decoded text, so there is no
+completion-character or content bar at K; that is stated, not silently omitted.
+
+### F-8. OOD arm — **ADDED (rule 5)**
+
+Previously **absent**: 100% of the run came from one pool, one model, one layer, one
+seed. Now `jackhhao/jailbreak-classification` (ungated, cached; 629 unique jailbreak /
+1,323 unique benign), rendered through the same `common/data.py` primitives as the
+in-domain set, positives capped at the benign p90 length ceiling before length-matching
+— **274/class, length bar 0.5624, prompt-content bar 0.9873**, all measured CPU-only.
+The uncapped 400/class arm (length bar **0.6504**) is reported beside it.
+
+`intrinsec-ai/cstm-bench`, which §17 rule 8 names for this lesson *family*, is **not**
+used: 108 rows of multi-session agent traces is the wrong granularity for a per-token
+lesson, and it is absent from this host's HF cache (no HF token). Stated in README §7,
+not quietly skipped. `allenai/wildjailbreak` — the best-matched corpus in existence for
+this lesson — is gated and unusable here.
+
+### F-9. Arithmetic and stale cells in the superseded README — **CORRECTED**
+
+`threshold_freeform`'s margin printed **−0.045**; `0.63778 − 0.735439 = −0.09766`, i.e.
+**−0.098**. Three F1 cells (0.24 / 0.84 / 0.86) disagreed with the artifact beside them
+(0.172 / 0.781 / 0.894). Both fixed in README §11.5, and the §9 banner that declared
+the claim "unsupported" while §10 declared it "MEASURED" is gone — those numbers now
+live in one place, in a quarantined **superseded** section.
+
+### F-10. Artifact reproducibility — **RESOLVED, with the trade-off stated**
+
+`token_trajectories.npz` was 101.18 MiB, **over GitHub's 100 MiB hard per-file limit**,
+so §10's "CPU only, no GPU, no regeneration — the trajectories are cached" instruction
+was false for every reader but the original author. The cache is now `savez_compressed`
++ float16 and still **not** committed; the committed artifact is
+`trajectory_meta_<substrate>.json` (~100 kB, **text-free**: label, prompt group-id,
+token count, completion char length, `mean_norm`, `final_norm`, fingerprint). From a
+fresh clone with no GPU: the prompt set reproduces exactly (deterministic
+`select_prompts` over a public dataset), the prompt-channel bars recompute in full, and
+the numeric completion-channel bars recompute from the meta file. The completion
+*content* bar needs the generated text and therefore the re-run — stated, not implied
+away. The npz text sidecar stays out of git deliberately: it holds abliterated-model
+completions on harmful prompts.
+
+### F-11. Statistical floor — **PARTIALLY CLOSED**
+
+`BOOTSTRAP` raised 2,000 → **10,000** (CLAUDE.md §7). The margin now carries a paired
+bootstrap CI over the same resample indices where the binding bar is a scalar. The CI
+still treats pooled out-of-fold predictions as i.i.d., which ignores fold correlation
+and is optimistic — standard practice, recorded as a known limitation. Screening tier:
+one model, one layer, one seed, so §7's `n ≥ 7 + rigor contract` is **not** met and the
+word "winner" is not used.
+
+### F-12. Falsifiers — **PRE-REGISTERED, and printed by the runner**
+
+Six falsifiers (F0 leakage, F1 drift-clears-bar, F2 decoding-beats-prompt, F3
+substrate-contrast, F4 streaming, F5 OOD) registered **2026-08-08 before any run on the
+new substrates**, printed by the runner at startup and evaluated into
+`results_<substrate>.json → falsifier_verdicts`. The superseded lesson's binding
+confound falsifier was stamped "binding from now on" *after* the AUCs existed — that is
+pre-registration after the fact, and it is not repeated.
+
+---
+
+## 3. Verdict table
+
+| check | verdict | note |
 |---|---|---|
-| Paper id verified | **PASS** | 2604.07727 WebFetch-resolves; title corrected to the verified form ("...Streaming Hidden-state Trajectory Detection for Decoding-time Jailbreak Defense"), full author list (Cheng Liu, Xiaolei Liu, Xingyu Li, Bangzhou Xin, Kangyi Ding), ACL 2026 Findings, 2026-04-09. `[UNVERIFIED]` tags dropped. |
-| Citation format | **PASS** | Full author-list + year + venue + verified arXiv id in `config.py` and `README.md`. |
-| Inspired-by, not a reproduction | **PASS (disclosed)** | `README.md` §10 and the citation footer state plainly that the lesson is an **inspired-by reconstruction** — a sliding-window harm-projection detector plus **reused** `multiturn_jailbreak` sequence classifiers — **not** a faithful reimplementation of TrajGuard's exact architecture. The paper's precise scoring function / detector internals are not claimed to be reproduced. |
-| Method fidelity — decoding-time trajectory | **PASS** | `trajectory.generate_and_capture` captures the layer-12 hidden state at each **generated** token position (one forward pass, `output_hidden_states=True`); `harm_direction` / `token_scores` / `sliding_window_risk` implement the training-free sliding-window projection; `ThresholdDetector.predict_proba_earlyK` provides the streaming early-detection readout. This operationalizes the paper's stated decoding-time-trajectory idea. |
-| Reuse claim honest | **PASS** | The learned classifiers (`per_turn_max`, `trajectory_mlp`, `seq_gru`) are imported unchanged from `multiturn_jailbreak.models`; `README.md` §7 documents the turn-level vs. token-level sibling relationship rather than implying new modelling. |
-| Label semantics disclosed | **PASS** | `README.md` §6 and §10 state plainly that the label is the **prompt's class**, not a judged harm rating of the completion, and that the abliterated model's compliance is both the enabling assumption and a confound. |
-| Results honesty | **PASS** | Results now report the first run (n=80/class, 32 tokens, 5-fold): the falsifier is NOT triggered (all methods clear chance; learned models 0.92-0.98). Crucially the README reports the *complication* honestly — `per_turn_max` (0.977) beats the sequence models and the paper's training-free projection is the WEAKEST (0.665), because the abliterated model complies immediately so individual tokens are already separable; the cross-lesson caveat (trajectory matters when chunks look benign, less under active generation) and the immediate-compliance confound are both named. `"judge": null` (detection). |
-| Train/test hygiene | **PASS** | `harm_direction` and `tau` fit on train folds only; no completion graded on the direction it defined — stated in §6 and §10. |
+| Paper ids verified | **PASS** | 4/4, full author lists + dates |
+| Rule 1 (≥500/class) | **PASS (`overt`) / documented FAIL (`disguised`)** | 500/512 vs 181/181; pool-limited, said so |
+| Rule 2 (pool-limited disclosure) | **PASS** | stated in config, loader stderr, artifact, gate print, README |
+| Rule 3 (off-family judge) | **N/A — PASS** | detection lesson; no judge anywhere; `"judge": null` |
+| Rule 4 (citations, full detail) | **PASS** | see §1 |
+| Rule 5 (real HF benchmark as OOD) | **PASS** | `jackhhao/jailbreak-classification`; cstm-bench exclusion justified |
+| Rule 6 (small-N provisional) | **PASS** | `disguised` labelled PROVISIONAL everywhere |
+| Rule 7 (confound-matched negatives, margin over the larger bar) | **PASS** | four spine bars + two geometry bars; prompt channel reported as a rival, not folded in |
+| Rule 8 (pre-registered falsifier per claim) | **PASS** | six, registered before the run, printed by the runner |
+| Artifact regenerable from the code beside it | **PASS (with a stated boundary)** | fingerprint + text-free meta; the content bar needs the GPU re-run |
+| `results.json` records achieved, not requested | **PASS** | `sizes` block; gate raises on an unexplained shortfall |
+| **Results honesty** | **PENDING** | the re-based runs have **not** been executed; every result cell reads `[PENDING RUN]` and the superseded run is quarantined. This row cannot read PASS until the GPU runs land |
+| `AUDIT.md` current | **PASS (this revision)** | the 2026-07-20 version certified a run that no longer existed; recorded above |
 
-## Overall verdict
+---
 
-**PASS.** arXiv:2604.07727 is verified (id resolves; title corrected to the
-verified form; authors Cheng Liu, Xiaolei Liu, Xingyu Li, Bangzhou Xin, Kangyi
-Ding; ACL 2026 Findings), and the DeepContext sibling 2602.16935 is verified. The
-lesson is an honestly framed **inspired-by reconstruction** of TrajGuard's
-decoding-time-trajectory defence (sliding-window harm projection + reused
-`multiturn_jailbreak` sequence classifiers), not a reproduction of the paper's
-exact architecture, and says so plainly. Method fidelity to the stated idea, label
-semantics, train/test hygiene, and — now that the run has landed — results honesty
-all pass, including the honest complication that on this immediate-compliance setup
-the per-token baseline beats the trajectory models and the paper's training-free
-projection is the weakest.
+## 4. Overall verdict
 
-*Internal QA pass — independent external review pending (auditor shares a model
-family with the author).*
+**PASS on process and disclosure; PENDING on results.**
+
+The lesson's cited papers are real and correctly characterised, its confound machinery
+is now the most complete in the course (the shared spine plus two geometry bars, run
+before the headline), its cache is fingerprinted and its size accounting is asserted
+rather than reported. Its **motivating premise was wrong and is retracted with the
+evidence**, and it has been re-based onto the substrate that makes the paper's actual
+claim testable.
+
+What it does **not** yet have is numbers on that substrate. Every result cell is
+`[PENDING RUN]`, the previous run is quarantined, and the registered prediction is that
+the paper's headline comparison **will not reproduce here**. That is the honest state
+of the lesson, and it is stated as the state rather than filled in.
+
+*Internal QA pass — independent external review pending.*

@@ -59,7 +59,11 @@ def _fit_reference_gru(embed_turn, cap_pos, cap_neg):
     """Quick-fit a SeqGRU on a small slice of the real dataset.
 
     Returns the trained ``SeqGRU``. Uses the ALREADY-LOADED ``embed_turn`` to
-    embed the training conversations, so the Gemma model is loaded exactly once.
+    embed the training conversations, so the embedder is loaded exactly once.
+
+    This is a DEMO fit on a small slice (MJ_INFER_N), not the measured result --
+    the numbers a claim may rest on come from ``run_multiturn`` under group-aware CV
+    against the binding confound bar.
     """
     from . import data as D
     from . import embed as E
@@ -110,9 +114,11 @@ def main(argv=None) -> None:
     cap_pos = int(os.environ.get("MJ_INFER_N") or 60)
     cap_neg = cap_pos
 
-    # Load the Gemma embedder ONCE and reuse it for training + the demo turns.
-    print("[infer] loading gemma embedder (layer %d) ..." % C.GEMMA_LAYER)
-    embed_turn, dim = E.get_embedder("gemma")
+    # Load the headline embedder ONCE (default embgemma) and reuse it for training
+    # + the demo turns. Override with MJ_HEADLINE_EMBED.
+    emb_name = C.HEADLINE_EMBEDDER
+    print("[infer] loading '%s' embedder ..." % emb_name)
+    embed_turn, dim = E.get_embedder(emb_name)
     print("[infer] embedder ready (dim=%d)" % dim)
 
     gru = _fit_reference_gru(embed_turn, cap_pos, cap_neg)

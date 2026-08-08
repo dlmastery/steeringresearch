@@ -2,8 +2,8 @@
 jailbreak detection) lesson.
 
 Builds per-token hidden-state trajectories for harmful vs benign completions of the
-abliterated Gemma-3-1B (data.load_or_build), then runs 5-fold stratified CV over four
-sequence detectors:
+abliterated Gemma-3-1B on ONE substrate (`config.SUBSTRATE`), then runs 5-fold
+stratified CV over four sequence detectors:
 
   threshold_freeform -> trajectory.ThresholdDetector  (TRAINING-FREE sliding-window
                         projection onto the harm direction -- the paper's own method)
@@ -11,24 +11,69 @@ sequence detectors:
                         TrajectoryMLP, SeqGRU}  (REUSED unchanged: a token trajectory is
                         the same [n_steps, dim] object a turn trajectory is)
 
-Out-of-fold predictions are pooled per method and scored with AUC (+ bootstrap 95% CI),
-F1, ACC, TPR@FPR<=0.10. The EARLY-DETECTION curve reports out-of-fold AUC as a function
-of how many generated tokens K we have seen -- the streaming / early-warning value --
-for both the training-free threshold detector and a seq_gru trained on first-K-truncated
-trajectories. Three PNGs (ROC, early-AUC vs K, risk-drift example) render on the Agg
-backend; results.json is written BEFORE the ASCII summary so a late crash keeps the data.
+WHAT CHANGED 2026-08-08 (and why the old numbers are superseded)
+----------------------------------------------------------------
+1. The dataset is fingerprinted. `data.load_or_build` recomputes the expected
+   fingerprint from the CPU-only prompt selection and REFUSES a cache that does not
+   match. The superseded runner called `load_or_build()` with no arguments against a
+   function that checked no knob at all, which is how a run configured for 500/class
+   shipped `n_harmful: 300`.
+2. Requested-vs-achieved is ASSERTED here, loudly, before any metric is computed. A
+   shortfall is tolerated only when the dataset header marks it POOL-LIMITED.
+3. The confound audit runs on the shared spine (`common/confound.py`), so it now has a
+   CONTENT bar and a LABEL-SHUFFLE control it never had, plus this lesson's two
+   geometry bars.
+4. The PROMPT channel is measured and reported as a RIVAL METHOD, not as a confound.
+   That is the paper's actual comparative claim and the lesson never tested it.
+5. Every early-K number carries its own first-K confound bar. Section 10 committed to
+   this; the superseded run left the streaming headline as the one unpriced number.
+6. There is an OOD arm (`ood.py`).
 
-Sibling modules (data / trajectory) and the reused multiturn_jailbreak.models are imported
-LAZILY inside main() so `python -c "import ...run_trajguard"` passes against bare stubs.
-CPU-only; ASCII stdout (Windows cp1252). Screening tier -- see README caveats.
+Out-of-fold predictions are pooled per method and scored with AUC (+ bootstrap 95% CI),
+F1, ACC, TPR@FPR<=0.10, and a PAIRED bootstrap CI on the margin over the binding bar.
+`results_<substrate>.json` is written BEFORE the ASCII summary so a late crash keeps the
+data. CPU-only orchestration; ASCII stdout (Windows cp1252). Screening tier -- see
+README caveats.
 """
 from __future__ import annotations
 
 import json
+import os
 
 import numpy as np
 
 from . import config as C
+
+# ---------------------------------------------------------------------------
+# PRE-REGISTERED FALSIFIERS -- written 2026-08-08, BEFORE any run on the new
+# substrates. Printed by the runner so they cannot be quietly dropped from the README.
+# Each is a condition under which a claim is FALSE, not a hope about what will happen.
+# ---------------------------------------------------------------------------
+PREREGISTERED = "2026-08-08"
+FALSIFIERS = [
+    ("F1  drift-detector-clears-its-bar",
+     "On the DISGUISED substrate, the paper's own training-free sliding-window "
+     "projection (threshold_freeform) beats the completion-channel binding confound "
+     "bar. FALSE if AUC(threshold_freeform) <= confound.worst_auc."),
+    ("F2  decoding beats the prompt (THE PAPER'S CLAIM)",
+     "The best trajectory detector beats a prompt-only bag-of-words classifier on the "
+     "same prompts. FALSE if max_method_auc <= prompt_channel.content.auc. This is the "
+     "comparative claim TrajGuard actually makes and the one this lesson never tested."),
+    ("F3  the substrate contrast (the pedagogy)",
+     "threshold_freeform's margin over its own bar is LARGER on DISGUISED than on "
+     "OVERT. FALSE if margin(disguised) <= margin(overt). Requires both arms; the "
+     "runner computes it whenever both results files exist."),
+    ("F4  streaming earns its keep",
+     "At some K in EARLY_KS an early-detection AUC beats the confound bar computed on "
+     "the SAME first-K truncation. FALSE if early_auc(K) <= early_confound(K).worst_auc "
+     "for every K."),
+    ("F5  the OOD arm transfers",
+     "Detectors trained in-domain keep a positive margin over the OOD arm's own "
+     "prompt-content bar. FALSE if ood_max_method_auc <= ood.prompt_channel.content.auc."),
+    ("F0  leakage control (must pass for any of the above to mean anything)",
+     "The label-shuffle control lands near chance. The run is INVALID if "
+     "confound.shuffle.auc > 0.60 -- that is leakage, not signal."),
+]
 
 
 # ---------------------------------------------------------------------------
@@ -80,6 +125,47 @@ def bootstrap_auc_ci(y_true, y_score, n=C.BOOTSTRAP, seed=0):
     lo = float(np.percentile(boots, 2.5))
     hi = float(np.percentile(boots, 97.5))
     return (point, lo, hi)
+
+
+def paired_margin_ci(y_true, y_method, y_bar, n=C.BOOTSTRAP, seed=0):
+    """PAIRED bootstrap 95% CI on ``AUC(method) - AUC(bar)`` over the SAME resamples.
+
+    "+0.209" is a difference of two AUCs on the same items with no uncertainty attached
+    until this exists. The bar's per-item scores must be a real scalar feature vector
+    (character length, token count, a hidden-state norm); the spine's CONTENT bar does
+    not expose per-item scores, so when content binds the margin is reported without a
+    CI and said so, rather than fabricating one.
+    """
+    from sklearn.metrics import roc_auc_score
+
+    y_true = np.asarray(y_true)
+    y_method = np.asarray(y_method, dtype=float)
+    y_bar = np.asarray(y_bar, dtype=float)
+    if len(y_bar) != len(y_true):
+        return None
+
+    def _fold(a):
+        return max(a, 1.0 - a)
+
+    try:
+        point = float(roc_auc_score(y_true, y_method)) - _fold(float(roc_auc_score(y_true, y_bar)))
+    except ValueError:
+        return None
+    rng = np.random.default_rng(seed)
+    m = len(y_true)
+    boots = []
+    for _ in range(int(n)):
+        idx = rng.integers(0, m, m)
+        yt = y_true[idx]
+        if len(np.unique(yt)) < 2:
+            continue
+        boots.append(float(roc_auc_score(yt, y_method[idx]))
+                     - _fold(float(roc_auc_score(yt, y_bar[idx]))))
+    if not boots:
+        return {"margin": point, "ci": [point, point], "n_boot": 0}
+    return {"margin": point,
+            "ci": [float(np.percentile(boots, 2.5)), float(np.percentile(boots, 97.5))],
+            "n_boot": len(boots)}
 
 
 def _tpr_at_fpr10(y_true, y_score):
@@ -138,11 +224,84 @@ def _truncate(traj, k):
     return out if out.shape[0] > 0 else a[:1]
 
 
+def _bar_feature(name, trajs, completions):
+    """Per-item scores for a SCALAR confound bar, or None if it has none.
+
+    Only the scalar bars can carry a paired margin CI; ``content`` cannot (the spine
+    does not expose per-item scores) and that is reported, not papered over.
+    """
+    arr = [np.asarray(t, dtype=np.float32) for t in trajs]
+    arr = [a[None, :] if a.ndim == 1 else a for a in arr]
+    if name == "length":
+        return [float(len(str(c))) for c in completions] if completions else None
+    if name == "count":
+        return [float(a.shape[0]) for a in arr]
+    if name == "mean_norm":
+        return [float(np.linalg.norm(a, axis=-1).mean()) if a.size else 0.0 for a in arr]
+    if name == "final_norm":
+        return [float(np.linalg.norm(a[-1])) if a.size else 0.0 for a in arr]
+    return None
+
+
+# ---------------------------------------------------------------------------
+# The requested-vs-achieved gate
+# ---------------------------------------------------------------------------
+def assert_n_achieved(header, n_captured_harmful, n_captured_benign):
+    """FAIL LOUDLY when achieved != requested for any reason other than the pool.
+
+    Returns the accounting block that goes into results.json. Raises RuntimeError on a
+    silent shortfall. The rule-2 exemption is for a genuinely capped corpus; it is not
+    a licence to ship whatever the cache happened to contain, which is what
+    ``config.py: 500`` / ``README: 120`` / ``results.json: 300`` amounted to.
+    """
+    requested = int(header["n_per_class_requested"])
+    effective = int(header["n_effective_target"])
+    achieved = min(int(n_captured_harmful), int(n_captured_benign))
+    skipped = int(header.get("n_skipped_empty_trajectory", 0))
+
+    block = {
+        "n_per_class_requested": requested,
+        "n_per_class_effective_target": effective,
+        "n_per_class_achieved": achieved,
+        "n_harmful_captured": int(n_captured_harmful),
+        "n_benign_captured": int(n_captured_benign),
+        "n_skipped_empty_trajectory": skipped,
+        "pool_limited": bool(header.get("pool_limited", False)),
+        "n_pool_harmful": int(header.get("n_pool_harmful", 0)),
+        "n_pool_benign": int(header.get("n_pool_benign", 0)),
+        "rule1_floor": int(C.RULE1_FLOOR),
+        "rule1_compliant": bool(achieved >= C.RULE1_FLOOR),
+    }
+
+    if effective < requested and not header.get("pool_limited", False):
+        raise RuntimeError(
+            "requested %d/class but the effective target is %d/class and the dataset "
+            "header does NOT mark this pool-limited. Refusing to run: an unexplained "
+            "shortfall is a bug, not a configuration." % (requested, effective))
+    if achieved < effective - skipped:
+        raise RuntimeError(
+            "achieved %d/class against an effective target of %d/class with only %d "
+            "empty-trajectory skips. The cache does not contain what this configuration "
+            "asked for. Re-run with TG_REBUILD=1." % (achieved, effective, skipped))
+
+    if block["pool_limited"]:
+        print("[gate] POOL-LIMITED (CLAUDE.md section 17 rule 2): requested %d/class, "
+              "corpus holds %d harmful / %d benign unique, running %d/class."
+              % (requested, block["n_pool_harmful"], block["n_pool_benign"], achieved))
+    if not block["rule1_compliant"]:
+        print("[gate] RULE-1 SHORTFALL: %d/class < the %d/class floor -> every number "
+              "below is PROVISIONAL." % (achieved, C.RULE1_FLOOR))
+    else:
+        print("[gate] rule 1 OK: %d/class >= the %d/class floor."
+              % (achieved, C.RULE1_FLOOR))
+    return block
+
+
 # ---------------------------------------------------------------------------
 # Plotting (Agg backend, PNG only)
 # ---------------------------------------------------------------------------
-def _plot_roc(roc_scores, out_path):
-    """Pooled out-of-fold ROC per method."""
+def _plot_roc(roc_scores, out_path, prompt_bar=None):
+    """Pooled out-of-fold ROC per method, with the prompt-content rival as a line."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -157,17 +316,20 @@ def _plot_roc(roc_scores, out_path):
         auc = roc_auc_score(yt, ys)
         ax.plot(fpr, tpr, label="%s (AUC=%.3f)" % (method, auc))
     ax.plot([0, 1], [0, 1], "k--", alpha=0.4, label="chance")
+    if isinstance(prompt_bar, (int, float)):
+        ax.axhline(prompt_bar, color="r", linestyle=":", alpha=0.7,
+                   label="prompt-only content AUC=%.3f" % prompt_bar)
     ax.set_xlabel("False positive rate")
     ax.set_ylabel("True positive rate")
-    ax.set_title("TrajGuard token-trajectory detection ROC")
+    ax.set_title("TrajGuard token-trajectory ROC (substrate=%s)" % C.SUBSTRATE)
     ax.legend(loc="lower right", fontsize=8)
     fig.tight_layout()
     fig.savefig(out_path, dpi=120)
     plt.close(fig)
 
 
-def _plot_early(early, out_path):
-    """Out-of-fold AUC vs number of generated tokens K, both methods."""
+def _plot_early(early, out_path, early_bars=None):
+    """Out-of-fold AUC vs number of generated tokens K, with the per-K confound bar."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -183,11 +345,21 @@ def _plot_early(early, out_path):
                 aucs.append(v)
         if ks:
             ax.plot(ks, aucs, marker="o", label=method)
+    if early_bars:
+        ks, bars = [], []
+        for k in C.EARLY_KS:
+            b = (early_bars.get(str(k)) or {}).get("worst_auc")
+            if isinstance(b, (int, float)):
+                ks.append(k)
+                bars.append(b)
+        if ks:
+            ax.plot(ks, bars, marker="x", color="r", linestyle="--",
+                    label="first-K confound bar")
     ax.axhline(0.5, color="k", linestyle="--", alpha=0.4, label="chance")
     ax.set_xlabel("Generated tokens seen (K)")
     ax.set_ylabel("Out-of-fold AUC")
     ax.set_ylim(0.0, 1.02)
-    ax.set_title("Early-detection: how few tokens flag the jailbreak?")
+    ax.set_title("Early detection vs its own bar (substrate=%s)" % C.SUBSTRATE)
     ax.legend(loc="lower right", fontsize=8)
     fig.tight_layout()
     fig.savefig(out_path, dpi=120)
@@ -211,7 +383,7 @@ def _plot_drift(examples, out_path):
         ax.plot(x, curve, marker=".", label=lbl)
     ax.set_xlabel("Generated token index")
     ax.set_ylabel("Sliding-window harm risk")
-    ax.set_title("Decoding-time risk drift (harmful vs benign)")
+    ax.set_title("Decoding-time risk drift (substrate=%s)" % C.SUBSTRATE)
     ax.legend(loc="upper left", fontsize=8)
     fig.tight_layout()
     fig.savefig(out_path, dpi=120)
@@ -233,19 +405,71 @@ def _make_model(name, trajectory, MJ):
     raise ValueError("unknown method: %s" % name)
 
 
+def _cv_method(name, trajs, labels, folds, trajectory, MJ):
+    """Pooled out-of-fold (y_true, y_score) for one method."""
+    pooled_t, pooled_s = [], []
+    for tr, te in folds:
+        mdl = _make_model(name, trajectory, MJ)
+        mdl.fit([trajs[i] for i in tr], labels[tr])
+        proba = np.asarray(mdl.predict_proba([trajs[i] for i in te])).reshape(-1)
+        pooled_t.append(labels[te])
+        pooled_s.append(proba)
+    return np.concatenate(pooled_t), np.concatenate(pooled_s)
+
+
+def _substrate_comparison():
+    """F3: compare threshold_freeform's margin across substrates, if both arms exist."""
+    out = {}
+    for sub in ("overt", "disguised"):
+        p = C.ARTIFACTS / ("results_%s.json" % sub)
+        if not p.exists():
+            continue
+        try:
+            blk = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        cell = (blk.get("methods") or {}).get("threshold_freeform") or {}
+        bar = (blk.get("confound") or {}).get("worst_auc")
+        if isinstance(cell.get("auc"), (int, float)) and isinstance(bar, (int, float)):
+            out[sub] = {"auc": cell["auc"], "bar": bar, "margin": cell["auc"] - bar}
+    if len(out) == 2:
+        out["F3_drift_larger_on_disguised"] = bool(
+            out["disguised"]["margin"] > out["overt"]["margin"])
+    else:
+        out["note"] = ("F3 needs BOTH arms; run the other substrate with "
+                       "TG_SUBSTRATE=overt / TG_SUBSTRATE=disguised")
+    return out
+
+
 def main():
     # Lazy sibling / reuse imports (guarded here, NOT at module top, so the import-check
     # passes even while data/trajectory are bare stubs).
     from . import data, trajectory
     from steering_tutorials.multiturn_jailbreak import models as MJ
 
-    ds = data.load_or_build()
+    rebuild = str(os.environ.get("TG_REBUILD") or "").strip().lower() in ("1", "true", "yes")
+    print("[config] substrate=%s n_per_class=%d layer=%d max_new_tokens=%d seed=%d "
+          "bootstrap=%d" % (C.SUBSTRATE, C.N_PER_CLASS, C.LAYER, C.MAX_NEW_TOKENS,
+                            C.SEED, C.BOOTSTRAP))
+    print("[preregistered %s] falsifiers:" % PREREGISTERED)
+    for tag, text in FALSIFIERS:
+        print("  %s: %s" % (tag, text))
+
+    ds = data.load_or_build(rebuild=rebuild)
     trajs = list(ds["trajectories"])
     labels = np.asarray(ds["labels"]).astype(int)
     prompts = list(ds["prompts"])
+    completions = list(ds["completions"])
+    header = dict(ds.get("header") or {})
     n = len(trajs)
     n_harmful = int((labels == 1).sum())
     n_benign = int((labels == 0).sum())
+
+    # --- the gate: achieved vs requested, BEFORE any metric ------------------
+    header.setdefault("n_skipped_empty_trajectory",
+                      max(0, 2 * int(header.get("n_effective_target", 0)) - n))
+    sizes = assert_n_achieved(header, n_harmful, n_benign)
+
     lens = np.array([int(np.asarray(t).reshape(-1, np.asarray(t).shape[-1]).shape[0])
                      for t in trajs]) if n else np.array([])
     mean_len_h = float(lens[labels == 1].mean()) if n_harmful else float("nan")
@@ -253,54 +477,69 @@ def main():
     print("[data] trajectories=%d harmful=%d benign=%d mean_len_h=%.1f mean_len_b=%.1f"
           % (n, n_harmful, n_benign, mean_len_h, mean_len_b))
 
-    # --- confound audit: what does a single trivial scalar score on this data? --
-    # Runs BEFORE the methods so the bar exists before the headline does. The
-    # detector's claim is only `auc - worst_auc_directionless` (CONFOUND_DISCIPLINE.md).
+    # --- confound audit: BEFORE the methods, so the bar exists first ---------
+    from steering_tutorials.common.confound import format_report, margin_over_bar
     try:
-        confound = data.confound_report(trajs, labels, ds["completions"], prompts)
-        print("[confound] worst trivial baseline: %s at AUC %.4f (directionless)"
-              % (confound["worst_feature"], confound["worst_auc_directionless"]))
-        for name in ("tokencount", "charlen", "mean_norm", "final_norm",
-                     "prompt_charlen"):
-            key = "%s_auc_directionless" % name
-            if key in confound:
-                print("[confound]   %-15s %.4f (raw %.4f)  pos=%.2f neg=%.2f"
-                      % (name, confound[key], confound["%s_auc" % name],
-                         confound["%s_pos_mean" % name],
-                         confound["%s_neg_mean" % name]))
+        confound = data.confound_report(trajs, labels, completions, prompts, seed=C.SEED)
+        print("[confound] COMPLETION channel:")
+        print(data.format_full_report(confound))
+        pc = confound.get("prompt_channel") or {}
+        if pc:
+            print("[confound] PROMPT channel (a RIVAL METHOD, not a bar):")
+            print(format_report(pc))
     except Exception as exc:
         confound = {"error": str(exc)}
         print("[confound] FAILED: %s" % exc)
 
+    bar = confound.get("worst_auc")
+    bar_name = confound.get("worst_name")
+    shuffle_auc = ((confound.get("shuffle") or {}).get("auc")
+                   if isinstance(confound.get("shuffle"), dict) else None)
+    prompt_content = (((confound.get("prompt_channel") or {}).get("content") or {})
+                      .get("auc"))
+
     folds = kfold_indices(n, C.N_FOLDS, C.SEED, labels=labels)
+    bar_scores = _bar_feature(bar_name, trajs, completions) if bar_name else None
 
     # --- per-method 5-fold pooled out-of-fold predictions --------------------
     methods_block = {}
     roc_scores = {}
     for name in C.METHODS:
         try:
-            pooled_t, pooled_s = [], []
-            for tr, te in folds:
-                mdl = _make_model(name, trajectory, MJ)
-                mdl.fit([trajs[i] for i in tr], labels[tr])
-                proba = np.asarray(mdl.predict_proba([trajs[i] for i in te])).reshape(-1)
-                pooled_t.append(labels[te])
-                pooled_s.append(proba)
-            yt = np.concatenate(pooled_t)
-            ys = np.concatenate(pooled_s)
-            methods_block[name] = _metrics(yt, ys)
+            yt, ys = _cv_method(name, trajs, labels, folds, trajectory, MJ)
+            cell = _metrics(yt, ys)
+            cell["vs_confound"] = margin_over_bar(cell["auc"], confound)
+            if bar_scores is not None:
+                # The pooled OOF order follows the fold test indices, so realign the
+                # bar feature to the same order before pairing.
+                order = np.concatenate([te for _, te in folds])
+                cell["vs_confound_paired_ci"] = paired_margin_ci(
+                    yt, ys, np.asarray(bar_scores)[order], seed=C.SEED)
+            else:
+                cell["vs_confound_paired_ci"] = None
+                cell["paired_ci_note"] = (
+                    "binding bar %r exposes no per-item score (the spine's content bar "
+                    "is a CV-pooled centroid model), so no paired CI is computed"
+                    % bar_name)
+            if isinstance(prompt_content, (int, float)):
+                cell["vs_prompt_content"] = float(cell["auc"]) - float(prompt_content)
+            methods_block[name] = cell
             roc_scores[name] = (yt, ys)
-            m = methods_block[name]
             print("[method:%s] auc=%.3f ci=[%.3f,%.3f] f1=%.3f acc=%.3f tpr@fpr10=%.3f"
-                  % (name, m["auc"], m["auc_ci"][0], m["auc_ci"][1],
-                     m["f1"], m["acc"], m["tpr_at_fpr10"]))
+                  % (name, cell["auc"], cell["auc_ci"][0], cell["auc_ci"][1],
+                     cell["f1"], cell["acc"], cell["tpr_at_fpr10"]))
         except Exception as exc:
             methods_block[name] = {"error": str(exc)}
             print("[method:%s] FAILED: %s" % (name, exc))
 
-    # --- early-detection curve: out-of-fold AUC vs K -------------------------
+    # --- early-detection curve + ITS OWN per-K confound bar ------------------
     early = {"threshold_freeform": {}, "seq_gru": {}}
+    early_bars = {}
     for k in C.EARLY_KS:
+        try:
+            early_bars[str(k)] = data.early_k_confound(trajs, labels, k)
+        except Exception as exc:
+            early_bars[str(k)] = {"error": str(exc)}
         # (a) training-free threshold detector, scored on the FIRST K tokens.
         try:
             pt, ps = [], []
@@ -331,9 +570,11 @@ def main():
             early["seq_gru"][str(k)] = float("nan")
             print("[early:seq_gru:K=%d] FAILED: %s" % (k, exc))
     for k in C.EARLY_KS:
-        print("[early] K=%2d  threshold=%.3f  seq_gru=%.3f"
+        b = (early_bars.get(str(k)) or {}).get("worst_auc")
+        print("[early] K=%2d  threshold=%.3f  seq_gru=%.3f  bar=%s"
               % (k, early["threshold_freeform"].get(str(k), float("nan")),
-                 early["seq_gru"].get(str(k), float("nan"))))
+                 early["seq_gru"].get(str(k), float("nan")),
+                 ("%.3f" % b) if isinstance(b, (int, float)) else "n/a"))
 
     # --- demo risk-drift curves (detector fit on ALL data for the illustration) --
     examples = []
@@ -355,20 +596,46 @@ def main():
     except Exception as exc:
         print("[examples] FAILED: %s" % exc)
 
+    # --- OOD arm --------------------------------------------------------------
+    ood_block = {"enabled": bool(C.OOD_ENABLED)}
+    if C.OOD_ENABLED:
+        try:
+            ood_block.update(_run_ood(trajs, labels, trajectory, MJ, rebuild))
+        except Exception as exc:
+            ood_block["error"] = str(exc)
+            print("[ood] SKIPPED: %s" % exc)
+
+    # --- falsifier verdicts ---------------------------------------------------
+    verdicts = _falsifier_verdicts(methods_block, confound, early, early_bars,
+                                   shuffle_auc, prompt_content, ood_block)
+
     # --- assemble + WRITE results.json BEFORE the summary print --------------
     results = {
+        "preregistered": PREREGISTERED,
+        "substrate": C.SUBSTRATE,
+        "substrate_definition": header.get("substrate_definition"),
         "model_id": C.MODEL_ID,
         "layer": int(C.LAYER),
-        "n_harmful": n_harmful,
-        "n_benign": n_benign,
         "max_new_tokens": int(C.MAX_NEW_TOKENS),
         "window": int(C.WINDOW),
         "seed": int(C.SEED),
         "n_folds": int(C.N_FOLDS),
+        "bootstrap": int(C.BOOTSTRAP),
         "judge": None,
+        "fingerprint": ds.get("fingerprint"),
+        "config_snapshot": ds.get("config_snapshot"),
+        "dataset_header": header,
+        "sizes": sizes,
+        "n_harmful": n_harmful,
+        "n_benign": n_benign,
         "confound": confound,
         "methods": methods_block,
         "early_detection": early,
+        "early_confound": early_bars,
+        "ood": ood_block,
+        "substrate_comparison": _substrate_comparison(),
+        "falsifiers": [{"tag": t, "statement": s} for t, s in FALSIFIERS],
+        "falsifier_verdicts": verdicts,
         "mean_traj_len_harmful": mean_len_h,
         "mean_traj_len_benign": mean_len_b,
         "examples": examples,
@@ -381,10 +648,10 @@ def main():
                          ("drift", C.DRIFT_PNG, examples)):
         try:
             if fn == "roc" and arg:
-                _plot_roc(arg, png)
+                _plot_roc(arg, png, prompt_bar=prompt_content)
                 plots.append(str(png))
             elif fn == "early":
-                _plot_early(arg, png)
+                _plot_early(arg, png, early_bars=early_bars)
                 plots.append(str(png))
             elif fn == "drift" and arg:
                 _plot_drift(arg, png)
@@ -402,25 +669,130 @@ def main():
     return results
 
 
+def _run_ood(train_trajs, train_labels, trajectory, MJ, rebuild):
+    """Fit every method on ALL in-domain data, score the OOD arm. Reports degradation."""
+    from steering_tutorials.common.confound import format_report
+
+    from . import ood as O
+
+    ds = O.load_or_build_ood(rebuild=rebuild)
+    trajs = list(ds["trajectories"])
+    labels = np.asarray(ds["labels"]).astype(int)
+    prompts = list(ds["prompts"])
+    completions = list(ds["completions"])
+
+    from . import data as D
+    conf = D.confound_report(trajs, labels, completions, prompts, seed=C.SEED)
+    print("[ood] COMPLETION channel:")
+    print(D.format_full_report(conf))
+    pc = conf.get("prompt_channel") or {}
+    if pc:
+        print("[ood] PROMPT channel:")
+        print(format_report(pc))
+
+    methods = {}
+    for name in C.METHODS:
+        try:
+            mdl = _make_model(name, trajectory, MJ)
+            mdl.fit(train_trajs, np.asarray(train_labels).astype(int))
+            proba = np.asarray(mdl.predict_proba(trajs)).reshape(-1)
+            cell = _metrics(labels, proba)
+            methods[name] = cell
+            print("[ood:%s] auc=%.3f ci=[%.3f,%.3f]"
+                  % (name, cell["auc"], cell["auc_ci"][0], cell["auc_ci"][1]))
+        except Exception as exc:
+            methods[name] = {"error": str(exc)}
+            print("[ood:%s] FAILED: %s" % (name, exc))
+
+    return {"enabled": True, "source": O.SRC_OOD, "header": ds.get("header"),
+            "fingerprint": ds.get("fingerprint"), "confound": conf, "methods": methods,
+            "transfer_note": "trained on ALL in-domain data (no CV -- the OOD set is the "
+                             "held-out corpus), so these are transfer numbers and are "
+                             "expected to be LOWER than the in-domain CV numbers"}
+
+
+def _falsifier_verdicts(methods, confound, early, early_bars, shuffle_auc,
+                        prompt_content, ood_block):
+    """Evaluate every pre-registered falsifier against the numbers just produced."""
+    def auc(name):
+        c = methods.get(name) or {}
+        return c.get("auc") if isinstance(c.get("auc"), (int, float)) else None
+
+    bar = confound.get("worst_auc")
+    aucs = [v for v in (auc(m) for m in C.METHODS) if v is not None]
+    best = max(aucs) if aucs else None
+    tf = auc("threshold_freeform")
+
+    out = {}
+    out["F0_shuffle_control"] = {
+        "shuffle_auc": shuffle_auc,
+        "threshold": 0.60,
+        "passes": (shuffle_auc is not None and shuffle_auc <= 0.60),
+    }
+    out["F1_drift_clears_bar"] = {
+        "threshold_freeform_auc": tf, "bar": bar,
+        "holds": (tf is not None and isinstance(bar, (int, float)) and tf > bar),
+    }
+    out["F2_decoding_beats_prompt"] = {
+        "best_method_auc": best, "prompt_content_auc": prompt_content,
+        "holds": (best is not None and isinstance(prompt_content, (int, float))
+                  and best > prompt_content),
+        "note": "THE paper's comparative claim. If this does not hold, the lesson's "
+                "substrate does not exercise TrajGuard's thesis and must say so.",
+    }
+    cleared = []
+    for k in C.EARLY_KS:
+        b = (early_bars.get(str(k)) or {}).get("worst_auc")
+        for m in ("threshold_freeform", "seq_gru"):
+            v = early.get(m, {}).get(str(k))
+            if isinstance(v, (int, float)) and v == v and isinstance(b, (int, float)) and v > b:
+                cleared.append({"K": k, "method": m, "auc": v, "bar": b})
+    out["F4_streaming_clears_its_own_bar"] = {"cells_clearing": cleared,
+                                              "holds": bool(cleared)}
+    ood_methods = (ood_block or {}).get("methods") or {}
+    ood_aucs = [c.get("auc") for c in ood_methods.values()
+                if isinstance(c, dict) and isinstance(c.get("auc"), (int, float))]
+    ood_pc = ((((ood_block or {}).get("confound") or {}).get("prompt_channel") or {})
+              .get("content") or {}).get("auc")
+    out["F5_ood_transfers"] = {
+        "ood_best_auc": max(ood_aucs) if ood_aucs else None,
+        "ood_prompt_content_auc": ood_pc,
+        "holds": (bool(ood_aucs) and isinstance(ood_pc, (int, float))
+                  and max(ood_aucs) > ood_pc),
+    }
+    return out
+
+
 def _print_summary(results):
     line = "-" * 78
+    sizes = results.get("sizes") or {}
+    conf = results.get("confound") or {}
+    bar = conf.get("worst_auc")
+    pc = (((conf.get("prompt_channel") or {}).get("content") or {}).get("auc"))
     print("")
     print(line)
     print("TRAJGUARD -- streaming decoding-time jailbreak detection (SCREENING TIER)")
-    print("model=%s layer=%d  harmful=%d benign=%d  window=%d folds=%d seed=%d"
+    print("substrate=%s  -- %s" % (results["substrate"], results.get("substrate_definition")))
+    print("model=%s layer=%d  harmful=%d benign=%d  window=%d folds=%d seed=%d boot=%d"
           % (results["model_id"], results["layer"], results["n_harmful"],
              results["n_benign"], results["window"], results["n_folds"],
-             results["seed"]))
+             results["seed"], results["bootstrap"]))
+    print("n/class: requested=%s effective=%s achieved=%s | pool_limited=%s | "
+          "rule1(>=%s)=%s | fingerprint=%s"
+          % (sizes.get("n_per_class_requested"), sizes.get("n_per_class_effective_target"),
+             sizes.get("n_per_class_achieved"), sizes.get("pool_limited"),
+             sizes.get("rule1_floor"), sizes.get("rule1_compliant"),
+             str(results.get("fingerprint"))[:12]))
     print("mean trajectory length: harmful=%.1f benign=%.1f tokens"
           % (results["mean_traj_len_harmful"], results["mean_traj_len_benign"]))
-    conf = results.get("confound") or {}
-    bar = conf.get("worst_auc_directionless")
     if isinstance(bar, (int, float)):
-        print("CONFOUND BAR: worst trivial baseline = %s at AUC %.4f (directionless)"
-              % (conf.get("worst_feature"), bar))
+        print("CONFOUND BAR (completion channel): %s = %.4f (directionless)"
+              % (conf.get("worst_name"), bar))
+    if isinstance(pc, (int, float)):
+        print("PROMPT-ONLY RIVAL (bag-of-words on the same prompts): AUC %.4f" % pc)
     print(line)
-    print("%-20s %7s %-15s %6s %6s %8s %9s"
-          % ("method", "AUC", "95% CI", "F1", "ACC", "TPR@10", "vs CONF"))
+    print("%-20s %7s %-15s %6s %6s %8s %9s %9s"
+          % ("method", "AUC", "95% CI", "F1", "ACC", "TPR@10", "vs CONF", "vs PROMPT"))
     for name in C.METHODS:
         cell = results["methods"].get(name)
         if not isinstance(cell, dict):
@@ -431,25 +803,54 @@ def _print_summary(results):
         ci = "[%.2f,%.2f]" % (cell["auc_ci"][0], cell["auc_ci"][1])
         margin = ("%+9.3f" % (cell["auc"] - bar)) if isinstance(bar, (int, float)) \
             else "%9s" % "n/a"
-        print("%-20s %7.3f %-15s %6.2f %6.2f %8.2f %s"
+        vsp = ("%+9.3f" % cell["vs_prompt_content"]) \
+            if isinstance(cell.get("vs_prompt_content"), (int, float)) else "%9s" % "n/a"
+        print("%-20s %7.3f %-15s %6.2f %6.2f %8.2f %s %s"
               % (name, cell["auc"], ci, cell["f1"], cell["acc"],
-                 cell["tpr_at_fpr10"], margin))
+                 cell["tpr_at_fpr10"], margin, vsp))
     print(line)
-    print("EARLY DETECTION -- out-of-fold AUC vs generated tokens seen (K):")
+    print("EARLY DETECTION -- out-of-fold AUC vs generated tokens seen (K), each against")
+    print("the confound bar computed on the SAME first-K truncation:")
     print("%-20s %s" % ("K:", "  ".join("%6d" % k for k in C.EARLY_KS)))
     for method in ("threshold_freeform", "seq_gru"):
         blk = results["early_detection"].get(method, {})
         row = "  ".join("%6.3f" % blk.get(str(k), float("nan")) for k in C.EARLY_KS)
         print("%-20s %s" % (method, row))
+    bars = results.get("early_confound") or {}
+    row = "  ".join(
+        ("%6.3f" % (bars.get(str(k)) or {}).get("worst_auc", float("nan")))
+        if isinstance((bars.get(str(k)) or {}).get("worst_auc"), (int, float))
+        else "%6s" % "n/a" for k in C.EARLY_KS)
+    print("%-20s %s" % ("first-K bar", row))
     print(line)
-    print("READ: threshold_freeform is the TRAINING-FREE sliding-window projection (the "
-          "paper's own method); the reused seq_gru/trajectory_mlp are the learned "
-          "sequence detectors. If AUC rises with K, the jailbreak signal accumulates "
-          "token-by-token -- it can be flagged BEFORE the harmful content is fully "
-          "emitted. Screening tier (n small; abliterated model; label=prompt class).")
-    print("CLAIM: only the 'vs CONF' column is claimable -- a raw AUC is not a result "
-          "until the strongest trivial baseline (token count / char length / hidden-"
-          "state norm) is subtracted. See steering_tutorials/CONFOUND_DISCIPLINE.md.")
+    print("PRE-REGISTERED FALSIFIERS (registered %s, evaluated on this run):"
+          % results.get("preregistered"))
+    for key, v in (results.get("falsifier_verdicts") or {}).items():
+        state = v.get("holds", v.get("passes"))
+        print("  %-34s %s" % (key, {True: "HOLDS", False: "FAILS"}.get(state, "n/a")))
+    ood = results.get("ood") or {}
+    if ood.get("enabled") and ood.get("methods"):
+        print(line)
+        print("OOD ARM -- %s (%s)" % (ood.get("source"),
+                                      (ood.get("header") or {}).get("role", "")))
+        for name in C.METHODS:
+            cell = ood["methods"].get(name)
+            if isinstance(cell, dict) and "auc" in cell:
+                print("  %-20s auc=%.3f" % (name, cell["auc"]))
+    elif ood.get("enabled"):
+        print(line)
+        print("OOD ARM: not available this run (%s)" % ood.get("error", "not built"))
+    print(line)
+    print("READ: threshold_freeform is the TRAINING-FREE sliding-window projection (the")
+    print("paper's own method); per_turn_max is STATELESS (one token at a time, no")
+    print("sequence); seq_gru/trajectory_mlp are the learned sequence detectors. If the")
+    print("stateless baseline matches the sequence models, there is no TRAJECTORY signal")
+    print("on this substrate -- only a per-token one.")
+    print("CLAIM: a raw AUC is not a result. Two subtractions are mandatory -- 'vs CONF'")
+    print("(the strongest trivial scalar) and 'vs PROMPT' (a bag-of-words classifier on")
+    print("the prompt alone). The paper's claim is that decoding-time states beat the")
+    print("prompt; only the 'vs PROMPT' column can support or refute it.")
+    print("Screening tier (one model, one layer, one seed; label = prompt class).")
     print(line)
 
 

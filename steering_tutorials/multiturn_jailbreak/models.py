@@ -1,23 +1,36 @@
-"""models.py -- the four conversation classifiers for multi-turn jailbreak detection.
+"""models.py -- the five conversation classifiers for multi-turn jailbreak detection.
 
 Every classifier exposes the SAME interface:
     .fit(train_seqs, train_labels)          # train_seqs: list of [n_turns, dim] float32
     .predict_proba(seqs) -> np.ndarray[n]   # P(attack) in [0,1], one per conversation
 
-The four models form a pedagogical ladder from stateless to stateful:
+The models form a pedagogical ladder from stateless to stateful, with TWO controls at
+the bottom rather than one:
 
   1. PerTurnMaxProbe  -- STATELESS BASELINE. A logistic regression on INDIVIDUAL turn
      vectors; the conversation score is the MAX per-turn P(attack). It literally cannot
      see turn order, so a multi-turn attack whose every single turn looks benign but
      whose TRAJECTORY escalates slips right past it. That failure is the whole point.
-  2. TrajectoryMLP    -- hand-crafted trajectory features (mean/last/max/std over turns
+  2. LastTurnOnly     -- THE CONTROL THAT DECIDES THE LESSON'S CLAIM. A logistic
+     regression on the FINAL turn embedding ALONE. `PerTurnMaxProbe` is a MAX over
+     turns and is NOT this control: a detector that has merely learned "the last turn
+     is the ask" scores well on a max-pool while reading no trajectory whatever. In the
+     HARD condition the positive window ends on the payload turn and the negative
+     window does not, so if this control matches the sequence models, the honest
+     headline is "the payload turn is recognisable", NOT "escalation is detectable".
+     Without it, "trajectory detection" is indistinguishable from "the final turn is
+     just harmful".
+  3. TrajectoryMLP    -- hand-crafted trajectory features (mean/last/max/std over turns
      plus the mean consecutive delta and the max drift-from-turn0 vectors) -> small MLP.
-     Sees the shape of the trajectory but through a fixed summary.
-  3. SeqGRU           -- the HEADLINE model. A GRU over the turn sequence; its last hidden
-     state -> logit. Exposes risk_trajectory(seq): the running per-turn risk that a
-     stateful detector reports as an attack escalates.
-  4. HierAttn         -- per-turn encoder + additive attention pool over turns. Exposes
-     attention_weights(seq): which turns the detector focused on.
+     Sees the shape of the trajectory but through a fixed, largely ORDER-INSENSITIVE
+     summary (only the consecutive-delta term carries any order at all).
+  4. SeqGRU           -- the HEADLINE stateful model. A GRU over the turn sequence; its
+     last hidden state -> logit. The only genuinely order-SENSITIVE model here, which
+     is why the shuffled-turn arm is informative for it and near-vacuous for the others.
+     Exposes risk_trajectory(seq): the running per-turn risk as an attack escalates.
+  5. HierAttn         -- per-turn encoder + additive attention pool over turns. Exposes
+     attention_weights(seq): which turns the detector focused on. Softmax pooling is
+     permutation-INVARIANT, so it is "stateful" in capacity but not in order-reading.
 
 Pure numpy/torch/sklearn, CPU-only. The __main__ self-test uses ONLY synthetic data
 (escalating vs flat sequences) -- no real dataset, no model download.
@@ -157,6 +170,55 @@ class PerTurnMaxProbe:
         for i, seq in enumerate(seqs):
             out[i] = float(np.max(self._turn_probs(seq)))
         return out
+
+
+# ---------------------------------------------------------------------------
+# 1b. LastTurnOnly -- the control that decides what the lesson may claim
+# ---------------------------------------------------------------------------
+class LastTurnOnly:
+    """Logistic regression on the FINAL turn embedding ALONE. Reads no trajectory.
+
+    This is deliberately the weakest possible "cheat": one turn, no order, no
+    aggregation. It exists to make the lesson's headline falsifiable. In the HARD
+    condition a positive window ends on the attack's payload turn while a negative
+    window ends mid-lead-up, so "the last turn is the ask" is a complete alternative
+    explanation for every sequence model's score. If this control lands within ~0.02
+    of the best sequence model, the trajectory reading is NOT established, no matter
+    how far both sit above `per_turn_max` (see config.PREREGISTRATION falsifier 2).
+    """
+
+    def __init__(self):
+        self.scaler = None
+        self.clf = None
+        self._const = None
+        self.dim = None
+
+    @staticmethod
+    def _last(seqs):
+        return np.stack([np.asarray(s, dtype=np.float32)[-1] for s in _as_seq_list(seqs)])
+
+    def fit(self, train_seqs, train_labels):
+        X = self._last(train_seqs).astype(np.float32)
+        y = np.asarray(train_labels).astype(np.float32)
+        self.dim = int(X.shape[1])
+        self.scaler = StandardScaler().fit(X) if _HAVE_SKLEARN else _NumpyScaler().fit(X)
+        Xs = self.scaler.transform(X)
+        if len(np.unique(y)) < 2:
+            self._const = float(y[0]) if len(y) else 0.0
+            self.clf = None
+            return self
+        self._const = None
+        if not _HAVE_SKLEARN:  # pragma: no cover - sklearn is a hard dependency here
+            raise RuntimeError("LastTurnOnly needs scikit-learn (LogisticRegression)")
+        self.clf = LogisticRegression(max_iter=1000, C=1.0)
+        self.clf.fit(Xs, y)
+        return self
+
+    def predict_proba(self, seqs):
+        Xs = self.scaler.transform(self._last(seqs).astype(np.float32))
+        if self._const is not None:
+            return np.full(len(Xs), self._const, dtype=np.float32)
+        return self.clf.predict_proba(Xs)[:, 1].astype(np.float32)
 
 
 class _NumpyScaler:  # pragma: no cover - only if sklearn missing
@@ -473,6 +535,7 @@ def _self_test():
 
     models = {
         "per_turn_max": PerTurnMaxProbe(),
+        "last_turn_only": LastTurnOnly(),
         "trajectory_mlp": TrajectoryMLP(),
         "seq_gru": SeqGRU(),
         "hier_attn": HierAttn(),
@@ -498,6 +561,12 @@ def _self_test():
     print("SELF-TEST PASSED: stateful models (seq_gru, hier_attn) clear AUC>0.85.")
     print("  (per_turn_max AUC = %.4f -- the stateless baseline, shown for contrast)"
           % aucs["per_turn_max"])
+    print("  (last_turn_only AUC = %.4f -- the control. On THIS synthetic set it is"
+          % aucs["last_turn_only"])
+    print("   expected to be STRONG, because the drift is monotone so the final turn is")
+    print("   the most extreme one. That is exactly why the control has to be run on the")
+    print("   real HARD condition: a high sequence-model AUC does not by itself show that")
+    print("   anything read the trajectory.)")
 
 
 if __name__ == "__main__":
