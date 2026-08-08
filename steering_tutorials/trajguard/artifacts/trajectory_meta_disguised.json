@@ -1,0 +1,4428 @@
+{
+  "fingerprint": "9ced87594d32b2fa5e5e4d4c5191576ad03704124a87359c65ea7dcb795bce81",
+  "config_snapshot": {
+    "substrate": "ood:jackhhao/jailbreak-classification",
+    "n_per_class": 274,
+    "seed": 0,
+    "max_new_tokens": 40,
+    "layer": 12,
+    "model_id": "models/google/gemma-3-1b-it",
+    "greedy": true
+  },
+  "dataset_header": {
+    "source": "jackhhao/jailbreak-classification",
+    "file": "default/jailbreak_dataset_full.csv",
+    "role": "OOD (out-of-distribution transfer), NOT a MAIN set",
+    "length_cap_quantile": 0.9,
+    "length_cap_chars": 1311,
+    "n_pool_jailbreak_unique": 629,
+    "n_pool_jailbreak_after_length_cap": 274,
+    "n_pool_benign_unique": 1323,
+    "n_per_class_requested": 400,
+    "n_effective_target": 274,
+    "n_positive": 274,
+    "n_negative": 274,
+    "pool_limited": true,
+    "rule1_compliant": false,
+    "median_char_length": {
+      "jailbreak": 732,
+      "benign": 567
+    },
+    "source_stats": {
+      "n_rows_raw": 1998,
+      "n_dropped_ambiguous": 0
+    },
+    "seed": 0,
+    "n_skipped_empty_trajectory": 0,
+    "n_captured": 548
+  },
+  "cache_file": "token_trajectories_disguised.npz",
+  "cache_bytes": 34005910,
+  "note": "TEXT-FREE reproduction sidecar. Regenerate the hidden-state cache with `python -m steering_tutorials.trajguard.run_trajguard` and verify the fingerprint matches; the numeric confound bars recompute from this file alone with no GPU.",
+  "completions": [
+    {
+      "label": 1,
+      "group_id": "945db7d41a92bfee",
+      "token_count": 24,
+      "completion_chars": 72,
+      "mean_norm": 7152.18212890625,
+      "final_norm": 5357.69482421875
+    },
+    {
+      "label": 1,
+      "group_id": "7dd9cf91516cb108",
+      "token_count": 3,
+      "completion_chars": 5,
+      "mean_norm": 5086.53271484375,
+      "final_norm": 5079.0810546875
+    },
+    {
+      "label": 1,
+      "group_id": "3c7bac359b22d14a",
+      "token_count": 26,
+      "completion_chars": 69,
+      "mean_norm": 6010.31689453125,
+      "final_norm": 5232.33642578125
+    },
+    {
+      "label": 1,
+      "group_id": "737998757cc40f53",
+      "token_count": 40,
+      "completion_chars": 152,
+      "mean_norm": 6864.20947265625,
+      "final_norm": 6769.5419921875
+    },
+    {
+      "label": 1,
+      "group_id": "8f90eb9cab916f71",
+      "token_count": 40,
+      "completion_chars": 162,
+      "mean_norm": 6175.2744140625,
+      "final_norm": 7480.05615234375
+    },
+    {
+      "label": 1,
+      "group_id": "e390e950f9dede89",
+      "token_count": 40,
+      "completion_chars": 153,
+      "mean_norm": 6732.76416015625,
+      "final_norm": 6287.3701171875
+    },
+    {
+      "label": 1,
+      "group_id": "2f89cee03ee8bd1a",
+      "token_count": 40,
+      "completion_chars": 129,
+      "mean_norm": 6826.93896484375,
+      "final_norm": 6137.40185546875
+    },
+    {
+      "label": 1,
+      "group_id": "2518ccee44c82826",
+      "token_count": 40,
+      "completion_chars": 149,
+      "mean_norm": 5852.52734375,
+      "final_norm": 5104.39794921875
+    },
+    {
+      "label": 1,
+      "group_id": "c65d02a14ea41a0c",
+      "token_count": 35,
+      "completion_chars": 137,
+      "mean_norm": 6071.84228515625,
+      "final_norm": 5233.17138671875
+    },
+    {
+      "label": 1,
+      "group_id": "8e3f56fd01a6be48",
+      "token_count": 40,
+      "completion_chars": 186,
+      "mean_norm": 6159.3583984375,
+      "final_norm": 5617.16845703125
+    },
+    {
+      "label": 1,
+      "group_id": "d0d02a65102ca8d5",
+      "token_count": 40,
+      "completion_chars": 165,
+      "mean_norm": 6936.5595703125,
+      "final_norm": 6542.16943359375
+    },
+    {
+      "label": 1,
+      "group_id": "d38562469998894d",
+      "token_count": 19,
+      "completion_chars": 45,
+      "mean_norm": 5870.7841796875,
+      "final_norm": 5175.537109375
+    },
+    {
+      "label": 1,
+      "group_id": "6e31fb8bc0a10673",
+      "token_count": 40,
+      "completion_chars": 124,
+      "mean_norm": 6649.5498046875,
+      "final_norm": 5020.17529296875
+    },
+    {
+      "label": 1,
+      "group_id": "813e1a632f70007a",
+      "token_count": 7,
+      "completion_chars": 10,
+      "mean_norm": 5574.55908203125,
+      "final_norm": 5294.33203125
+    },
+    {
+      "label": 1,
+      "group_id": "37c4c6cb19e15b81",
+      "token_count": 40,
+      "completion_chars": 44,
+      "mean_norm": 3862.632080078125,
+      "final_norm": 3520.93310546875
+    },
+    {
+      "label": 1,
+      "group_id": "09124a38782b2cb0",
+      "token_count": 14,
+      "completion_chars": 42,
+      "mean_norm": 5999.70263671875,
+      "final_norm": 5364.201171875
+    },
+    {
+      "label": 1,
+      "group_id": "0333dd0163d74e99",
+      "token_count": 9,
+      "completion_chars": 18,
+      "mean_norm": 8881.3486328125,
+      "final_norm": 5235.29736328125
+    },
+    {
+      "label": 1,
+      "group_id": "21f0a5e554cf27ff",
+      "token_count": 40,
+      "completion_chars": 179,
+      "mean_norm": 6308.5986328125,
+      "final_norm": 6904.76904296875
+    },
+    {
+      "label": 1,
+      "group_id": "56e48822f9006455",
+      "token_count": 40,
+      "completion_chars": 172,
+      "mean_norm": 6243.85693359375,
+      "final_norm": 7150.16455078125
+    },
+    {
+      "label": 1,
+      "group_id": "fe245a305428795b",
+      "token_count": 40,
+      "completion_chars": 184,
+      "mean_norm": 6535.5322265625,
+      "final_norm": 5605.189453125
+    },
+    {
+      "label": 1,
+      "group_id": "7aee8b268193db08",
+      "token_count": 40,
+      "completion_chars": 186,
+      "mean_norm": 5769.59228515625,
+      "final_norm": 6580.28564453125
+    },
+    {
+      "label": 1,
+      "group_id": "0387f089c3faf2bd",
+      "token_count": 21,
+      "completion_chars": 33,
+      "mean_norm": 5400.5322265625,
+      "final_norm": 5079.02001953125
+    },
+    {
+      "label": 1,
+      "group_id": "d42eebc726e41ea4",
+      "token_count": 4,
+      "completion_chars": 11,
+      "mean_norm": 5574.60986328125,
+      "final_norm": 5083.55322265625
+    },
+    {
+      "label": 1,
+      "group_id": "dd62b7778bd7c193",
+      "token_count": 40,
+      "completion_chars": 177,
+      "mean_norm": 6254.7275390625,
+      "final_norm": 5257.4521484375
+    },
+    {
+      "label": 1,
+      "group_id": "c716c3de11b58b15",
+      "token_count": 12,
+      "completion_chars": 34,
+      "mean_norm": 5926.50732421875,
+      "final_norm": 5270.4453125
+    },
+    {
+      "label": 1,
+      "group_id": "9d4f662ad16bf65c",
+      "token_count": 5,
+      "completion_chars": 10,
+      "mean_norm": 5449.41845703125,
+      "final_norm": 5198.998046875
+    },
+    {
+      "label": 1,
+      "group_id": "d93f0248f10a5cd9",
+      "token_count": 40,
+      "completion_chars": 164,
+      "mean_norm": 6771.96240234375,
+      "final_norm": 5773.9423828125
+    },
+    {
+      "label": 1,
+      "group_id": "30509fc28ad98122",
+      "token_count": 40,
+      "completion_chars": 156,
+      "mean_norm": 6933.56787109375,
+      "final_norm": 7274.86669921875
+    },
+    {
+      "label": 1,
+      "group_id": "5bd98c677d7b548a",
+      "token_count": 40,
+      "completion_chars": 196,
+      "mean_norm": 6321.37255859375,
+      "final_norm": 6798.96630859375
+    },
+    {
+      "label": 1,
+      "group_id": "a1f8937548b329bd",
+      "token_count": 6,
+      "completion_chars": 11,
+      "mean_norm": 5650.14501953125,
+      "final_norm": 5167.08447265625
+    },
+    {
+      "label": 1,
+      "group_id": "4f9eba27afd1e891",
+      "token_count": 12,
+      "completion_chars": 34,
+      "mean_norm": 6083.03857421875,
+      "final_norm": 5389.9970703125
+    },
+    {
+      "label": 1,
+      "group_id": "364f2ca5fe046fc8",
+      "token_count": 40,
+      "completion_chars": 240,
+      "mean_norm": 6302.1455078125,
+      "final_norm": 5291.26220703125
+    },
+    {
+      "label": 1,
+      "group_id": "2c8c59f5a8122eb8",
+      "token_count": 40,
+      "completion_chars": 149,
+      "mean_norm": 6169.90869140625,
+      "final_norm": 5639.1201171875
+    },
+    {
+      "label": 1,
+      "group_id": "60cb0683e9843e77",
+      "token_count": 40,
+      "completion_chars": 192,
+      "mean_norm": 6193.7890625,
+      "final_norm": 6702.86572265625
+    },
+    {
+      "label": 1,
+      "group_id": "f668a987a0a6f767",
+      "token_count": 19,
+      "completion_chars": 63,
+      "mean_norm": 5944.69140625,
+      "final_norm": 5132.1748046875
+    },
+    {
+      "label": 1,
+      "group_id": "16b1ccef78ee238a",
+      "token_count": 40,
+      "completion_chars": 157,
+      "mean_norm": 6212.5185546875,
+      "final_norm": 5443.20068359375
+    },
+    {
+      "label": 1,
+      "group_id": "2921c95397184481",
+      "token_count": 40,
+      "completion_chars": 184,
+      "mean_norm": 6008.4560546875,
+      "final_norm": 6418.48974609375
+    },
+    {
+      "label": 1,
+      "group_id": "f5fd49a5c3002e45",
+      "token_count": 40,
+      "completion_chars": 132,
+      "mean_norm": 5826.1865234375,
+      "final_norm": 5812.58544921875
+    },
+    {
+      "label": 1,
+      "group_id": "8f95537a2db393d2",
+      "token_count": 40,
+      "completion_chars": 223,
+      "mean_norm": 6201.9677734375,
+      "final_norm": 5841.33447265625
+    },
+    {
+      "label": 1,
+      "group_id": "1487677c06e0a627",
+      "token_count": 40,
+      "completion_chars": 174,
+      "mean_norm": 5993.7705078125,
+      "final_norm": 6706.19921875
+    },
+    {
+      "label": 1,
+      "group_id": "d4eafdd15fd3a292",
+      "token_count": 13,
+      "completion_chars": 45,
+      "mean_norm": 6033.3076171875,
+      "final_norm": 5235.50390625
+    },
+    {
+      "label": 1,
+      "group_id": "162cba15d7eb2ca4",
+      "token_count": 40,
+      "completion_chars": 186,
+      "mean_norm": 6071.0302734375,
+      "final_norm": 6289.90380859375
+    },
+    {
+      "label": 1,
+      "group_id": "a9e9f1bbcb9bb6ee",
+      "token_count": 9,
+      "completion_chars": 25,
+      "mean_norm": 5805.26025390625,
+      "final_norm": 5205.490234375
+    },
+    {
+      "label": 1,
+      "group_id": "c4f2d0561c2ebdf3",
+      "token_count": 40,
+      "completion_chars": 144,
+      "mean_norm": 6561.6875,
+      "final_norm": 5224.34765625
+    },
+    {
+      "label": 1,
+      "group_id": "c9e89b77eb689318",
+      "token_count": 40,
+      "completion_chars": 126,
+      "mean_norm": 5893.14306640625,
+      "final_norm": 6262.90283203125
+    },
+    {
+      "label": 1,
+      "group_id": "21c504992756403a",
+      "token_count": 7,
+      "completion_chars": 32,
+      "mean_norm": 6078.45361328125,
+      "final_norm": 5388.37646484375
+    },
+    {
+      "label": 1,
+      "group_id": "e0ae5e8bf3fed9df",
+      "token_count": 40,
+      "completion_chars": 161,
+      "mean_norm": 6815.0400390625,
+      "final_norm": 6230.84619140625
+    },
+    {
+      "label": 1,
+      "group_id": "77c89cc9a174a7f2",
+      "token_count": 40,
+      "completion_chars": 245,
+      "mean_norm": 6489.84326171875,
+      "final_norm": 5445.28369140625
+    },
+    {
+      "label": 1,
+      "group_id": "0b8867b04d9769d3",
+      "token_count": 40,
+      "completion_chars": 213,
+      "mean_norm": 6248.51416015625,
+      "final_norm": 6226.7919921875
+    },
+    {
+      "label": 1,
+      "group_id": "e32abf1479ad1849",
+      "token_count": 17,
+      "completion_chars": 53,
+      "mean_norm": 5788.88720703125,
+      "final_norm": 5200.7265625
+    },
+    {
+      "label": 1,
+      "group_id": "c4766f98a777d861",
+      "token_count": 40,
+      "completion_chars": 190,
+      "mean_norm": 6206.16845703125,
+      "final_norm": 5647.97607421875
+    },
+    {
+      "label": 1,
+      "group_id": "6b7cde3949287416",
+      "token_count": 40,
+      "completion_chars": 119,
+      "mean_norm": 6521.3251953125,
+      "final_norm": 5717.14501953125
+    },
+    {
+      "label": 1,
+      "group_id": "f6fc52fcbf25af98",
+      "token_count": 40,
+      "completion_chars": 198,
+      "mean_norm": 6484.03857421875,
+      "final_norm": 5320.76513671875
+    },
+    {
+      "label": 1,
+      "group_id": "a143d53f250a0108",
+      "token_count": 14,
+      "completion_chars": 40,
+      "mean_norm": 6070.65185546875,
+      "final_norm": 5298.119140625
+    },
+    {
+      "label": 1,
+      "group_id": "a4eb2e017921af34",
+      "token_count": 6,
+      "completion_chars": 19,
+      "mean_norm": 6073.521484375,
+      "final_norm": 5484.4091796875
+    },
+    {
+      "label": 1,
+      "group_id": "53538a2c2274bc0c",
+      "token_count": 14,
+      "completion_chars": 59,
+      "mean_norm": 6201.5,
+      "final_norm": 5050.587890625
+    },
+    {
+      "label": 1,
+      "group_id": "d7ada50acce839ac",
+      "token_count": 40,
+      "completion_chars": 178,
+      "mean_norm": 6214.2412109375,
+      "final_norm": 5703.36865234375
+    },
+    {
+      "label": 1,
+      "group_id": "5fb34d78b49b4863",
+      "token_count": 40,
+      "completion_chars": 102,
+      "mean_norm": 5607.6748046875,
+      "final_norm": 5205.30859375
+    },
+    {
+      "label": 1,
+      "group_id": "9e54d284134325bf",
+      "token_count": 40,
+      "completion_chars": 110,
+      "mean_norm": 6551.2626953125,
+      "final_norm": 4627.83251953125
+    },
+    {
+      "label": 1,
+      "group_id": "1ab9f21a5aec41ad",
+      "token_count": 15,
+      "completion_chars": 47,
+      "mean_norm": 7924.3505859375,
+      "final_norm": 5393.4560546875
+    },
+    {
+      "label": 1,
+      "group_id": "3d93c18154275621",
+      "token_count": 40,
+      "completion_chars": 127,
+      "mean_norm": 5862.43310546875,
+      "final_norm": 5606.11865234375
+    },
+    {
+      "label": 1,
+      "group_id": "4b54c7b465fe00b6",
+      "token_count": 6,
+      "completion_chars": 8,
+      "mean_norm": 5627.958984375,
+      "final_norm": 5362.27099609375
+    },
+    {
+      "label": 1,
+      "group_id": "7fbeec3ee6cea4d8",
+      "token_count": 40,
+      "completion_chars": 150,
+      "mean_norm": 6139.46337890625,
+      "final_norm": 7080.861328125
+    },
+    {
+      "label": 1,
+      "group_id": "de5ff22b3d05f043",
+      "token_count": 30,
+      "completion_chars": 121,
+      "mean_norm": 6170.90869140625,
+      "final_norm": 5358.91650390625
+    },
+    {
+      "label": 1,
+      "group_id": "8d0e97d6fe601e34",
+      "token_count": 40,
+      "completion_chars": 178,
+      "mean_norm": 5922.6884765625,
+      "final_norm": 6902.81298828125
+    },
+    {
+      "label": 1,
+      "group_id": "2060530a6af643d5",
+      "token_count": 40,
+      "completion_chars": 141,
+      "mean_norm": 5945.8779296875,
+      "final_norm": 6128.45751953125
+    },
+    {
+      "label": 1,
+      "group_id": "c222e0e2d84f012b",
+      "token_count": 40,
+      "completion_chars": 112,
+      "mean_norm": 5900.47802734375,
+      "final_norm": 5202.12451171875
+    },
+    {
+      "label": 1,
+      "group_id": "9eec77d6413996b6",
+      "token_count": 40,
+      "completion_chars": 185,
+      "mean_norm": 6047.1005859375,
+      "final_norm": 5511.88525390625
+    },
+    {
+      "label": 1,
+      "group_id": "5607a22d0c9cc99b",
+      "token_count": 40,
+      "completion_chars": 177,
+      "mean_norm": 6423.4931640625,
+      "final_norm": 6279.48193359375
+    },
+    {
+      "label": 1,
+      "group_id": "701222c9a101ed80",
+      "token_count": 23,
+      "completion_chars": 76,
+      "mean_norm": 5795.6748046875,
+      "final_norm": 5453.5419921875
+    },
+    {
+      "label": 1,
+      "group_id": "c5c1386b348d3b93",
+      "token_count": 40,
+      "completion_chars": 166,
+      "mean_norm": 5851.69384765625,
+      "final_norm": 6061.41455078125
+    },
+    {
+      "label": 1,
+      "group_id": "375e14e3934508f0",
+      "token_count": 40,
+      "completion_chars": 124,
+      "mean_norm": 5686.5439453125,
+      "final_norm": 6842.3857421875
+    },
+    {
+      "label": 1,
+      "group_id": "df2d967af1971143",
+      "token_count": 18,
+      "completion_chars": 26,
+      "mean_norm": 5082.06689453125,
+      "final_norm": 5233.73681640625
+    },
+    {
+      "label": 1,
+      "group_id": "bebac1988a3b088a",
+      "token_count": 40,
+      "completion_chars": 179,
+      "mean_norm": 6340.6845703125,
+      "final_norm": 6377.00244140625
+    },
+    {
+      "label": 1,
+      "group_id": "938e3cb28e6723df",
+      "token_count": 40,
+      "completion_chars": 133,
+      "mean_norm": 6768.2421875,
+      "final_norm": 5202.03759765625
+    },
+    {
+      "label": 1,
+      "group_id": "f96cf264af4fecc1",
+      "token_count": 40,
+      "completion_chars": 125,
+      "mean_norm": 6876.5029296875,
+      "final_norm": 5479.3701171875
+    },
+    {
+      "label": 1,
+      "group_id": "c2dfbbfb39452a68",
+      "token_count": 36,
+      "completion_chars": 115,
+      "mean_norm": 6933.21337890625,
+      "final_norm": 5361.412109375
+    },
+    {
+      "label": 1,
+      "group_id": "ea9b88897e4a6b81",
+      "token_count": 29,
+      "completion_chars": 94,
+      "mean_norm": 5890.35888671875,
+      "final_norm": 5133.1298828125
+    },
+    {
+      "label": 1,
+      "group_id": "07f856b61f7e469a",
+      "token_count": 40,
+      "completion_chars": 98,
+      "mean_norm": 5721.4736328125,
+      "final_norm": 5308.45263671875
+    },
+    {
+      "label": 1,
+      "group_id": "4ea98e00cd496039",
+      "token_count": 40,
+      "completion_chars": 224,
+      "mean_norm": 6586.6865234375,
+      "final_norm": 5669.3525390625
+    },
+    {
+      "label": 1,
+      "group_id": "ccd03cbf751be537",
+      "token_count": 40,
+      "completion_chars": 191,
+      "mean_norm": 6982.83447265625,
+      "final_norm": 5799.19384765625
+    },
+    {
+      "label": 1,
+      "group_id": "3d771e4bbb8dac93",
+      "token_count": 40,
+      "completion_chars": 225,
+      "mean_norm": 7052.09228515625,
+      "final_norm": 6732.11083984375
+    },
+    {
+      "label": 1,
+      "group_id": "8c4543fe029155d5",
+      "token_count": 40,
+      "completion_chars": 202,
+      "mean_norm": 6253.3251953125,
+      "final_norm": 6135.83837890625
+    },
+    {
+      "label": 1,
+      "group_id": "b8ecc2cca7e2d248",
+      "token_count": 40,
+      "completion_chars": 211,
+      "mean_norm": 6397.8916015625,
+      "final_norm": 7347.32861328125
+    },
+    {
+      "label": 1,
+      "group_id": "58b807df384e678a",
+      "token_count": 40,
+      "completion_chars": 181,
+      "mean_norm": 6406.95849609375,
+      "final_norm": 5801.0693359375
+    },
+    {
+      "label": 1,
+      "group_id": "6267367f2d23e666",
+      "token_count": 40,
+      "completion_chars": 120,
+      "mean_norm": 5265.6591796875,
+      "final_norm": 4429.0224609375
+    },
+    {
+      "label": 1,
+      "group_id": "3350b58b8dcc31cb",
+      "token_count": 40,
+      "completion_chars": 200,
+      "mean_norm": 6237.4638671875,
+      "final_norm": 6417.06787109375
+    },
+    {
+      "label": 1,
+      "group_id": "6881d53589a3b8f7",
+      "token_count": 8,
+      "completion_chars": 26,
+      "mean_norm": 6167.3759765625,
+      "final_norm": 5324.45458984375
+    },
+    {
+      "label": 1,
+      "group_id": "6793d920b660e879",
+      "token_count": 40,
+      "completion_chars": 138,
+      "mean_norm": 6085.79296875,
+      "final_norm": 6510.33935546875
+    },
+    {
+      "label": 1,
+      "group_id": "f7b8e198bb9c3a60",
+      "token_count": 40,
+      "completion_chars": 169,
+      "mean_norm": 6119.49462890625,
+      "final_norm": 5424.05859375
+    },
+    {
+      "label": 1,
+      "group_id": "e74a1aeae650a16b",
+      "token_count": 40,
+      "completion_chars": 129,
+      "mean_norm": 6807.78271484375,
+      "final_norm": 5643.2353515625
+    },
+    {
+      "label": 1,
+      "group_id": "4a4c2ce99265953b",
+      "token_count": 40,
+      "completion_chars": 233,
+      "mean_norm": 6269.4150390625,
+      "final_norm": 6809.2646484375
+    },
+    {
+      "label": 1,
+      "group_id": "14c987e1d6ead086",
+      "token_count": 40,
+      "completion_chars": 125,
+      "mean_norm": 6614.9736328125,
+      "final_norm": 5843.04443359375
+    },
+    {
+      "label": 1,
+      "group_id": "66e0d1656408e747",
+      "token_count": 15,
+      "completion_chars": 44,
+      "mean_norm": 5801.162109375,
+      "final_norm": 5142.16259765625
+    },
+    {
+      "label": 1,
+      "group_id": "e1590fd1b6fd247f",
+      "token_count": 40,
+      "completion_chars": 232,
+      "mean_norm": 6156.3095703125,
+      "final_norm": 6319.13134765625
+    },
+    {
+      "label": 1,
+      "group_id": "d69397b7cc4bd796",
+      "token_count": 40,
+      "completion_chars": 210,
+      "mean_norm": 7219.7353515625,
+      "final_norm": 6247.5087890625
+    },
+    {
+      "label": 1,
+      "group_id": "fe0c52c62215fdc0",
+      "token_count": 40,
+      "completion_chars": 143,
+      "mean_norm": 5727.63037109375,
+      "final_norm": 5862.73779296875
+    },
+    {
+      "label": 1,
+      "group_id": "570e0ae10496171d",
+      "token_count": 40,
+      "completion_chars": 164,
+      "mean_norm": 6085.265625,
+      "final_norm": 6409.76611328125
+    },
+    {
+      "label": 1,
+      "group_id": "49acc05a3df538e7",
+      "token_count": 40,
+      "completion_chars": 141,
+      "mean_norm": 6083.1865234375,
+      "final_norm": 6966.0810546875
+    },
+    {
+      "label": 1,
+      "group_id": "cec4bffc661a7308",
+      "token_count": 40,
+      "completion_chars": 112,
+      "mean_norm": 5890.21728515625,
+      "final_norm": 6114.453125
+    },
+    {
+      "label": 1,
+      "group_id": "751f715e0edafa1d",
+      "token_count": 40,
+      "completion_chars": 199,
+      "mean_norm": 6448.72412109375,
+      "final_norm": 6834.4794921875
+    },
+    {
+      "label": 1,
+      "group_id": "d6a1c45f584c7627",
+      "token_count": 6,
+      "completion_chars": 28,
+      "mean_norm": 6246.20654296875,
+      "final_norm": 5175.6650390625
+    },
+    {
+      "label": 1,
+      "group_id": "aaa63dd9762bbf80",
+      "token_count": 25,
+      "completion_chars": 121,
+      "mean_norm": 7525.51318359375,
+      "final_norm": 5264.6318359375
+    },
+    {
+      "label": 1,
+      "group_id": "b0b0dcdb0938c50a",
+      "token_count": 40,
+      "completion_chars": 155,
+      "mean_norm": 6318.4345703125,
+      "final_norm": 6702.693359375
+    },
+    {
+      "label": 1,
+      "group_id": "dd9b8629eeef3c92",
+      "token_count": 40,
+      "completion_chars": 186,
+      "mean_norm": 6210.2216796875,
+      "final_norm": 5946.86181640625
+    },
+    {
+      "label": 1,
+      "group_id": "7bc79785110c6d9c",
+      "token_count": 3,
+      "completion_chars": 5,
+      "mean_norm": 5519.87646484375,
+      "final_norm": 5207.03564453125
+    },
+    {
+      "label": 1,
+      "group_id": "5c5a66c26ebed561",
+      "token_count": 37,
+      "completion_chars": 149,
+      "mean_norm": 5909.02783203125,
+      "final_norm": 5141.1015625
+    },
+    {
+      "label": 1,
+      "group_id": "de7da566ec8f2e55",
+      "token_count": 40,
+      "completion_chars": 184,
+      "mean_norm": 6360.28173828125,
+      "final_norm": 7566.24365234375
+    },
+    {
+      "label": 1,
+      "group_id": "922a90e7e780b23d",
+      "token_count": 40,
+      "completion_chars": 185,
+      "mean_norm": 6199.796875,
+      "final_norm": 5911.939453125
+    },
+    {
+      "label": 1,
+      "group_id": "104c98cb23dc15b8",
+      "token_count": 40,
+      "completion_chars": 133,
+      "mean_norm": 5431.9814453125,
+      "final_norm": 4884.1611328125
+    },
+    {
+      "label": 1,
+      "group_id": "ccd9947be3a23edd",
+      "token_count": 40,
+      "completion_chars": 122,
+      "mean_norm": 6177.80712890625,
+      "final_norm": 5591.93115234375
+    },
+    {
+      "label": 1,
+      "group_id": "0a199deca0853b58",
+      "token_count": 40,
+      "completion_chars": 162,
+      "mean_norm": 6232.349609375,
+      "final_norm": 7035.724609375
+    },
+    {
+      "label": 1,
+      "group_id": "8d6c383993cfce61",
+      "token_count": 23,
+      "completion_chars": 74,
+      "mean_norm": 5793.607421875,
+      "final_norm": 5039.97705078125
+    },
+    {
+      "label": 1,
+      "group_id": "140116eb176c782a",
+      "token_count": 40,
+      "completion_chars": 174,
+      "mean_norm": 6643.109375,
+      "final_norm": 5453.60009765625
+    },
+    {
+      "label": 1,
+      "group_id": "233faeca86d0cfdf",
+      "token_count": 40,
+      "completion_chars": 154,
+      "mean_norm": 6818.8984375,
+      "final_norm": 6894.3486328125
+    },
+    {
+      "label": 1,
+      "group_id": "f13b80121bc3ff1b",
+      "token_count": 40,
+      "completion_chars": 152,
+      "mean_norm": 6847.35791015625,
+      "final_norm": 7037.9248046875
+    },
+    {
+      "label": 1,
+      "group_id": "0d19d462b0d86495",
+      "token_count": 15,
+      "completion_chars": 49,
+      "mean_norm": 7937.1884765625,
+      "final_norm": 5520.8359375
+    },
+    {
+      "label": 1,
+      "group_id": "a282ddefbf612dcb",
+      "token_count": 40,
+      "completion_chars": 180,
+      "mean_norm": 5903.05810546875,
+      "final_norm": 6229.208984375
+    },
+    {
+      "label": 1,
+      "group_id": "067feb220130373f",
+      "token_count": 36,
+      "completion_chars": 143,
+      "mean_norm": 6002.9033203125,
+      "final_norm": 5165.1689453125
+    },
+    {
+      "label": 1,
+      "group_id": "c8414e917787d444",
+      "token_count": 7,
+      "completion_chars": 20,
+      "mean_norm": 5668.94677734375,
+      "final_norm": 5330.666015625
+    },
+    {
+      "label": 1,
+      "group_id": "af5a28b67f4037aa",
+      "token_count": 40,
+      "completion_chars": 159,
+      "mean_norm": 5893.6259765625,
+      "final_norm": 5269.6279296875
+    },
+    {
+      "label": 1,
+      "group_id": "11f6975a4fe664df",
+      "token_count": 6,
+      "completion_chars": 9,
+      "mean_norm": 5301.59521484375,
+      "final_norm": 5456.376953125
+    },
+    {
+      "label": 1,
+      "group_id": "6585b1340e1fa7d7",
+      "token_count": 40,
+      "completion_chars": 191,
+      "mean_norm": 6178.7109375,
+      "final_norm": 5605.85595703125
+    },
+    {
+      "label": 1,
+      "group_id": "a4a7aaab2e18641b",
+      "token_count": 21,
+      "completion_chars": 57,
+      "mean_norm": 6019.43701171875,
+      "final_norm": 5583.494140625
+    },
+    {
+      "label": 1,
+      "group_id": "4d7feae4cc9ab178",
+      "token_count": 40,
+      "completion_chars": 131,
+      "mean_norm": 6634.6806640625,
+      "final_norm": 5559.470703125
+    },
+    {
+      "label": 1,
+      "group_id": "dabef0fa18df73de",
+      "token_count": 40,
+      "completion_chars": 129,
+      "mean_norm": 6754.71875,
+      "final_norm": 6476.94775390625
+    },
+    {
+      "label": 1,
+      "group_id": "3be3f2075ca649a9",
+      "token_count": 3,
+      "completion_chars": 3,
+      "mean_norm": 5794.140625,
+      "final_norm": 5233.07763671875
+    },
+    {
+      "label": 1,
+      "group_id": "bd928853b077ddb1",
+      "token_count": 40,
+      "completion_chars": 196,
+      "mean_norm": 6675.93359375,
+      "final_norm": 6512.66748046875
+    },
+    {
+      "label": 1,
+      "group_id": "fd9a11cb9792ebcf",
+      "token_count": 40,
+      "completion_chars": 196,
+      "mean_norm": 6333.8916015625,
+      "final_norm": 7022.44775390625
+    },
+    {
+      "label": 1,
+      "group_id": "107187a653b5047c",
+      "token_count": 40,
+      "completion_chars": 212,
+      "mean_norm": 6515.82958984375,
+      "final_norm": 6289.35693359375
+    },
+    {
+      "label": 1,
+      "group_id": "31c1b38d8b2e0ae6",
+      "token_count": 40,
+      "completion_chars": 135,
+      "mean_norm": 6725.89208984375,
+      "final_norm": 5678.28076171875
+    },
+    {
+      "label": 1,
+      "group_id": "11606b4e65df31ef",
+      "token_count": 40,
+      "completion_chars": 205,
+      "mean_norm": 6246.82177734375,
+      "final_norm": 6116.08984375
+    },
+    {
+      "label": 1,
+      "group_id": "355e35bed17bf0f8",
+      "token_count": 40,
+      "completion_chars": 150,
+      "mean_norm": 6803.28515625,
+      "final_norm": 6332.2265625
+    },
+    {
+      "label": 1,
+      "group_id": "692f19efe9e9d534",
+      "token_count": 40,
+      "completion_chars": 110,
+      "mean_norm": 6657.34521484375,
+      "final_norm": 5999.37744140625
+    },
+    {
+      "label": 1,
+      "group_id": "ba8594bfaa260593",
+      "token_count": 28,
+      "completion_chars": 98,
+      "mean_norm": 6272.11767578125,
+      "final_norm": 5332.48388671875
+    },
+    {
+      "label": 1,
+      "group_id": "f91dff3c168a2fa6",
+      "token_count": 40,
+      "completion_chars": 149,
+      "mean_norm": 6180.89794921875,
+      "final_norm": 6577.99755859375
+    },
+    {
+      "label": 1,
+      "group_id": "ea49b0145d1881ea",
+      "token_count": 40,
+      "completion_chars": 144,
+      "mean_norm": 5873.3984375,
+      "final_norm": 6348.10693359375
+    },
+    {
+      "label": 1,
+      "group_id": "6501e82a11c25333",
+      "token_count": 40,
+      "completion_chars": 233,
+      "mean_norm": 6620.11474609375,
+      "final_norm": 5990.7900390625
+    },
+    {
+      "label": 1,
+      "group_id": "eda1274715643951",
+      "token_count": 40,
+      "completion_chars": 211,
+      "mean_norm": 7007.5859375,
+      "final_norm": 6250.38037109375
+    },
+    {
+      "label": 1,
+      "group_id": "b1180f165975c04a",
+      "token_count": 40,
+      "completion_chars": 161,
+      "mean_norm": 6196.7900390625,
+      "final_norm": 7425.3984375
+    },
+    {
+      "label": 1,
+      "group_id": "b3925bcf1340e61a",
+      "token_count": 40,
+      "completion_chars": 120,
+      "mean_norm": 6785.29833984375,
+      "final_norm": 6539.18994140625
+    },
+    {
+      "label": 1,
+      "group_id": "5a2aa83a62085cf0",
+      "token_count": 40,
+      "completion_chars": 200,
+      "mean_norm": 6178.32568359375,
+      "final_norm": 6452.85009765625
+    },
+    {
+      "label": 1,
+      "group_id": "204bd33848c6a65e",
+      "token_count": 40,
+      "completion_chars": 142,
+      "mean_norm": 6568.0205078125,
+      "final_norm": 5524.1689453125
+    },
+    {
+      "label": 1,
+      "group_id": "3628ed24f4e96e79",
+      "token_count": 4,
+      "completion_chars": 10,
+      "mean_norm": 5844.857421875,
+      "final_norm": 5327.41748046875
+    },
+    {
+      "label": 1,
+      "group_id": "29e243edd3f2f431",
+      "token_count": 40,
+      "completion_chars": 181,
+      "mean_norm": 7113.4189453125,
+      "final_norm": 5443.7353515625
+    },
+    {
+      "label": 1,
+      "group_id": "5e51b85a3cef12ee",
+      "token_count": 40,
+      "completion_chars": 153,
+      "mean_norm": 6055.4609375,
+      "final_norm": 6187.21533203125
+    },
+    {
+      "label": 1,
+      "group_id": "dec2ecf6f3478b32",
+      "token_count": 38,
+      "completion_chars": 166,
+      "mean_norm": 6179.27197265625,
+      "final_norm": 5298.40380859375
+    },
+    {
+      "label": 1,
+      "group_id": "74fb960ea1734eb4",
+      "token_count": 11,
+      "completion_chars": 42,
+      "mean_norm": 5895.93115234375,
+      "final_norm": 5262.353515625
+    },
+    {
+      "label": 1,
+      "group_id": "1491352cb8068bd3",
+      "token_count": 40,
+      "completion_chars": 186,
+      "mean_norm": 6313.3623046875,
+      "final_norm": 7492.47119140625
+    },
+    {
+      "label": 1,
+      "group_id": "fd7f9a5f29305579",
+      "token_count": 40,
+      "completion_chars": 155,
+      "mean_norm": 6265.70458984375,
+      "final_norm": 5904.96630859375
+    },
+    {
+      "label": 1,
+      "group_id": "cd0474bb0defd158",
+      "token_count": 29,
+      "completion_chars": 112,
+      "mean_norm": 7192.11083984375,
+      "final_norm": 5454.5078125
+    },
+    {
+      "label": 1,
+      "group_id": "911ac9e7bc7dd7f9",
+      "token_count": 40,
+      "completion_chars": 212,
+      "mean_norm": 6337.2021484375,
+      "final_norm": 6738.89892578125
+    },
+    {
+      "label": 1,
+      "group_id": "7e2bc17031abce47",
+      "token_count": 26,
+      "completion_chars": 75,
+      "mean_norm": 5908.78125,
+      "final_norm": 5203.6796875
+    },
+    {
+      "label": 1,
+      "group_id": "506f0653844d8660",
+      "token_count": 40,
+      "completion_chars": 151,
+      "mean_norm": 6936.9677734375,
+      "final_norm": 5390.51025390625
+    },
+    {
+      "label": 1,
+      "group_id": "1a03722670c400ff",
+      "token_count": 40,
+      "completion_chars": 121,
+      "mean_norm": 6684.96728515625,
+      "final_norm": 6035.73291015625
+    },
+    {
+      "label": 1,
+      "group_id": "19d7552e432489fe",
+      "token_count": 40,
+      "completion_chars": 197,
+      "mean_norm": 6206.8095703125,
+      "final_norm": 6963.00732421875
+    },
+    {
+      "label": 1,
+      "group_id": "e72a0ef9be29206e",
+      "token_count": 5,
+      "completion_chars": 12,
+      "mean_norm": 5639.34228515625,
+      "final_norm": 5170.4560546875
+    },
+    {
+      "label": 1,
+      "group_id": "0116faacd319e310",
+      "token_count": 20,
+      "completion_chars": 57,
+      "mean_norm": 5950.3740234375,
+      "final_norm": 4983.34912109375
+    },
+    {
+      "label": 1,
+      "group_id": "b1f631dbd9a53c0b",
+      "token_count": 3,
+      "completion_chars": 3,
+      "mean_norm": 5932.02783203125,
+      "final_norm": 5229.65234375
+    },
+    {
+      "label": 1,
+      "group_id": "1949cfde8a440177",
+      "token_count": 40,
+      "completion_chars": 128,
+      "mean_norm": 6036.205078125,
+      "final_norm": 6898.8837890625
+    },
+    {
+      "label": 1,
+      "group_id": "2573e3318d3c8072",
+      "token_count": 40,
+      "completion_chars": 152,
+      "mean_norm": 6841.6640625,
+      "final_norm": 5792.28369140625
+    },
+    {
+      "label": 1,
+      "group_id": "1011336915cdf049",
+      "token_count": 40,
+      "completion_chars": 168,
+      "mean_norm": 6327.6962890625,
+      "final_norm": 6989.6787109375
+    },
+    {
+      "label": 1,
+      "group_id": "ec23baeaa5ee4cfb",
+      "token_count": 18,
+      "completion_chars": 48,
+      "mean_norm": 5851.17578125,
+      "final_norm": 5177.1337890625
+    },
+    {
+      "label": 1,
+      "group_id": "1f2d86afebda127b",
+      "token_count": 29,
+      "completion_chars": 85,
+      "mean_norm": 5951.32666015625,
+      "final_norm": 5422.21728515625
+    },
+    {
+      "label": 1,
+      "group_id": "59a39d50f5f8568b",
+      "token_count": 40,
+      "completion_chars": 159,
+      "mean_norm": 6702.3837890625,
+      "final_norm": 5855.76904296875
+    },
+    {
+      "label": 1,
+      "group_id": "5fb33fd89dcbcc01",
+      "token_count": 40,
+      "completion_chars": 184,
+      "mean_norm": 6012.5693359375,
+      "final_norm": 6736.357421875
+    },
+    {
+      "label": 1,
+      "group_id": "b4e462acfad429ea",
+      "token_count": 40,
+      "completion_chars": 138,
+      "mean_norm": 5931.7236328125,
+      "final_norm": 5615.15283203125
+    },
+    {
+      "label": 1,
+      "group_id": "7c4ce573043e1e7d",
+      "token_count": 40,
+      "completion_chars": 174,
+      "mean_norm": 6279.30810546875,
+      "final_norm": 6102.4453125
+    },
+    {
+      "label": 1,
+      "group_id": "534f1628a24231ff",
+      "token_count": 40,
+      "completion_chars": 155,
+      "mean_norm": 6387.77978515625,
+      "final_norm": 4521.32177734375
+    },
+    {
+      "label": 1,
+      "group_id": "82ddaf9062cd6b91",
+      "token_count": 40,
+      "completion_chars": 130,
+      "mean_norm": 5892.5673828125,
+      "final_norm": 7988.1259765625
+    },
+    {
+      "label": 1,
+      "group_id": "550405e87cbd82e6",
+      "token_count": 40,
+      "completion_chars": 216,
+      "mean_norm": 6206.59375,
+      "final_norm": 7246.80712890625
+    },
+    {
+      "label": 1,
+      "group_id": "31d569b09dae2891",
+      "token_count": 40,
+      "completion_chars": 134,
+      "mean_norm": 6578.57177734375,
+      "final_norm": 5378.3359375
+    },
+    {
+      "label": 1,
+      "group_id": "0b717e9d3155a83a",
+      "token_count": 8,
+      "completion_chars": 12,
+      "mean_norm": 5288.86328125,
+      "final_norm": 5107.1689453125
+    },
+    {
+      "label": 1,
+      "group_id": "1506a85e020535fb",
+      "token_count": 40,
+      "completion_chars": 125,
+      "mean_norm": 6710.67724609375,
+      "final_norm": 5774.10546875
+    },
+    {
+      "label": 1,
+      "group_id": "7509f6e71852d4ea",
+      "token_count": 40,
+      "completion_chars": 184,
+      "mean_norm": 7100.3388671875,
+      "final_norm": 6121.271484375
+    },
+    {
+      "label": 1,
+      "group_id": "91ffe09f63adb682",
+      "token_count": 40,
+      "completion_chars": 237,
+      "mean_norm": 7162.2548828125,
+      "final_norm": 5905.4345703125
+    },
+    {
+      "label": 1,
+      "group_id": "a197fb313e5cfb29",
+      "token_count": 40,
+      "completion_chars": 162,
+      "mean_norm": 5784.6337890625,
+      "final_norm": 5007.076171875
+    },
+    {
+      "label": 1,
+      "group_id": "61ba71cc1fdb0f73",
+      "token_count": 18,
+      "completion_chars": 62,
+      "mean_norm": 5625.94873046875,
+      "final_norm": 5392.8427734375
+    },
+    {
+      "label": 1,
+      "group_id": "d9d99a7553b8f17f",
+      "token_count": 40,
+      "completion_chars": 114,
+      "mean_norm": 5859.60498046875,
+      "final_norm": 5073.98876953125
+    },
+    {
+      "label": 1,
+      "group_id": "2bdb30e4f7fae7ba",
+      "token_count": 40,
+      "completion_chars": 157,
+      "mean_norm": 5996.50244140625,
+      "final_norm": 6838.212890625
+    },
+    {
+      "label": 1,
+      "group_id": "45715d21426255ca",
+      "token_count": 29,
+      "completion_chars": 112,
+      "mean_norm": 7230.951171875,
+      "final_norm": 5454.8525390625
+    },
+    {
+      "label": 1,
+      "group_id": "d0f0d170d5d71725",
+      "token_count": 40,
+      "completion_chars": 200,
+      "mean_norm": 6366.0498046875,
+      "final_norm": 6228.87158203125
+    },
+    {
+      "label": 1,
+      "group_id": "74b729e4beffcbc4",
+      "token_count": 40,
+      "completion_chars": 110,
+      "mean_norm": 5799.1591796875,
+      "final_norm": 5719.43798828125
+    },
+    {
+      "label": 1,
+      "group_id": "1eda44b9b8fd20a0",
+      "token_count": 7,
+      "completion_chars": 17,
+      "mean_norm": 5668.47314453125,
+      "final_norm": 5300.1162109375
+    },
+    {
+      "label": 1,
+      "group_id": "c78c97a15a7f4c80",
+      "token_count": 40,
+      "completion_chars": 233,
+      "mean_norm": 6382.28466796875,
+      "final_norm": 6107.7451171875
+    },
+    {
+      "label": 1,
+      "group_id": "0ce9281ad582c882",
+      "token_count": 40,
+      "completion_chars": 142,
+      "mean_norm": 6704.46484375,
+      "final_norm": 5825.4072265625
+    },
+    {
+      "label": 1,
+      "group_id": "2a39496370ab0de6",
+      "token_count": 40,
+      "completion_chars": 92,
+      "mean_norm": 6331.67041015625,
+      "final_norm": 5939.02392578125
+    },
+    {
+      "label": 1,
+      "group_id": "6d66ddced8e0f7f2",
+      "token_count": 40,
+      "completion_chars": 153,
+      "mean_norm": 6758.65625,
+      "final_norm": 5786.06201171875
+    },
+    {
+      "label": 1,
+      "group_id": "33129feabdc50abe",
+      "token_count": 9,
+      "completion_chars": 12,
+      "mean_norm": 4993.77099609375,
+      "final_norm": 5146.56689453125
+    },
+    {
+      "label": 1,
+      "group_id": "0c54037c7198b42b",
+      "token_count": 40,
+      "completion_chars": 194,
+      "mean_norm": 6318.47998046875,
+      "final_norm": 6150.66796875
+    },
+    {
+      "label": 1,
+      "group_id": "59ae6126f76c14ff",
+      "token_count": 40,
+      "completion_chars": 154,
+      "mean_norm": 6216.697265625,
+      "final_norm": 5239.9921875
+    },
+    {
+      "label": 1,
+      "group_id": "219918965c851679",
+      "token_count": 40,
+      "completion_chars": 116,
+      "mean_norm": 6205.4482421875,
+      "final_norm": 5426.5078125
+    },
+    {
+      "label": 1,
+      "group_id": "0fcd5975febc5665",
+      "token_count": 40,
+      "completion_chars": 148,
+      "mean_norm": 6163.17138671875,
+      "final_norm": 5639.74755859375
+    },
+    {
+      "label": 1,
+      "group_id": "c835bcd78da752a9",
+      "token_count": 40,
+      "completion_chars": 129,
+      "mean_norm": 5944.34375,
+      "final_norm": 5228.17919921875
+    },
+    {
+      "label": 1,
+      "group_id": "e1852a91e7748ce0",
+      "token_count": 40,
+      "completion_chars": 154,
+      "mean_norm": 5949.82080078125,
+      "final_norm": 6573.44873046875
+    },
+    {
+      "label": 1,
+      "group_id": "7b81d31da30b16e9",
+      "token_count": 40,
+      "completion_chars": 165,
+      "mean_norm": 6134.1630859375,
+      "final_norm": 7058.13330078125
+    },
+    {
+      "label": 1,
+      "group_id": "dde2afe4f1e33757",
+      "token_count": 40,
+      "completion_chars": 210,
+      "mean_norm": 6196.1220703125,
+      "final_norm": 6509.1171875
+    },
+    {
+      "label": 1,
+      "group_id": "f85ecfa52d916831",
+      "token_count": 3,
+      "completion_chars": 3,
+      "mean_norm": 5803.94091796875,
+      "final_norm": 5264.333984375
+    },
+    {
+      "label": 1,
+      "group_id": "9f75a9e1ffe2ebed",
+      "token_count": 40,
+      "completion_chars": 113,
+      "mean_norm": 6666.0078125,
+      "final_norm": 6316.72998046875
+    },
+    {
+      "label": 1,
+      "group_id": "12eaa273fba59537",
+      "token_count": 40,
+      "completion_chars": 173,
+      "mean_norm": 6877.0234375,
+      "final_norm": 6263.033203125
+    },
+    {
+      "label": 1,
+      "group_id": "f79d3fbd5f015bb1",
+      "token_count": 29,
+      "completion_chars": 73,
+      "mean_norm": 5873.568359375,
+      "final_norm": 5361.05078125
+    },
+    {
+      "label": 1,
+      "group_id": "c30058a7c2d74708",
+      "token_count": 4,
+      "completion_chars": 8,
+      "mean_norm": 5541.001953125,
+      "final_norm": 5236.6142578125
+    },
+    {
+      "label": 1,
+      "group_id": "506f15e883880608",
+      "token_count": 37,
+      "completion_chars": 123,
+      "mean_norm": 6108.35498046875,
+      "final_norm": 5231.6220703125
+    },
+    {
+      "label": 1,
+      "group_id": "477a999cd0cac9d8",
+      "token_count": 40,
+      "completion_chars": 141,
+      "mean_norm": 6066.00537109375,
+      "final_norm": 6203.5859375
+    },
+    {
+      "label": 1,
+      "group_id": "4724b6b479b693d1",
+      "token_count": 40,
+      "completion_chars": 189,
+      "mean_norm": 6390.24462890625,
+      "final_norm": 7038.6494140625
+    },
+    {
+      "label": 1,
+      "group_id": "106cb7f3900f7838",
+      "token_count": 18,
+      "completion_chars": 47,
+      "mean_norm": 5854.98388671875,
+      "final_norm": 5171.923828125
+    },
+    {
+      "label": 1,
+      "group_id": "6010106f78aa6268",
+      "token_count": 40,
+      "completion_chars": 72,
+      "mean_norm": 4964.23291015625,
+      "final_norm": 5410.96826171875
+    },
+    {
+      "label": 1,
+      "group_id": "3b20d1aeaf2b733e",
+      "token_count": 40,
+      "completion_chars": 107,
+      "mean_norm": 5760.9755859375,
+      "final_norm": 7602.7890625
+    },
+    {
+      "label": 1,
+      "group_id": "5a76d0b2a363f1ec",
+      "token_count": 14,
+      "completion_chars": 48,
+      "mean_norm": 6062.4228515625,
+      "final_norm": 5301.439453125
+    },
+    {
+      "label": 1,
+      "group_id": "af50f0a2c3ec9551",
+      "token_count": 5,
+      "completion_chars": 10,
+      "mean_norm": 5423.72998046875,
+      "final_norm": 5199.52685546875
+    },
+    {
+      "label": 1,
+      "group_id": "44defc9968500eb7",
+      "token_count": 40,
+      "completion_chars": 218,
+      "mean_norm": 6212.26025390625,
+      "final_norm": 6187.95166015625
+    },
+    {
+      "label": 1,
+      "group_id": "d286a82b14d7f322",
+      "token_count": 8,
+      "completion_chars": 32,
+      "mean_norm": 5989.78466796875,
+      "final_norm": 5237.7568359375
+    },
+    {
+      "label": 1,
+      "group_id": "3ef6b30a6b90986d",
+      "token_count": 40,
+      "completion_chars": 162,
+      "mean_norm": 6152.6884765625,
+      "final_norm": 5070.208984375
+    },
+    {
+      "label": 1,
+      "group_id": "4cde4ecb96713656",
+      "token_count": 31,
+      "completion_chars": 107,
+      "mean_norm": 5931.17138671875,
+      "final_norm": 5230.04931640625
+    },
+    {
+      "label": 1,
+      "group_id": "3545e01480e0086e",
+      "token_count": 5,
+      "completion_chars": 9,
+      "mean_norm": 5856.6650390625,
+      "final_norm": 5077.1142578125
+    },
+    {
+      "label": 1,
+      "group_id": "edadc766724740e0",
+      "token_count": 22,
+      "completion_chars": 61,
+      "mean_norm": 6165.35595703125,
+      "final_norm": 4915.40087890625
+    },
+    {
+      "label": 1,
+      "group_id": "447ae766cac35478",
+      "token_count": 40,
+      "completion_chars": 123,
+      "mean_norm": 6838.7509765625,
+      "final_norm": 6773.0927734375
+    },
+    {
+      "label": 1,
+      "group_id": "da998ed4e763ab42",
+      "token_count": 40,
+      "completion_chars": 168,
+      "mean_norm": 7196.1806640625,
+      "final_norm": 6537.96923828125
+    },
+    {
+      "label": 1,
+      "group_id": "80171f33cc7b055d",
+      "token_count": 40,
+      "completion_chars": 150,
+      "mean_norm": 7032.1318359375,
+      "final_norm": 5391.78369140625
+    },
+    {
+      "label": 1,
+      "group_id": "dd410a99d56858e4",
+      "token_count": 40,
+      "completion_chars": 108,
+      "mean_norm": 6611.0595703125,
+      "final_norm": 6198.85498046875
+    },
+    {
+      "label": 1,
+      "group_id": "f88d46c1b23e7ecc",
+      "token_count": 40,
+      "completion_chars": 145,
+      "mean_norm": 6073.81396484375,
+      "final_norm": 5940.53759765625
+    },
+    {
+      "label": 1,
+      "group_id": "ec3655816733de6a",
+      "token_count": 40,
+      "completion_chars": 167,
+      "mean_norm": 6243.0009765625,
+      "final_norm": 6355.98046875
+    },
+    {
+      "label": 1,
+      "group_id": "6e1df11aa4687872",
+      "token_count": 40,
+      "completion_chars": 138,
+      "mean_norm": 6133.1865234375,
+      "final_norm": 6387.42333984375
+    },
+    {
+      "label": 1,
+      "group_id": "d8b31f0cb80e7d7c",
+      "token_count": 40,
+      "completion_chars": 148,
+      "mean_norm": 6864.31103515625,
+      "final_norm": 5346.4873046875
+    },
+    {
+      "label": 1,
+      "group_id": "0912134cae4ce1a5",
+      "token_count": 40,
+      "completion_chars": 150,
+      "mean_norm": 6087.39599609375,
+      "final_norm": 5996.66845703125
+    },
+    {
+      "label": 1,
+      "group_id": "5cecd78b231c14b0",
+      "token_count": 40,
+      "completion_chars": 123,
+      "mean_norm": 5903.03857421875,
+      "final_norm": 7644.1767578125
+    },
+    {
+      "label": 1,
+      "group_id": "c19c97180297e776",
+      "token_count": 40,
+      "completion_chars": 200,
+      "mean_norm": 6207.078125,
+      "final_norm": 4842.29345703125
+    },
+    {
+      "label": 1,
+      "group_id": "865e19be63818928",
+      "token_count": 40,
+      "completion_chars": 179,
+      "mean_norm": 6361.52880859375,
+      "final_norm": 7055.97900390625
+    },
+    {
+      "label": 1,
+      "group_id": "9a790492013b2ab2",
+      "token_count": 40,
+      "completion_chars": 251,
+      "mean_norm": 6249.9482421875,
+      "final_norm": 6616.4267578125
+    },
+    {
+      "label": 1,
+      "group_id": "e1219682bc13c163",
+      "token_count": 40,
+      "completion_chars": 135,
+      "mean_norm": 6875.29052734375,
+      "final_norm": 6422.15185546875
+    },
+    {
+      "label": 1,
+      "group_id": "9ac914821cb78426",
+      "token_count": 40,
+      "completion_chars": 194,
+      "mean_norm": 6608.32958984375,
+      "final_norm": 7084.20849609375
+    },
+    {
+      "label": 1,
+      "group_id": "ac98e4add1a2efd2",
+      "token_count": 40,
+      "completion_chars": 121,
+      "mean_norm": 5954.4794921875,
+      "final_norm": 7121.41162109375
+    },
+    {
+      "label": 1,
+      "group_id": "af94ee21f2cc4737",
+      "token_count": 40,
+      "completion_chars": 149,
+      "mean_norm": 6124.8837890625,
+      "final_norm": 5218.9326171875
+    },
+    {
+      "label": 1,
+      "group_id": "c193043272c22788",
+      "token_count": 40,
+      "completion_chars": 171,
+      "mean_norm": 6223.4091796875,
+      "final_norm": 5616.28076171875
+    },
+    {
+      "label": 1,
+      "group_id": "b80ff2c9b86f2b22",
+      "token_count": 14,
+      "completion_chars": 29,
+      "mean_norm": 7948.19775390625,
+      "final_norm": 5332.46435546875
+    },
+    {
+      "label": 1,
+      "group_id": "dc234026728945e0",
+      "token_count": 39,
+      "completion_chars": 135,
+      "mean_norm": 5978.01220703125,
+      "final_norm": 5111.5419921875
+    },
+    {
+      "label": 1,
+      "group_id": "3675d40fc3b4faad",
+      "token_count": 40,
+      "completion_chars": 55,
+      "mean_norm": 5121.6142578125,
+      "final_norm": 4535.21337890625
+    },
+    {
+      "label": 1,
+      "group_id": "dd9aefc048b987b9",
+      "token_count": 40,
+      "completion_chars": 165,
+      "mean_norm": 6202.8046875,
+      "final_norm": 6829.63671875
+    },
+    {
+      "label": 1,
+      "group_id": "12fff6cb4fec3b29",
+      "token_count": 12,
+      "completion_chars": 24,
+      "mean_norm": 5766.2265625,
+      "final_norm": 5163.38623046875
+    },
+    {
+      "label": 1,
+      "group_id": "fb98a25ee73046b9",
+      "token_count": 40,
+      "completion_chars": 167,
+      "mean_norm": 6675.42041015625,
+      "final_norm": 6359.15380859375
+    },
+    {
+      "label": 1,
+      "group_id": "463248f2441b8ec9",
+      "token_count": 40,
+      "completion_chars": 152,
+      "mean_norm": 5848.36962890625,
+      "final_norm": 6541.14404296875
+    },
+    {
+      "label": 1,
+      "group_id": "8048faf2828bfacf",
+      "token_count": 40,
+      "completion_chars": 133,
+      "mean_norm": 6852.34228515625,
+      "final_norm": 6038.6328125
+    },
+    {
+      "label": 1,
+      "group_id": "50aebdb792b740cd",
+      "token_count": 40,
+      "completion_chars": 162,
+      "mean_norm": 6690.31884765625,
+      "final_norm": 5739.73486328125
+    },
+    {
+      "label": 1,
+      "group_id": "a61381dc3e351ecd",
+      "token_count": 40,
+      "completion_chars": 119,
+      "mean_norm": 5985.3369140625,
+      "final_norm": 5851.58154296875
+    },
+    {
+      "label": 1,
+      "group_id": "f8c552f8c07173e9",
+      "token_count": 40,
+      "completion_chars": 144,
+      "mean_norm": 6570.01025390625,
+      "final_norm": 5323.8193359375
+    },
+    {
+      "label": 1,
+      "group_id": "bbff9121708d7088",
+      "token_count": 40,
+      "completion_chars": 127,
+      "mean_norm": 6966.52490234375,
+      "final_norm": 5481.5771484375
+    },
+    {
+      "label": 1,
+      "group_id": "4d2fc8837ab53f2d",
+      "token_count": 40,
+      "completion_chars": 163,
+      "mean_norm": 6073.28125,
+      "final_norm": 6330.1513671875
+    },
+    {
+      "label": 1,
+      "group_id": "d0fabe9ab7642184",
+      "token_count": 40,
+      "completion_chars": 143,
+      "mean_norm": 6180.1826171875,
+      "final_norm": 6927.0771484375
+    },
+    {
+      "label": 1,
+      "group_id": "caf59b674de3cdde",
+      "token_count": 40,
+      "completion_chars": 193,
+      "mean_norm": 6381.89892578125,
+      "final_norm": 7152.45654296875
+    },
+    {
+      "label": 1,
+      "group_id": "6b4e190bdeb495b7",
+      "token_count": 15,
+      "completion_chars": 68,
+      "mean_norm": 6038.107421875,
+      "final_norm": 5226.67431640625
+    },
+    {
+      "label": 1,
+      "group_id": "88d1dddae893d999",
+      "token_count": 40,
+      "completion_chars": 168,
+      "mean_norm": 6757.86865234375,
+      "final_norm": 6322.47412109375
+    },
+    {
+      "label": 1,
+      "group_id": "debb5f6aac7e188c",
+      "token_count": 40,
+      "completion_chars": 135,
+      "mean_norm": 6638.4267578125,
+      "final_norm": 36358.5234375
+    },
+    {
+      "label": 1,
+      "group_id": "605f487876260464",
+      "token_count": 40,
+      "completion_chars": 166,
+      "mean_norm": 6765.9306640625,
+      "final_norm": 6113.67138671875
+    },
+    {
+      "label": 1,
+      "group_id": "29319d47bec0ba23",
+      "token_count": 40,
+      "completion_chars": 130,
+      "mean_norm": 6981.63818359375,
+      "final_norm": 6253.115234375
+    },
+    {
+      "label": 1,
+      "group_id": "21c01a8c53f97ace",
+      "token_count": 40,
+      "completion_chars": 150,
+      "mean_norm": 6761.94677734375,
+      "final_norm": 5616.3896484375
+    },
+    {
+      "label": 1,
+      "group_id": "c131760c33ebd5f6",
+      "token_count": 40,
+      "completion_chars": 205,
+      "mean_norm": 6284.02783203125,
+      "final_norm": 7088.86767578125
+    },
+    {
+      "label": 1,
+      "group_id": "8e535e6ab1859696",
+      "token_count": 40,
+      "completion_chars": 215,
+      "mean_norm": 6000.3662109375,
+      "final_norm": 6944.673828125
+    },
+    {
+      "label": 1,
+      "group_id": "d1b6dcafdcaa9321",
+      "token_count": 40,
+      "completion_chars": 185,
+      "mean_norm": 6312.43505859375,
+      "final_norm": 7090.345703125
+    },
+    {
+      "label": 1,
+      "group_id": "dbf00e8832e60e57",
+      "token_count": 40,
+      "completion_chars": 138,
+      "mean_norm": 6041.2861328125,
+      "final_norm": 6063.544921875
+    },
+    {
+      "label": 1,
+      "group_id": "5341f6a7ca904448",
+      "token_count": 29,
+      "completion_chars": 101,
+      "mean_norm": 6019.03271484375,
+      "final_norm": 5332.01611328125
+    },
+    {
+      "label": 1,
+      "group_id": "c4d9d8915d69722a",
+      "token_count": 4,
+      "completion_chars": 13,
+      "mean_norm": 5691.59375,
+      "final_norm": 5230.97705078125
+    },
+    {
+      "label": 1,
+      "group_id": "6fdfa427e31c6e38",
+      "token_count": 40,
+      "completion_chars": 144,
+      "mean_norm": 6842.8759765625,
+      "final_norm": 6485.2861328125
+    },
+    {
+      "label": 1,
+      "group_id": "6eb3154bbc3dbfbf",
+      "token_count": 38,
+      "completion_chars": 113,
+      "mean_norm": 6870.19482421875,
+      "final_norm": 5075.11474609375
+    },
+    {
+      "label": 1,
+      "group_id": "7108ab75c1ee7f14",
+      "token_count": 4,
+      "completion_chars": 13,
+      "mean_norm": 6132.3818359375,
+      "final_norm": 5295.1435546875
+    },
+    {
+      "label": 1,
+      "group_id": "fc65a6d6a49e6b4d",
+      "token_count": 40,
+      "completion_chars": 250,
+      "mean_norm": 6172.9560546875,
+      "final_norm": 5553.94140625
+    },
+    {
+      "label": 1,
+      "group_id": "e88729c69460c342",
+      "token_count": 5,
+      "completion_chars": 13,
+      "mean_norm": 5563.14697265625,
+      "final_norm": 5327.9619140625
+    },
+    {
+      "label": 1,
+      "group_id": "91fa16fdf0946be2",
+      "token_count": 40,
+      "completion_chars": 123,
+      "mean_norm": 5985.0615234375,
+      "final_norm": 5816.11669921875
+    },
+    {
+      "label": 1,
+      "group_id": "d52cf5446e7c7296",
+      "token_count": 40,
+      "completion_chars": 142,
+      "mean_norm": 6630.2451171875,
+      "final_norm": 5351.0009765625
+    },
+    {
+      "label": 1,
+      "group_id": "4d07eba753136b19",
+      "token_count": 40,
+      "completion_chars": 80,
+      "mean_norm": 4697.62255859375,
+      "final_norm": 4528.5078125
+    },
+    {
+      "label": 1,
+      "group_id": "29e9cab2e3643ee8",
+      "token_count": 21,
+      "completion_chars": 57,
+      "mean_norm": 5851.80908203125,
+      "final_norm": 5301.95654296875
+    },
+    {
+      "label": 1,
+      "group_id": "d07f973e62a8b8e7",
+      "token_count": 40,
+      "completion_chars": 186,
+      "mean_norm": 6455.765625,
+      "final_norm": 6342.9833984375
+    },
+    {
+      "label": 1,
+      "group_id": "9806f3a5cc40e260",
+      "token_count": 40,
+      "completion_chars": 138,
+      "mean_norm": 5920.70849609375,
+      "final_norm": 5583.716796875
+    },
+    {
+      "label": 1,
+      "group_id": "b939181d3c39de5b",
+      "token_count": 3,
+      "completion_chars": 8,
+      "mean_norm": 5941.1484375,
+      "final_norm": 5326.869140625
+    },
+    {
+      "label": 1,
+      "group_id": "ae57aeb95eac18b2",
+      "token_count": 40,
+      "completion_chars": 146,
+      "mean_norm": 6221.8095703125,
+      "final_norm": 6257.89013671875
+    },
+    {
+      "label": 0,
+      "group_id": "59a5af97b447889e",
+      "token_count": 40,
+      "completion_chars": 163,
+      "mean_norm": 6066.75341796875,
+      "final_norm": 5714.60693359375
+    },
+    {
+      "label": 0,
+      "group_id": "1c5d38d328f535c6",
+      "token_count": 40,
+      "completion_chars": 218,
+      "mean_norm": 7114.2548828125,
+      "final_norm": 7095.8056640625
+    },
+    {
+      "label": 0,
+      "group_id": "985b94213ce2c821",
+      "token_count": 40,
+      "completion_chars": 128,
+      "mean_norm": 5699.11865234375,
+      "final_norm": 5991.7431640625
+    },
+    {
+      "label": 0,
+      "group_id": "0439eb8a95b2796a",
+      "token_count": 11,
+      "completion_chars": 59,
+      "mean_norm": 6027.11376953125,
+      "final_norm": 5191.216796875
+    },
+    {
+      "label": 0,
+      "group_id": "d7962972af8bd6d4",
+      "token_count": 40,
+      "completion_chars": 171,
+      "mean_norm": 5617.77978515625,
+      "final_norm": 5604.03759765625
+    },
+    {
+      "label": 0,
+      "group_id": "db2f9db0043f99fa",
+      "token_count": 40,
+      "completion_chars": 140,
+      "mean_norm": 6054.1474609375,
+      "final_norm": 7051.8359375
+    },
+    {
+      "label": 0,
+      "group_id": "6dbd8143a8bf1bc5",
+      "token_count": 40,
+      "completion_chars": 162,
+      "mean_norm": 6098.88134765625,
+      "final_norm": 6691.85009765625
+    },
+    {
+      "label": 0,
+      "group_id": "5f5e6cbd89ff94f0",
+      "token_count": 40,
+      "completion_chars": 199,
+      "mean_norm": 6115.96875,
+      "final_norm": 6249.4189453125
+    },
+    {
+      "label": 0,
+      "group_id": "4b2552372296d048",
+      "token_count": 24,
+      "completion_chars": 102,
+      "mean_norm": 5719.23193359375,
+      "final_norm": 5177.33447265625
+    },
+    {
+      "label": 0,
+      "group_id": "562b894330c5a1e7",
+      "token_count": 37,
+      "completion_chars": 168,
+      "mean_norm": 6161.8828125,
+      "final_norm": 5266.38916015625
+    },
+    {
+      "label": 0,
+      "group_id": "dc542353168647b8",
+      "token_count": 40,
+      "completion_chars": 163,
+      "mean_norm": 6190.4267578125,
+      "final_norm": 5509.97900390625
+    },
+    {
+      "label": 0,
+      "group_id": "12cf4f30403e9c9c",
+      "token_count": 40,
+      "completion_chars": 194,
+      "mean_norm": 6244.14599609375,
+      "final_norm": 6053.6220703125
+    },
+    {
+      "label": 0,
+      "group_id": "ad38264d3d24899a",
+      "token_count": 40,
+      "completion_chars": 145,
+      "mean_norm": 6087.00830078125,
+      "final_norm": 5911.43212890625
+    },
+    {
+      "label": 0,
+      "group_id": "7e1e53346dec3722",
+      "token_count": 40,
+      "completion_chars": 131,
+      "mean_norm": 6670.21728515625,
+      "final_norm": 5575.58349609375
+    },
+    {
+      "label": 0,
+      "group_id": "451fe0cd89dfbc6f",
+      "token_count": 40,
+      "completion_chars": 172,
+      "mean_norm": 6222.0703125,
+      "final_norm": 5414.14892578125
+    },
+    {
+      "label": 0,
+      "group_id": "6bd07d63b176007e",
+      "token_count": 40,
+      "completion_chars": 151,
+      "mean_norm": 5922.3916015625,
+      "final_norm": 5831.810546875
+    },
+    {
+      "label": 0,
+      "group_id": "d5bf5e6a0c343d91",
+      "token_count": 40,
+      "completion_chars": 151,
+      "mean_norm": 6118.515625,
+      "final_norm": 5946.44580078125
+    },
+    {
+      "label": 0,
+      "group_id": "1732dc2f6a9a787c",
+      "token_count": 40,
+      "completion_chars": 124,
+      "mean_norm": 5774.2724609375,
+      "final_norm": 5017.17578125
+    },
+    {
+      "label": 0,
+      "group_id": "d3386523d572a8a1",
+      "token_count": 40,
+      "completion_chars": 130,
+      "mean_norm": 5877.19580078125,
+      "final_norm": 6093.6611328125
+    },
+    {
+      "label": 0,
+      "group_id": "a6a38c00ea0b61cc",
+      "token_count": 22,
+      "completion_chars": 90,
+      "mean_norm": 5698.57568359375,
+      "final_norm": 5363.92578125
+    },
+    {
+      "label": 0,
+      "group_id": "ba1d47ee7436205e",
+      "token_count": 40,
+      "completion_chars": 150,
+      "mean_norm": 5967.5693359375,
+      "final_norm": 4220.6865234375
+    },
+    {
+      "label": 0,
+      "group_id": "f7b95672d9df973d",
+      "token_count": 40,
+      "completion_chars": 157,
+      "mean_norm": 6591.2109375,
+      "final_norm": 6418.6103515625
+    },
+    {
+      "label": 0,
+      "group_id": "52c268b75cc89c16",
+      "token_count": 40,
+      "completion_chars": 181,
+      "mean_norm": 6275.02880859375,
+      "final_norm": 6994.0361328125
+    },
+    {
+      "label": 0,
+      "group_id": "b9491cb5e35a0b83",
+      "token_count": 40,
+      "completion_chars": 182,
+      "mean_norm": 6295.36181640625,
+      "final_norm": 6605.43212890625
+    },
+    {
+      "label": 0,
+      "group_id": "fb05862dc0abf464",
+      "token_count": 40,
+      "completion_chars": 164,
+      "mean_norm": 6258.09130859375,
+      "final_norm": 5848.75830078125
+    },
+    {
+      "label": 0,
+      "group_id": "a266768855f72ed6",
+      "token_count": 24,
+      "completion_chars": 111,
+      "mean_norm": 7448.76953125,
+      "final_norm": 5171.12939453125
+    },
+    {
+      "label": 0,
+      "group_id": "87c3cedfc7220df5",
+      "token_count": 14,
+      "completion_chars": 36,
+      "mean_norm": 5525.63671875,
+      "final_norm": 5074.99853515625
+    },
+    {
+      "label": 0,
+      "group_id": "a85a21ae9a35de60",
+      "token_count": 10,
+      "completion_chars": 16,
+      "mean_norm": 4774.025390625,
+      "final_norm": 5362.74365234375
+    },
+    {
+      "label": 0,
+      "group_id": "3c37c3a1d45bc976",
+      "token_count": 40,
+      "completion_chars": 182,
+      "mean_norm": 6557.60546875,
+      "final_norm": 6067.904296875
+    },
+    {
+      "label": 0,
+      "group_id": "7e80b90cf8bf75f0",
+      "token_count": 40,
+      "completion_chars": 163,
+      "mean_norm": 5993.82958984375,
+      "final_norm": 5524.09326171875
+    },
+    {
+      "label": 0,
+      "group_id": "d9702f9e3156e2f8",
+      "token_count": 40,
+      "completion_chars": 145,
+      "mean_norm": 6389.2021484375,
+      "final_norm": 5902.435546875
+    },
+    {
+      "label": 0,
+      "group_id": "42b39dc79c79c25c",
+      "token_count": 40,
+      "completion_chars": 128,
+      "mean_norm": 5900.51953125,
+      "final_norm": 5471.4814453125
+    },
+    {
+      "label": 0,
+      "group_id": "320b84f6483c276a",
+      "token_count": 40,
+      "completion_chars": 184,
+      "mean_norm": 6357.0908203125,
+      "final_norm": 6969.38916015625
+    },
+    {
+      "label": 0,
+      "group_id": "36156c293023da56",
+      "token_count": 40,
+      "completion_chars": 179,
+      "mean_norm": 6878.83056640625,
+      "final_norm": 5239.9912109375
+    },
+    {
+      "label": 0,
+      "group_id": "07e5e3cc238392e6",
+      "token_count": 37,
+      "completion_chars": 213,
+      "mean_norm": 6101.0205078125,
+      "final_norm": 5424.2138671875
+    },
+    {
+      "label": 0,
+      "group_id": "2c7f6ec0dc91e4cc",
+      "token_count": 39,
+      "completion_chars": 160,
+      "mean_norm": 5551.11572265625,
+      "final_norm": 5391.44580078125
+    },
+    {
+      "label": 0,
+      "group_id": "e39d124b4a560a25",
+      "token_count": 40,
+      "completion_chars": 187,
+      "mean_norm": 6032.01220703125,
+      "final_norm": 5879.3671875
+    },
+    {
+      "label": 0,
+      "group_id": "250df04f13fb69f8",
+      "token_count": 38,
+      "completion_chars": 231,
+      "mean_norm": 7042.44677734375,
+      "final_norm": 4977.388671875
+    },
+    {
+      "label": 0,
+      "group_id": "eba9de70d442ffdd",
+      "token_count": 40,
+      "completion_chars": 207,
+      "mean_norm": 5930.99169921875,
+      "final_norm": 6419.07275390625
+    },
+    {
+      "label": 0,
+      "group_id": "a9a04fed686dbbb5",
+      "token_count": 40,
+      "completion_chars": 167,
+      "mean_norm": 6120.0224609375,
+      "final_norm": 6158.54931640625
+    },
+    {
+      "label": 0,
+      "group_id": "8e090f6bf26818d2",
+      "token_count": 40,
+      "completion_chars": 135,
+      "mean_norm": 5925.3955078125,
+      "final_norm": 5329.1884765625
+    },
+    {
+      "label": 0,
+      "group_id": "2dd48bccc7b98a3a",
+      "token_count": 40,
+      "completion_chars": 211,
+      "mean_norm": 6274.90625,
+      "final_norm": 5833.66552734375
+    },
+    {
+      "label": 0,
+      "group_id": "a75c9c5944b5414c",
+      "token_count": 40,
+      "completion_chars": 184,
+      "mean_norm": 6445.23291015625,
+      "final_norm": 6892.96630859375
+    },
+    {
+      "label": 0,
+      "group_id": "a717d1c540ea6f3b",
+      "token_count": 5,
+      "completion_chars": 12,
+      "mean_norm": 5941.6025390625,
+      "final_norm": 5103.828125
+    },
+    {
+      "label": 0,
+      "group_id": "12c4ad8d3ece0f69",
+      "token_count": 40,
+      "completion_chars": 146,
+      "mean_norm": 5788.4462890625,
+      "final_norm": 5967.9091796875
+    },
+    {
+      "label": 0,
+      "group_id": "b7a2bdf4f84cddd2",
+      "token_count": 40,
+      "completion_chars": 169,
+      "mean_norm": 6226.72265625,
+      "final_norm": 5934.5009765625
+    },
+    {
+      "label": 0,
+      "group_id": "c298fd85a9fe98b6",
+      "token_count": 40,
+      "completion_chars": 178,
+      "mean_norm": 6121.9462890625,
+      "final_norm": 6228.1123046875
+    },
+    {
+      "label": 0,
+      "group_id": "f145b237fe67ec39",
+      "token_count": 40,
+      "completion_chars": 153,
+      "mean_norm": 5835.4677734375,
+      "final_norm": 4835.8056640625
+    },
+    {
+      "label": 0,
+      "group_id": "c2655df9f647a6be",
+      "token_count": 40,
+      "completion_chars": 163,
+      "mean_norm": 6173.77294921875,
+      "final_norm": 5543.0380859375
+    },
+    {
+      "label": 0,
+      "group_id": "14e0a95ac8f295d0",
+      "token_count": 36,
+      "completion_chars": 138,
+      "mean_norm": 5815.162109375,
+      "final_norm": 5332.9072265625
+    },
+    {
+      "label": 0,
+      "group_id": "45f9f6193bfd11bb",
+      "token_count": 40,
+      "completion_chars": 139,
+      "mean_norm": 6029.6220703125,
+      "final_norm": 5231.90478515625
+    },
+    {
+      "label": 0,
+      "group_id": "3808af5423716f9c",
+      "token_count": 40,
+      "completion_chars": 198,
+      "mean_norm": 6310.06884765625,
+      "final_norm": 5576.69677734375
+    },
+    {
+      "label": 0,
+      "group_id": "cafd319724294241",
+      "token_count": 40,
+      "completion_chars": 153,
+      "mean_norm": 6053.4609375,
+      "final_norm": 6083.27294921875
+    },
+    {
+      "label": 0,
+      "group_id": "6c9a5b57774bfc0e",
+      "token_count": 40,
+      "completion_chars": 172,
+      "mean_norm": 6314.55615234375,
+      "final_norm": 6291.58349609375
+    },
+    {
+      "label": 0,
+      "group_id": "3758f23754324ab9",
+      "token_count": 40,
+      "completion_chars": 167,
+      "mean_norm": 6273.5302734375,
+      "final_norm": 7606.76171875
+    },
+    {
+      "label": 0,
+      "group_id": "1f27efa7d05f1618",
+      "token_count": 40,
+      "completion_chars": 170,
+      "mean_norm": 6118.841796875,
+      "final_norm": 5645.6337890625
+    },
+    {
+      "label": 0,
+      "group_id": "69eae3c0035a0181",
+      "token_count": 40,
+      "completion_chars": 200,
+      "mean_norm": 6271.4873046875,
+      "final_norm": 6797.42236328125
+    },
+    {
+      "label": 0,
+      "group_id": "d427e42bf3434990",
+      "token_count": 40,
+      "completion_chars": 183,
+      "mean_norm": 6958.02099609375,
+      "final_norm": 5656.6826171875
+    },
+    {
+      "label": 0,
+      "group_id": "3a2e7bd037ba0cce",
+      "token_count": 40,
+      "completion_chars": 177,
+      "mean_norm": 6882.67333984375,
+      "final_norm": 7057.45263671875
+    },
+    {
+      "label": 0,
+      "group_id": "814410afee7c110b",
+      "token_count": 39,
+      "completion_chars": 183,
+      "mean_norm": 5642.72900390625,
+      "final_norm": 5231.5185546875
+    },
+    {
+      "label": 0,
+      "group_id": "729406b04a161a14",
+      "token_count": 40,
+      "completion_chars": 172,
+      "mean_norm": 7027.50927734375,
+      "final_norm": 7025.85888671875
+    },
+    {
+      "label": 0,
+      "group_id": "1613006183e92b70",
+      "token_count": 40,
+      "completion_chars": 188,
+      "mean_norm": 6244.8359375,
+      "final_norm": 6035.849609375
+    },
+    {
+      "label": 0,
+      "group_id": "3ecc313d3448bea9",
+      "token_count": 3,
+      "completion_chars": 3,
+      "mean_norm": 5362.67724609375,
+      "final_norm": 5266.16796875
+    },
+    {
+      "label": 0,
+      "group_id": "266250163186fc7f",
+      "token_count": 40,
+      "completion_chars": 189,
+      "mean_norm": 5981.36279296875,
+      "final_norm": 5841.6376953125
+    },
+    {
+      "label": 0,
+      "group_id": "b80110b491470976",
+      "token_count": 40,
+      "completion_chars": 200,
+      "mean_norm": 6492.017578125,
+      "final_norm": 7169.09130859375
+    },
+    {
+      "label": 0,
+      "group_id": "941e44f7e2cd252d",
+      "token_count": 40,
+      "completion_chars": 164,
+      "mean_norm": 6066.9384765625,
+      "final_norm": 4807.642578125
+    },
+    {
+      "label": 0,
+      "group_id": "62769faa3f55a148",
+      "token_count": 40,
+      "completion_chars": 192,
+      "mean_norm": 6308.48974609375,
+      "final_norm": 6326.96630859375
+    },
+    {
+      "label": 0,
+      "group_id": "669e7b8fcbc719b5",
+      "token_count": 40,
+      "completion_chars": 140,
+      "mean_norm": 5564.7392578125,
+      "final_norm": 5895.98046875
+    },
+    {
+      "label": 0,
+      "group_id": "99a950ffae3ce373",
+      "token_count": 40,
+      "completion_chars": 173,
+      "mean_norm": 6169.4169921875,
+      "final_norm": 5847.40478515625
+    },
+    {
+      "label": 0,
+      "group_id": "73f00900478bc9b5",
+      "token_count": 40,
+      "completion_chars": 175,
+      "mean_norm": 6040.0498046875,
+      "final_norm": 5923.44775390625
+    },
+    {
+      "label": 0,
+      "group_id": "02442e02f04e2673",
+      "token_count": 25,
+      "completion_chars": 138,
+      "mean_norm": 5856.58251953125,
+      "final_norm": 4845.89306640625
+    },
+    {
+      "label": 0,
+      "group_id": "9ad1e30408cc08e2",
+      "token_count": 40,
+      "completion_chars": 159,
+      "mean_norm": 6247.26025390625,
+      "final_norm": 6031.7236328125
+    },
+    {
+      "label": 0,
+      "group_id": "83b023e92ad9081c",
+      "token_count": 3,
+      "completion_chars": 8,
+      "mean_norm": 5634.97998046875,
+      "final_norm": 4789.3544921875
+    },
+    {
+      "label": 0,
+      "group_id": "3d7f43aa6f23c212",
+      "token_count": 40,
+      "completion_chars": 188,
+      "mean_norm": 5923.34375,
+      "final_norm": 6589.4501953125
+    },
+    {
+      "label": 0,
+      "group_id": "1ecff56f945f4809",
+      "token_count": 40,
+      "completion_chars": 186,
+      "mean_norm": 6112.19287109375,
+      "final_norm": 6447.31787109375
+    },
+    {
+      "label": 0,
+      "group_id": "e6ebcbae26c6b806",
+      "token_count": 40,
+      "completion_chars": 206,
+      "mean_norm": 6307.6728515625,
+      "final_norm": 6900.70654296875
+    },
+    {
+      "label": 0,
+      "group_id": "c5adf2a064326888",
+      "token_count": 40,
+      "completion_chars": 157,
+      "mean_norm": 5813.9462890625,
+      "final_norm": 6124.0283203125
+    },
+    {
+      "label": 0,
+      "group_id": "fa4526f077587383",
+      "token_count": 40,
+      "completion_chars": 138,
+      "mean_norm": 6142.3232421875,
+      "final_norm": 5961.408203125
+    },
+    {
+      "label": 0,
+      "group_id": "83c5751b047cb3cd",
+      "token_count": 40,
+      "completion_chars": 147,
+      "mean_norm": 6164.5986328125,
+      "final_norm": 6061.97216796875
+    },
+    {
+      "label": 0,
+      "group_id": "f4bbb52c3ad8300c",
+      "token_count": 40,
+      "completion_chars": 184,
+      "mean_norm": 6687.1298828125,
+      "final_norm": 6377.77685546875
+    },
+    {
+      "label": 0,
+      "group_id": "dbd62c9aee0c1ee8",
+      "token_count": 40,
+      "completion_chars": 154,
+      "mean_norm": 6079.49755859375,
+      "final_norm": 6017.66845703125
+    },
+    {
+      "label": 0,
+      "group_id": "c30ca50b84cef75a",
+      "token_count": 40,
+      "completion_chars": 176,
+      "mean_norm": 6372.68994140625,
+      "final_norm": 6009.4462890625
+    },
+    {
+      "label": 0,
+      "group_id": "802d6d434cecf91c",
+      "token_count": 40,
+      "completion_chars": 177,
+      "mean_norm": 6116.6962890625,
+      "final_norm": 6642.83544921875
+    },
+    {
+      "label": 0,
+      "group_id": "61d774aa99f45556",
+      "token_count": 40,
+      "completion_chars": 161,
+      "mean_norm": 5882.3203125,
+      "final_norm": 5292.48095703125
+    },
+    {
+      "label": 0,
+      "group_id": "eca2e260de05fcc3",
+      "token_count": 40,
+      "completion_chars": 162,
+      "mean_norm": 7049.11572265625,
+      "final_norm": 5549.53369140625
+    },
+    {
+      "label": 0,
+      "group_id": "df585b7c1a6503bf",
+      "token_count": 40,
+      "completion_chars": 169,
+      "mean_norm": 5907.833984375,
+      "final_norm": 5253.85546875
+    },
+    {
+      "label": 0,
+      "group_id": "6fd38472c4c2d60a",
+      "token_count": 19,
+      "completion_chars": 73,
+      "mean_norm": 5651.58447265625,
+      "final_norm": 5177.71728515625
+    },
+    {
+      "label": 0,
+      "group_id": "8146bbd73219bfe9",
+      "token_count": 40,
+      "completion_chars": 169,
+      "mean_norm": 5964.0263671875,
+      "final_norm": 5550.359375
+    },
+    {
+      "label": 0,
+      "group_id": "579e529dfb5baef5",
+      "token_count": 40,
+      "completion_chars": 196,
+      "mean_norm": 6127.5419921875,
+      "final_norm": 5446.3330078125
+    },
+    {
+      "label": 0,
+      "group_id": "ebf83983469f5138",
+      "token_count": 40,
+      "completion_chars": 185,
+      "mean_norm": 6210.3369140625,
+      "final_norm": 5642.39404296875
+    },
+    {
+      "label": 0,
+      "group_id": "b8699760f244868e",
+      "token_count": 40,
+      "completion_chars": 186,
+      "mean_norm": 6388.0888671875,
+      "final_norm": 6437.95849609375
+    },
+    {
+      "label": 0,
+      "group_id": "a07be44f3fc2a603",
+      "token_count": 40,
+      "completion_chars": 217,
+      "mean_norm": 6134.59912109375,
+      "final_norm": 5157.12060546875
+    },
+    {
+      "label": 0,
+      "group_id": "f16a47711a595d03",
+      "token_count": 40,
+      "completion_chars": 186,
+      "mean_norm": 6424.85302734375,
+      "final_norm": 6963.61865234375
+    },
+    {
+      "label": 0,
+      "group_id": "93a2b76deb192b7a",
+      "token_count": 40,
+      "completion_chars": 151,
+      "mean_norm": 5801.93212890625,
+      "final_norm": 5550.56640625
+    },
+    {
+      "label": 0,
+      "group_id": "b56621fdce395a8c",
+      "token_count": 40,
+      "completion_chars": 185,
+      "mean_norm": 6585.12109375,
+      "final_norm": 5351.958984375
+    },
+    {
+      "label": 0,
+      "group_id": "a166b3bfea77c629",
+      "token_count": 40,
+      "completion_chars": 220,
+      "mean_norm": 6077.7939453125,
+      "final_norm": 6513.60498046875
+    },
+    {
+      "label": 0,
+      "group_id": "2dda35282f1a0a00",
+      "token_count": 40,
+      "completion_chars": 172,
+      "mean_norm": 6048.1123046875,
+      "final_norm": 5560.8544921875
+    },
+    {
+      "label": 0,
+      "group_id": "d9d8dc00acc75169",
+      "token_count": 40,
+      "completion_chars": 98,
+      "mean_norm": 5650.04345703125,
+      "final_norm": 6051.49609375
+    },
+    {
+      "label": 0,
+      "group_id": "5a1ba0aee1d70f36",
+      "token_count": 40,
+      "completion_chars": 162,
+      "mean_norm": 5642.119140625,
+      "final_norm": 5317.91064453125
+    },
+    {
+      "label": 0,
+      "group_id": "a0ca4b07f083dbe3",
+      "token_count": 40,
+      "completion_chars": 193,
+      "mean_norm": 6116.63427734375,
+      "final_norm": 6966.79150390625
+    },
+    {
+      "label": 0,
+      "group_id": "5938a4e3d95cb840",
+      "token_count": 8,
+      "completion_chars": 26,
+      "mean_norm": 5765.8837890625,
+      "final_norm": 4981.0322265625
+    },
+    {
+      "label": 0,
+      "group_id": "2360d83aa40b209d",
+      "token_count": 40,
+      "completion_chars": 160,
+      "mean_norm": 6783.9580078125,
+      "final_norm": 7503.6044921875
+    },
+    {
+      "label": 0,
+      "group_id": "ebfa28d80352124b",
+      "token_count": 40,
+      "completion_chars": 190,
+      "mean_norm": 5942.078125,
+      "final_norm": 4965.5859375
+    },
+    {
+      "label": 0,
+      "group_id": "89f14e533a2cc1ee",
+      "token_count": 40,
+      "completion_chars": 224,
+      "mean_norm": 6225.70556640625,
+      "final_norm": 6534.83837890625
+    },
+    {
+      "label": 0,
+      "group_id": "f9bf833ced0e38b5",
+      "token_count": 40,
+      "completion_chars": 178,
+      "mean_norm": 6191.7275390625,
+      "final_norm": 5427.9443359375
+    },
+    {
+      "label": 0,
+      "group_id": "036e160527edbdea",
+      "token_count": 40,
+      "completion_chars": 133,
+      "mean_norm": 5962.0751953125,
+      "final_norm": 5724.4580078125
+    },
+    {
+      "label": 0,
+      "group_id": "6edcf41c7b59fc86",
+      "token_count": 31,
+      "completion_chars": 133,
+      "mean_norm": 5960.23828125,
+      "final_norm": 5490.388671875
+    },
+    {
+      "label": 0,
+      "group_id": "d16c198c2ed49b44",
+      "token_count": 40,
+      "completion_chars": 181,
+      "mean_norm": 6322.18359375,
+      "final_norm": 5498.47900390625
+    },
+    {
+      "label": 0,
+      "group_id": "617f834dcccdf1a2",
+      "token_count": 40,
+      "completion_chars": 128,
+      "mean_norm": 6045.58837890625,
+      "final_norm": 8073.341796875
+    },
+    {
+      "label": 0,
+      "group_id": "4d134641f0ec38a3",
+      "token_count": 14,
+      "completion_chars": 53,
+      "mean_norm": 5668.05908203125,
+      "final_norm": 5268.51220703125
+    },
+    {
+      "label": 0,
+      "group_id": "6f0bac369e86bf34",
+      "token_count": 40,
+      "completion_chars": 184,
+      "mean_norm": 5969.9306640625,
+      "final_norm": 6279.37744140625
+    },
+    {
+      "label": 0,
+      "group_id": "88184cdff3fe233c",
+      "token_count": 40,
+      "completion_chars": 188,
+      "mean_norm": 6070.1142578125,
+      "final_norm": 5895.42138671875
+    },
+    {
+      "label": 0,
+      "group_id": "95df384e0d138c65",
+      "token_count": 40,
+      "completion_chars": 137,
+      "mean_norm": 6159.3271484375,
+      "final_norm": 5288.97705078125
+    },
+    {
+      "label": 0,
+      "group_id": "6bf5447a01d2a54e",
+      "token_count": 40,
+      "completion_chars": 161,
+      "mean_norm": 6172.7080078125,
+      "final_norm": 5548.22119140625
+    },
+    {
+      "label": 0,
+      "group_id": "00ecb8bcb8434c44",
+      "token_count": 40,
+      "completion_chars": 168,
+      "mean_norm": 6067.8798828125,
+      "final_norm": 6030.2626953125
+    },
+    {
+      "label": 0,
+      "group_id": "711af2f063826fe9",
+      "token_count": 40,
+      "completion_chars": 203,
+      "mean_norm": 6212.0302734375,
+      "final_norm": 5229.080078125
+    },
+    {
+      "label": 0,
+      "group_id": "7f2de55d639f1f60",
+      "token_count": 40,
+      "completion_chars": 176,
+      "mean_norm": 6108.05224609375,
+      "final_norm": 6424.0859375
+    },
+    {
+      "label": 0,
+      "group_id": "7a8ff39150777125",
+      "token_count": 40,
+      "completion_chars": 228,
+      "mean_norm": 6261.5400390625,
+      "final_norm": 6576.24755859375
+    },
+    {
+      "label": 0,
+      "group_id": "74e115c0e0096bb3",
+      "token_count": 40,
+      "completion_chars": 193,
+      "mean_norm": 6657.3076171875,
+      "final_norm": 6732.7607421875
+    },
+    {
+      "label": 0,
+      "group_id": "a0273757e7e5ba72",
+      "token_count": 40,
+      "completion_chars": 186,
+      "mean_norm": 6817.9091796875,
+      "final_norm": 6584.7783203125
+    },
+    {
+      "label": 0,
+      "group_id": "0aa237ada84cfed5",
+      "token_count": 40,
+      "completion_chars": 174,
+      "mean_norm": 5889.95068359375,
+      "final_norm": 6514.4853515625
+    },
+    {
+      "label": 0,
+      "group_id": "844831f5c2748e64",
+      "token_count": 40,
+      "completion_chars": 192,
+      "mean_norm": 6262.72705078125,
+      "final_norm": 5669.16748046875
+    },
+    {
+      "label": 0,
+      "group_id": "2b9c1b0168a3bed6",
+      "token_count": 40,
+      "completion_chars": 123,
+      "mean_norm": 5680.42333984375,
+      "final_norm": 7238.609375
+    },
+    {
+      "label": 0,
+      "group_id": "09f565086dfdde23",
+      "token_count": 24,
+      "completion_chars": 102,
+      "mean_norm": 5796.41650390625,
+      "final_norm": 5006.400390625
+    },
+    {
+      "label": 0,
+      "group_id": "ad9169923148347f",
+      "token_count": 40,
+      "completion_chars": 145,
+      "mean_norm": 6119.37939453125,
+      "final_norm": 5652.197265625
+    },
+    {
+      "label": 0,
+      "group_id": "53fe9c5791607028",
+      "token_count": 40,
+      "completion_chars": 157,
+      "mean_norm": 5905.7431640625,
+      "final_norm": 6541.794921875
+    },
+    {
+      "label": 0,
+      "group_id": "5b312a0ea4ff08a4",
+      "token_count": 6,
+      "completion_chars": 18,
+      "mean_norm": 5891.43310546875,
+      "final_norm": 5041.1728515625
+    },
+    {
+      "label": 0,
+      "group_id": "0ff7fe8577694c88",
+      "token_count": 40,
+      "completion_chars": 214,
+      "mean_norm": 6088.85791015625,
+      "final_norm": 5253.69677734375
+    },
+    {
+      "label": 0,
+      "group_id": "9b8e340239bd927a",
+      "token_count": 40,
+      "completion_chars": 198,
+      "mean_norm": 5960.08544921875,
+      "final_norm": 5423.7255859375
+    },
+    {
+      "label": 0,
+      "group_id": "f991527ce5b13f4a",
+      "token_count": 40,
+      "completion_chars": 189,
+      "mean_norm": 5865.2080078125,
+      "final_norm": 5486.17626953125
+    },
+    {
+      "label": 0,
+      "group_id": "10a6fcbfcde00ffe",
+      "token_count": 40,
+      "completion_chars": 186,
+      "mean_norm": 5824.4814453125,
+      "final_norm": 5119.52685546875
+    },
+    {
+      "label": 0,
+      "group_id": "28124eb9cd9cc031",
+      "token_count": 22,
+      "completion_chars": 69,
+      "mean_norm": 5279.849609375,
+      "final_norm": 5326.35546875
+    },
+    {
+      "label": 0,
+      "group_id": "f5016b9489a08410",
+      "token_count": 40,
+      "completion_chars": 145,
+      "mean_norm": 6182.5087890625,
+      "final_norm": 6841.53759765625
+    },
+    {
+      "label": 0,
+      "group_id": "db3f95bc1c16bd63",
+      "token_count": 40,
+      "completion_chars": 145,
+      "mean_norm": 5731.82421875,
+      "final_norm": 5516.05224609375
+    },
+    {
+      "label": 0,
+      "group_id": "b04da05d1d17077e",
+      "token_count": 40,
+      "completion_chars": 177,
+      "mean_norm": 6112.3212890625,
+      "final_norm": 7086.23193359375
+    },
+    {
+      "label": 0,
+      "group_id": "65f9032f21457e75",
+      "token_count": 40,
+      "completion_chars": 195,
+      "mean_norm": 6659.3095703125,
+      "final_norm": 6134.88525390625
+    },
+    {
+      "label": 0,
+      "group_id": "99f36f5b93270529",
+      "token_count": 40,
+      "completion_chars": 174,
+      "mean_norm": 6022.87353515625,
+      "final_norm": 6395.9052734375
+    },
+    {
+      "label": 0,
+      "group_id": "eb9efd12bd0cb805",
+      "token_count": 9,
+      "completion_chars": 39,
+      "mean_norm": 6066.6572265625,
+      "final_norm": 5300.2490234375
+    },
+    {
+      "label": 0,
+      "group_id": "1a20c58dbdbcf066",
+      "token_count": 40,
+      "completion_chars": 192,
+      "mean_norm": 6188.01708984375,
+      "final_norm": 5233.1142578125
+    },
+    {
+      "label": 0,
+      "group_id": "a6812ea259c94552",
+      "token_count": 40,
+      "completion_chars": 160,
+      "mean_norm": 6938.57275390625,
+      "final_norm": 5542.89599609375
+    },
+    {
+      "label": 0,
+      "group_id": "11bd81d0d75e5e0e",
+      "token_count": 40,
+      "completion_chars": 201,
+      "mean_norm": 6413.61328125,
+      "final_norm": 6422.2568359375
+    },
+    {
+      "label": 0,
+      "group_id": "4fe284a401ce4c2c",
+      "token_count": 27,
+      "completion_chars": 111,
+      "mean_norm": 5664.0087890625,
+      "final_norm": 5195.42431640625
+    },
+    {
+      "label": 0,
+      "group_id": "f238d36bd02706c1",
+      "token_count": 40,
+      "completion_chars": 186,
+      "mean_norm": 6542.19287109375,
+      "final_norm": 6292.9716796875
+    },
+    {
+      "label": 0,
+      "group_id": "205653bdf0f539bb",
+      "token_count": 40,
+      "completion_chars": 195,
+      "mean_norm": 5991.1357421875,
+      "final_norm": 6631.43896484375
+    },
+    {
+      "label": 0,
+      "group_id": "3bb076e0576e9da4",
+      "token_count": 40,
+      "completion_chars": 141,
+      "mean_norm": 6662.02197265625,
+      "final_norm": 5899.94873046875
+    },
+    {
+      "label": 0,
+      "group_id": "4e80b3d7168a3953",
+      "token_count": 40,
+      "completion_chars": 180,
+      "mean_norm": 6002.96533203125,
+      "final_norm": 6608.072265625
+    },
+    {
+      "label": 0,
+      "group_id": "8b50899e5f782ae0",
+      "token_count": 40,
+      "completion_chars": 173,
+      "mean_norm": 6152.27978515625,
+      "final_norm": 5326.5732421875
+    },
+    {
+      "label": 0,
+      "group_id": "46926f695024a113",
+      "token_count": 40,
+      "completion_chars": 172,
+      "mean_norm": 6263.1201171875,
+      "final_norm": 5579.05126953125
+    },
+    {
+      "label": 0,
+      "group_id": "24da9ebe9ee36bbd",
+      "token_count": 40,
+      "completion_chars": 185,
+      "mean_norm": 6140.86962890625,
+      "final_norm": 5413.9892578125
+    },
+    {
+      "label": 0,
+      "group_id": "09bcdd3386dac5b4",
+      "token_count": 40,
+      "completion_chars": 202,
+      "mean_norm": 6152.24755859375,
+      "final_norm": 6736.8642578125
+    },
+    {
+      "label": 0,
+      "group_id": "9e6270b6342624cb",
+      "token_count": 40,
+      "completion_chars": 128,
+      "mean_norm": 5655.7294921875,
+      "final_norm": 5381.79150390625
+    },
+    {
+      "label": 0,
+      "group_id": "03b0e4b8043fb21a",
+      "token_count": 9,
+      "completion_chars": 40,
+      "mean_norm": 6043.96826171875,
+      "final_norm": 5327.7939453125
+    },
+    {
+      "label": 0,
+      "group_id": "c58c49928581697a",
+      "token_count": 21,
+      "completion_chars": 93,
+      "mean_norm": 5783.7177734375,
+      "final_norm": 5489.078125
+    },
+    {
+      "label": 0,
+      "group_id": "1dc2fab1b3b36b9e",
+      "token_count": 40,
+      "completion_chars": 135,
+      "mean_norm": 5891.79248046875,
+      "final_norm": 5833.01220703125
+    },
+    {
+      "label": 0,
+      "group_id": "4dccad0cbf1d6207",
+      "token_count": 40,
+      "completion_chars": 162,
+      "mean_norm": 6138.32275390625,
+      "final_norm": 6830.72216796875
+    },
+    {
+      "label": 0,
+      "group_id": "e83af9b4e951bb49",
+      "token_count": 40,
+      "completion_chars": 181,
+      "mean_norm": 6181.91015625,
+      "final_norm": 6416.8134765625
+    },
+    {
+      "label": 0,
+      "group_id": "cb0856f6785c5536",
+      "token_count": 40,
+      "completion_chars": 211,
+      "mean_norm": 6647.2626953125,
+      "final_norm": 6988.27001953125
+    },
+    {
+      "label": 0,
+      "group_id": "7c9db51eb315559a",
+      "token_count": 37,
+      "completion_chars": 155,
+      "mean_norm": 6162.701171875,
+      "final_norm": 5525.8662109375
+    },
+    {
+      "label": 0,
+      "group_id": "f1b1eb0d59af3034",
+      "token_count": 40,
+      "completion_chars": 195,
+      "mean_norm": 6426.7373046875,
+      "final_norm": 5511.0576171875
+    },
+    {
+      "label": 0,
+      "group_id": "1d8dd79829a92a4d",
+      "token_count": 40,
+      "completion_chars": 163,
+      "mean_norm": 6365.515625,
+      "final_norm": 5936.48828125
+    },
+    {
+      "label": 0,
+      "group_id": "1e71da9534093202",
+      "token_count": 40,
+      "completion_chars": 179,
+      "mean_norm": 6267.3291015625,
+      "final_norm": 7065.041015625
+    },
+    {
+      "label": 0,
+      "group_id": "11ac814f7ce6e901",
+      "token_count": 40,
+      "completion_chars": 156,
+      "mean_norm": 6867.6552734375,
+      "final_norm": 5649.669921875
+    },
+    {
+      "label": 0,
+      "group_id": "91d45ae51d601c02",
+      "token_count": 40,
+      "completion_chars": 191,
+      "mean_norm": 6167.42578125,
+      "final_norm": 5414.76953125
+    },
+    {
+      "label": 0,
+      "group_id": "4f4139c1b464d9ca",
+      "token_count": 40,
+      "completion_chars": 164,
+      "mean_norm": 6147.380859375,
+      "final_norm": 6543.81982421875
+    },
+    {
+      "label": 0,
+      "group_id": "5e66eb05b066e9d1",
+      "token_count": 40,
+      "completion_chars": 129,
+      "mean_norm": 6017.99951171875,
+      "final_norm": 5408.6513671875
+    },
+    {
+      "label": 0,
+      "group_id": "c9740d1fc6f38bc0",
+      "token_count": 40,
+      "completion_chars": 192,
+      "mean_norm": 6263.0,
+      "final_norm": 7152.43408203125
+    },
+    {
+      "label": 0,
+      "group_id": "7eac129b4e2e8dab",
+      "token_count": 40,
+      "completion_chars": 166,
+      "mean_norm": 6235.189453125,
+      "final_norm": 5672.76123046875
+    },
+    {
+      "label": 0,
+      "group_id": "742551d7f0c81d61",
+      "token_count": 40,
+      "completion_chars": 173,
+      "mean_norm": 6108.025390625,
+      "final_norm": 6198.8037109375
+    },
+    {
+      "label": 0,
+      "group_id": "6c7ab607bcfa8bc8",
+      "token_count": 40,
+      "completion_chars": 181,
+      "mean_norm": 6203.27880859375,
+      "final_norm": 7595.568359375
+    },
+    {
+      "label": 0,
+      "group_id": "e9f64314cba66273",
+      "token_count": 28,
+      "completion_chars": 123,
+      "mean_norm": 5718.90576171875,
+      "final_norm": 5136.83935546875
+    },
+    {
+      "label": 0,
+      "group_id": "3c79357715e42416",
+      "token_count": 40,
+      "completion_chars": 218,
+      "mean_norm": 6146.2744140625,
+      "final_norm": 6871.86181640625
+    },
+    {
+      "label": 0,
+      "group_id": "04839556b98a3aad",
+      "token_count": 4,
+      "completion_chars": 23,
+      "mean_norm": 5819.5283203125,
+      "final_norm": 4847.11865234375
+    },
+    {
+      "label": 0,
+      "group_id": "f906d98e6e3773a3",
+      "token_count": 40,
+      "completion_chars": 137,
+      "mean_norm": 5942.18359375,
+      "final_norm": 6032.701171875
+    },
+    {
+      "label": 0,
+      "group_id": "f8a5416ea8ec2a67",
+      "token_count": 40,
+      "completion_chars": 195,
+      "mean_norm": 6491.96484375,
+      "final_norm": 6375.58642578125
+    },
+    {
+      "label": 0,
+      "group_id": "745637ec9eb4e1fa",
+      "token_count": 40,
+      "completion_chars": 139,
+      "mean_norm": 6546.38427734375,
+      "final_norm": 5217.390625
+    },
+    {
+      "label": 0,
+      "group_id": "110c12879e1f0c08",
+      "token_count": 40,
+      "completion_chars": 142,
+      "mean_norm": 6289.0361328125,
+      "final_norm": 7613.94287109375
+    },
+    {
+      "label": 0,
+      "group_id": "dbaf6bc3e9eda703",
+      "token_count": 40,
+      "completion_chars": 147,
+      "mean_norm": 6385.62109375,
+      "final_norm": 7252.45947265625
+    },
+    {
+      "label": 0,
+      "group_id": "20134447fc4e912a",
+      "token_count": 40,
+      "completion_chars": 203,
+      "mean_norm": 6262.35791015625,
+      "final_norm": 5573.4990234375
+    },
+    {
+      "label": 0,
+      "group_id": "d74810f52fc056c2",
+      "token_count": 40,
+      "completion_chars": 186,
+      "mean_norm": 6470.880859375,
+      "final_norm": 6796.68896484375
+    },
+    {
+      "label": 0,
+      "group_id": "fb86907b5bf0c1e8",
+      "token_count": 40,
+      "completion_chars": 194,
+      "mean_norm": 6610.44921875,
+      "final_norm": 5897.5947265625
+    },
+    {
+      "label": 0,
+      "group_id": "c6b959517a1f8368",
+      "token_count": 40,
+      "completion_chars": 186,
+      "mean_norm": 6234.64453125,
+      "final_norm": 6009.83447265625
+    },
+    {
+      "label": 0,
+      "group_id": "48d610ca1e6c82b7",
+      "token_count": 29,
+      "completion_chars": 117,
+      "mean_norm": 5712.19140625,
+      "final_norm": 5171.0771484375
+    },
+    {
+      "label": 0,
+      "group_id": "8ebd94013cff9f12",
+      "token_count": 40,
+      "completion_chars": 171,
+      "mean_norm": 6295.53662109375,
+      "final_norm": 6347.4775390625
+    },
+    {
+      "label": 0,
+      "group_id": "cb5e8599a8c6628d",
+      "token_count": 40,
+      "completion_chars": 204,
+      "mean_norm": 6732.4609375,
+      "final_norm": 5645.50244140625
+    },
+    {
+      "label": 0,
+      "group_id": "dc356ea6db1d3673",
+      "token_count": 40,
+      "completion_chars": 189,
+      "mean_norm": 6163.6728515625,
+      "final_norm": 5134.97021484375
+    },
+    {
+      "label": 0,
+      "group_id": "bd577013225e819c",
+      "token_count": 40,
+      "completion_chars": 204,
+      "mean_norm": 6202.763671875,
+      "final_norm": 6695.97021484375
+    },
+    {
+      "label": 0,
+      "group_id": "29d8206b63a43da8",
+      "token_count": 40,
+      "completion_chars": 142,
+      "mean_norm": 5755.220703125,
+      "final_norm": 4083.18798828125
+    },
+    {
+      "label": 0,
+      "group_id": "46897fded14d9414",
+      "token_count": 40,
+      "completion_chars": 177,
+      "mean_norm": 6058.1435546875,
+      "final_norm": 6438.29931640625
+    },
+    {
+      "label": 0,
+      "group_id": "4046211ef0652626",
+      "token_count": 40,
+      "completion_chars": 181,
+      "mean_norm": 6396.546875,
+      "final_norm": 6830.95166015625
+    },
+    {
+      "label": 0,
+      "group_id": "b5ee6ab6d9b6b6a5",
+      "token_count": 40,
+      "completion_chars": 211,
+      "mean_norm": 6494.55126953125,
+      "final_norm": 7418.16015625
+    },
+    {
+      "label": 0,
+      "group_id": "a70fe95859bea5ef",
+      "token_count": 40,
+      "completion_chars": 150,
+      "mean_norm": 6150.34130859375,
+      "final_norm": 6177.30810546875
+    },
+    {
+      "label": 0,
+      "group_id": "90e5843464c14756",
+      "token_count": 40,
+      "completion_chars": 164,
+      "mean_norm": 6106.80810546875,
+      "final_norm": 5480.87548828125
+    },
+    {
+      "label": 0,
+      "group_id": "4b8b9e4185a752b0",
+      "token_count": 40,
+      "completion_chars": 181,
+      "mean_norm": 6131.81005859375,
+      "final_norm": 6383.46728515625
+    },
+    {
+      "label": 0,
+      "group_id": "6196da6648a2c5ef",
+      "token_count": 40,
+      "completion_chars": 161,
+      "mean_norm": 6156.14990234375,
+      "final_norm": 6578.25732421875
+    },
+    {
+      "label": 0,
+      "group_id": "557d99d155239786",
+      "token_count": 27,
+      "completion_chars": 111,
+      "mean_norm": 5575.35009765625,
+      "final_norm": 5300.82666015625
+    },
+    {
+      "label": 0,
+      "group_id": "caa35ec8cef21693",
+      "token_count": 40,
+      "completion_chars": 180,
+      "mean_norm": 6195.05859375,
+      "final_norm": 6935.2412109375
+    },
+    {
+      "label": 0,
+      "group_id": "8093963720a1d9a5",
+      "token_count": 3,
+      "completion_chars": 2,
+      "mean_norm": 5477.84423828125,
+      "final_norm": 5017.49365234375
+    },
+    {
+      "label": 0,
+      "group_id": "386375fed2295b4d",
+      "token_count": 40,
+      "completion_chars": 169,
+      "mean_norm": 6023.58837890625,
+      "final_norm": 6185.11279296875
+    },
+    {
+      "label": 0,
+      "group_id": "9dfc54e3be3378cd",
+      "token_count": 40,
+      "completion_chars": 157,
+      "mean_norm": 5908.49755859375,
+      "final_norm": 5749.94970703125
+    },
+    {
+      "label": 0,
+      "group_id": "ed3049b96256586c",
+      "token_count": 40,
+      "completion_chars": 170,
+      "mean_norm": 6878.0576171875,
+      "final_norm": 6427.2626953125
+    },
+    {
+      "label": 0,
+      "group_id": "65b67aa701ac43c0",
+      "token_count": 31,
+      "completion_chars": 131,
+      "mean_norm": 5917.48779296875,
+      "final_norm": 5328.16015625
+    },
+    {
+      "label": 0,
+      "group_id": "2053979dcc76bc7b",
+      "token_count": 40,
+      "completion_chars": 194,
+      "mean_norm": 6161.189453125,
+      "final_norm": 5581.9541015625
+    },
+    {
+      "label": 0,
+      "group_id": "052a4152d0cca153",
+      "token_count": 40,
+      "completion_chars": 158,
+      "mean_norm": 6854.96728515625,
+      "final_norm": 7412.24609375
+    },
+    {
+      "label": 0,
+      "group_id": "f5829bdff3bae115",
+      "token_count": 40,
+      "completion_chars": 162,
+      "mean_norm": 5976.7509765625,
+      "final_norm": 6806.3212890625
+    },
+    {
+      "label": 0,
+      "group_id": "4d3dfe3eac76d210",
+      "token_count": 40,
+      "completion_chars": 171,
+      "mean_norm": 6138.6474609375,
+      "final_norm": 5029.0068359375
+    },
+    {
+      "label": 0,
+      "group_id": "c6aca2554fdf4f70",
+      "token_count": 18,
+      "completion_chars": 77,
+      "mean_norm": 5999.26123046875,
+      "final_norm": 5238.7685546875
+    },
+    {
+      "label": 0,
+      "group_id": "6ac9a0819a29a956",
+      "token_count": 40,
+      "completion_chars": 252,
+      "mean_norm": 6625.09375,
+      "final_norm": 6547.42431640625
+    },
+    {
+      "label": 0,
+      "group_id": "5bd30f5b71fdf22c",
+      "token_count": 40,
+      "completion_chars": 151,
+      "mean_norm": 5675.01025390625,
+      "final_norm": 5381.29150390625
+    },
+    {
+      "label": 0,
+      "group_id": "cb6fe0584520b432",
+      "token_count": 40,
+      "completion_chars": 221,
+      "mean_norm": 5925.32177734375,
+      "final_norm": 6470.4267578125
+    },
+    {
+      "label": 0,
+      "group_id": "5a287798a5847076",
+      "token_count": 40,
+      "completion_chars": 138,
+      "mean_norm": 6588.65380859375,
+      "final_norm": 5576.85595703125
+    },
+    {
+      "label": 0,
+      "group_id": "38563e6d3508ef98",
+      "token_count": 40,
+      "completion_chars": 157,
+      "mean_norm": 5586.51318359375,
+      "final_norm": 5929.3095703125
+    },
+    {
+      "label": 0,
+      "group_id": "a287ebad9dc30a88",
+      "token_count": 40,
+      "completion_chars": 173,
+      "mean_norm": 6947.8291015625,
+      "final_norm": 5094.1953125
+    },
+    {
+      "label": 0,
+      "group_id": "5cf7a0791c0af53e",
+      "token_count": 40,
+      "completion_chars": 230,
+      "mean_norm": 6997.8564453125,
+      "final_norm": 6513.14111328125
+    },
+    {
+      "label": 0,
+      "group_id": "218dfe765a463d38",
+      "token_count": 20,
+      "completion_chars": 24,
+      "mean_norm": 5228.2255859375,
+      "final_norm": 5134.06103515625
+    },
+    {
+      "label": 0,
+      "group_id": "f415f68aa4ac729d",
+      "token_count": 40,
+      "completion_chars": 142,
+      "mean_norm": 6151.29345703125,
+      "final_norm": 7129.4638671875
+    },
+    {
+      "label": 0,
+      "group_id": "75083acba2746da2",
+      "token_count": 40,
+      "completion_chars": 168,
+      "mean_norm": 6270.4775390625,
+      "final_norm": 5591.2431640625
+    },
+    {
+      "label": 0,
+      "group_id": "3b1cc4449c8ba9fa",
+      "token_count": 40,
+      "completion_chars": 158,
+      "mean_norm": 6654.88525390625,
+      "final_norm": 7054.6181640625
+    },
+    {
+      "label": 0,
+      "group_id": "3bf7717da0def167",
+      "token_count": 40,
+      "completion_chars": 170,
+      "mean_norm": 6710.8984375,
+      "final_norm": 6641.5732421875
+    },
+    {
+      "label": 0,
+      "group_id": "2e01a7dbda72faed",
+      "token_count": 40,
+      "completion_chars": 179,
+      "mean_norm": 6921.64453125,
+      "final_norm": 5685.27197265625
+    },
+    {
+      "label": 0,
+      "group_id": "a48f6ab5d070341f",
+      "token_count": 40,
+      "completion_chars": 161,
+      "mean_norm": 6316.26318359375,
+      "final_norm": 5137.40478515625
+    },
+    {
+      "label": 0,
+      "group_id": "b8e5d16840d63caf",
+      "token_count": 40,
+      "completion_chars": 170,
+      "mean_norm": 6135.6259765625,
+      "final_norm": 6550.32080078125
+    },
+    {
+      "label": 0,
+      "group_id": "b1ee609386838715",
+      "token_count": 40,
+      "completion_chars": 139,
+      "mean_norm": 5653.68359375,
+      "final_norm": 5529.62646484375
+    },
+    {
+      "label": 0,
+      "group_id": "e6703852b5553651",
+      "token_count": 27,
+      "completion_chars": 127,
+      "mean_norm": 6134.779296875,
+      "final_norm": 5450.01171875
+    },
+    {
+      "label": 0,
+      "group_id": "df99454b37aa13f9",
+      "token_count": 40,
+      "completion_chars": 148,
+      "mean_norm": 6055.37060546875,
+      "final_norm": 5676.5439453125
+    },
+    {
+      "label": 0,
+      "group_id": "3db8507258732680",
+      "token_count": 40,
+      "completion_chars": 192,
+      "mean_norm": 6243.580078125,
+      "final_norm": 5862.5224609375
+    },
+    {
+      "label": 0,
+      "group_id": "409c4be014ac5024",
+      "token_count": 40,
+      "completion_chars": 188,
+      "mean_norm": 5922.84716796875,
+      "final_norm": 6833.046875
+    },
+    {
+      "label": 0,
+      "group_id": "3e90e04e3889253d",
+      "token_count": 40,
+      "completion_chars": 146,
+      "mean_norm": 6529.3369140625,
+      "final_norm": 5147.46044921875
+    },
+    {
+      "label": 0,
+      "group_id": "c2b201a10d5d4fe8",
+      "token_count": 40,
+      "completion_chars": 159,
+      "mean_norm": 6703.39599609375,
+      "final_norm": 34313.109375
+    },
+    {
+      "label": 0,
+      "group_id": "51f346c556f34b74",
+      "token_count": 40,
+      "completion_chars": 224,
+      "mean_norm": 6958.87890625,
+      "final_norm": 5608.27294921875
+    },
+    {
+      "label": 0,
+      "group_id": "11432abea5017c4f",
+      "token_count": 40,
+      "completion_chars": 188,
+      "mean_norm": 6089.25537109375,
+      "final_norm": 5574.0556640625
+    },
+    {
+      "label": 0,
+      "group_id": "567da25fb63864c3",
+      "token_count": 40,
+      "completion_chars": 162,
+      "mean_norm": 6531.8701171875,
+      "final_norm": 5612.755859375
+    },
+    {
+      "label": 0,
+      "group_id": "b69b6ce8f1709b4a",
+      "token_count": 40,
+      "completion_chars": 157,
+      "mean_norm": 6158.65478515625,
+      "final_norm": 5859.1015625
+    },
+    {
+      "label": 0,
+      "group_id": "18d6abc5a810f62c",
+      "token_count": 3,
+      "completion_chars": 1,
+      "mean_norm": 5238.95556640625,
+      "final_norm": 5240.4912109375
+    },
+    {
+      "label": 0,
+      "group_id": "56d55f7811af3277",
+      "token_count": 13,
+      "completion_chars": 59,
+      "mean_norm": 6111.5263671875,
+      "final_norm": 5137.66796875
+    },
+    {
+      "label": 0,
+      "group_id": "f25a6333233e85cb",
+      "token_count": 40,
+      "completion_chars": 154,
+      "mean_norm": 6961.7763671875,
+      "final_norm": 5153.69775390625
+    },
+    {
+      "label": 0,
+      "group_id": "19767c3ffe863ba9",
+      "token_count": 40,
+      "completion_chars": 173,
+      "mean_norm": 6119.40869140625,
+      "final_norm": 5457.42431640625
+    },
+    {
+      "label": 0,
+      "group_id": "302911df4baeb082",
+      "token_count": 40,
+      "completion_chars": 165,
+      "mean_norm": 6192.6982421875,
+      "final_norm": 5708.42236328125
+    },
+    {
+      "label": 0,
+      "group_id": "23b031d2d6c90da8",
+      "token_count": 40,
+      "completion_chars": 174,
+      "mean_norm": 5898.84033203125,
+      "final_norm": 7212.6650390625
+    },
+    {
+      "label": 0,
+      "group_id": "5763ddcdede53031",
+      "token_count": 40,
+      "completion_chars": 202,
+      "mean_norm": 6113.96484375,
+      "final_norm": 5577.75830078125
+    },
+    {
+      "label": 0,
+      "group_id": "261d40c3bae1821b",
+      "token_count": 40,
+      "completion_chars": 152,
+      "mean_norm": 6255.91357421875,
+      "final_norm": 6068.2900390625
+    },
+    {
+      "label": 0,
+      "group_id": "62cc2857f192bf61",
+      "token_count": 40,
+      "completion_chars": 168,
+      "mean_norm": 6115.8779296875,
+      "final_norm": 5252.96923828125
+    },
+    {
+      "label": 0,
+      "group_id": "f96aa01c8935e611",
+      "token_count": 40,
+      "completion_chars": 176,
+      "mean_norm": 5558.8984375,
+      "final_norm": 6826.861328125
+    },
+    {
+      "label": 0,
+      "group_id": "acd24714a8f9a4c1",
+      "token_count": 40,
+      "completion_chars": 169,
+      "mean_norm": 6328.578125,
+      "final_norm": 5835.12841796875
+    },
+    {
+      "label": 0,
+      "group_id": "c831d1e92e1eb586",
+      "token_count": 40,
+      "completion_chars": 180,
+      "mean_norm": 6574.85009765625,
+      "final_norm": 5643.0009765625
+    },
+    {
+      "label": 0,
+      "group_id": "4426ea743f3a7a8c",
+      "token_count": 40,
+      "completion_chars": 195,
+      "mean_norm": 6727.1572265625,
+      "final_norm": 5459.8173828125
+    },
+    {
+      "label": 0,
+      "group_id": "1b7e452d8552c597",
+      "token_count": 40,
+      "completion_chars": 182,
+      "mean_norm": 6069.62939453125,
+      "final_norm": 7087.1376953125
+    },
+    {
+      "label": 0,
+      "group_id": "b16baddadd564cea",
+      "token_count": 40,
+      "completion_chars": 199,
+      "mean_norm": 6085.095703125,
+      "final_norm": 5398.75634765625
+    },
+    {
+      "label": 0,
+      "group_id": "211a64e2f62cca6d",
+      "token_count": 40,
+      "completion_chars": 150,
+      "mean_norm": 6668.31884765625,
+      "final_norm": 5893.6669921875
+    },
+    {
+      "label": 0,
+      "group_id": "51135fa089c24677",
+      "token_count": 40,
+      "completion_chars": 159,
+      "mean_norm": 6047.1220703125,
+      "final_norm": 5613.58740234375
+    },
+    {
+      "label": 0,
+      "group_id": "cde7144764a54b13",
+      "token_count": 40,
+      "completion_chars": 177,
+      "mean_norm": 6767.25146484375,
+      "final_norm": 6289.5556640625
+    },
+    {
+      "label": 0,
+      "group_id": "6c4f4a091abea1a5",
+      "token_count": 4,
+      "completion_chars": 10,
+      "mean_norm": 5680.8369140625,
+      "final_norm": 5331.31884765625
+    },
+    {
+      "label": 0,
+      "group_id": "88a2afe2ade27fbf",
+      "token_count": 40,
+      "completion_chars": 151,
+      "mean_norm": 6191.45947265625,
+      "final_norm": 5609.91259765625
+    },
+    {
+      "label": 0,
+      "group_id": "016efc9c8230dd3a",
+      "token_count": 40,
+      "completion_chars": 227,
+      "mean_norm": 6176.22265625,
+      "final_norm": 6675.85595703125
+    },
+    {
+      "label": 0,
+      "group_id": "5aacf1a2194b8781",
+      "token_count": 40,
+      "completion_chars": 150,
+      "mean_norm": 6009.13427734375,
+      "final_norm": 5483.32958984375
+    },
+    {
+      "label": 0,
+      "group_id": "900685a3860d6e01",
+      "token_count": 28,
+      "completion_chars": 126,
+      "mean_norm": 6114.61181640625,
+      "final_norm": 5100.96337890625
+    },
+    {
+      "label": 0,
+      "group_id": "28efcce873c09b5f",
+      "token_count": 3,
+      "completion_chars": 2,
+      "mean_norm": 5540.814453125,
+      "final_norm": 5144.787109375
+    },
+    {
+      "label": 0,
+      "group_id": "71bd62f3d1f1dc45",
+      "token_count": 40,
+      "completion_chars": 136,
+      "mean_norm": 6964.99072265625,
+      "final_norm": 6113.2041015625
+    },
+    {
+      "label": 0,
+      "group_id": "af38a1f8c224e062",
+      "token_count": 40,
+      "completion_chars": 153,
+      "mean_norm": 6125.00048828125,
+      "final_norm": 6285.64990234375
+    },
+    {
+      "label": 0,
+      "group_id": "db85c8ebaad19bd3",
+      "token_count": 40,
+      "completion_chars": 175,
+      "mean_norm": 5968.29052734375,
+      "final_norm": 6539.89013671875
+    },
+    {
+      "label": 0,
+      "group_id": "e8ccddfbb9ea70f8",
+      "token_count": 40,
+      "completion_chars": 172,
+      "mean_norm": 6132.43310546875,
+      "final_norm": 6399.40771484375
+    },
+    {
+      "label": 0,
+      "group_id": "53bd20c778822c31",
+      "token_count": 40,
+      "completion_chars": 169,
+      "mean_norm": 6400.31640625,
+      "final_norm": 5903.44384765625
+    },
+    {
+      "label": 0,
+      "group_id": "fad4fd3a46b9023d",
+      "token_count": 36,
+      "completion_chars": 154,
+      "mean_norm": 5760.43798828125,
+      "final_norm": 5132.64794921875
+    },
+    {
+      "label": 0,
+      "group_id": "41f1b118d7d3cc64",
+      "token_count": 40,
+      "completion_chars": 190,
+      "mean_norm": 6692.671875,
+      "final_norm": 6829.1484375
+    },
+    {
+      "label": 0,
+      "group_id": "73b81c0315c80a1a",
+      "token_count": 40,
+      "completion_chars": 156,
+      "mean_norm": 6783.28271484375,
+      "final_norm": 5384.0380859375
+    },
+    {
+      "label": 0,
+      "group_id": "38966b5021798498",
+      "token_count": 16,
+      "completion_chars": 55,
+      "mean_norm": 5718.8154296875,
+      "final_norm": 5041.72705078125
+    },
+    {
+      "label": 0,
+      "group_id": "dd7cb2e5de29736a",
+      "token_count": 40,
+      "completion_chars": 133,
+      "mean_norm": 6787.46728515625,
+      "final_norm": 5691.185546875
+    },
+    {
+      "label": 0,
+      "group_id": "c18fdb611ff47345",
+      "token_count": 40,
+      "completion_chars": 139,
+      "mean_norm": 6171.5419921875,
+      "final_norm": 6271.97412109375
+    },
+    {
+      "label": 0,
+      "group_id": "5d7be81e0d2caf85",
+      "token_count": 40,
+      "completion_chars": 194,
+      "mean_norm": 6387.45068359375,
+      "final_norm": 6196.97119140625
+    },
+    {
+      "label": 0,
+      "group_id": "8a0c5ab0c27c9205",
+      "token_count": 40,
+      "completion_chars": 113,
+      "mean_norm": 5519.76171875,
+      "final_norm": 6509.48486328125
+    },
+    {
+      "label": 0,
+      "group_id": "310c29d80d67c8d1",
+      "token_count": 40,
+      "completion_chars": 180,
+      "mean_norm": 6684.91015625,
+      "final_norm": 7030.82177734375
+    },
+    {
+      "label": 0,
+      "group_id": "07f61fcb5b20473b",
+      "token_count": 40,
+      "completion_chars": 178,
+      "mean_norm": 6053.34521484375,
+      "final_norm": 5530.564453125
+    },
+    {
+      "label": 0,
+      "group_id": "57bbd820974cd6e7",
+      "token_count": 33,
+      "completion_chars": 161,
+      "mean_norm": 6193.37060546875,
+      "final_norm": 5516.45166015625
+    },
+    {
+      "label": 0,
+      "group_id": "34dbe734fe084f5f",
+      "token_count": 40,
+      "completion_chars": 137,
+      "mean_norm": 5948.3525390625,
+      "final_norm": 5666.93212890625
+    },
+    {
+      "label": 0,
+      "group_id": "924815002d9b634b",
+      "token_count": 40,
+      "completion_chars": 151,
+      "mean_norm": 6708.6591796875,
+      "final_norm": 6389.640625
+    }
+  ]
+}
