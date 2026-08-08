@@ -4,6 +4,14 @@ All numbers below were produced by **calling the loaders on CPU** (`common.data.
 `common.data.load_concepts` at each lesson's `N_PER_CONCEPT`), plus reading every lesson's
 `config.py` / `data.py`. No model is loaded; no code was changed. Seed 0, full toxic-chat split.
 
+The detection-lesson rows (§1a, added 2026-08-08) were produced differently: re-running each
+lesson's own loader/config and reading `artifacts/results.json` directly, per
+[`AUDIT_2026-08_four_detection_lessons.md`](AUDIT_2026-08_four_detection_lessons.md) and each
+lesson's `AUDIT_2026-08.md`. That audit is the single shared instrument for confound and
+sufficiency checks across `biencoder_guard`, `cross_trajectory`, `multiturn_jailbreak`, and
+`trajguard` — see also [`CONFOUND_DISCIPLINE.md`](CONFOUND_DISCIPLINE.md) §4 for the confound side
+of the same audit.
+
 ---
 
 ## 0. The ceilings (what is actually available)
@@ -55,6 +63,45 @@ built on too little signal.
 | **contextual_steering** | `load_harmful_benign(500)` | 200/cls | **25/cls (capped)** | binary | **INSUFFICIENT** | Raise `N_EVAL_PER_CLASS` 25 → ≥50 (300/cls held out; only cost is generation time). |
 | **multi_intent** | `load_concepts(n_per_concept=150)` | see cells | see cells | sexual 105/**45**, harassment 100/**43**, violence 77/**34**, self_harm 19/**8**, hate 17/**7** | **INSUFFICIENT** | Drop `self_harm` (27) & `hate` (24) from the K-ladder; keep sexual/harassment/violence (all ≥100 avail, eval ≥34). |
 | **flas** | `load_concepts(n_per_concept=120)` | see cells | see cells | sexual 84/**36**, harassment 84/**36**, violence 77/**34**, self_harm 19/**8**, hate 17/**7** | **INSUFFICIENT** | Same: restrict trained + held-out concepts to sexual/harassment/violence; `harassment` (held-out, 36 eval) is fine, but `hate`/`self_harm` rungs are noise. |
+
+---
+
+## 0a. The confound side of the same audit — `common/confound.py`
+
+Data sufficiency and confound discipline fail together (a small pool is also the pool most
+likely to be accidentally length-separable), so the detection-lesson corrections below were
+produced alongside a fix to the course's confound instrument. **`steering_tutorials/common/confound.py`**
+is now the single shared instrument for every detection lesson, replacing four partial
+per-lesson reimplementations. It runs four bars — **length**, **count** (turns/trajectories/
+tokens), **content** (a train-fold-only TF-IDF bar no lesson had before), and **shuffle** — and
+folds every AUC with `max(auc, 1 - auc)` before comparing it to anything, because an AUC of
+**0.110 is not clean, it is a 0.890 confound with the sign flipped**. The **shuffle** control is a
+**leakage diagnostic**, not a bar: it is deliberately **excluded** from the binding bar a method
+must clear, since a shuffle score far from 0.5 means the pipeline is leaking, not that the method
+is allowed to use that signal. Full detail: `CONFOUND_DISCIPLINE.md` §4.
+
+## 1a. The four detection lessons — CORRECTED 2026-08 (`trajguard` added; three others refreshed)
+
+These four lessons draw from `common.data`'s harmful/benign pool the same way the binary lessons
+above do, but were audited separately (2026-08-08) because each also runs its own confound
+instrument (see `CONFOUND_DISCIPLINE.md`). **`trajguard` did not previously appear in this table
+at all** — a lesson that fails the ≥500/class floor was invisible to the course's own sufficiency
+audit. All four rows below are re-measured from the current artifacts, not from memory.
+
+| Lesson | Achieved | Rule-1 floor (500/class) | Pool available | Pool-limited? | Verdict |
+|---|---|---|---|---|---|
+| **`trajguard`** | **300/300** | FAIL | `common.data` has **693** unique harmful available | **No** — shortfall is a compute choice, not a pool ceiling | **INSUFFICIENT.** `config.py:59` says `N_PER_CLASS=500`; README §8 said **120**; the shipped artifact is **300** — three different numbers in three places, now reconciled to the achieved value (300). Not exempt under rule 2 since the pool was not binding. |
+| **`biencoder_guard`** | **6 of 16 policy columns < 500**: `jailbreak` 109, `child_abuse` 185, `self_harm` 205, `terrorism` 293, `animal_abuse` 357, `toxicity` 374 | FAIL (6/16 columns) | `nvidia/Aegis-AI-Content-Safety-Dataset-2.0` (ungated, 33,416 rows) and BeaverTails (`330k_train`+`30k_test`) both clear 4 of the 6 starved columns | **No** for those 4; benign cap (500 vs 5,226 harmful available) is also self-imposed | **INSUFFICIENT.** Corpus is **91.3% harmful / 8.7% benign** by construction; `wildguardmix` contributed **0 rows** (HTTP 403, gated, no token). `results.json` records the *requested* `n_per_class: 500`, not the achieved per-column counts — the shortfall is invisible without re-running the loader. |
+| **`cross_trajectory`** | `hard` **298/298** | FAIL (both conditions) | `SafeMTData/SafeMTData` config `SafeMTData_1K` — **1,680 rows**, same ungated repo already called by the loader | **No** — the 600 ceiling is self-imposed; 1,680 more rows sit unused one config-string away | **INSUFFICIENT**, but honestly reported: README states 298 in four places. (Note: `SafeMTData_1K`'s 1,680 rows carry multiple actors per `query_id`, so distinct groups are likely ~500–600, not 1,680 — raising `n` here would not proportionally raise independent groups; both numbers must be reported separately if this pool is used.) |
+| **`multiturn_jailbreak`** | **200/200**, both conditions | FAIL | `Attack_600` has 600 (600/600 was free); UltraChat `train_sft` has 207,865 | **No** — unforced on both counts | **INSUFFICIENT**, unforced. No pool ceiling was ever binding at 200/class. |
+
+All four have since been corrected/documented; see
+[`AUDIT_2026-08_four_detection_lessons.md`](AUDIT_2026-08_four_detection_lessons.md) §1.1 for the
+full cross-lesson table and each lesson's own `AUDIT_2026-08.md` for per-lesson detail and the
+ranked fix list (Tier C in the cross-lesson audit covers the GPU-gated re-extraction that would
+actually clear the floor: `nvidia/Aegis-2.0` for `biencoder_guard`, `SafeMTData_1K` +
+`tom-gibbs/multi-turn_jailbreak_attack_datasets` for `cross_trajectory`/`multiturn_jailbreak`, and
+toxic-chat's unused `jailbreaking` column for `trajguard`).
 
 ---
 
