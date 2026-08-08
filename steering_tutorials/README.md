@@ -23,8 +23,9 @@ Repo: <https://github.com/dlmastery/steeringresearch/tree/master/steering_tutori
 ## The learning arc
 
 A three-verb **Foundations** spine (READ → WRITE → GENERATE) that branches into
-five themed streams. Solid nodes are **built + validated**; dashed nodes are
-**planned**.
+five themed streams. Solid green nodes are **built + validated**; dashed grey
+nodes are **planned** (no code yet); the dashed amber node is **under
+construction** (citations + datasets verified, code not started).
 
 ```mermaid
 flowchart TD
@@ -57,6 +58,7 @@ flowchart TD
         D5["cross_trajectory"]:::built
         D6["meerkat"]:::built
         D7["biencoder_guard"]:::built
+        D8["streaming_trajectory_aggregation"]:::wip
     end
     DEF --> DEF_S
 
@@ -89,6 +91,7 @@ flowchart TD
 
     classDef built fill:#1a7f37,stroke:#0b4d1f,color:#fff;
     classDef plan fill:#eee,stroke:#999,color:#333,stroke-dasharray:5 4;
+    classDef wip fill:#b08800,stroke:#6b5200,color:#fff,stroke-dasharray:2 2;
 
     click R "hello_world/README.md"
     click W "hello_world_steering/README.md"
@@ -101,6 +104,7 @@ flowchart TD
     click D5 "cross_trajectory/README.md"
     click D6 "meerkat/README.md"
     click D7 "biencoder_guard/README.md"
+    click D8 "streaming_trajectory_aggregation/CITATIONS_VERIFIED.md"
     click P1 "stacking/README.md"
     click F1 "non_identifiability/README.md"
     click F2 "fine_grained/README.md"
@@ -157,11 +161,18 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 |---|---|---|---|
 | [`rogue_scalpel`](rogue_scalpel/README.md) · L10 | red-team the guard: the universal attack + the five-layer defense | [Rogue Scalpel — red-teaming activation steering](https://arxiv.org/abs/2509.22067) | ✅ built + validated |
 | [`realignment`](realignment/README.md) · L11 | restore refusal in an abliterated model by transplanting a direction | [Refusal in LLMs Is Mediated by a Single Direction](https://arxiv.org/abs/2406.11717) | ✅ built + validated |
-| [`multiturn_jailbreak`](multiturn_jailbreak/README.md) | detect multi-turn (Crescendo/ActorAttack) jailbreaks: chunk-wise turn embedding + sequence classification | [DeepContext: Multi-Turn Intent-Drift Detection](https://arxiv.org/abs/2602.16935) · [Hierarchical Attention](https://arxiv.org/abs/2606.21082) · [ActorAttack](https://arxiv.org/abs/2410.10700) | ✅ built + validated |
-| [`trajguard`](trajguard/README.md) | streaming decoding-time detection: the hidden-state trajectory across generated tokens; flag the jailbreak early | [TrajGuard: Streaming Hidden-state Trajectory Detection for Decoding-time Jailbreak Defense](https://arxiv.org/abs/2604.07727) | ✅ built + validated |
-| [`cross_trajectory`](cross_trajectory/README.md) | swarm/cross-session attacks: a harmful goal fractured across K agents; aggregate the per-trajectory latents (set-transformer / GNN) to recover it | [Context-Fractured Decomposition](https://arxiv.org/abs/2606.09084) · [Cross-Session Threats / CSTM-Bench](https://arxiv.org/abs/2604.21131) · [GroupGuard](https://arxiv.org/abs/2603.13940) · [Set Transformer](https://arxiv.org/abs/1810.00825) | ✅ built (screening) |
+| [`multiturn_jailbreak`](multiturn_jailbreak/README.md) | detect multi-turn (Crescendo/ActorAttack) jailbreaks: chunk-wise turn embedding + sequence classification | [DeepContext: Multi-Turn Intent-Drift Detection](https://arxiv.org/abs/2602.16935) · [Hierarchical Attention](https://arxiv.org/abs/2606.21082) · [ActorAttack](https://arxiv.org/abs/2410.10700) | AUDITED 2026-08 — see below |
+| [`trajguard`](trajguard/README.md) | streaming decoding-time detection: the hidden-state trajectory across generated tokens; flag the jailbreak early | [TrajGuard: Streaming Hidden-state Trajectory Detection for Decoding-time Jailbreak Defense](https://arxiv.org/abs/2604.07727) | CORRECTED 2026-08 — see below |
+| [`cross_trajectory`](cross_trajectory/README.md) | swarm/cross-session attacks: a harmful goal fractured across K agents; aggregate the per-trajectory latents (set-transformer / GNN) to recover it | [Context-Fractured Decomposition](https://arxiv.org/abs/2606.09084)¹ · [Cross-Session Threats / CSTM-Bench](https://arxiv.org/abs/2604.21131) · [GroupGuard](https://arxiv.org/abs/2603.13940)¹ · [Set Transformer](https://arxiv.org/abs/1810.00825) | CORRECTED 2026-08 — see below |
 | [`meerkat`](meerkat/README.md) | sparse (~5%) distributed violations hidden across MANY traces: cluster trace embeddings + cluster-enrichment to surface the campaign a per-trace monitor misses | [Detecting Safety Violations Across Many Agent Traces (Meerkat)](https://arxiv.org/abs/2604.11806) · [CSTM-Bench](https://arxiv.org/abs/2604.21131) | 🧪 building |
-| [`biencoder_guard`](biencoder_guard/README.md) | EmbeddingGemma dual-tower guardrail: cache a policy tower + content tower, cosine-match many labels, add policies zero-shot; + hard-negative contrastive augmentation | [GLiNER bi-encoder (Million-Label NER)](https://arxiv.org/abs/2602.18487) · [GLiNER Guard](https://arxiv.org/abs/2605.05277) · [Opir](https://arxiv.org/abs/2605.29659) · [GLiGuard](https://arxiv.org/abs/2605.07982) | 🧪 building |
+| [`biencoder_guard`](biencoder_guard/README.md) | EmbeddingGemma dual-tower guardrail: cache a policy tower + content tower, cosine-match many labels, add policies zero-shot; + hard-negative contrastive augmentation | [GLiNER bi-encoder (Million-Label NER)](https://arxiv.org/abs/2602.18487) · [GLiNER Guard](https://arxiv.org/abs/2605.05277) · [Opir](https://arxiv.org/abs/2605.29659) · [GLiGuard](https://arxiv.org/abs/2605.07982) | CORRECTED 2026-08 — see below |
+| [`streaming_trajectory_aggregation`](streaming_trajectory_aggregation/CITATIONS_VERIFIED.md) | early/streaming detection of scheming WITHIN a long agent trajectory: per-step judge-derived labels give a directly computable lead time (`point_of_no_return_step − ideal_flagging_step`), the natural streaming/many-step sequel to `trajguard` (streaming) + `cross_trajectory` (aggregation) | 7 ids WebFetch-verified safe-to-cite (SafetyDrift 2603.27148 · TRACE-compression 2606.00611 · TRACE-TIJ 2606.07054 · Trajectory Guard 2601.00516 · Real-Time Detection and Repair of LLM Agent Failures 2608.02464 · Organize then Retrieve 2606.11680 · Latent Collaboration in Multi-Agent Systems 2511.20639) — full table incl. 2 DO-NOT-CITE traps in [`CITATIONS_VERIFIED.md`](streaming_trajectory_aggregation/CITATIONS_VERIFIED.md) | 🚧 UNDER CONSTRUCTION — citations + datasets verified ([citations](streaming_trajectory_aggregation/CITATIONS_VERIFIED.md), [datasets](streaming_trajectory_aggregation/DATASETS_VERIFIED.md)), no code yet |
+
+¹ Both ids resolve to real papers, but the 2026-08 audit found the short titles used here do not match:
+`2606.09084` is actually about **one** agent's artifact-provenance gaps, not K cooperating agents;
+`2603.13940`'s GroupGuard is a **training-free** graph/honeypot defense, not the trained `gnn_agg`
+classifier this lesson uses. Neither paper is wrong to cite as *inspiration*, but the lesson should
+not claim closer correspondence than that. Detail: `cross_trajectory/AUDIT_2026-08.md` §4.
 
 ### 📜 Certify — provable guarantees
 
@@ -200,11 +211,43 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 | [`prompt_activation_duality`](prompt_activation_duality/README.md) · 2026 | **duality (cos 0.70) + site matters** (n=150): same vector at the **attention** output degrades less than residual-add (refusal 0.26/gib 0.30 vs 0.227/0.48); the n=20 "attention raises refusal" was noise |
 | [`realignment`](realignment/README.md) · DEFEND | **works** (n=200/class) — clean α=0.25 point: **ASR 0.46→0.045**, over-refusal 0.01, coherence 0.88 |
 | [`multiturn_jailbreak`](multiturn_jailbreak/README.md) · DEFEND | **trajectory matters**: on same-style hard negatives the stateless per-turn probe collapses to **0.57** while a sequence model reaches **0.96** (Gemma) — and a naive benchmark (easy negatives) is trivially 0.99, the cautionary half |
-| [`trajguard`](trajguard/README.md) · DEFEND | **streaming detection works early, but a third of the raw number is length** (n=300): the strongest trivial baseline is **completion** character length at AUC **0.735**, so the claimable quantity is the margin above it — `seq_gru` **+0.209**, `trajectory_mlp` **+0.208**, `per_turn_max` **+0.195**; the paper's own training-free projection (0.638) lands **below the bar** |
-| [`cross_trajectory`](cross_trajectory/README.md) · DEFEND | **aggregation recovers fractured intent** (n=500/class, MiniLM): on leakage-free HARD negatives the per-trajectory baseline collapses to **0.607** while set-aggregators recover (mean 0.936, attn 0.863, gnn 0.812) and clear the 0.704 length confound — but **OOD to real CSTM-Bench is near chance (0.48–0.57)**, reported as a negative |
+| [`trajguard`](trajguard/README.md) · DEFEND | **streaming detection works early, but a third of the raw number is length** (n=300): the strongest trivial baseline *within this lesson's own data* is **completion** character length at AUC **0.735**, so the claimable quantity is the margin above it — `seq_gru` **+0.209**, `trajectory_mlp` **+0.208**, `per_turn_max` **+0.195**; the paper's own training-free projection (0.638) lands **below the bar**. **2026-08 correction, see below: this is no longer the strongest trivial baseline in the course** — `hello_world`'s prompt-only probe on the same pool beats every number in this row. |
+| [`cross_trajectory`](cross_trajectory/README.md) · DEFEND | **aggregation recovers fractured intent** (n=500/class, MiniLM): on leakage-free HARD negatives the per-trajectory baseline collapses to **0.607** while set-aggregators recover (mean 0.936, attn 0.863, gnn 0.812) and clear the 0.704 length confound — but **OOD to real CSTM-Bench is near chance (0.48–0.57)**, reported as a negative. (The lesson's separate `easy` condition needed a 2026-08 correction — see below; the HARD numbers above are unaffected.) |
 | [`rogue_scalpel`](rogue_scalpel/README.md) · DEFEND | attack strips refusal **0.70→0.00** (n=200); the **norm-clamp guard recovers it (0.735)**; lock/dual guards don't |
 | [`hello_world`](hello_world/README.md) · READ | probe 5-fold CV **0.87 ± 0.03**; leakage clean; XSTest OOD AUC 0.89 |
 | [`hello_world_steering`](hello_world_steering/README.md) - WRITE | **the extraction source was the bug** (n=200, off-family judge): extracting the refusal direction from the *abliterated* model gives a vector cos **0.905** to the correct one - close, but the old **"Not supported"** verdict on ActAdd/CAA/Arditi is **withdrawn as an extraction artifact**. Re-extracted from the *aligned base* (cos **0.99999988** to `realignment`'s), compliance falls monotonically **0.445 to 0.115** across alpha. Refusal still does not *rise* at alpha <= 0.15 |
+
+> **2026-08 audit of the four detection lessons** (`biencoder_guard`, `cross_trajectory`,
+> `multiturn_jailbreak`, `trajguard`) — four independent, disjoint-scope, CPU-only auditors
+> against §17 and each lesson's own artifacts. **All four fail rule 1 (≥500/class), and in none
+> of them was the shortfall pool-limited** — more data was sitting unused in every case. The
+> confound instrument was also fragmented (each lesson reimplemented a different partial subset,
+> and `CONFOUND_DISCIPLINE.md` described a canonical `confound_report()` that did not actually
+> exist); the fix is the new **`common/confound.py`** — one shared instrument (directionless
+> length/count/content bars + a label-shuffle control) replacing the four disagreeing copies.
+> Full findings + ranked fix plan: [`AUDIT_2026-08_four_detection_lessons.md`](AUDIT_2026-08_four_detection_lessons.md).
+> Per-lesson status:
+> - **`trajguard` — RETRACTED headline.** The claim that prompt-length alone cannot call this
+>   ("you cannot call this from the prompt alone") does not survive contact with this course's own
+>   `hello_world`: on the **same** toxic-chat pool, `hello_world`'s prompt-only probe reaches
+>   **AUC 0.965** — above every trajectory detector in `trajguard` (best 0.945). The 0.5032
+>   prompt-length-at-chance figure the old claim rested on was *designed in* by decile-matched
+>   sampling, not measured evidence that the prompt carries no signal. Detail:
+>   [`trajguard/AUDIT_2026-08.md`](trajguard/AUDIT_2026-08.md).
+> - **`cross_trajectory` — one condition corrected, one unaffected.** Its `easy` condition was
+>   previously priced against no confound bar at all; the real directionless bar is **0.890**, so
+>   the honest margin there is **+0.10**, not the +0.99 gap the raw AUCs suggested. The `hard`
+>   condition's headline (0.936 vs. the 0.704 bar, quoted above) is unaffected. Its
+>   `results_gemma_ablation.json` cannot be regenerated from the code beside it and should not be
+>   treated as reproducible. Detail: [`cross_trajectory/AUDIT_2026-08.md`](cross_trajectory/AUDIT_2026-08.md).
+> - **`biencoder_guard` — correction in the lesson's favour.** The held-out chance macro-AP was
+>   computed as 0.185; the audited value is **0.1344**, so the held-out zero-shot result is
+>   **2.84× chance**, not 2.1×. Detail: [`biencoder_guard/AUDIT_2026-08.md`](biencoder_guard/AUDIT_2026-08.md).
+> - **`multiturn_jailbreak` — audited, no reversal.** Ran at 200/200 on both conditions, with no
+>   OOD arm. Detail: [`multiturn_jailbreak/AUDIT_2026-08.md`](multiturn_jailbreak/AUDIT_2026-08.md).
+>
+> *Internal QA pass — independent external review pending (§14 circularity disclosure: the
+> auditors share a model family with the lesson authors).*
 
 **Honest 2026-frontier negatives** (reported as prominently as the wins): `gavel`
 — block rates **0.135 harmful / 0.085 benign** at 500/class (the earlier 0.26/0.26
@@ -270,10 +313,23 @@ flowchart LR
 
 > - **Data** — shared ≥500 harmful + ≥500 benign set (`common/data.py`), 100%
 >   lmsys/toxic-chat, deduped, **length-matched (length-AUC 0.501)** so no probe or
->   vector can cheat on length.
+>   vector can cheat on length. Data-floor compliance per lesson (which ones actually
+>   reach ≥500/class, which are pool-limited and which just never checked):
+>   [`DATA_SUFFICIENCY.md`](DATA_SUFFICIENCY.md).
+> - **Confound** — every detection lesson must clear a **directionless** trivial-baseline bar
+>   (length / count / content / label-shuffle) before claiming a raw AUC; the rule and the
+>   worked cases are in [`CONFOUND_DISCIPLINE.md`](CONFOUND_DISCIPLINE.md). As of 2026-08 the
+>   one canonical implementation is **`common/confound.py`** — it replaced four lessons' partial,
+>   disagreeing copies (see the 2026-08 audit above). Both course-wide docs predate that fix and
+>   the four-lesson audit; read them alongside, not instead of,
+>   [`AUDIT_2026-08_four_detection_lessons.md`](AUDIT_2026-08_four_detection_lessons.md) for the
+>   current per-lesson verdicts on `trajguard` and `cross_trajectory`.
 > - **Judge** — an **off-family Qwen2.5-3B** grades outputs (`STEER_JUDGE_MODEL`).
 >   The tutorials' tiny **1B self-judge inflates refusal**, so all headline numbers
->   use the Qwen judge.
+>   use the Qwen judge. Whether a judge can even discriminate the classes it grades is a
+>   separate question, measured (and twice failed against a 0.85 usability bar) in
+>   [`JUDGE_VALIDITY.md`](JUDGE_VALIDITY.md) — detection/probe lessons sidestep this by scoring
+>   against ground-truth labels instead of a judge.
 > - **Papers** — an independent auditor per lesson (`AUDIT.md`) WebFetch-verified
 >   every cited arXiv ID and fixed attribution errors.
 > - **Tier** — numbers are **screening-tier** (n ≈ 50/class), labelled as such.
