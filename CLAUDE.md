@@ -527,12 +527,41 @@ expected-value readout, +0.086 and 12.8× faster). Both under the 0.85 gate. See
 All live work uses judge-free endpoints: WikiText-2 perplexity, geometry, probe AUC
 vs ground-truth labels.
 
-**Literature refresh (Jun–Jul 2026), 4 scans in `corpus/LIT_2026-07_*.md`.** Two of the
-three planned contributions were **scooped while the program sat idle** — the
-displacement budget (`2602.02712`, `2606.06735`, `2604.09839`, `2601.19375`) and
-direction fungibility (`2509.22067`, `2602.06801`, `2606.20852`). Only the **conformal
-gate** survives as novel, and its pre-flight cleared: `2603.14623` is feasibility-
-conditioned on gate AUC, so our probe result *strengthens* rather than scoops it.
+**Literature refresh (Jun–Jul 2026), 4 scans in `corpus/LIT_2026-07_*.md`.**
+**CORRECTED 2026-08-08 — all eight IDs were WebFetch-verified for the first time in
+`corpus/LIT_2026-08_conformal_gate_novelty.md`; the original claim below was wrong in
+three ways. The scoop is TWO papers, not seven, and both were already known here.**
+
+- **Genuine scoops (2):** `2606.06735` (angle-norm decomposition — independently reached
+  HC-1's own angle/radius parameterisation, 7 models to our 1) and `2602.06801`
+  (non-identifiability). Both were **already known to the program** — `2602.06801` has a
+  `non_identifiability` lesson built against it with an unrun alpha sweep (§18.6 item 3).
+  The accurate account is **not** "scooped while idle" but **"built lessons against
+  published results and did not run them."**
+- **`2606.20852` — STRUCK. FALSE CITATION.** It is *"Activation Steering for Pneumonia
+  Classification on Chest X-rays"* (Farina et al., 18 Jun 2026, cs.CV). A radiology paper.
+  Its only link to direction fungibility is the phrase "activation steering." It survived
+  because it *resolves* — the §18.8 pattern, failing silently and plausibly.
+- **`2601.19375` — RE-FILED AS AN ADVERSARY, NOT A SCOOP.** *Selective Steering:
+  Norm-Preserving Control…* (Dang & Ngo, 27 Jan 2026) pitches **norm preservation as the
+  GOOD regime** and blames its violation for collapse "particularly in models below 7B."
+  **HC-1 measured the opposite in that same band** (r=0 worst; pure rotation 4× the PPL of
+  pure addition at f=0.10). HC-1 does not lose to this paper — it **contradicts** it, which
+  is sharper than the contribution §18.2 mourned. Filing an adversary as a scoop is how a
+  live disagreement gets silently retired. Re-run HC-1 to that paper's protocol before
+  claiming it. Its layer-selection half also belongs in **HC-3**'s citations.
+- **Overstated (2):** `2604.09839` proves off-manifold-ness (a binary formal property), not
+  a displacement budget. `2509.22067` is the §10 Rogue Scalpel paper, **v1 26 Sep 2025** —
+  a design input since §10 was written, not a Jun–Jul 2026 discovery.
+- **The conformal gate survives, and the sweep is now evidenced**: exhaustive arXiv
+  full-text conjunctions return **zero** on-topic hits; `"conformal"` + `"residual stream"`
+  returns **zero papers in all of arXiv**. `2603.14623`'s AUC-feasibility reading is
+  CONFIRMED at theorem level (Prop 2, Thms 1–2) — **but its Remark 2 shows AUC is
+  sufficient-not-necessary and it routes successfully at AUC 0.57.** So a better gate is
+  *not* what it is waiting on: our 0.7508 judge is already inside its working regime, the
+  0.85 gate is **self-imposed**, and the real opening is that **feasibility is a LOCAL ROC
+  property while we report global AUC everywhere**. Time-limited: `2605.14746` (the Romano
+  conformal group) names the exact problem one layer away, without conformal.
 
 **Findings that survive:**
 - **HC-1 (new champion).** Angle/radius at fixed chord is **monotone**, not U-shaped:
@@ -743,6 +772,18 @@ listings** (a directory listing said the model was cached; it was a 16 KB stub).
   stdout is block-buffered when not a tty. Use `python -u` if you want to tail it.
 - **ONE GPU.** Re-check `nvidia-smi --query-compute-apps` before every launch — three
   concurrent model loads got two jobs killed this session.
-- `google/embeddinggemma-300m` is **gated**; this host has **no HF token at all**
-  (`huggingface-cli login` required). Metadata listing succeeds while weights 401 —
-  test a real weight fetch, never a file listing.
+- `google/embeddinggemma-300m` is **gated** on the hub and this host has **no HF token**
+  (`huggingface-cli login` required). Metadata listing succeeds while weights 401 — test a
+  real weight fetch, never a file listing.
+  **UPDATED 2026-08-08: the MODEL blocker is STALE — the EmbeddingGemma weights are already
+  on disk** (found by the `multiturn_jailbreak` audit). So the §17 encoder mandate is
+  *unblocked* and MiniLM/BGE headlines are non-compliance, not necessity. **The DATASET
+  gating is real and unchanged**: verified `gated` and unusable here are `ScaleAI/mhj`
+  (which §17 rule 5 names as this family's benchmark — its local cache holds only a 40-byte
+  `refs/main`), `allenai/wildjailbreak`, `allenai/wildguardmix` (403), `walledai/HarmBench`,
+  `lmsys/lmsys-chat-1m`. Verified **ungated** and usable today:
+  `nvidia/Aegis-AI-Content-Safety-Dataset-2.0` (33,416 rows, 3-level taxonomy),
+  `SafeMTData/SafeMTData` config `SafeMTData_1K` (1,680), `tom-gibbs/multi-turn_jailbreak_attack_datasets`
+  (1,200 purpose-built Semi-Benign hard negatives), `intrinsec-ai/cstm-bench` (already cached).
+  *Verify contents, never listings — in both directions: a listing said the model was gated,
+  and the weights were sitting on disk.*
