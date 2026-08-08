@@ -15,19 +15,30 @@ To teach that honestly we need a corpus that is (a) MANY-LABEL (one text can
 violate several policies), (b) genuinely HARD (benign look-alikes that a length
 or keyword shortcut cannot separate from violations), and (c) REAL (in-the-wild
 data, not toy strings). No single public dataset gives all three, so we POOL
-THREE complementary ones into ONE unified multi-label corpus over a shared
-taxonomy:
+complementary ones into ONE unified multi-label corpus over a shared taxonomy:
 
   * BeaverTails (PKU-Alignment)  -- 14 fine-grained, MULTI-LABEL harm categories on
-    prompt+response pairs. This is the CORE of our label space: thousands of
-    positives per common category, and the safe rows give topically-adjacent
-    benign hard-negatives.
+    prompt+response pairs. This is the CORE of our label space, and the safe rows
+    give topically-adjacent benign hard-negatives.
+  * Aegis 2.0 (nvidia)           -- a SECOND, independent safety taxonomy (12 core
+    + 9 fine-grained categories) annotated by a DIFFERENT regime, over prompt and
+    response. Pooled to break the single-dataset dependence and to fill the
+    columns BeaverTails' 30k split starves.
   * toxic-chat (lmsys)           -- REAL user prompts hand-labelled for `toxicity`
     and `jailbreaking`. Supplies in-the-wild toxic + adversarial positives and
     benign hard-negatives that look adversarial but are not.
-  * wildguardmix (allenai)       -- adversarial prompt-harm labels (gated; we SKIP
-    it gracefully if it will not load -- BeaverTails + toxic-chat already clear
-    the rubric).
+  * wildguardmix (allenai)       -- GATED. It has NEVER loaded on this host: HTTP
+    403, no HF token, ZERO rows contributed to every corpus this lesson has built.
+    The call is kept so a tokened host gets it; no result here rests on it.
+
+WHERE THE ROWS ACTUALLY CAME FROM
+---------------------------------
+Read `results.json -> source_distribution` and `results.json -> achieved`, never a
+docstring (this one included). The 2026-08 audit found the previous version of this
+file describing a three-way pool that measured 93.5% BeaverTails / 6.5% toxic-chat /
+0% wildguardmix, with `results.json` recording only the REQUESTED config. Every
+corpus now stamps what it achieved, per column, per source, plus a
+`pool_fingerprint` over the sampled texts.
 
 WHY BENIGN LOOK-ALIKES ARE *HARD* NEGATIVES
 -------------------------------------------
@@ -57,6 +68,11 @@ from collections import Counter, defaultdict
 import numpy as np
 
 from steering_tutorials.biencoder_guard import config as C
+from steering_tutorials.common.confound import (
+    confound_report as _shared_confound_report,
+    format_report as format_confound_report,
+    margin_over_bar,
+)
 
 
 # --- ASCII-safe logging ------------------------------------------------------
@@ -215,11 +231,124 @@ _POLICY_SPEC = {
          "Harassing, offensive, or hateful phrasing in a request."]),
 }
 
-# Fixed column order: the 14 BeaverTails core policies, then jailbreak, then toxicity.
+# --- Aegis 2.0 columns that have NO clean home in the 16 above ---------------
+# Rule (task brief): where an Aegis category has no clean mapping, ADD a column
+# rather than force it into a neighbour. Five do. They are appended AFTER the
+# original 16 so every existing column index is unchanged, which is what lets
+# EXP-G/EXP-H keep comparing against prior runs column-for-column.
+_AEGIS_EXTRA_SPEC = {
+    "criminal_planning": (
+        "Content that plans, assists, or confesses to a crime not covered by a more specific policy.",
+        ["Help planning or carrying out a criminal act.",
+         "A confession to, or coordination of, illegal activity.",
+         "Requests that assist someone in breaking the law.",
+         "Text that facilitates general criminal conduct."]),
+    "unauthorized_advice": (
+        "Authoritative medical, legal, or financial advice given without qualification or caveat.",
+        ["Unqualified medical, legal, or financial guidance presented as expert advice.",
+         "Professional-sounding advice a licensed expert should give.",
+         "Definitive health, legal, or investment instructions given to an individual.",
+         "Specific advice that requires professional credentials to give safely."]),
+    "malware": (
+        "Content that creates, distributes, or deploys malicious software or cyber intrusions.",
+        ["Help writing viruses, ransomware, or other malicious code.",
+         "Instructions for hacking into a system or network.",
+         "Requests to build or spread malware.",
+         "Text that facilitates a cyber attack or unauthorized system access."]),
+    "intellectual_property": (
+        "Content that infringes copyright or trademark, or that plagiarizes protected work.",
+        ["Reproducing copyrighted work without permission.",
+         "Help plagiarizing someone else's writing.",
+         "Requests to infringe a trademark or pirate protected material.",
+         "Text that copies protected content as if it were original."]),
+    "high_risk_gov_decisions": (
+        "Content that steers high-stakes government or public-policy decisions such as "
+        "law enforcement, military, or immigration determinations.",
+        ["Guidance driving consequential government or public-policy determinations.",
+         "Advice on law-enforcement, military, or immigration decisions about people.",
+         "Recommendations for high-stakes state decisions affecting individuals' rights.",
+         "Input intended to decide a governmental action with serious consequences."]),
+}
+
+# THE AEGIS TAXONOMY CROSSWALK (mirrored in README section 6 as a table).
+# Aegis category string (as it appears in `violated_categories`, ", "-joined)
+#   -> the list of OUR policy ids it activates. A list, because this corpus is
+# multi-label and one Aegis category can legitimately span two of our policies.
+# Keys are matched after `_norm_key` normalisation, so casing, punctuation and
+# "Sexual (minor)" vs "Sexual Minor" all resolve to the same entry.
+_AEGIS_CROSSWALK_RAW = {
+    # --- 12 core categories ---
+    "Hate/Identity Hate": ["hate_speech", "discrimination_stereotype"],
+    "Sexual": ["sexually_explicit"],
+    "Suicide and Self Harm": ["self_harm"],
+    "Violence": ["violence"],
+    "Guns/Illegal Weapons": ["drug_weapon"],
+    "Threat": ["violence"],
+    "PII/Privacy": ["privacy_violation"],
+    "Sexual (minor)": ["child_abuse", "sexually_explicit"],
+    "Sexual Minor": ["child_abuse", "sexually_explicit"],
+    "Criminal Planning/Confessions": ["criminal_planning"],
+    "Harassment": ["toxicity"],
+    "Controlled/Regulated Substances": ["drug_weapon"],
+    "Profanity": ["toxicity"],
+    # --- 9 fine-grained subcategories ---
+    "Illegal Activity": ["criminal_planning"],
+    "Immoral/Unethical": ["non_violent_unethical"],
+    "Unauthorized Advice": ["unauthorized_advice"],
+    "Political/Misinformation/Conspiracy": ["misinformation", "controversial_topics"],
+    "Fraud/Deception": ["financial_crime", "non_violent_unethical"],
+    "Copyright/Trademark/Plagiarism": ["intellectual_property"],
+    "High Risk Gov. Decision Making": ["high_risk_gov_decisions"],
+    "Malware": ["malware"],
+    "Manipulation": ["non_violent_unethical"],
+    # --- top-level markers that are NOT harm categories ---
+    # Aegis' top level is Safe / Needs Caution; "Needs Caution" can appear here and
+    # names no policy. It maps to NOTHING on purpose: a row whose only category is
+    # this is dropped and counted, never relabelled benign (see _load_aegis).
+    "Needs Caution": [],
+    "None": [],
+    "Safe": [],
+}
+# The five ids above that exist ONLY because of Aegis. Dropping AEGIS_EXTRA_COLUMNS
+# removes these columns and every category routed to them becomes unmapped.
+_AEGIS_ONLY_IDS = list(_AEGIS_EXTRA_SPEC.keys())
+
+
+def _aegis_crosswalk(extra_columns: bool) -> dict:
+    """Normalised {aegis_category_key -> [our policy ids]} for the active taxonomy.
+
+    Its ONE job: resolve Aegis' category strings to our columns without silent
+    forcing. When `extra_columns` is False the five Aegis-only ids are stripped from
+    every target list, so a category that mapped ONLY to them becomes unmapped and
+    its rows are dropped-and-counted rather than pushed into a neighbouring policy.
+    """
+    out = {}
+    for raw, ids in _AEGIS_CROSSWALK_RAW.items():
+        kept = [i for i in ids if extra_columns or i not in _AEGIS_ONLY_IDS]
+        out[_norm_key(raw)] = kept
+    return out
+
+
+# Fixed column order: the 14 BeaverTails core policies, then jailbreak, then
+# toxicity, then (optionally) the five Aegis-only columns. APPEND-ONLY -- indices
+# 0..15 are frozen so results stay comparable across runs.
 _CORE_IDS = list(_BEAVERTAILS_KEY_TO_ID.values())
-_POLICY_ORDER = _CORE_IDS + ["jailbreak", "toxicity"]
+_BASE_POLICY_ORDER = _CORE_IDS + ["jailbreak", "toxicity"]
 _POLICY_GROUP = {**{i: "beavertails" for i in _CORE_IDS},
-                 "jailbreak": "adversarial", "toxicity": "toxicity"}
+                 "jailbreak": "adversarial", "toxicity": "toxicity",
+                 **{i: "aegis" for i in _AEGIS_ONLY_IDS}}
+
+
+def policy_order(extra_columns=None) -> list:
+    """The active column order (its ONE job: one place decides how many columns exist).
+
+    16 base columns, plus the five Aegis-only columns when `C.AEGIS_EXTRA_COLUMNS`
+    is on. APPEND-ONLY: index 0..15 never move, so a run with the extra columns is
+    still column-comparable to one without for the first 16.
+    """
+    if extra_columns is None:
+        extra_columns = bool(C.AEGIS_EXTRA_COLUMNS)
+    return list(_BASE_POLICY_ORDER) + (list(_AEGIS_ONLY_IDS) if extra_columns else [])
 
 
 def build_taxonomy() -> list:
@@ -229,9 +358,10 @@ def build_taxonomy() -> list:
     must stay stable. WHY paraphrases: the policy tower averages a description plus
     its paraphrases into a robust multi-prototype vector (the schema-expansion idea).
     """
+    spec = {**_POLICY_SPEC, **_AEGIS_EXTRA_SPEC}
     policies = []
-    for pid in _POLICY_ORDER:
-        desc, paras = _POLICY_SPEC[pid]
+    for pid in policy_order():
+        desc, paras = spec[pid]
         # Guarantee at least C.POLICY_PARAPHRASES paraphrases (pad by reusing the
         # description if a spec is ever short) so build_policy_bank never underflows.
         paras = list(paras)
@@ -297,7 +427,8 @@ def _load_beavertails(store, n_per_class, n_benign, col_of, P, rng):
     # Bound the scan so a low-cap smoke does not walk all 30k rows chasing a rare class.
     max_scan = max(30000, n_per_class * 200)
     try:
-        stream = hf_load(C.BEAVERTAILS_DATASET, split="30k_train", streaming=True)
+        stream = hf_load(C.BEAVERTAILS_DATASET, split=C.BEAVERTAILS_TRAIN_SPLIT,
+                         streaming=True)
     except Exception as e:
         _eprint("[data] BeaverTails load FAILED (%s) -- continuing without it" % e)
         return 0
@@ -328,6 +459,112 @@ def _load_beavertails(store, n_per_class, n_benign, col_of, P, rng):
             % (scanned, n_benign_have,
                {c: col_counts[c] for c in _CORE_IDS}))
     return n_benign_have
+
+
+def _parse_aegis_categories(raw) -> list:
+    """Split Aegis' `violated_categories` string into raw category names.
+
+    The field is a ", "-joined string ("Sexual (minor), Criminal Planning/Confessions").
+    Forward slashes are INSIDE names, not separators, so we split on commas only.
+    """
+    if raw is None:
+        return []
+    s = str(raw).strip()
+    if not s or s.lower() in ("none", "null", "nan"):
+        return []
+    return [part.strip() for part in s.split(",") if part.strip()]
+
+
+def _load_aegis(store, n_per_class, n_benign, col_of, P, rng, split=None):
+    """Pool Aegis 2.0 into the corpus (its ONE job: a SECOND annotation regime).
+
+    WHY this dataset and not more BeaverTails. The 2026-08 audit measured the corpus
+    at 93.5% BeaverTails -- a "three-dataset pool" that was really one dataset, so
+    every number inherited one annotation regime's idiosyncrasies with no way to see
+    it. Aegis 2.0 is 33,416 rows over an INDEPENDENT 12-core + 9-fine-grained
+    taxonomy, human- and LLM-labelled in separate columns, and it is ungated. It
+    fills the six columns BeaverTails' 30k split starves, supplies thousands of extra
+    safe rows for the benign side, and its held-out test split becomes a genuine
+    CROSS-ANNOTATOR transfer arm (see load_transfer_arms).
+
+    text = prompt + "\\n" + response (response may be empty -> prompt only), matching
+    how the BeaverTails rows are rendered so the two sources share a length
+    distribution and the length-confound bar stays near 0.5.
+
+    Labels come from `violated_categories` through `_AEGIS_CROSSWALK`. A row flagged
+    unsafe whose categories ALL fail to map is DROPPED and counted in
+    `unmapped_categories` -- it is NOT relabelled benign, which is exactly the silent,
+    plausible-looking failure CLAUDE.md section 18.8 is about.
+
+    Returns {"n_pos","n_benign","n_dropped_unmapped","unmapped_categories",
+             "per_col"} so the caller can report what actually landed.
+    """
+    from datasets import load_dataset as hf_load
+
+    split = split or C.AEGIS_TRAIN_SPLIT
+    cross = _aegis_crosswalk(bool(C.AEGIS_EXTRA_COLUMNS))
+    stats = {"n_pos": 0, "n_benign": 0, "n_dropped_unmapped": 0,
+             "unmapped_categories": {}, "per_col": {}}
+    try:
+        ds = hf_load(C.AEGIS_DATASET, split=split)
+    except Exception as e:
+        _eprint("[data] Aegis 2.0 (%s) load FAILED (%s) -- continuing without it"
+                % (split, e))
+        stats["error"] = str(e)
+        return stats
+
+    col_counts = defaultdict(int)
+    rows = list(ds)
+    rng.shuffle(rows)                       # deterministic order for reproducibility
+    for row in rows:
+        prompt = _clean(row.get("prompt", ""))
+        resp = _clean(row.get("response") or "")
+        text = (prompt + "\n" + resp) if resp else prompt
+        gkey = _norm_key(prompt)            # group by PROMPT: an Aegis prompt appears
+                                            # with several responses; they must not
+                                            # straddle the train/test split.
+        p_lab = str(row.get("prompt_label", "") or "").strip().lower()
+        r_lab = str(row.get("response_label", "") or "").strip().lower()
+        unsafe = (p_lab == "unsafe") or (r_lab == "unsafe")
+
+        if unsafe:
+            raw_cats = _parse_aegis_categories(row.get("violated_categories"))
+            active, unmapped = [], []
+            for cat in raw_cats:
+                key = _norm_key(cat)
+                if key in cross:
+                    active.extend(cross[key])
+                else:
+                    unmapped.append(cat)
+            active = sorted(set(active))
+            for cat in unmapped:            # count EVERY unrecognised string
+                stats["unmapped_categories"][cat] = \
+                    stats["unmapped_categories"].get(cat, 0) + 1
+            if not active:
+                # unsafe but nothing to put it in -> DROP and count. Never a benign.
+                stats["n_dropped_unmapped"] += 1
+                continue
+            if any(col_counts[a] < n_per_class for a in active):
+                if _add_row(store, text, active, "aegis", gkey, col_of, P):
+                    stats["n_pos"] += 1
+                    for a in active:
+                        col_counts[a] += 1
+        elif p_lab == "safe" and r_lab in ("safe", ""):
+            if stats["n_benign"] < n_benign:
+                if _add_row(store, text, [], "aegis_benign", gkey, col_of, P):
+                    stats["n_benign"] += 1
+
+    stats["per_col"] = {k: int(v) for k, v in sorted(col_counts.items())}
+    _eprint("[data] Aegis 2.0 (%s): pos=%d benign=%d dropped_unmapped=%d "
+            "unmapped_category_strings=%d"
+            % (split, stats["n_pos"], stats["n_benign"], stats["n_dropped_unmapped"],
+               len(stats["unmapped_categories"])))
+    if stats["unmapped_categories"]:
+        _eprint("[data]   UNMAPPED Aegis categories (rows dropped, not relabelled): "
+                + ", ".join("%s=%d" % kv
+                            for kv in sorted(stats["unmapped_categories"].items())))
+    _eprint("[data]   Aegis per-col: %s" % stats["per_col"])
+    return stats
 
 
 def _load_toxicchat(store, n_per_class, n_benign, col_of, P, rng):
@@ -449,18 +686,27 @@ def load_corpus(n_per_class=C.N_PER_CLASS, n_benign=C.N_BENIGN, seed=C.SEED) -> 
     col_of = {p["id"]: i for i, p in enumerate(policies)}
     store = {"seen": set(), "texts": [], "Y": [], "sources": [], "gkeys": []}
 
-    # BENIGN = LENGTH-MATCHED. BeaverTails safe rows (prompt+response) share the
-    # positives' length distribution, so we fill the benign quota from BeaverTails
-    # FIRST and only backfill any deficit from the shorter, prompt-only toxic-chat /
-    # wildguard benigns -- this keeps length from leaking the label (length_auc ~0.5).
-    # All three sources still contribute their POSITIVES regardless of the benign cap.
+    # BENIGN = LENGTH-MATCHED. BeaverTails and Aegis safe rows are rendered
+    # prompt+response like the positives, so they share the positives' length
+    # distribution; we fill the benign quota from those FIRST and only backfill any
+    # deficit from the shorter, prompt-only toxic-chat / wildguard benigns -- this
+    # keeps length from leaking the label (length_auc ~0.5). Every source still
+    # contributes its POSITIVES regardless of the benign cap.
     bt_benign = _load_beavertails(store, n_per_class, n_benign, col_of, P, rng)
     deficit = max(0, n_benign - bt_benign)
+    aegis_stats = {}
+    if C.AEGIS_ON:
+        aegis_stats = _load_aegis(store, n_per_class, deficit, col_of, P, rng)
+        deficit = max(0, deficit - int(aegis_stats.get("n_benign", 0)))
     tc_benign = _load_toxicchat(store, n_per_class, deficit, col_of, P, rng)
     deficit = max(0, deficit - tc_benign)
     _load_wildguard(store, n_per_class, deficit, col_of, P, rng)
 
     corpus = _finalize(store, policies, rng)
+    corpus["aegis"] = aegis_stats
+    corpus["requested"] = {"n_per_class": int(n_per_class),
+                           "n_benign": int(n_benign), "seed": int(seed)}
+    corpus["achieved"] = corpus_provenance(corpus, n_per_class, n_benign)
 
     # --- provenance: per-column positive counts + benign + mean chars (stderr) ---
     Y = corpus["Y"]
@@ -474,7 +720,113 @@ def load_corpus(n_per_class=C.N_PER_CLASS, n_benign=C.N_BENIGN, seed=C.SEED) -> 
         _eprint("[data]   col %2d %-24s pos=%d" % (i, p["id"], int(col_pos[i])))
     _eprint("[data] source dist: "
             + ", ".join("%s=%d" % (s, c) for s, c in sorted(Counter(corpus["sources"]).items())))
+    _eprint(format_shortfall(corpus["achieved"]))
     return corpus
+
+
+# --- ACHIEVED-vs-REQUESTED provenance (never echo the config back) -----------
+def pool_fingerprint(texts) -> str:
+    """SHA-256 over the SORTED normalised texts (its ONE job: identify this pool).
+
+    Sorted, so the fingerprint is invariant to row order but changes the instant the
+    membership changes. This is the anchor that tells a reader whether a cached
+    embedding matrix belongs to the corpus sitting beside it -- the `meerkat` defect
+    (an artifact that cannot be regenerated from the code beside it) made concrete.
+    """
+    h = hashlib.sha256()
+    for key in sorted(_norm_key(t) for t in texts):
+        h.update(key.encode("utf-8"))
+        h.update(b"\x00")
+    return h.hexdigest()
+
+
+def corpus_provenance(corpus, requested_n_per_class, requested_n_benign,
+                      test_idx=None) -> dict:
+    """What the corpus ACHIEVED, per column and per source (its ONE job).
+
+    `results.json` used to record `n_per_class: 500` read straight off the config --
+    the REQUESTED value, while six of sixteen columns held 109-374 positives. A
+    reader could not detect the rubric failure from the artifact at all. This returns
+    the achieved side so the runner can persist it:
+
+      per_column_positives   corpus counts, per policy id
+      per_column_positives_test  the same on the test split (pass `test_idx`)
+      n_benign_achieved / n_harmful / class_balance
+      source_distribution    measured row counts per source tag
+      requested_vs_achieved  both numbers plus a per-column `shortfall` bool
+      pool_fingerprint       sha256 of the sorted normalised texts
+    """
+    Y = np.asarray(corpus["Y"])
+    texts = list(corpus["texts"])
+    policies = corpus["policies"]
+    n = len(texts)
+    col_pos = Y.sum(axis=0).astype(int) if n else np.zeros(len(policies), int)
+    n_benign = int((np.asarray(corpus["is_harmful"]) == 0).sum()) if n else 0
+    n_harmful = n - n_benign
+
+    per_col = {p["id"]: int(col_pos[i]) for i, p in enumerate(policies)}
+    req = int(requested_n_per_class)
+    rva = {pid: {"requested": req, "achieved": got, "shortfall": bool(got < req)}
+           for pid, got in per_col.items()}
+
+    out = {
+        "n_rows": int(n),
+        "n_policies": int(len(policies)),
+        "per_column_positives": per_col,
+        "n_harmful": int(n_harmful),
+        "n_benign_achieved": int(n_benign),
+        "n_benign_requested": int(requested_n_benign),
+        "benign_shortfall": bool(n_benign < int(requested_n_benign)),
+        "class_balance_harmful_frac": float(n_harmful / n) if n else 0.0,
+        "source_distribution": {s: int(c) for s, c in
+                                sorted(Counter(corpus["sources"]).items())},
+        "requested_vs_achieved": rva,
+        "n_columns_short": int(sum(1 for v in rva.values() if v["shortfall"])),
+        "pool_fingerprint": pool_fingerprint(texts),
+    }
+    if test_idx is not None:
+        ti = np.asarray(test_idx, dtype=np.int64)
+        Yt = Y[ti] if len(ti) else Y[:0]
+        tcol = Yt.sum(axis=0).astype(int) if len(ti) else np.zeros(len(policies), int)
+        out["per_column_positives_test"] = {p["id"]: int(tcol[i])
+                                            for i, p in enumerate(policies)}
+        out["n_test_rows"] = int(len(ti))
+        out["n_benign_test"] = int((np.asarray(corpus["is_harmful"])[ti] == 0).sum()) \
+            if len(ti) else 0
+    return out
+
+
+def format_shortfall(achieved: dict) -> str:
+    """LOUD ASCII warning when requested != achieved (its ONE job). Never raises.
+
+    A warning, not a failure: a pool-limited column is legitimate under CLAUDE.md
+    section 17 rule 2 -- what is NOT legitimate is failing to say so. So we print it
+    every run, at a size that cannot be skimmed past.
+    """
+    short = [(pid, v) for pid, v in sorted(achieved.get("requested_vs_achieved", {}).items())
+             if v["shortfall"]]
+    lines = []
+    if short or achieved.get("benign_shortfall"):
+        lines.append("=" * 72)
+        lines.append("!! DATA SHORTFALL -- requested != achieved (rubric rule 1) !!")
+        for pid, v in short:
+            lines.append("!!   %-26s requested %5d  achieved %5d"
+                         % (pid, v["requested"], v["achieved"]))
+        if achieved.get("benign_shortfall"):
+            lines.append("!!   %-26s requested %5d  achieved %5d"
+                         % ("(benign negatives)", achieved.get("n_benign_requested", 0),
+                            achieved.get("n_benign_achieved", 0)))
+        lines.append("!! %d of %d policy columns are under the requested floor."
+                     % (achieved.get("n_columns_short", 0), achieved.get("n_policies", 0)))
+        lines.append("!! results.json records the ACHIEVED counts under 'achieved'.")
+        lines.append("=" * 72)
+    else:
+        lines.append("[data] requested == achieved on every column and on the benign side.")
+    lines.append("[data] class balance: harmful=%d benign=%d (harmful frac %.3f)"
+                 % (achieved.get("n_harmful", 0), achieved.get("n_benign_achieved", 0),
+                    achieved.get("class_balance_harmful_frac", 0.0)))
+    lines.append("[data] pool_fingerprint=%s" % achieved.get("pool_fingerprint", "?")[:16])
+    return "\n".join(lines)
 
 
 # --- seen / held-out policy split (the zero-shot test) -----------------------
@@ -525,14 +877,19 @@ def group_train_test(corpus, test_frac=0.3, seed=C.SEED):
     return np.array(train_idx, dtype=np.int64), np.array(test_idx, dtype=np.int64)
 
 
-# --- OOD slice ---------------------------------------------------------------
-def load_ood(seed=C.SEED) -> dict:
-    """Load a DISJOINT OOD slice in the same corpus shape (the real generalization check).
+# --- transfer arms: three DIFFERENT things "OOD" could mean -------------------
+# AUDIT_2026-08.md section A4: what this lesson called OOD was BeaverTails/30k_test --
+# the same dataset, annotators, taxonomy and prompt+response rendering as 93.5% of
+# train. Only the ROWS changed. It is kept (it is a real held-out check) but is now
+# named `heldout_split`, and two arms where something actually shifts sit beside it.
+def load_heldout_split(seed=C.SEED) -> dict:
+    """BeaverTails 30k_test: a HELD-OUT SPLIT of the training dataset. NOT OOD.
 
-    Source = BeaverTails '30k_test' (a split never seen in load_corpus's '30k_train'),
-    mapped over the SAME taxonomy. jailbreak/toxicity columns stay 0 here (BeaverTails
-    has no such labels) -- OOD is scored over the CORE/seen columns. Returns the same
-    dict shape; notes source + counts.
+    Same annotators, same 14-way taxonomy, same prompt+response rendering as the
+    BeaverTails rows in train -- only the rows differ. It measures split transfer,
+    which is worth measuring and is not distribution transfer. jailbreak/toxicity
+    stay 0 here (BeaverTails has no such labels), so it is scored over the core
+    columns.
     """
     from datasets import load_dataset as hf_load
 
@@ -542,12 +899,15 @@ def load_ood(seed=C.SEED) -> dict:
     col_of = {p["id"]: i for i, p in enumerate(policies)}
     store = {"seen": set(), "texts": [], "Y": [], "sources": [], "gkeys": []}
     n_pos = n_ben = 0
-    cap = 1500                              # bounded OOD slice (screening tier)
+    cap = 1500                              # bounded slice (screening tier)
+    src = "BeaverTails/%s" % C.BEAVERTAILS_TEST_SPLIT
     try:
-        ds = hf_load(C.BEAVERTAILS_DATASET, split="30k_test", streaming=True)
+        ds = hf_load(C.BEAVERTAILS_DATASET, split=C.BEAVERTAILS_TEST_SPLIT,
+                     streaming=True)
     except Exception as e:
-        _eprint("[ood] BeaverTails 30k_test load FAILED (%s)" % e)
-        return _finalize(store, policies, rng) | {"source": "none", "n": 0}
+        _eprint("[transfer] %s load FAILED (%s)" % (src, e))
+        return _finalize(store, policies, rng) | {
+            "source": "none", "n": 0, "arm": "heldout_split", "error": str(e)}
     for row in ds:
         cats = row.get("category") or {}
         active = [_BEAVERTAILS_KEY_TO_ID[k] for k, v in cats.items()
@@ -562,58 +922,207 @@ def load_ood(seed=C.SEED) -> dict:
                 n_ben += 1
         if n_pos >= cap and n_ben >= cap:
             break
-    ood = _finalize(store, policies, rng)
-    ood["source"] = "BeaverTails/30k_test"
-    ood["n"] = len(ood["texts"])
-    _eprint("[ood] %s: N=%d harmful=%d benign=%d"
-            % (ood["source"], ood["n"], n_pos, n_ben))
-    return ood
+    out = _finalize(store, policies, rng)
+    out["source"] = src
+    out["arm"] = "heldout_split"
+    out["shift"] = "rows only -- same dataset, annotators, taxonomy and rendering"
+    out["n"] = len(out["texts"])
+    _eprint("[transfer/heldout_split] %s: N=%d harmful=%d benign=%d"
+            % (out["source"], out["n"], n_pos, n_ben))
+    return out
 
 
-# --- confound audit ----------------------------------------------------------
-def _auc(scores, labels) -> float:
-    """Threshold-free AUC = P(score(pos) > score(neg)); sklearn with a rank fallback."""
-    pos = [s for s, y in zip(scores, labels) if y == 1]
-    neg = [s for s, y in zip(scores, labels) if y == 0]
-    if not pos or not neg:
-        return 0.5
-    try:
-        from sklearn.metrics import roc_auc_score
-        return float(roc_auc_score(labels, scores))
-    except Exception:
-        order = sorted(range(len(scores)), key=lambda i: scores[i])
-        ranks = [0.0] * len(scores)
-        i = 0
-        while i < len(order):
-            j = i
-            while j + 1 < len(order) and scores[order[j + 1]] == scores[order[i]]:
-                j += 1
-            avg = (i + j) / 2.0 + 1.0
-            for m in range(i, j + 1):
-                ranks[order[m]] = avg
-            i = j + 1
-        n_p, n_n = len(pos), len(neg)
-        sum_pos = sum(ranks[i] for i in range(len(labels)) if labels[i] == 1)
-        u = sum_pos - n_p * (n_p + 1) / 2.0
-        return float(u / (n_p * n_n))
+def load_cross_annotator(seed=C.SEED) -> dict:
+    """Aegis 2.0's HELD-OUT TEST split: a different annotation regime, same rendering.
 
-
-def confound_report(texts, is_harmful) -> dict:
-    """Can raw CHAR LENGTH separate harmful vs benign? (its ONE job: a length-tell audit).
-
-    A guard must read INTENT, not length. length_auc ~0.5 => no trivial tell; far from
-    0.5 => the classes are length-separable and a "win" might be a length artifact.
-    Returns {"length_auc","len_pos_mean","len_neg_mean"}.
+    Genuinely cross-annotator: Aegis' labels come from a different taxonomy and a
+    different labelling process than BeaverTails', so agreement here is a real
+    transfer question rather than a resampling question. Rows whose Aegis categories
+    do not map are dropped and counted, exactly as in training (see _load_aegis).
     """
-    lens = [len(t) for t in texts]
+    rng = random.Random(seed + 4)
+    policies = build_taxonomy()
+    P = len(policies)
+    col_of = {p["id"]: i for i, p in enumerate(policies)}
+    store = {"seen": set(), "texts": [], "Y": [], "sources": [], "gkeys": []}
+    cap = 1500
+    stats = _load_aegis(store, cap, cap, col_of, P, rng, split=C.AEGIS_TEST_SPLIT)
+    out = _finalize(store, policies, rng)
+    out["source"] = "%s/%s" % (C.AEGIS_DATASET, C.AEGIS_TEST_SPLIT)
+    out["arm"] = "cross_annotator"
+    out["shift"] = "annotators + taxonomy -- same prompt+response rendering"
+    out["n"] = len(out["texts"])
+    out["aegis"] = stats
+    if "error" in stats:
+        out["error"] = stats["error"]
+    _eprint("[transfer/cross_annotator] %s: N=%d" % (out["source"], out["n"]))
+    return out
+
+
+def _cstm_session_text(session) -> str:
+    """Flatten one CSTM-Bench session dict into one readable string."""
+    if not isinstance(session, dict):
+        return _clean(session)
+    parts = []
+    anchor = session.get("identity_anchor")
+    if isinstance(anchor, str) and anchor.strip():
+        parts.append(_clean(anchor))
+    for key in ("messages", "content", "text", "turns", "conversation"):
+        val = session.get(key)
+        if isinstance(val, str) and val.strip():
+            parts.append(_clean(val))
+        elif isinstance(val, list):
+            for m in val:
+                if isinstance(m, str) and m.strip():
+                    parts.append(_clean(m))
+                elif isinstance(m, dict):
+                    for mk in ("content", "text", "message"):
+                        mv = m.get(mk)
+                        if isinstance(mv, str) and mv.strip():
+                            parts.append(_clean(mv))
+    return " ".join(parts).strip()
+
+
+def load_ood_benchmark(seed=C.SEED) -> dict:
+    """CSTM-Bench (intrinsec-ai/cstm-bench): a RELEASED external benchmark as OOD.
+
+    The benchmark CLAUDE.md section 17 rule 8 names for this lesson family, and the
+    only arm here where the task shape itself changes: rows are multi-session attack
+    scenarios, not single moderated messages.
+
+    Mapping, stated plainly because it is a CHOICE and not a given:
+      * one row per SCENARIO, text = its sessions concatenated, capped at
+        C.CSTM_MAX_CHARS so one scenario cannot dominate the length distribution;
+      * scenario_class == 'attack'  -> the `jailbreak` column (the scenarios are
+        prompt-injection / role-override attacks, which is what that policy names);
+        anything else -> all-zero (benign).
+    THREE HONEST LIMITS. (1) The label is SCENARIO-level, so a benign session inside
+    an attack scenario is folded into a positive. (2) Only the `jailbreak` column and
+    the binary harmful/benign score are meaningful; the other columns are all-zero
+    by construction and must not be read as "the model missed them". (3) n is ~108,
+    which is a screening-tier read on a genuinely external distribution, not an
+    evaluation-tier number.
+    """
+    from datasets import load_dataset as hf_load
+    import json as _json
+
+    rng = random.Random(seed + 5)
+    policies = build_taxonomy()
+    P = len(policies)
+    col_of = {p["id"]: i for i, p in enumerate(policies)}
+    store = {"seen": set(), "texts": [], "Y": [], "sources": [], "gkeys": []}
+    n_att = n_ben = 0
+    errors = []
+    for split in C.CSTM_SPLITS:
+        try:
+            ds = hf_load(C.CSTM_DATASET, "default", split=split)
+        except Exception as e:
+            _eprint("[transfer/ood_benchmark] split %s load FAILED (%s)" % (split, e))
+            errors.append("%s: %s" % (split, e))
+            continue
+        for row in ds:
+            raw = row.get("sessions_json")
+            try:
+                sessions = _json.loads(raw) if isinstance(raw, str) else (raw or [])
+            except Exception:
+                sessions = []
+            parts = [t for t in (_cstm_session_text(s) for s in sessions) if t]
+            if not parts:
+                continue
+            text = " ".join(parts)[:int(C.CSTM_MAX_CHARS)]
+            attack = str(row.get("scenario_class", "")) == "attack"
+            labels = ["jailbreak"] if attack else []
+            gkey = _norm_key(str(row.get("scenario_id", "")) or text[:200])
+            if _add_row(store, text, labels, "cstm_%s" % split, gkey, col_of, P):
+                n_att += int(attack)
+                n_ben += int(not attack)
+    out = _finalize(store, policies, rng)
+    out["source"] = C.CSTM_DATASET
+    out["arm"] = "ood_benchmark"
+    out["shift"] = "external benchmark -- different corpus, task shape and label source"
+    out["n"] = len(out["texts"])
+    out["scored_columns"] = ["jailbreak"]
+    out["label_granularity"] = "scenario-level"
+    if errors:
+        out["error"] = "; ".join(errors)
+    _eprint("[transfer/ood_benchmark] %s: N=%d attack=%d benign=%d"
+            % (out["source"], out["n"], n_att, n_ben))
+    return out
+
+
+_TRANSFER_LOADERS = {
+    "heldout_split": load_heldout_split,
+    "cross_annotator": load_cross_annotator,
+    "ood_benchmark": load_ood_benchmark,
+}
+
+
+def load_transfer_arms(arms=None, seed=C.SEED) -> dict:
+    """Load every configured transfer arm (its ONE job: name each shift honestly).
+
+    Returns {arm_name: corpus-shaped dict}. A failing arm records its error and does
+    not take the others down with it.
+    """
+    names = list(arms if arms is not None else C.TRANSFER_ARMS)
+    out = {}
+    for name in names:
+        fn = _TRANSFER_LOADERS.get(name)
+        if fn is None:
+            _eprint("[transfer] unknown arm '%s' -- skipped" % name)
+            continue
+        try:
+            out[name] = fn(seed=seed)
+        except Exception as exc:
+            _eprint("[transfer] arm %s FAILED: %s" % (name, exc))
+            out[name] = {"arm": name, "source": "?", "n": 0, "error": str(exc),
+                         "texts": [], "Y": np.zeros((0, len(build_taxonomy())), np.float32),
+                         "is_harmful": np.zeros(0, np.int64)}
+    return out
+
+
+# Back-compat: `load_ood` was the BeaverTails held-out split all along. The alias
+# keeps older callers working while the honest name is what new code uses.
+load_ood = load_heldout_split
+
+
+# --- confound audit (delegated to the ONE shared implementation) --------------
+# There used to be a local `confound_report` here. It ran ONE bar (character
+# length), returned the RAW auc without folding it about 0.5, and had no count bar,
+# no content bar and no shuffle control -- one of four partial reimplementations
+# across the detection lessons. `steering_tutorials/common/confound.py` is now the
+# single implementation; this module only adapts the call and keeps the three legacy
+# keys so an older reader of `results.json` still finds what it expects.
+def confound_report(texts, is_harmful, units=None, seed=C.SEED, n_folds=5,
+                    run_content=True, run_shuffle=True) -> dict:
+    """Run the SHARED four-bar confound audit over this corpus (its ONE job).
+
+    Four bars, because a length-only audit is not sufficient (CLAUDE.md section 17
+    rule 7): character LENGTH, unit COUNT (word count here, so a token-count tell
+    cannot hide behind a clean char-count), a TF-IDF CONTENT bar under 5-fold CV
+    (a policy-matching guard that cannot beat unigrams is not matching policies),
+    and a label-SHUFFLE control (a leakage diagnostic, never a bar to clear).
+
+    Every bar is DIRECTIONLESS -- `max(auc, 1-auc)` -- because a feature that
+    predicts the benign class perfectly is exactly as damning as one that predicts
+    the harmful class perfectly.
+
+    Returns the shared report (`length`/`count`/`content`/`shuffle`/`worst_auc`/
+    `worst_name`) PLUS the three legacy keys `length_auc`, `len_pos_mean`,
+    `len_neg_mean`. `length_auc` is the FOLDED value; the unfolded one is at
+    `length.auc_raw`.
+    """
     labels = [int(y) for y in is_harmful]
-    pos = [n for n, y in zip(lens, labels) if y == 1]
-    neg = [n for n, y in zip(lens, labels) if y == 0]
-    return {
-        "length_auc": _auc(lens, labels),
-        "len_pos_mean": float(sum(pos) / len(pos)) if pos else 0.0,
-        "len_neg_mean": float(sum(neg) / len(neg)) if neg else 0.0,
-    }
+    if units is None:                       # word count: a second, non-char length tell
+        units = [str(t).split() for t in texts]
+    rep = _shared_confound_report(texts, labels, units=units, seed=int(seed),
+                                  n_folds=int(n_folds), run_content=bool(run_content),
+                                  run_shuffle=bool(run_shuffle))
+    length = rep.get("length", {})
+    rep["length_auc"] = float(length.get("auc", 0.5))          # folded (legacy key)
+    rep["length_auc_raw"] = float(length.get("auc_raw", 0.5))  # unfolded
+    rep["len_pos_mean"] = float(length.get("mean_pos", 0.0))
+    rep["len_neg_mean"] = float(length.get("mean_neg", 0.0))
+    return rep
 
 
 # --- CPU smoke: python -m steering_tutorials.biencoder_guard.data ------------
@@ -641,9 +1150,14 @@ if __name__ == "__main__":
     tr, te = group_train_test(corpus)
     print("SPLIT: train=%d test=%d" % (len(tr), len(te)))
 
+    print("\n" + format_shortfall(corpus["achieved"]))
+    print("source_distribution: %s" % corpus["achieved"]["source_distribution"])
+
     conf = confound_report(corpus["texts"], corpus["is_harmful"])
-    print("CONFOUND: length_auc=%.4f  len_pos_mean=%.1f  len_neg_mean=%.1f"
-          % (conf["length_auc"], conf["len_pos_mean"], conf["len_neg_mean"]))
+    print("\n" + format_confound_report(conf))
+    print("legacy keys: length_auc=%.4f (raw %.4f) len_pos_mean=%.1f len_neg_mean=%.1f"
+          % (conf["length_auc"], conf["length_auc_raw"],
+             conf["len_pos_mean"], conf["len_neg_mean"]))
 
     if corpus["texts"]:
         i = 0

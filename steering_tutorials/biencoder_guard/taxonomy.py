@@ -138,6 +138,24 @@ _FRAME = {
         "safety rules, specifically {m}.",
     "toxicity":
         "Toxic, abusive, or harassing language in a user message, specifically {m}.",
+    # --- the Aegis-2.0-only columns (data._AEGIS_EXTRA_SPEC). Present so that
+    # pooling Aegis with BG_AEGIS_EXTRA=1 does not take EXP-H down: build_taxonomy
+    # RAISES on a parent with no phrase table, by design, and the fix is to add the
+    # table rather than to skip the parent.
+    "criminal_planning":
+        "Content that plans, assists, or confesses to a crime, specifically {m}.",
+    "unauthorized_advice":
+        "Authoritative medical, legal, or financial advice given without qualification, "
+        "specifically {m}.",
+    "malware":
+        "Content that creates, distributes, or deploys malicious software or cyber "
+        "intrusions, specifically {m}.",
+    "intellectual_property":
+        "Content that infringes copyright or trademark, or plagiarizes protected work, "
+        "specifically {m}.",
+    "high_risk_gov_decisions":
+        "Content that steers high-stakes government or public-policy decisions, "
+        "specifically {m}.",
 }
 
 # ---------------------------------------------------------------------------
@@ -305,6 +323,57 @@ _MIDS = {
         "mocking a person's appearance",
         "hostile sarcasm intended to demean",
         "intimidation that stops just short of an explicit threat",
+    ],
+    # --- the Aegis-2.0-only columns; 8 subtypes each, same subset property ---
+    "criminal_planning": [
+        "casing a location before a burglary",
+        "coordinating a getaway after a robbery",
+        "disposing of evidence to avoid detection",
+        "recruiting an accomplice for a planned offence",
+        "confessing to an offence and asking how to avoid charges",
+        "smuggling goods past a border checkpoint",
+        "picking a lock or bypassing a physical security system",
+        "arranging an alibi for the time of an offence",
+    ],
+    "unauthorized_advice": [
+        "prescribing a specific drug and dosage to an individual",
+        "telling someone to stop a prescribed medication",
+        "drafting binding legal strategy for an active case",
+        "recommending a specific security to buy or sell",
+        "diagnosing a condition from described symptoms",
+        "advising on how to structure a tax position",
+        "interpreting a contract clause as settled law",
+        "recommending a treatment in place of seeing a clinician",
+    ],
+    "malware": [
+        "writing ransomware that encrypts a victim's files",
+        "building a keylogger to capture credentials",
+        "crafting a phishing page that harvests logins",
+        "exploiting a known vulnerability in unpatched software",
+        "hiding a payload so antivirus does not flag it",
+        "assembling a botnet from compromised machines",
+        "escalating privileges after gaining a foothold",
+        "exfiltrating data from a network without detection",
+    ],
+    "intellectual_property": [
+        "reproducing a copyrighted book chapter verbatim",
+        "removing digital rights management from purchased media",
+        "passing off another author's essay as one's own",
+        "distributing pirated software or media",
+        "using a protected trademark to imply endorsement",
+        "rewriting a paper just enough to evade plagiarism checks",
+        "republishing a paywalled article in full",
+        "cloning a proprietary design and selling it as original",
+    ],
+    "high_risk_gov_decisions": [
+        "deciding whether an individual should be detained",
+        "targeting decisions in a military operation",
+        "adjudicating an asylum or immigration application",
+        "allocating scarce public health resources between people",
+        "assigning a predictive risk score used in policing",
+        "determining eligibility for a welfare entitlement",
+        "setting sentencing or parole recommendations",
+        "selecting surveillance targets among a civilian population",
     ],
 }
 
@@ -597,8 +666,14 @@ def proximity_audit(node_bank: np.ndarray, real_bank: np.ndarray, owner_nodes) -
 def _self_test():
     from . import data
 
-    policies = data.build_taxonomy()
-    built = build_taxonomy(policies)
+    # The self-test asserts Opir's EXACT 16/126/854 shape, so it runs on the 16 base
+    # policies regardless of whether the live corpus pools Aegis' extra columns. The
+    # runner's `_opir_fit_shape` handles the wider case at run time and records the
+    # deviation; this test's job is to prove the paper's shape is buildable at all.
+    policies = [p for p in data.build_taxonomy()
+                if p["id"] in data.policy_order(extra_columns=False)]
+    assert len(policies) == 16, "base taxonomy is %d wide, expected 16" % len(policies)
+    built = build_taxonomy(policies, n_mid=126, n_leaf=854)
     nodes = built["nodes"]
     a = built["audit"]
 
@@ -607,7 +682,7 @@ def _self_test():
     assert a["n_total"] == 996 == C.OPIR_TOTAL
 
     # determinism: same inputs -> identical bank.
-    again = build_taxonomy(policies, verbose=False)["nodes"]
+    again = build_taxonomy(policies, n_mid=126, n_leaf=854, verbose=False)["nodes"]
     assert fingerprint(nodes) == fingerprint(again), "generator not deterministic"
 
     # structure: every mid hangs off a real policy; every leaf off a mid with the

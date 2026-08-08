@@ -36,7 +36,9 @@ THE SEVEN EXPERIMENTS
   EXP-D  latency vs #labels      : bi (embed once + matmul vs K cached vecs) is
                                   FLAT; uni (re-encode texts x K joints) rises
                                   LINEARLY. The "million-label" scaling claim.
-  EXP-E  OOD                     : score a disjoint out-of-distribution slice
+  EXP-E  TRANSFER (3 arms)       : heldout_split (BeaverTails 30k_test -- rows only,
+                                   NOT OOD), cross_annotator (Aegis 2.0 test), and
+                                   ood_benchmark (intrinsec-ai/cstm-bench)
                                   over the SEEN cols -> binary harm AUC + macro
                                   AP. The real generalization check.
   EXP-F  hard-negative synthesis : the 2026 contrastive-augmentation recipe --
@@ -83,6 +85,7 @@ each plot is wrapped so a late failure still leaves results.json on disk.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import time
 
@@ -147,33 +150,78 @@ def _seen_metrics(encoders, Y_true, S, is_harmful):
 # ===========================================================================
 # Encoding / policy-bank caching helpers
 # ===========================================================================
+def _content_fingerprint(texts) -> str:
+    """SHA-256 over the ORDERED texts. Order matters: rows index into this matrix."""
+    h = hashlib.sha256()
+    for t in texts:
+        h.update(str(t).encode("utf-8", "replace"))
+        h.update(b"\x00")
+    return h.hexdigest()[:12]
+
+
+def _bank_fingerprint(policies, n_proto) -> str:
+    """SHA-256 over the ORDERED policy TEXTS -- the thing the bank actually encodes."""
+    h = hashlib.sha256()
+    h.update(("n_proto=%d|" % int(n_proto)).encode("utf-8"))
+    for p in policies:
+        h.update(str(p.get("id", "")).encode("utf-8", "replace"))
+        h.update(b"\x1f")
+        h.update(str(p.get("description", "")).encode("utf-8", "replace"))
+        h.update(b"\x1f")
+        for para in p.get("paraphrases", []):
+            h.update(str(para).encode("utf-8", "replace"))
+            h.update(b"\x1e")
+        h.update(b"\x00")
+    return h.hexdigest()[:12]
+
+
 def _encode_content_cached(embedder, texts, split):
     """Embed a batch of texts with the CONTENT tower, cached to disk per split.
 
     The corpus texts are the SAME across the seen / held-out experiments (only
     the policy COLUMNS differ), so we embed the whole corpus once under the
-    "train" cache key and index it by the train / test row splits. OOD texts are
-    a genuinely different set and get their own cache key. Cache is keyed by
-    (split, embedder-name); a shape mismatch invalidates it.
+    "train" cache key and index it by the train / test row splits. Each transfer
+    arm is a genuinely different set and gets its own cache key.
+
+    STAMPED, not counted. This used to validate on `X.shape[0] == len(texts)`
+    alone, so any change that preserved the row count -- a new dataset mix, a
+    reshuffled seed -- silently reused vectors belonging to different text. That
+    is verbatim CLAUDE.md section 18.8's "the embedding cache returned stale labels
+    under a key that ignored them". The cache now carries a fingerprint of the
+    ordered texts and is REJECTED on mismatch, including when it predates
+    fingerprinting and cannot prove anything about itself.
     """
     key = (split, C.EMBEDDER)
     path = C.EMB_CACHE.get(key)
+    fp = _content_fingerprint(texts)
     if path is not None and path.exists():
         try:
-            data = np.load(path)
-            X = data["X"].astype(np.float32)
-            if X.shape[0] == len(texts):
-                print("[embed] loaded cache %s  shape=%s" % (path.name, X.shape))
+            blob = np.load(path)
+            X = blob["X"].astype(np.float32)
+            cached_fp = str(blob["fp"]) if "fp" in blob.files else None
+            if cached_fp is None:
+                print("[embed] cache REJECTED %s: no fingerprint (predates stamping); "
+                      "re-encoding" % path.name)
+            elif cached_fp != fp:
+                print("[embed] cache REJECTED %s: fingerprint %s != %s (the texts "
+                      "changed); re-encoding" % (path.name, cached_fp, fp))
+            elif X.shape[0] != len(texts):
+                print("[embed] cache REJECTED %s: %d rows != %d texts; re-encoding"
+                      % (path.name, X.shape[0], len(texts)))
+            else:
+                print("[embed] loaded cache %s  shape=%s fp=%s"
+                      % (path.name, X.shape, fp))
                 return X
         except Exception as exc:
             print("[embed] cache reload failed (%s); re-encoding" % exc)
     X = np.asarray(embedder.encode(list(texts), "content"), dtype=np.float32)
     if path is not None:
         try:
-            np.savez_compressed(path, X=X)
+            np.savez_compressed(path, X=X, fp=np.array(fp))
         except Exception as exc:
             print("[embed] cache save failed: %s" % exc)
-    print("[embed] encoded %d texts -> shape=%s (split=%s)" % (len(texts), X.shape, split))
+    print("[embed] encoded %d texts -> shape=%s (split=%s fp=%s)"
+          % (len(texts), X.shape, split, fp))
     return X
 
 
@@ -186,12 +234,27 @@ def _build_bank_cached(encoders, policies, embedder, n_proto, cache):
     incoming text against -- the crux of the bi-encoder scaling story.
     """
     path = C.POLICY_CACHE.get(C.EMBEDDER)
+    fp = _bank_fingerprint(policies, n_proto)
     if cache and path is not None and path.exists():
         try:
-            data = np.load(path)
-            B = data["B"].astype(np.float32)
-            if B.shape[0] == len(policies):
-                print("[bank] loaded cache %s  shape=%s" % (path.name, B.shape))
+            blob = np.load(path)
+            B = blob["B"].astype(np.float32)
+            cached_fp = str(blob["fp"]) if "fp" in blob.files else None
+            # A row-count check on 16 rows guards nothing: edit a policy DESCRIPTION
+            # or a paraphrase and the count is unchanged, so every cosine in
+            # EXP-A/B/C/E/G/H would be against the old text. Fingerprint the TEXTS.
+            if cached_fp is None:
+                print("[bank] cache REJECTED %s: no fingerprint (predates stamping); "
+                      "rebuilding" % path.name)
+            elif cached_fp != fp:
+                print("[bank] cache REJECTED %s: fingerprint %s != %s (a policy "
+                      "description or paraphrase changed); rebuilding"
+                      % (path.name, cached_fp, fp))
+            elif B.shape[0] != len(policies):
+                print("[bank] cache REJECTED %s: %d rows != %d policies; rebuilding"
+                      % (path.name, B.shape[0], len(policies)))
+            else:
+                print("[bank] loaded cache %s  shape=%s fp=%s" % (path.name, B.shape, fp))
                 return B
         except Exception as exc:
             print("[bank] cache reload failed (%s); rebuilding" % exc)
@@ -199,7 +262,7 @@ def _build_bank_cached(encoders, policies, embedder, n_proto, cache):
                    dtype=np.float32)
     if cache and path is not None:
         try:
-            np.savez_compressed(path, B=B)
+            np.savez_compressed(path, B=B, fp=np.array(fp))
         except Exception as exc:
             print("[bank] cache save failed: %s" % exc)
     print("[bank] built policy bank n_proto=%d -> shape=%s" % (n_proto, B.shape))
@@ -659,9 +722,16 @@ def _run_label_scale_accuracy(encoders, distractors, guards, policies, embedder,
     approximation: it is the same matrix the K-th run would have produced, and it
     also guarantees the nested-scale property (no resampling between K values).
     """
-    ks = sorted({int(k) for k in C.LABEL_SCALE_ACC_K})
     n_real = len(policies)
+    # K = n_real is the UNPADDED row -- the no-distractor baseline every other K is
+    # read against, and the row EXP-H's head-to-head looks up by `n_labels == n_real`.
+    # Pooling Aegis with extra columns moves n_real off 16, so it is added
+    # explicitly rather than left to a hardcoded grid that no longer contains it.
+    ks = sorted({int(k) for k in C.LABEL_SCALE_ACC_K} | {n_real})
+    dropped = [k for k in ks if k < n_real]
     ks = [k for k in ks if k >= n_real]
+    if dropped:
+        print("[EXP-G] dropped K < n_real=%d from the grid: %s" % (n_real, dropped))
     if not ks:
         raise ValueError("LABEL_SCALE_ACC_K has no K >= n_real=%d" % n_real)
     k_max = ks[-1]
@@ -1377,6 +1447,61 @@ def _plot_opir(block, exp_g_block, out_path):
     plt.close(fig)
 
 
+class _SkipExperiment(Exception):
+    """Raised to leave an experiment block with a STATED reason, not an error."""
+
+
+def _opir_fit_shape(n_top: int) -> dict:
+    """Keep Opir's 996-category TOTAL exact when the real taxonomy is not 16 wide.
+
+    Opir (arXiv:2605.29659) reports "996 categories across 16 top-level labels, 126
+    mid-level labels, and 854 leaf labels". `taxonomy.build_taxonomy` ASSERTS that
+    sum rather than trusting it, which is correct -- and which means it raises the
+    moment pooling Aegis adds policy columns and n_top leaves 16.
+
+    Two honest options, and silently mis-shaping the taxonomy is neither:
+      * AUTOFIT (default): hold the 996 TOTAL and the 126:854 ratio, re-deriving
+        mid/leaf at the new n_top. The total is the number the paper's scaling claim
+        is about; the exact 126/854 split is not. The deviation is recorded in
+        results.json under `opir_shape` and printed, never assumed.
+      * OFF: skip EXP-H and say why.
+
+    Mutates C.OPIR_N_MID / C.OPIR_N_LEAF, which `taxonomy` reads at call time.
+    Returns the shape record (paper's numbers AND ours).
+    """
+    paper = {"n_top": int(C.OPIR_PAPER_TOP), "n_mid": 126, "n_leaf": 854,
+             "n_total": int(C.OPIR_TOTAL)}
+    if int(n_top) == int(C.OPIR_PAPER_TOP):
+        return {"autofit": False, "matches_paper": True, "paper": paper,
+                "used": {"n_top": int(n_top), "n_mid": int(C.OPIR_N_MID),
+                         "n_leaf": int(C.OPIR_N_LEAF), "n_total": int(C.OPIR_TOTAL)}}
+    if not C.OPIR_AUTOFIT:
+        return {"autofit": False, "matches_paper": False, "paper": paper, "skip": True,
+                "reason": ("the real taxonomy has %d top-level policies, not %d, so "
+                           "Opir's 16/126/854=996 split is not exact. Set "
+                           "BG_OPIR_AUTOFIT=1 to hold the 996 total and re-derive "
+                           "mid/leaf, or BG_AEGIS_EXTRA=0 to keep 16 columns."
+                           % (n_top, C.OPIR_PAPER_TOP))}
+    below = int(C.OPIR_TOTAL) - int(n_top)
+    if below < 2:
+        return {"autofit": False, "matches_paper": False, "paper": paper, "skip": True,
+                "reason": "n_top=%d leaves %d nodes below it; too few to build a "
+                          "3-level taxonomy." % (n_top, below)}
+    ratio = 126.0 / (126.0 + 854.0)
+    n_mid = max(1, int(round(below * ratio)))
+    n_leaf = below - n_mid
+    C.OPIR_N_MID, C.OPIR_N_LEAF = int(n_mid), int(n_leaf)
+    used = {"n_top": int(n_top), "n_mid": int(n_mid), "n_leaf": int(n_leaf),
+            "n_total": int(n_top + n_mid + n_leaf)}
+    print("[EXP-H] OPIR SHAPE AUTOFIT: n_top=%d (paper: %d) -> mid=%d leaf=%d, "
+          "total=%d held at Opir's 996. The 126:854 RATIO is preserved; the exact "
+          "126/854 split is NOT the paper's."
+          % (n_top, C.OPIR_PAPER_TOP, n_mid, n_leaf, used["n_total"]))
+    return {"autofit": True, "matches_paper": False, "paper": paper, "used": used,
+            "note": "total held at Opir's 996; mid/leaf re-derived at the new n_top "
+                    "by the paper's 126:854 ratio"}
+
+
 # ===========================================================================
 # Orchestrator
 # ===========================================================================
@@ -1411,15 +1536,32 @@ def main():
     te = np.asarray(te)
     print("[data] group split  train=%d  test=%d" % (len(tr), len(te)))
 
-    # length-confound audit (can raw char length separate harmful vs benign?).
-    try:
-        conf = data.confound_report(texts, is_harmful)
-    except Exception as exc:
-        conf = {"length_auc": float("nan"), "len_pos_mean": float("nan"),
-                "len_neg_mean": float("nan"), "error": str(exc)}
-        print("[confound] FAILED: %s" % exc)
-    print("[confound] length_auc=%.3f (0.5 => no trivial length tell)"
-          % conf.get("length_auc", float("nan")))
+    # --- what the corpus ACHIEVED, not what it was asked for ---------------
+    # results.json used to write `n_per_class: 500` straight off the config while
+    # six of sixteen columns held 109-374 positives, so the rubric failure was
+    # invisible from the artifact. Recompute WITH the test split so the per-column
+    # eval counts are on the record too, and warn loudly on any shortfall.
+    achieved = data.corpus_provenance(corpus, C.N_PER_CLASS, C.N_BENIGN, test_idx=te)
+    print(data.format_shortfall(achieved))
+
+    # --- confound audit: FOUR bars, directionless, from the shared spine ----
+    # length / word-count / TF-IDF content / label-shuffle, each folded about 0.5.
+    # Run on the whole corpus (comparable to prior runs) AND on the TEST split,
+    # because the test split is where the methods are scored and therefore where
+    # the binding bar has to come from.
+    def _confound(tag, sub_texts, sub_labels):
+        try:
+            rep = data.confound_report(sub_texts, sub_labels, seed=C.SEED)
+            print("[confound:%s]\n%s" % (tag, data.format_confound_report(rep)))
+            return rep
+        except Exception as exc:
+            print("[confound:%s] FAILED: %s" % (tag, exc))
+            return {"length_auc": float("nan"), "len_pos_mean": float("nan"),
+                    "len_neg_mean": float("nan"), "worst_name": "none",
+                    "worst_auc": 0.5, "error": str(exc)}
+
+    conf = _confound("corpus", texts, is_harmful)
+    conf_test = _confound("test", [texts[i] for i in te], [is_harmful[i] for i in te])
 
     # --- 2. Encode (content tower) + build the cached policy tower ----------
     embedder = encoders.get_embedder()
@@ -1474,19 +1616,54 @@ def main():
         "n_policies": int(P),
         "seen_cols": [int(c) for c in seen_cols],
         "heldout_policies": [str(n) for n in heldout_names],
+        # REQUESTED config. The achieved counts live under "achieved" -- these two
+        # are named apart on purpose; conflating them is what made the rubric
+        # failure unauditable from the artifact (AUDIT_2026-08.md section A2).
+        "n_per_class_requested": int(C.N_PER_CLASS),
+        "n_benign_requested": int(C.N_BENIGN),
+        # legacy keys, kept so an older reader does not KeyError -- but they are the
+        # REQUESTED values and must not be read as compliance claims.
         "n_per_class": int(C.N_PER_CLASS),
         "n_benign": int(C.N_BENIGN),
         "seed": int(C.SEED),
         "judge": None,
+        # --- ACHIEVED: per-column positives (corpus AND test), realised benign
+        # count, class balance, measured source distribution, pool fingerprint,
+        # and a per-column requested-vs-achieved shortfall flag.
+        "achieved": achieved,
+        "source_distribution": achieved.get("source_distribution", {}),
+        "pool_fingerprint": achieved.get("pool_fingerprint", ""),
+        "requested_vs_achieved": achieved.get("requested_vs_achieved", {}),
+        "datasets": {
+            "beavertails": {"id": C.BEAVERTAILS_DATASET,
+                            "split": C.BEAVERTAILS_TRAIN_SPLIT, "gated": False},
+            "aegis": {"id": C.AEGIS_DATASET, "split": C.AEGIS_TRAIN_SPLIT,
+                      "gated": False, "enabled": bool(C.AEGIS_ON),
+                      "extra_columns": bool(C.AEGIS_EXTRA_COLUMNS),
+                      "stats": corpus.get("aegis", {})},
+            "toxicchat": {"id": C.TOXICCHAT_DATASET, "config": C.TOXICCHAT_CONFIG,
+                          "gated": False},
+            "wildguardmix": {"id": C.WILDGUARD_DATASET, "gated": True,
+                             "note": "GATED; HTTP 403 without an HF token. Contributes "
+                                     "0 rows on this host -- see source_distribution."},
+        },
         "confound": {
+            # folded (directionless) length AUC, plus the raw value it folds from
             "length_auc": float(conf.get("length_auc", float("nan"))),
+            "length_auc_raw": float(conf.get("length_auc_raw", float("nan"))),
             "len_pos_mean": float(conf.get("len_pos_mean", float("nan"))),
             "len_neg_mean": float(conf.get("len_neg_mean", float("nan"))),
+            "corpus": conf,
+            "test": conf_test,
+            "binding_bar": float(conf_test.get("worst_auc", 0.5)),
+            "binding_bar_name": str(conf_test.get("worst_name", "none")),
         },
+        "margins": {},
         "seen": {},
         "heldout_zeroshot": {},
         "multiproto_ablation": {},
         "scaling": {},
+        "transfer": {},
         "ood": {},
         "hardneg": {},
         "label_scale_accuracy": {},
@@ -1514,6 +1691,22 @@ def main():
         except Exception as exc:
             results["seen"][method] = {"error": str(exc)}
             print("[EXP-A/%s] FAILED: %s" % (method, exc))
+
+    # --- the only number a method may headline: margin over the BINDING bar --
+    # CLAUDE.md section 17 rule 7: claim only the margin ABOVE the larger of
+    # {confound bar, method baseline}. The bar comes from the TEST split, which is
+    # where binary_harm_auc is measured. A negative margin is printed, not hidden.
+    for method, cell in results["seen"].items():
+        if not isinstance(cell, dict) or "binary_harm_auc" not in cell:
+            continue
+        try:
+            m = data.margin_over_bar(float(cell["binary_harm_auc"]), conf_test)
+            results["margins"][method] = m
+            print("[margin/%s] harm_auc=%.4f  bar(%s)=%.4f  margin=%+.4f  clears=%s"
+                  % (method, m["method_auc"], m["binding_bar_name"],
+                     m["binding_bar"], m["margin"], m["clears"]))
+        except Exception as exc:
+            results["margins"][method] = {"error": str(exc)}
 
     # --- EXP-B: held-out ZERO-SHOT (the headline) -------------------------
     Y_held_te = Y_te[:, heldout_cols]
@@ -1611,34 +1804,65 @@ def main():
         results["scaling"] = {"error": str(exc)}
         print("[EXP-D] FAILED: %s" % exc)
 
-    # --- EXP-E: OOD (score a disjoint slice over SEEN cols) ---------------
+    # --- EXP-E: TRANSFER, in three arms that shift different things -------
+    # The arm this lesson used to call "OOD" was BeaverTails/30k_test -- the same
+    # dataset, annotators, taxonomy and rendering as most of train, with only the
+    # rows changed. It is kept and renamed `heldout_split`, and two arms where
+    # something real shifts sit beside it: `cross_annotator` (Aegis 2.0's held-out
+    # test split -- different annotators and taxonomy) and `ood_benchmark`
+    # (intrinsec-ai/cstm-bench -- a released external benchmark, the one CLAUDE.md
+    # section 17 rule 8 names for this lesson family).
     try:
-        ood = data.load_ood()
-        ood_texts = list(ood["texts"])
-        Y_ood = np.asarray(ood["Y"], dtype=np.float32)[:, seen_cols]
-        ih_ood = np.asarray(ood["is_harmful"]).astype(int)
-        Xc_ood = _encode_content_cached(embedder, ood_texts, "ood")
-        results["ood"] = {"source": str(ood.get("source", "?")), "n": int(len(ood_texts))}
-        print("[EXP-E] ood source=%s n=%d harmful=%d"
-              % (results["ood"]["source"], results["ood"]["n"], int(ih_ood.sum())))
-        for method, g in guards.items():
-            if g is None:
-                results["ood"][method] = {"error": "fit failed"}
+        arms = data.load_transfer_arms()
+        results["transfer"] = {}
+        for arm_name, arm in arms.items():
+            arm_texts = list(arm.get("texts", []))
+            block = {
+                "source": str(arm.get("source", "?")),
+                "n": int(len(arm_texts)),
+                "shift": str(arm.get("shift", "")),
+            }
+            for key in ("scored_columns", "label_granularity", "error"):
+                if key in arm:
+                    block[key] = arm[key]
+            results["transfer"][arm_name] = block
+            if not arm_texts:
+                print("[EXP-E/%s] NO ROWS (%s) -- arm reported, not silently dropped"
+                      % (arm_name, arm.get("error", "empty")))
                 continue
-            try:
-                S = _guard_scores(g, Xc_ood, ood_texts, policy_bank, seen_cols)
-                mm = encoders.macro_micro(Y_ood, S, thresholds=None)
-                results["ood"][method] = {
-                    "binary_harm_auc": float(encoders.binary_harm_auc(ih_ood, _any_policy_score(S))),
-                    "macro_ap": float(mm.get("macro_ap", float("nan"))),
-                }
-                print("[EXP-E/%s] harm_auc=%.3f macro_ap=%.3f"
-                      % (method, results["ood"][method]["binary_harm_auc"],
-                         results["ood"][method]["macro_ap"]))
-            except Exception as exc:
-                results["ood"][method] = {"error": str(exc)}
-                print("[EXP-E/%s] FAILED: %s" % (method, exc))
+            Y_arm = np.asarray(arm["Y"], dtype=np.float32)[:, seen_cols]
+            ih_arm = np.asarray(arm["is_harmful"]).astype(int)
+            Xc_arm = _encode_content_cached(embedder, arm_texts, arm_name)
+            block["n_harmful"] = int(ih_arm.sum())
+            print("[EXP-E/%s] source=%s n=%d harmful=%d  (%s)"
+                  % (arm_name, block["source"], block["n"], block["n_harmful"],
+                     block["shift"]))
+            for method, g in guards.items():
+                if g is None:
+                    block[method] = {"error": "fit failed"}
+                    continue
+                try:
+                    S = _guard_scores(g, Xc_arm, arm_texts, policy_bank, seen_cols)
+                    mm = encoders.macro_micro(Y_arm, S, thresholds=None)
+                    block[method] = {
+                        "binary_harm_auc": float(
+                            encoders.binary_harm_auc(ih_arm, _any_policy_score(S))),
+                        "macro_ap": float(mm.get("macro_ap", float("nan"))),
+                    }
+                    print("[EXP-E/%s/%s] harm_auc=%.3f macro_ap=%.3f"
+                          % (arm_name, method, block[method]["binary_harm_auc"],
+                             block[method]["macro_ap"]))
+                except Exception as exc:
+                    block[method] = {"error": str(exc)}
+                    print("[EXP-E/%s/%s] FAILED: %s" % (arm_name, method, exc))
+        # legacy key: `ood` was always the held-out split. Keep it pointing there so
+        # an older reader gets the same numbers under the same name, and never
+        # silently gets the new external benchmark under the old label.
+        results["ood"] = dict(results["transfer"].get("heldout_split", {}))
+        results["ood"]["note"] = ("This is the BeaverTails held-out SPLIT, not "
+                                  "out-of-distribution. See results['transfer'].")
     except Exception as exc:
+        results["transfer"] = {"error": str(exc)}
         results["ood"] = {"error": str(exc)}
         print("[EXP-E] FAILED: %s" % exc)
 
@@ -1678,10 +1902,18 @@ def main():
     if C.OPIR_MODULE:
         try:
             from . import taxonomy
+            results["opir_shape"] = _opir_fit_shape(len(policies))
+            if results["opir_shape"].get("skip"):
+                results["opir_taxonomy"] = {
+                    "skipped": True, "reason": results["opir_shape"]["reason"]}
+                print("[EXP-H] SKIPPED: %s" % results["opir_shape"]["reason"])
+                raise _SkipExperiment()
             results["opir_taxonomy"] = _run_opir_taxonomy(
                 encoders, taxonomy, guards, policies, embedder,
                 policy_bank, Xc_te, texts_te, Y_te, seen_cols,
                 results.get("label_scale_accuracy", {}))
+        except _SkipExperiment:
+            pass
         except Exception as exc:
             results["opir_taxonomy"] = {"error": str(exc)}
             print("[EXP-H] FAILED: %s" % exc)
@@ -1787,9 +2019,26 @@ def _print_summary(results):
     print("embedder=%s emb_dim=%d  n_policies=%d  seed=%d"
           % (results["embedder"], results["emb_dim"], results["n_policies"], results["seed"]))
     print("held-out (zero-shot) policies: %s" % ", ".join(results["heldout_policies"]))
+    ach = results.get("achieved", {})
+    if ach:
+        print("ACHIEVED: %d rows  harmful=%d benign=%d (harmful frac %.3f)  "
+              "%d/%d columns under the requested %d"
+              % (ach.get("n_rows", 0), ach.get("n_harmful", 0),
+                 ach.get("n_benign_achieved", 0),
+                 ach.get("class_balance_harmful_frac", 0.0),
+                 ach.get("n_columns_short", 0), ach.get("n_policies", 0),
+                 results.get("n_per_class_requested", 0)))
+        print("sources: %s" % ach.get("source_distribution", {}))
+        print("pool_fingerprint=%s" % str(ach.get("pool_fingerprint", ""))[:16])
     c = results.get("confound", {})
-    print("length-confound AUC=%.3f (0.5 => no trivial length tell)"
-          % c.get("length_auc", float("nan")))
+    print("confound (folded, directionless): length AUC=%.3f  BINDING BAR %s=%.3f"
+          % (c.get("length_auc", float("nan")),
+             c.get("binding_bar_name", "none"), c.get("binding_bar", 0.5)))
+    for m, mg in sorted((results.get("margins") or {}).items()):
+        if isinstance(mg, dict) and "margin" in mg:
+            print("  margin %-18s harmAUC %.4f - %s %.4f = %+.4f  clears=%s"
+                  % (m, mg["method_auc"], mg["binding_bar_name"],
+                     mg["binding_bar"], mg["margin"], mg["clears"]))
 
     # EXP-A
     print(line)
@@ -1835,18 +2084,29 @@ def _print_summary(results):
         print("  bi_sec : %s" % ["%.3f" % v for v in sc["bi_sec"]])
         print("  uni_sec: %s" % ["%.3f" % v for v in sc["uni_sec"]])
 
-    # EXP-E
-    ood = results.get("ood", {})
-    if isinstance(ood, dict) and "source" in ood:
+    # EXP-E -- three arms, each labelled with WHAT SHIFTED. The first is a held-out
+    # split of the training dataset and is not out-of-distribution; the name says so.
+    transfer = results.get("transfer", {})
+    if isinstance(transfer, dict) and transfer and "error" not in transfer:
         print(line)
-        print("EXP-E  OOD (%s, n=%d)  score over SEEN cols" % (ood.get("source", "?"), ood.get("n", 0)))
-        print("%-14s %9s %8s" % ("method", "harmAUC", "macroAP"))
-        for m in C.METHODS:
-            cell = ood.get(m)
-            if not isinstance(cell, dict) or "error" in cell:
-                print("%-14s   [FAILED]" % m)
+        print("EXP-E  TRANSFER, scored over SEEN cols")
+        for arm_name, arm in transfer.items():
+            if not isinstance(arm, dict):
                 continue
-            print("%-14s %9.3f %8.3f" % (m, cell["binary_harm_auc"], cell["macro_ap"]))
+            print("  [%s] %s  n=%d  -- shift: %s"
+                  % (arm_name, arm.get("source", "?"), arm.get("n", 0),
+                     arm.get("shift", "?")))
+            if arm.get("error"):
+                print("      [NO ROWS] %s" % arm["error"])
+                continue
+            print("      %-14s %9s %8s" % ("method", "harmAUC", "macroAP"))
+            for m in C.METHODS:
+                cell = arm.get(m)
+                if not isinstance(cell, dict) or "error" in cell:
+                    print("      %-14s   [FAILED]" % m)
+                    continue
+                print("      %-14s %9.3f %8.3f"
+                      % (m, cell["binary_harm_auc"], cell["macro_ap"]))
 
     # EXP-F
     hn = results.get("hardneg", {})

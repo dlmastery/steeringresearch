@@ -65,6 +65,9 @@ Full file-by-file walkthrough below.
 4. [Files](#4-files)
 5. [Code walkthrough, file by file](#5-code-walkthrough-file-by-file)
 6. [The dataset](#6-the-dataset)
+   — [6.1 The Aegis 2.0 crosswalk](#61-the-aegis-20-crosswalk--and-where-we-added-a-column-instead-of-forcing-one)
+   · [6.2 Three transfer arms, one OOD](#62-three-transfer-arms-and-only-one-of-them-is-ood)
+   · [6.3 The confound audit](#63-the-confound-audit--four-bars-now-from-the-shared-spine)
 7. [Hard-negative augmentation — the 2026 data-synthesis recipe](#7-hard-negative-augmentation--the-2026-data-synthesis-recipe)
 8. [The safety-detection series](#8-the-safety-detection-series)
 9. [Running](#9-running)
@@ -185,8 +188,8 @@ on the right — which is why its cost tracks the label count.
 
 | file | role |
 |---|---|
-| `config.py` | every knob: embedder id + task prompts, the three datasets, `N_PER_CLASS`/`N_BENIGN`, held-out policy count, method list, the hard-negative + multi-prototype + scaling settings, and all paths |
-| `data.py` | build the many-label taxonomy; pool BeaverTails + toxic-chat + wildguardmix into one multi-label corpus (>=500/class); the seen/held-out policy split; group-aware train/test split; OOD slice; the length-confound audit |
+| `config.py` | every knob: embedder id + task prompts, the pooled datasets (BeaverTails, Aegis 2.0, toxic-chat; wildguardmix gated/unused), `N_PER_CLASS`/`N_BENIGN`, held-out policy count, method list, the hard-negative + multi-prototype + scaling settings, and all paths |
+| `data.py` | build the many-label taxonomy; pool BeaverTails + Aegis 2.0 + toxic-chat into one multi-label corpus; the Aegis crosswalk; the seen/held-out policy split; group-aware train/test split; the three transfer arms; achieved-vs-requested provenance + `pool_fingerprint`; the four-bar confound audit (delegated to `common/confound.py`) |
 | `encoders.py` | `get_embedder` (EmbeddingGemma / MiniLM), the multi-prototype `build_policy_bank`, the three guards (`BiEncoderGuard`, `UniEncoderGuard`, `TrainedHeadGuard`), the metrics, and the latency-vs-labels scaling microbenchmark |
 | `hardneg.py` | the 2026 hard-negative module: dense mining, the ECIsem diagnostic, CausalNeg counterfactuals, the ARHN false-negative filter, and a small InfoNCE contrastive adapter over frozen embeddings |
 | `run_biencoder_guard.py` | orchestrator: load -> embed (cached) -> fit the 3 guards -> EXP-A..EXP-F -> `results.json` + 4 PNGs |
@@ -216,18 +219,32 @@ overridable by env var so an eval shrinks into one foreground window (see
 (animal_abuse, child_abuse, controversial_topics, discrimination_stereotype,
 drug_weapon, financial_crime, hate_speech, misinformation, non_violent_unethical,
 privacy_violation, self_harm, sexually_explicit, terrorism, violence) plus
-adversarial/jailbreak and toxicity — each a `Policy` with a one-sentence
-`description` **and** several `paraphrases` (the synthetic-schema-expansion
-teaching point). `load_corpus()` pools three public datasets into one multi-hot
-corpus over that taxonomy: BeaverTails (14-way category dict → the core columns),
-toxic-chat (real in-the-wild toxicity/jailbreak positives + adjacent benign hard
-negatives), and wildguardmix (adversarial harmful prompts + benign-adversarial
-hard negatives; skipped gracefully if it fails to load). `split_seen_heldout()`
-withholds `N_HELDOUT_POLICIES` columns as **zero-shot** policies never seen in
-training; `group_train_test()` is a group-aware split (no text leakage);
-`load_ood()` renders a disjoint OOD shard to the same schema. `confound_report()`
-is the honesty check: can raw character **length** alone separate harmful from
-benign? An AUC near 0.5 means no trivial tell.
+adversarial/jailbreak and toxicity, plus the five columns Aegis 2.0 needs and no
+existing policy covers (§6.1) — each a `Policy` with a one-sentence `description`
+**and** several `paraphrases` (the synthetic-schema-expansion teaching point).
+
+`load_corpus()` pools the public datasets into one multi-hot corpus over that
+taxonomy: BeaverTails (14-way category dict → the core columns), **Aegis 2.0**
+(`_load_aegis` + `_AEGIS_CROSSWALK_RAW`, a second independent taxonomy; an unsafe
+row whose categories all fail to map is **dropped and counted**, never relabelled
+benign), toxic-chat (in-the-wild toxicity/jailbreak positives, benign only as a
+backfill), and wildguardmix (**gated — 0 rows on this host**).
+
+`corpus_provenance()` records what the corpus **achieved** rather than what it was
+asked for: per-column positives on the corpus *and* the test split, the realised
+benign count and class balance, the measured `source_distribution`, a per-column
+`shortfall` flag, and a `pool_fingerprint` (SHA-256 over the sorted normalised
+texts). `format_shortfall()` prints a loud banner whenever requested ≠ achieved —
+a warning, not a failure, because a pool-limited column is legitimate and failing
+to *say so* is not.
+
+`split_seen_heldout()` withholds `N_HELDOUT_POLICIES` columns as **zero-shot**
+policies never seen in training; `group_train_test()` is a group-aware split (no
+text leakage). `load_transfer_arms()` builds the three separately-named arms of
+§6.2 — `load_heldout_split()` (the BeaverTails shard formerly mislabelled `load_ood`,
+which survives as a back-compat alias), `load_cross_annotator()` (Aegis' test split),
+`load_ood_benchmark()` (CSTM-Bench). `confound_report()` delegates to the shared
+four-bar audit in `common/confound.py` (§6.3).
 
 ### `encoders.py` — the towers, the guards, the metrics, the scaling benchmark
 
@@ -264,16 +281,25 @@ weighting. Full narrative in [Section 7](#7-hard-negative-augmentation--the-2026
 ### `run_biencoder_guard.py` — the orchestrator
 
 `main()` loads the corpus, the seen/held-out split, the group-aware train/test
-split, and the OOD slice; embeds all texts once (cached to disk per split ×
-embedder) and builds the policy bank; fits the three guards on the **seen**
-columns; then runs EXP-A (seen-policy multilabel AP/F1), EXP-B (held-out
-**zero-shot** — the headline; the trained head reports `N/A`), EXP-C (the
-1-vs-`P` prototype ablation), EXP-D (the latency-vs-labels scaling curve), EXP-E
-(OOD transfer), and EXP-F (the hard-negative pipeline: mine → ECIsem → CausalNeg
-→ ARHN → adapter, comparing FPR@recall0.90 of the frozen bi-encoder vs. the
-adapter). It writes `results.json` **before** the summary print and renders four
-PNGs (PR by method, zero-shot bars, latency vs. labels, hard-neg FPR). Every EXP
-and plot is wrapped so a late failure still leaves the data on disk.
+split, and the three transfer arms; embeds all texts once (cached to disk per split
+× embedder) and builds the policy bank; fits the guards on the **seen** columns;
+then runs EXP-A (seen-policy multilabel AP/F1), EXP-B (held-out **zero-shot** — the
+headline; the trained head reports `N/A`), EXP-C (the 1-vs-`P` prototype ablation),
+EXP-D (the latency-vs-labels scaling curve), EXP-E (the three transfer arms), and
+EXP-F (the hard-negative pipeline: mine → ECIsem → CausalNeg → ARHN → adapter,
+comparing FPR@recall0.90 of the frozen bi-encoder vs. the adapter). It writes
+`results.json` **before** the summary print and renders four PNGs (PR by method,
+zero-shot bars, latency vs. labels, hard-neg FPR). Every EXP and plot is wrapped so
+a late failure still leaves the data on disk.
+
+Two caches are **stamped, not counted.** `_encode_content_cached` and
+`_build_bank_cached` used to accept a cached matrix on a row-count match alone, so
+any change preserving the count — a new dataset mix, an edited policy description —
+silently reused vectors belonging to different text. They now store a SHA-256
+fingerprint of the ordered inputs and **reject** on mismatch, including when a cache
+predates fingerprinting and can prove nothing about itself (`cache REJECTED …`).
+This is CLAUDE.md §18.8's "the embedding cache returned stale labels under a key
+that ignored them", closed.
 
 ### `infer.py` — policy matching + the zero-shot demo, in one script
 
@@ -290,27 +316,135 @@ lazy imports.
 
 ## 6. The dataset
 
-One pooled, multi-label safety corpus over a shared policy taxonomy, built to the
-project's hard-data rubric (>=500 positives **and** >=500 benign hard-negatives),
-with a real OOD slice and held-out zero-shot policies on top.
+One pooled, multi-label safety corpus over a shared policy taxonomy, plus three
+separately-named transfer arms and held-out zero-shot policies on top.
+
+> ### What the previous version of this section claimed, and what actually happened
+>
+> This section used to describe a three-way pool in the indicative. The 2026-08
+> audit re-ran the loader and measured the corpus that produced the numbers in §10:
+>
+> ```
+> source dist: beavertails=4852, beavertails_benign=500, toxicchat=374
+> [data] wildguardmix SKIPPED (gated/unavailable: ... error 403)
+> corpus N=5726  policies=16  benign=500
+> ```
+>
+> **BeaverTails was 93.5% of the corpus. toxic-chat was 6.5%. wildguardmix was 0%.**
+> Two sentences here were false in that run and are now deleted:
+>
+> - *"toxic-chat supplies … the benign hard-negatives that look adversarial but are
+>   safe."* **It supplied zero benign rows.** The toxic-chat benign draw is gated
+>   behind `deficit = max(0, n_benign - bt_benign)`, and BeaverTails filled the
+>   entire 500-row quota first, so `tc_benign` was **0 by construction** whenever
+>   `N_BENIGN <= 500`. Every benign row in that corpus was a BeaverTails safe row —
+>   the one property this lesson advertised for its negatives was not in the data.
+> - *"wildguardmix supplies adversarial-but-benign prompts."* **wildguardmix has
+>   never loaded on this host.** It is gated, the host has no HF token, and the
+>   request returns HTTP 403. It has contributed **zero rows of any kind** to every
+>   corpus this lesson has ever built. The loader is kept so a tokened host gets it;
+>   no result here rests on it, and this is stated in the indicative, not as a
+>   conditional.
+>
+> Neither failure was visible from `results.json`, which recorded no source
+> distribution and no per-column counts. That is fixed: every run now writes
+> `source_distribution`, `achieved` and a `pool_fingerprint` (§6.1).
 
 | role | dataset (loader) | what it is | contributes |
 |---|---|---|---|
-| **core taxonomy** | **BeaverTails** `PKU-Alignment/BeaverTails` (`data.py`) | prompt+response with a 14-way harm-category dict, multi-label | the 14 core policy columns; thousands/category available |
-| **in-the-wild hard** | **toxic-chat** `lmsys/toxic-chat` `toxicchat0124` (`data.py`) | real user prompts with toxicity + jailbreak flags | hard positives (toxicity/jailbreak) + topically-adjacent benign hard negatives |
-| **adversarial hard** | **wildguardmix** `allenai/wildguardmix` (`data.py`) | adversarial prompt-harm labels | adversarial harmful positives + benign-adversarial hard negatives (skipped gracefully if gated) |
+| **core taxonomy** | **BeaverTails** `PKU-Alignment/BeaverTails` `30k_train` (`data.py`) | prompt+response with a 14-way harm-category dict, multi-label | the 14 core policy columns + the length-matched benign pool |
+| **second taxonomy** | **Aegis 2.0** `nvidia/Aegis-AI-Content-Safety-Dataset-2.0` (`data.py`) | 33,416 rows, 12 core + 9 fine-grained categories, prompt **and** response, separate human/LLM label columns; **ungated** | an independent annotation regime, the starved columns, thousands of extra safe rows, 5 new policy columns |
+| **in-the-wild hard** | **toxic-chat** `lmsys/toxic-chat` `toxicchat0124` (`data.py`) | real user prompts with toxicity + jailbreak flags | hard positives (toxicity/jailbreak); benign only as a backfill, and only if the earlier sources leave a deficit |
+| **adversarial hard** | ~~**wildguardmix** `allenai/wildguardmix`~~ (`data.py`) | adversarial prompt-harm labels | **NOTHING on this host.** Gated, HTTP 403, no token. 0 rows in every run to date |
 | **held-out policies** | columns of the taxonomy (`data.py`) | `N_HELDOUT_POLICIES` categories withheld from training | the **zero-shot** test — detected from the description alone |
-| **OOD** | a disjoint shard (`data.py`) | same taxonomy, unseen rows | honest out-of-distribution transfer |
+| **transfer arms** | three, named separately (§6.2) | `heldout_split` / `cross_annotator` / `ood_benchmark` | only one of the three is out-of-distribution, and it says so |
 
-**Why pool three datasets.** No single public set gives both a rich many-label
-taxonomy **and** hard, in-the-wild adversarial text. BeaverTails supplies the
-fine-grained 14-way label structure the bi-encoder needs to *have many labels to
-match against*; toxic-chat supplies genuine messy user prompts and the benign
-hard-negatives that look adversarial but are safe; wildguardmix supplies
-adversarial-but-benign prompts, the leakage-free style of hard negative. The label
-space is the **union** of their taxonomies, and every policy carries a written
-description so the tower can match — and so an unseen policy can be added by
-description alone.
+**Why pool more than one dataset.** No single public set gives both a rich
+many-label taxonomy **and** hard, in-the-wild adversarial text. But the deeper
+reason is the one the audit found: a corpus that is 93.5% one dataset inherits that
+dataset's annotation idiosyncrasies with no way to see it from the outside. Aegis
+2.0 is the fix — a second, independently-annotated safety taxonomy over the same
+kind of prompt+response text, large enough to fill the columns BeaverTails' 30k
+split starves and to supply a benign pool big enough for hard-negative mining to
+mean something. The label space is the **union** of these taxonomies, and every
+policy carries a written description so the tower can match — and so an unseen
+policy can be added by description alone.
+
+### 6.1 The Aegis 2.0 crosswalk — and where we added a column instead of forcing one
+
+Aegis' taxonomy is not ours. `violated_categories` is a `", "`-joined string of
+category names, and `data._AEGIS_CROSSWALK_RAW` maps each one onto a **list** of
+our policy ids (a list, because this corpus is multi-label and one Aegis category
+can legitimately span two of our policies). Matching is done after normalisation,
+so casing, punctuation and `Sexual (minor)` vs `Sexual Minor` resolve together.
+
+| Aegis category | our column(s) | note |
+|---|---|---|
+| Hate/Identity Hate | `hate_speech` + `discrimination_stereotype` | split: the category covers both |
+| Sexual | `sexually_explicit` | direct |
+| Sexual (minor) | `child_abuse` + `sexually_explicit` | split |
+| Suicide and Self Harm | `self_harm` | direct |
+| Violence | `violence` | direct |
+| Threat | `violence` | our `violence` policy names threats explicitly |
+| Guns/Illegal Weapons | `drug_weapon` | direct |
+| Controlled/Regulated Substances | `drug_weapon` | direct |
+| PII/Privacy | `privacy_violation` | direct |
+| Harassment | `toxicity` | our `toxicity` names harassing language |
+| Profanity | `toxicity` | direct |
+| Immoral/Unethical | `non_violent_unethical` | direct |
+| Manipulation | `non_violent_unethical` | our description names manipulation |
+| Fraud/Deception | `financial_crime` + `non_violent_unethical` | split |
+| Political/Misinformation/Conspiracy | `misinformation` + `controversial_topics` | split: the category is genuinely two of ours |
+| **Criminal Planning/Confessions** | **`criminal_planning` (NEW)** | no clean home; forcing it into `terrorism` or `financial_crime` would have been wrong |
+| **Illegal Activity** | **`criminal_planning` (NEW)** | merged with the above — Aegis distinguishes them, we do not, and that is a documented loss |
+| **Unauthorized Advice** | **`unauthorized_advice` (NEW)** | no existing policy covers unqualified medical/legal/financial advice |
+| **Malware** | **`malware` (NEW)** | no cyber policy existed |
+| **Copyright/Trademark/Plagiarism** | **`intellectual_property` (NEW)** | no IP policy existed |
+| **High Risk Gov. Decision Making** | **`high_risk_gov_decisions` (NEW)** | no existing policy is about consequential state decisions |
+| Needs Caution / Safe / None | *(nothing)* | top-level markers, not harm categories |
+
+**Five columns were added rather than forced**, taking the taxonomy from 16 to 21.
+They are **appended**, so indices 0–15 never move and every prior per-column result
+stays comparable. Set `BG_AEGIS_EXTRA=0` to keep exactly 16 columns; the five
+categories above then map to nothing.
+
+**A row that maps to nothing is dropped and counted, never relabelled benign.** If
+an Aegis row is flagged unsafe but every one of its categories fails to resolve, it
+is excluded and tallied under `datasets.aegis.stats.unmapped_categories` in
+`results.json`, with the exact unrecognised strings. Quietly turning an unsafe row
+into a benign one is precisely the silent, plausible-looking failure CLAUDE.md
+§18.8 catalogues, and it would have poisoned the negative pool.
+
+**EXP-H's taxonomy is affected and says so.** Opir's `16 top + 126 mid + 854 leaf =
+996` is exact only at 16 top-level policies. `build_taxonomy` **raises** rather than
+mis-shaping, so the runner re-derives mid/leaf at the new top count while holding
+the **996 total** and the 126:854 ratio (21/125/850), records both shapes under
+`results['opir_shape']`, and prints the deviation. The total is the number Opir's
+scaling claim is about; the exact 126/854 split is not.
+
+### 6.2 Three transfer arms, and only one of them is OOD
+
+The single arm this lesson used to call "OOD" was `BeaverTails/30k_test`: the same
+dataset, the same annotators, the same 14-way taxonomy and the same prompt+response
+rendering as 93.5% of train. **Only the rows changed.** That is split transfer, and
+calling it out-of-distribution overstated it. It is kept — a held-out split is worth
+measuring — and renamed so the name cannot overstate it again.
+
+| arm | source | what actually shifts |
+|---|---|---|
+| `heldout_split` | `BeaverTails/30k_test` | **rows only.** Same dataset, annotators, taxonomy, rendering |
+| `cross_annotator` | `nvidia/Aegis-AI-Content-Safety-Dataset-2.0` `test` | **annotators + taxonomy.** Same prompt+response rendering |
+| `ood_benchmark` | `intrinsec-ai/cstm-bench` | **everything.** A released external benchmark with a different corpus, task shape and label source |
+
+**CSTM-Bench is the benchmark CLAUDE.md §17 rule 8 names for this lesson family**,
+it is ungated, and it was already cached on this host while going unused. Three
+limits are stated up front because the mapping onto a single-message moderation task
+is a *choice*: (1) one row per **scenario**, sessions concatenated and capped, so the
+label is scenario-level and a benign session inside an attack scenario is folded into
+a positive; (2) only the `jailbreak` column and the binary harmful/benign score are
+meaningful — the other columns are all-zero by construction and must **not** be read
+as "the guard missed them"; (3) n ≈ 108, a screening-tier read on a genuinely
+external distribution, not an evaluation-tier number.
 
 **Held-out policies — the zero-shot test.** `N_HELDOUT_POLICIES` columns are
 withheld from **all** training and are chosen from categories that still have
@@ -318,13 +452,34 @@ enough positives that the zero-shot number is real. Only the bi-encoder and
 uni-encoder can score them; the trained head has no weight for them and reports
 `N/A`. This is the experiment the whole design exists for.
 
-**The length-confound audit — and why it matters.** A guardrail can look good for
-a boring reason: if harmful prompts are systematically longer than benign ones, a
-length-only rule already separates the classes and no embedding understanding is
-proven. `confound_report()` measures the AUC of raw character length against the
-label. ≈0.5 → no shortcut, a high method AP reflects real policy-matching signal;
-well above 0.5 → the headline must be discounted for a length artifact. The number
-is recorded in `results.json` and quoted beside the method numbers.
+### 6.3 The confound audit — four bars now, from the shared spine
+
+A guardrail can look good for a boring reason. `confound_report()` no longer lives
+in this lesson: it delegates to `steering_tutorials/common/confound.py`, the single
+implementation every detection lesson shares. The local version measured **one** bar
+(character length) and returned the **raw** AUC without folding it about 0.5 — one
+of four partial reimplementations across the course, and the fold is not cosmetic
+(a sibling lesson's `0.110` raw was a `0.890` confound with the sign flipped).
+
+| bar | question | why it is needed |
+|---|---|---|
+| `length` | can raw character count separate the classes? | the classic length artifact |
+| `count` | can word count separate them? | a token-count tell can hide behind a clean char count |
+| `content` | can a 5-fold TF-IDF unigram model separate them? | **the bar that matters.** A policy-matching guard that cannot beat unigrams is not matching policies |
+| `shuffle` | with labels permuted, does the pipeline still score above chance? | a leakage **diagnostic**, never a bar to clear |
+
+Every bar is **directionless** — `max(auc, 1-auc)` — because a feature that predicts
+the benign class perfectly is exactly as damning as one that predicts the harmful
+class perfectly: a classifier learns either sign for free. The **binding bar** is the
+largest of them, and `results.json` records the audit twice: over the whole corpus
+(comparable to prior runs) and over the **test split**, which is where the methods
+are scored and therefore where the bar a method must clear has to come from.
+`results['margins']` states each method's `binary_harm_auc` minus that bar, with a
+`clears` flag; a negative margin is printed, not hidden.
+
+Legacy keys (`length_auc`, `len_pos_mean`, `len_neg_mean`) are still written so an
+older reader does not break — but `length_auc` is now the **folded** value, with the
+unfolded one beside it at `length_auc_raw`.
 
 ---
 
@@ -420,11 +575,34 @@ VRAM, is the wall):
 | var | meaning | default |
 |---|---|---|
 | `BG_N_PER_CLASS` | positives per harm category | 500 |
-| `BG_N_BENIGN` | benign hard-negatives | 500 |
+| `BG_N_BENIGN` | benign hard-negatives | **3000** (was 500 — see below) |
 | `BG_EMBED` | `embeddinggemma` or `minilm` (fast, ungated dry run) | `embeddinggemma` |
 | `BG_PARAPHRASES` | descriptions averaged per policy (multi-prototype) | 4 |
 | `BG_N_HELDOUT` | policy columns withheld for zero-shot | 4 |
 | `BG_HARDNEG` | mined hard negatives per policy | 20 |
+| `BG_AEGIS_ON` | pool `nvidia/Aegis-AI-Content-Safety-Dataset-2.0` | 1 |
+| `BG_AEGIS_EXTRA` | add the 5 policy columns Aegis needs (§6.1); 0 keeps 16 | 1 |
+| `BG_TRANSFER_ARMS` | which transfer arms to run (§6.2) | `heldout_split,cross_annotator,ood_benchmark` |
+| `BG_OPIR_AUTOFIT` | hold Opir's 996 total when the taxonomy is not 16 wide | 1 |
+
+**Why `BG_N_BENIGN` went 500 → 3000.** At 500 the corpus was **5,226 harmful vs 500
+benign — 91.3% / 8.7%**, and the harmful side was uncapped while the benign side was
+hard-capped (`_load_beavertails` keeps a multi-label row while *any* of its columns
+is under quota, so common columns overshot to 1,870 while `n_benign` stopped dead at
+500). Two things broke as a result. First, `binary_harm_auc` and the confound bars
+were computed on an 11:1 set with no prevalence-aware framing. Second — the sharper
+one — the ANCE-style hard-negative miner draws `HARDNEG_PER_POLICY=20` per seen
+policy = **240 negatives from the ~350** in the train split, i.e. **~69% of the whole
+pool**. Dense mining means "retrieve the look-alikes"; retrieving two-thirds of
+everything is not mining, and that is why EXP-F's frozen baseline sits at
+`FPR@recall0.90 = 1.000`, the literal maximum.
+
+3000 is chosen so that the selection is a **small fraction** of the pool rather than
+most of it: the train split then holds ~2,100 benign rows and 240 mined is ~11% of
+them — a ~6× larger pool to be selective within — while the class balance moves to
+roughly **64% / 36%**. BeaverTails `30k_train` and Aegis 2.0 both have thousands of
+unused safe rows, so nothing about the old cap was pool-limited; it was arbitrary.
+Raise it further with `BG_N_BENIGN`; the cost is linear in embedding time.
 
 ```bash
 # a fast, ungated smoke on MiniLM with a small corpus:
@@ -442,6 +620,27 @@ so the off-family-judge discipline of the steering lessons does not apply here
 ---
 
 ## 10. Results — measured vs. the claim
+
+> ### PROVENANCE OF EVERY NUMBER IN §10 (read before the tables)
+>
+> All figures below come from the **2026-07-31 run**: EmbeddingGemma-300M, **16**
+> policy columns, `N_PER_CLASS=500`, `N_BENIGN=500`, corpus **N=5,726** at
+> **93.5% BeaverTails**, and a single transfer arm that was mislabelled OOD. They
+> are the numbers this lesson actually measured and they are not edited.
+>
+> Since then the data layer changed on four axes, so **these tables do not describe
+> the corpus the code now builds** and must be re-measured:
+>
+> | axis | the run below | now |
+> |---|---|---|
+> | benign pool | 500 (mining drew 69% of it) | `BG_N_BENIGN=3000` |
+> | sources | BeaverTails 93.5% / toxic-chat 6.5% / wildguard 0% | + Aegis 2.0 (33,416 rows, ungated) |
+> | policy columns | 16 | 21 (5 appended for unmappable Aegis categories, §6.1) |
+> | transfer | one arm, called "OOD" | three named arms, one genuinely OOD (§6.2) |
+> | confound | one bar, unfolded | four bars, folded, corpus **and** test split (§6.3) |
+>
+> Anything marked **[PENDING RUN]** is wired and import-checked but has not been
+> executed. No number below has been invented, adjusted, or projected forward.
 
 > ### 10.0 The bi-encoder arm was measuring the wrong thing, and this is the fix
 >
@@ -479,7 +678,7 @@ so the off-family-judge discipline of the steering lessons does not apply here
 > > retained as a **labelled ablation**. Every number in §10 below is from the
 > > orthonormal-init run.
 >
-> | arm | EXP-A seen | EXP-B **unseen policy** | EXP-E **OOD content** |
+> | arm | EXP-A seen | EXP-B **unseen policy** | EXP-E `heldout_split` *(not OOD, see 6.2)* |
 > |---|---|---|---|
 > | `bi_encoder` (frozen cosine) | 0.240 | **0.382** | 0.184 |
 > | `bi_encoder_trained` (InfoNCE) | **0.575** *(+140%)* | **0.182** *(−52%)* | **0.415** *(+126%)* |
@@ -499,7 +698,11 @@ so the off-family-judge discipline of the steering lessons does not apply here
 >
 > Those two shifts are different, and the split is the lesson:
 >
-> - **EXP-E holds the policies fixed and changes the content.** Training transfers. ✔
+> - **EXP-E `heldout_split` holds the policies fixed and changes only the ROWS.** Training
+>   transfers across them. ✔ *(This was written as "changes the content"; the content
+>   barely changes -- same dataset, annotators and rendering. The `cross_annotator` and
+>   `ood_benchmark` arms are the ones that test the stronger reading, and they are
+>   **[PENDING RUN]**.)*
 > - **EXP-B holds the content distribution and changes the policies.** Training does not
 >   transfer, and is *less than half* as good as frozen cosine. X
 >
@@ -890,14 +1093,23 @@ prototypes):
 > a `contended` flag — *inside* the block, not annotated beside it, so a timing can never
 > again be quoted without its conditions travelling with it.
 
-**EXP-E — OOD transfer** (train on the constructed set, evaluate the disjoint OOD
-shard with no further fitting):
+**EXP-E — transfer** (train on the constructed set, evaluate with no further
+fitting). **The arm below is `heldout_split`, NOT out-of-distribution** — it is
+BeaverTails `30k_test`, the same dataset, annotators, taxonomy and rendering as
+93.5% of train, with only the rows changed (§6.2). It was labelled "OOD content"
+here and that overstated it.
 
 | method | binary harm AUC | macro-AP |
 |---|---|---|
 | `bi_encoder` | 0.615 | 0.184 |
 | `uni_encoder` | 0.571 | 0.146 |
 | **`trained_head`** | **0.636** | **0.496** |
+
+| arm | source | status |
+|---|---|---|
+| `heldout_split` | `BeaverTails/30k_test` | measured (the table above) |
+| `cross_annotator` | Aegis 2.0 `test` | **[PENDING RUN]** — wired, not yet executed |
+| `ood_benchmark` | `intrinsec-ai/cstm-bench` | **[PENDING RUN]** — wired, not yet executed |
 
 **EXP-F — hard-negative augmentation** (frozen bi-encoder vs. the contrastive
 adapter, on held-out hard negatives):
@@ -910,15 +1122,71 @@ adapter, on held-out hard negatives):
 | **delta (frozen − adapter)** | **+0.542** (adapter is better) |
 | hard negatives mined / counterfactuals / false-neg dropped | 240 / 8,985 / 22 |
 
-**Pre-registered falsifiers.**
+> **The frozen baseline here is pinned at the worst value the metric can take, and
+> falsifier (iii) therefore clears a floor.** `FPR@recall0.90 = 1.000` means that at
+> the threshold needed for 90% recall the frozen bi-encoder flags **every single**
+> hard negative. There is no value above 1.000, so *any* adapter that is not also
+> degenerate produces a positive delta and the falsifier survives by construction.
+> The +0.542 is real, and it is a win over a floor.
+>
+> **The cause is on the data side, not the method side.** `hardneg.n_mined = 240` =
+> 12 seen policies × `HARDNEG_PER_POLICY=20`, drawn from a train split holding only
+> ~350 benign rows (500 × 70%). "The 20 benign texts closest to each policy" was
+> selecting **~69% of the entire pool** — ANCE-style dense mining is only meaningful
+> when the pool is orders of magnitude larger than the selection, so the miner was a
+> near no-op and the frozen arm had no boundary to sit on. `BG_N_BENIGN` has been
+> raised 500 → **3000** for exactly this reason (§9); at that size 240 mined is ~11%
+> of a ~2,100-row pool. **The numbers in this table are from the 500-benign run and
+> must be re-measured.**
+
+**Pre-registered falsifiers.** Three were registered before the original run and are
+verdicted in §10.4. **Four experiments shipped a verdict with no falsifier written
+before the run** — EXP-A, EXP-C, EXP-G and EXP-H; EXP-G and EXP-H were added after
+the falsifier block and it was never extended. They are pre-registered here, dated
+**2026-08-08**, **before** the Aegis/benign-raise re-run, and they are unverdicted
+until that run exists.
+
 - **(i) Scaling.** If uni-encoder latency does **not** grow with #labels while the
   bi-encoder stays flat (EXP-D), the scaling claim is **FALSE**.
 - **(ii) Zero-shot.** If the bi-encoder's zero-shot macro-AP on held-out policies
   is **≤ 0.5** (chance-ish, EXP-B), the "add policies zero-shot from a
-  description" claim is **FALSE**.
+  description" claim is **FALSE**. *(This threshold was mis-specified — see §10.4.
+  A corrected re-run must use `macro-AP >= 2x the held-out base rate`, which is the
+  criterion pre-registered for the next run and does not retroactively rescue this
+  one.)*
 - **(iii) Hard-negative sharpening.** If the contrastive adapter does **not**
   lower FPR@recall0.90 versus the frozen bi-encoder on held-out hard negatives
-  (EXP-F), then "hard-negative sharpening helps here" is **FALSE**.
+  (EXP-F), then "hard-negative sharpening helps here" is **FALSE**. *(Amended
+  2026-08-08, before the re-run: the frozen baseline must additionally be
+  **strictly below 1.000**, or the comparison is against a floor and the result is
+  recorded as UNINFORMATIVE rather than as a survival.)*
+
+**Pre-registered 2026-08-08, before the re-run (previously missing):**
+
+- **(iv) EXP-A, seen policies.** If no method's `binary_harm_auc` on the test split
+  exceeds the **binding confound bar** (`results['confound']['binding_bar']` — the
+  largest of the length / count / TF-IDF-content bars, directionless), then the
+  claim that this corpus is separable by *policy matching* rather than by surface
+  statistics is **FALSE**, and no EXP-A number may be headlined. Falsifier fires on
+  `results['margins'][m]['clears'] == false` for every `m`.
+- **(v) EXP-C, multi-prototype policy tower.** If averaging `POLICY_PARAPHRASES=4`
+  paraphrases into each policy vector does **not** raise held-out zero-shot macro-AP
+  above the single-description tower by **at least +0.01**, then "synthetic schema
+  expansion helps here" is **FALSE**. *(The prior run measured +0.023, i.e. it would
+  have survived — but that verdict was written after the fact and is not what a
+  pre-registration is.)*
+- **(vi) EXP-G, accuracy at label scale.** Per-column macro-AP is **arithmetically**
+  invariant to K and cannot test anything (§10.1). The real claim is competitive:
+  if the bi-encoder's `mean_rank_true / chance_rank` does **not** stay flat or
+  improve as K grows 16 → 900, then "accuracy is maintained at scale" is **FALSE**
+  for this backbone. Reporting the flat macro-AP as a scaling result is a
+  **tautology** and is barred regardless of outcome.
+- **(vii) EXP-H, related vs unrelated competitors.** If scoring against Opir-shaped
+  **related** competitors (siblings and descendants) is **not** harder than against
+  EXP-G's **unrelated** strangers at matched K — i.e. if `mean_rank_true` at K=900
+  is not worse under EXP-H than under EXP-G for the `bi_encoder` arm — then the
+  premise that taxonomic adjacency is what makes a large label bank hard is
+  **FALSE**, and EXP-H measures nothing EXP-G did not.
 
 No reclassification-after-the-fact, and no swapping to an easier condition to
 rescue a failed ordering.
@@ -997,28 +1265,48 @@ construction, and it is the finding.
 > on both backbones with the `gpu_witness` block recording the state — pre-registered here
 > as the follow-up, exactly as §10.3 does for the encoder comparison itself.
 
-### Verdicts against those falsifiers
+### 10.4 Verdicts against those falsifiers
 
 | falsifier | outcome | evidence |
 |---|---|---|
 | **(i) Scaling** | **SURVIVES — claim upheld** | bi-encoder is flat at 0.974 → 0.977 s from 16 → 1024 labels; uni-encoder rises 0.983 → 42.92 s, **43.9×** the bi-encoder at 1024. The predicted flat-vs-linear split is exactly what was measured. *(Corrected 2026-07-31 from a mis-stated 64×, then re-measured at 43.91× by the orthonormal-init regeneration — see the EXP-D table. The verdict is unchanged across all of it; only the ratio moved.)* |
 | **(ii) Zero-shot** | ⚠️ **TRIPS as literally written** | bi-encoder held-out macro-AP = **0.382 ≤ 0.5**. By the pre-registered rule, the claim is FALSE. |
-| **(iii) Hard-negative sharpening** | **SURVIVES — claim upheld** | FPR@recall0.90 falls **1.000 → 0.458** with the contrastive adapter (a 0.542 reduction) — a larger gain than the substitute run showed. |
+| **(iii) Hard-negative sharpening** | **SURVIVES — against a floor** | FPR@recall0.90 falls **1.000 → 0.458** with the contrastive adapter (a 0.542 reduction). But **1.000 is the literal maximum the metric can take**: the frozen baseline flags *every* hard negative at the 90%-recall threshold, so any non-degenerate adapter produces a positive delta and this falsifier cannot fail. It is a true statement about a very low bar. Cause and fix in the EXP-F note above (the miner was drawing ~69% of the benign pool; `BG_N_BENIGN` 500 → 3000). **Re-measure before quoting.** |
+| **(iv)–(vii)** | **[PENDING RUN]** | Pre-registered 2026-08-08, before the re-run. No verdict may be written until that run exists. |
 
 **On (ii) — reporting the trip, and a specification error I will not hide behind.**
 The falsifier is recorded as tripped because that is what the pre-registered rule
 says, and rules are not renegotiated after seeing data. But the threshold itself was
 **mis-specified**: `0.5` is a chance level for **AUC**, not for **average precision**.
-AP's chance level is the **base rate**. The four held-out policies have base rates
-0.118 / 0.180 / 0.342 / 0.102 → **chance macro-AP ≈ 0.185**. The measured **0.382** is
-therefore **2.1× chance**, and it beats the uni-encoder's **0.115** (below chance) on the
-same policies while the trained head cannot score them at all.
+AP's chance level is the **base rate**.
 
-*(This paragraph previously quoted **0.408** and **0.178** — the MiniLM@150 substitute
-run's figures — inside a section whose every other number is EmbeddingGemma@500. Corrected
-to the headline run's own `heldout_zeroshot` values. The four base rates are not recorded in
-`results.json`, so they are carried over unverified; the ratio above should be re-derived
-whenever they are.)*
+**CORRECTED 2026-08-08 — the base rates quoted here were wrong, and the correction
+goes in this lesson's favour.** They read `0.118 / 0.180 / 0.342 / 0.102 → chance
+macro-AP ≈ 0.185 → 2.1× chance`, carried over from the MiniLM@150 run with an honest
+hedge that they were unverified. The hedge was right. Measured on the actual test
+split at the shipped config (held-out = `animal_abuse`, `sexually_explicit`,
+`violence`, `toxicity`):
+
+| policy | previously quoted | **measured (test split)** |
+|---|---|---|
+| animal_abuse | 0.118 | **0.0591** |
+| sexually_explicit | 0.180 | **0.0930** |
+| violence | 0.342 | **0.3175** |
+| toxicity | 0.102 | **0.0678** |
+| **chance macro-AP** | 0.185 | **0.1344** |
+| **the measured 0.382 is** | 2.1× chance | **2.84× chance** |
+
+So the measured **0.382** is **2.84× chance**, and it beats the uni-encoder's
+**0.115** (below chance) on the same policies while the trained head cannot score
+them at all. The hedge is retired: per-column positive counts for **both** the
+corpus and the test split are now written to `results.json` under
+`achieved.per_column_positives` / `achieved.per_column_positives_test`, so this
+ratio is re-derivable from the artifact instead of carried between runs.
+
+*(This paragraph previously also quoted **0.408** and **0.178** — the MiniLM@150
+substitute run's figures — inside a section whose every other number is
+EmbeddingGemma@500. That was corrected first; the base rates were the second half of
+the same cross-run contamination.)*
 
 So the *capability* is real; the *test of it* was written wrong. Both statements go
 in the record: the pre-registered falsifier **tripped**, and the pre-registration
@@ -1052,6 +1340,23 @@ only to the *next* run — it does not retroactively rescue this one.
   *idea* the cited papers share; it is **not** a faithful reimplementation of any
   one paper's exact model. All cited arXiv ids are WebFetch-verified by the lead
   (see `AUDIT.md`).
+- **The rubric floor is not met on every column, and the artifact now says which.**
+  At the run in §10, six of sixteen columns held under 500 positives — `jailbreak`
+  **109**, `child_abuse` 185, `self_harm` 205, `terrorism` 293, `animal_abuse` 357,
+  `toxicity` 374 — while `results.json` recorded `"n_per_class": 500`, the
+  *requested* value read straight off the config. `jailbreak` at 109 is the worst,
+  and it is this lesson's own thesis column. Only `jailbreak`/`toxicity` were
+  genuinely pool-limited (the toxic-chat ceiling); the four BeaverTails shortfalls
+  were a **split** ceiling, not a dataset ceiling. Pooling Aegis 2.0 targets exactly
+  those columns. Every run now writes `achieved.per_column_positives` (corpus and
+  test split) and prints a loud shortfall banner, so the gap is auditable from the
+  artifact instead of only from a re-run of the loader.
+- **The lesson's headline arm is the *frozen* ablation on one axis and the *trained*
+  arm on another.** §10.0 shows the split honestly, but it means no single row is
+  "the bi-encoder"; read both.
+- **EXP-H deviates from Opir's exact 16/126/854 split when Aegis' extra columns are
+  on** (21/125/850, total held at 996). The paper's *total* is preserved; its exact
+  mid/leaf split is not, and `results['opir_shape']` records both.
 
 ---
 

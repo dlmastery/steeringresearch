@@ -73,29 +73,84 @@ EMB_DIM = _env_int("BG_EMB_DIM", 768)     # Matryoshka truncation target (768/51
 
 # --- Data: a HARD, MULTI-DATASET, MANY-LABEL safety corpus -------------------
 # The rubric (CLAUDE.md 17): >=500 positives AND >=500 negatives per class, hard
-# negatives, a real combination of datasets. We pool three complementary public
-# safety datasets into ONE unified multi-label corpus:
+# negatives, a real combination of datasets. We pool complementary public safety
+# datasets into ONE unified multi-label corpus:
 #   BeaverTails  : 14 fine-grained harm categories, multi-label, prompt+response
-#                  -> the CORE many-label taxonomy (thousands/category available).
+#                  -> the CORE many-label taxonomy.
+#   Aegis 2.0    : NVIDIA's 12 core + 9 fine-grained safety taxonomy, prompt AND
+#                  response, separate human/LLM label columns, 33,416 rows. A
+#                  SECOND independent annotation regime over a DIFFERENT taxonomy
+#                  -- the fix for the single-dataset collapse documented in
+#                  AUDIT_2026-08.md section A1 (BeaverTails was 93.5% of the corpus).
 #   toxic-chat   : REAL user prompts with toxicity + jailbreak flags -> HARD,
 #                  in-the-wild adversarial positives and topically-adjacent
 #                  benign hard-negatives.
-#   wildguardmix : adversarial prompt-harm labels -> HARD adversarial positives
-#                  and benign-but-adversarial hard-negatives (leakage-free style).
+#   wildguardmix : GATED. Has NEVER loaded on this host (HTTP 403, no HF token);
+#                  it contributes ZERO rows. Kept wired so a tokened host gets it,
+#                  but no claim in this lesson may rest on it.
 # The label space is the union of these taxonomies; the policy TOWER matches
 # against a written DESCRIPTION per label (so we can add unseen policies zero-shot).
 BEAVERTAILS_DATASET = "PKU-Alignment/BeaverTails"
+BEAVERTAILS_TRAIN_SPLIT = _env_str("BG_BT_SPLIT", "30k_train")
+BEAVERTAILS_TEST_SPLIT = _env_str("BG_BT_TEST_SPLIT", "30k_test")
 TOXICCHAT_DATASET = "lmsys/toxic-chat"
 TOXICCHAT_CONFIG = "toxicchat0124"
 WILDGUARD_DATASET = "allenai/wildguardmix"
 WILDGUARD_CONFIG = "wildguardtrain"
+# Aegis 2.0 -- VERIFIED ungated (2026-08-08, HF dataset card + datasets-server
+# first-rows). 30,007 train / 1,445 validation / 1,964 test. Columns:
+#   id, reconstruction_id_if_redacted, prompt, response, prompt_label,
+#   response_label, violated_categories, prompt_label_source, response_label_source
+# prompt_label / response_label are in {"safe","unsafe"} (response_label may be null);
+# violated_categories is a ", "-joined string of category names.
+AEGIS_DATASET = _env_str("BG_AEGIS_DATASET", "nvidia/Aegis-AI-Content-Safety-Dataset-2.0")
+AEGIS_TRAIN_SPLIT = _env_str("BG_AEGIS_SPLIT", "train")
+AEGIS_TEST_SPLIT = _env_str("BG_AEGIS_TEST_SPLIT", "test")
+AEGIS_ON = _env_int("BG_AEGIS_ON", 1)          # 1 = pool Aegis into the corpus
+# Five Aegis categories have NO clean mapping onto the 16 existing policy columns
+# (Criminal Planning/Confessions, Unauthorized Advice, Malware, Copyright/Trademark/
+# Plagiarism, High Risk Gov. Decision Making). Rule: ADD a column rather than force
+# the mapping. Set to 0 to keep the taxonomy at exactly 16 columns, in which case
+# rows whose ONLY categories are unmapped are SKIPPED and counted -- never silently
+# relabelled benign. The mapping table is in data._AEGIS_CROSSWALK / README section 6.
+AEGIS_EXTRA_COLUMNS = _env_int("BG_AEGIS_EXTRA", 1)
 
 N_PER_CLASS = _env_int("BG_N_PER_CLASS", 500)   # >=500 per harm category (rubric)
-N_BENIGN = _env_int("BG_N_BENIGN", 500)         # >=500 benign hard-negatives (rubric)
+# BENIGN TARGET -- raised 500 -> 3000 (2026-08-08).
+# WHY: at 500 the corpus was 5,226 harmful vs 500 benign = 91.3%/8.7%, and the
+# ANCE-style hard-negative miner drew 240 of the ~350 benign rows in the train
+# split -- 69% of the pool, i.e. a near no-op, because there was almost nothing
+# left to NOT select. That is why EXP-F's frozen baseline sits at
+# fpr_at_recall90 = 1.000, the literal worst possible value. Dense mining is only
+# meaningful when the pool is much larger than the selection. At 3000 the train
+# split holds ~2,100 benign rows, so 240 mined is ~11% of the pool (a ~6x larger
+# pool to be selective within) and the class balance moves to roughly 64/36.
+# BeaverTails 30k_train and Aegis both have thousands of unused safe rows.
+N_BENIGN = _env_int("BG_N_BENIGN", 3000)        # benign hard-negatives (see above)
 # The many-label taxonomy. HELD-OUT policies are NEVER in any training split; they
 # are detected zero-shot from their description alone (the bi-encoder headline).
 N_HELDOUT_POLICIES = _env_int("BG_N_HELDOUT", 4)   # categories withheld for zero-shot
 SEED = _env_int("BG_SEED", 0)
+
+# --- Transfer arms: what "OOD" is allowed to mean ----------------------------
+# AUDIT_2026-08.md section A4: the single arm this lesson used to call "OOD" was
+# BeaverTails/30k_test -- the SAME dataset, annotators, taxonomy and rendering as
+# 93.5% of train. That is SPLIT transfer, not DISTRIBUTION transfer, and it is now
+# named `heldout_split` so the name cannot overstate it again. Three arms, in
+# increasing order of how much actually changes:
+#   heldout_split   : BeaverTails 30k_test        -- rows change, nothing else
+#   cross_annotator : Aegis 2.0 test split        -- different annotators + taxonomy
+#   ood_benchmark   : intrinsec-ai/cstm-bench     -- a released external benchmark,
+#                     a different task shape entirely (multi-session attack traces)
+# CSTM-Bench is the benchmark CLAUDE.md section 17 rule 8 names for this lesson
+# family. VERIFIED ungated and already present in this host's HF cache
+# (default config; splits 'dilution' + 'cross_session'; fields scenario_class /
+# sessions_json / ground_truth_json).
+CSTM_DATASET = _env_str("BG_CSTM_DATASET", "intrinsec-ai/cstm-bench")
+CSTM_SPLITS = ("dilution", "cross_session")
+CSTM_MAX_CHARS = _env_int("BG_CSTM_MAX_CHARS", 6000)   # per-scenario text cap
+TRANSFER_ARMS = [a for a in _env_str(
+    "BG_TRANSFER_ARMS", "heldout_split,cross_annotator,ood_benchmark").split(",") if a.strip()]
 
 # --- Methods compared (keys are stable -- the results schema uses them) -------
 #   bi_encoder    : HERO. cosine(content_vec, cached policy_desc_vec). Labels cached;
@@ -195,6 +250,15 @@ OPIR_PROTO = _env_int("BG_OPIR_PROTO", POLICY_PARAPHRASES)   # prototypes per no
 # is 996, so we ALSO slice EXP-H to this many columns for an exact-K head-to-head
 # (and report the scale-free percentile rank, which needs no matching at all).
 OPIR_MATCH_K = _env_int("BG_OPIR_MATCH_K", 900)
+# Opir's 16 / 126 / 854 = 996 shape is exact ONLY while the real taxonomy has 16
+# top-level policies. Pooling Aegis with AEGIS_EXTRA_COLUMNS=1 adds columns, and
+# build_taxonomy() would then raise rather than silently mis-shape (correct). With
+# AUTOFIT on, the runner re-derives mid/leaf to preserve the 996 TOTAL and the
+# 126:854 ratio at the new top count, records BOTH shapes in results.json, and says
+# loudly that it deviated from the paper's exact split. With it off, EXP-H is
+# skipped with a stated reason instead of running on a shape nobody chose.
+OPIR_AUTOFIT = _env_int("BG_OPIR_AUTOFIT", 1)
+OPIR_PAPER_TOP = 16       # the top-level count at which Opir's 16/126/854 is exact
 
 # --- Paths -------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent
@@ -202,7 +266,8 @@ ARTIFACTS = ROOT / "artifacts"
 RESULTS_PATH = ARTIFACTS / "results.json"
 # content embeddings cached per split x embedder; policy-bank cached per embedder.
 EMB_CACHE = {(split, m): ARTIFACTS / f"emb_{split}_{m}.npz"
-             for split in ("train", "test", "heldout", "ood")
+             for split in ("train", "test", "heldout", "ood",
+                           "heldout_split", "cross_annotator", "ood_benchmark")
              for m in ("embeddinggemma", "minilm")}
 POLICY_CACHE = {m: ARTIFACTS / f"policy_bank_{m}.npz" for m in ("embeddinggemma", "minilm")}
 PR_PNG = ARTIFACTS / "pr_by_method.png"            # precision-recall, seen policies
