@@ -73,6 +73,18 @@ class EmbeddingGemmaEmbedder:
     """
 
     def __init__(self, model_id: str = None, local_path: str = None):
+        # HOST GUARD -- must run BEFORE sentence_transformers is imported.
+        # sentence_transformers -> transformers.integrations -> modeling_tf_utils
+        # -> activations_tf, which RAISES on this host: "Your currently installed
+        # version of Keras is Keras 3, but this is not yet supported in
+        # Transformers." That killed the first live AgentDojo run AFTER the corpus
+        # had downloaded. USE_TF=0 makes transformers skip the TF import path
+        # entirely -- no `pip install tf-keras`, no environment mutation. Same
+        # spirit as the truststore guard the loaders carry for this host's SSL
+        # middlebox: fix the host quirk in code, not in a README instruction
+        # somebody has to remember.
+        os.environ.setdefault("USE_TF", "0")
+        os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
         from sentence_transformers import SentenceTransformer  # lazy, heavy
 
         model_id = model_id or C.EMBGEMMA_ID
