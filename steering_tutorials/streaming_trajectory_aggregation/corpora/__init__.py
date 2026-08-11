@@ -94,12 +94,42 @@ def _traj_from_dict(d: dict) -> Trajectory:
     return Trajectory(**kwargs)
 
 
+# CRITICAL (audit 2026-08-11, CONFIRMED-3). The old check stored a sha256 of the uids and
+# then RECOMPUTED IT FROM THE TRAJECTORIES IT HAD JUST PARSED OUT OF THAT SAME FILE. The
+# two were equal by construction, so it could only ever fire if somebody hand-edited the
+# JSON -- WEAKER than row-count validation, because nothing about the corpus-to-be-built
+# entered the comparison at all. Reproduced: a cache written with WRONG_TEXT was served
+# against a builder returning FIXED_TEXT and the check passed.
+#
+# The staleness that actually bites is a PARSE-LOGIC CHANGE, and it bit immediately: the
+# alignment fix (CONFIRMED-1) and the PONR sentinel fix (CONFIRMED-2) both changed what a
+# correct Trajectory looks like, and the old cache would have kept serving the wrong one.
+# So BUILDER_VERSION is the real guard -- bump it whenever the parse logic changes and
+# every cache written by older code is refused. The content hash is kept, but honestly
+# labelled as what it is: corruption detection, not staleness detection.
+BUILDER_VERSION = 2   # 1 -> 2: alignment guard made load-bearing; PONR sentinel guarded
+
+
+def _content_fingerprint(trajs: list) -> str:
+    """sha256 over the fields a downstream number depends on -- NOT just the uids."""
+    h = hashlib.sha256()
+    for t in trajs:
+        h.update(("%s|%d|%s|%s|%s\n" % (t.uid, t.label, t.group_id,
+                                        t.ideal_flagging_step, t.point_of_no_return_step))
+                 .encode("utf-8"))
+        for s in t.steps:
+            h.update(("%d|%s\n" % (s.index, s.text)).encode("utf-8"))
+    return h.hexdigest()
+
+
 def load_cache(path: Path):
     """Returns cached list[Trajectory], or None if absent/invalid.
 
-    Validity = a stored sha256 of the sampled uids, RECOMPUTED from the cached
-    trajectories and compared. A mismatch (or any parse failure) is a loud,
-    non-fatal signal to rebuild -- never a silent stale hit.
+    TWO checks, and only the first detects real staleness:
+      1. BUILDER_VERSION -- refuses any cache written by different parse logic.
+      2. a content hash over uid/label/group/oracle steps/step text -- corruption only,
+         since it is recomputed from the same file (see the note above).
+    Any mismatch is a LOUD, non-fatal rebuild signal -- never a silent stale hit.
     """
     if not path.exists():
         return None
@@ -109,24 +139,37 @@ def load_cache(path: Path):
     except Exception as exc:
         eprint("[cache] %s: unreadable (%s) -- rebuilding" % (path, exc))
         return None
-    expected = obj.get("uids_sha256")
-    actual = uids_fingerprint([t.uid for t in trajs])
-    if expected != actual:
-        eprint("[cache] %s: FINGERPRINT MISMATCH (stored %s != recomputed %s) -- "
-               "treating as INVALID, rebuilding" % (path, expected, actual))
+
+    cached_version = obj.get("builder_version")
+    if cached_version != BUILDER_VERSION:
+        eprint("[cache] %s: STALE -- written by builder_version %r, current is %d. "
+               "The parse logic changed; refusing to serve it. Rebuilding."
+               % (path, cached_version, BUILDER_VERSION))
         return None
-    eprint("[cache] %s: HIT, %d trajectories, uid fingerprint verified" % (path, len(trajs)))
+
+    expected = obj.get("content_sha256")
+    actual = _content_fingerprint(trajs)
+    if expected != actual:
+        eprint("[cache] %s: CONTENT HASH MISMATCH (stored %s != recomputed %s) -- "
+               "file is corrupt or hand-edited. Rebuilding." % (path, expected, actual))
+        return None
+
+    eprint("[cache] %s: HIT, %d trajectories, builder_version %d verified"
+           % (path, len(trajs), BUILDER_VERSION))
     return trajs
 
 
 def save_cache(path: Path, trajectories: list) -> None:
     ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
     obj = {
+        "builder_version": BUILDER_VERSION,
+        "content_sha256": _content_fingerprint(trajectories),
         "uids_sha256": uids_fingerprint([t.uid for t in trajectories]),
         "trajectories": [_traj_to_dict(t) for t in trajectories],
     }
     path.write_text(json.dumps(obj), encoding="utf-8")
-    eprint("[cache] %s: saved %d trajectories" % (path, len(trajectories)))
+    eprint("[cache] %s: saved %d trajectories (builder_version %d)"
+           % (path, len(trajectories), BUILDER_VERSION))
 
 
 def cached_build(loader_name: str, hf_ids: Sequence[str], n_per_class: int, seed: int,
@@ -314,12 +357,22 @@ def _build_steps_from_judge(raw_texts, priv_by_step, nonpriv_by_step):
         return tuple(), 0
     base = min(indices)
     n = max(indices) - base + 1
+    # CRITICAL (audit 2026-08-11, CONFIRMED-1). This guard used to be computed and then
+    # `del`-ed without ever being read, so the `pos < len(raw_texts)` branch below bound
+    # judge step k to raw_texts[k] even when the counts DISAGREED -- which is the normal
+    # case, because `messages` carries system/user/tool turns while `step_analyses`
+    # covers only the analysed steps. Reproduced: 7 messages, 3 judge steps -> the label
+    # for judge step 0 landed on the SYSTEM PROMPT. Every per-step label, embedding and
+    # AUC was then computed over text with no verified correspondence to its label.
+    # A guard that matches nothing and passes is exactly the CLAUDE.md section 18.8
+    # failure mode, so it is now LOAD-BEARING: on a mismatch we use the judge's own
+    # rationale, which is a real per-step document, instead of inventing an alignment.
     aligned = len(raw_texts) == n
     steps = []
     for pos, idx in enumerate(range(base, base + n)):
         if idx not in priv_by_step and idx not in nonpriv_by_step:
             continue  # a gap in the judge's own numbering -- skip, do not fabricate
-        if pos < len(raw_texts):
+        if aligned and pos < len(raw_texts):
             text = raw_texts[pos]
         else:
             rec = priv_by_step.get(idx) or nonpriv_by_step.get(idx) or {}
@@ -335,7 +388,6 @@ def _build_steps_from_judge(raw_texts, priv_by_step, nonpriv_by_step):
             would_flag_now=nonpriv.get("would_flag_now"),
             cumulative_confidence=nonpriv.get("cumulative_confidence"),
         ))
-    del aligned  # (kept for readability of the branch above; not otherwise used)
     return tuple(steps), base
 
 
@@ -372,9 +424,21 @@ def _row_to_control_arena_trajectory(loader_name, row_index, row, log, label):
     if isinstance(ideal_raw, (int, float)) and int(ideal_raw) >= 0:
         ideal = int(ideal_raw) - base
 
+    # CRITICAL (audit 2026-08-11, CONFIRMED-2). This mirrored none of the guard above,
+    # so the -1 benign/not-adjudicated sentinel flowed straight through. A positive whose
+    # adjudicator returned -1 then had available_lead NOT None, so it counted toward
+    # n_positives_evaluated while `alarm_step <= ponr` with ponr=-1 could never be
+    # satisfied -- silently booked as an undetected positive, deflating the detection
+    # rate by exactly the number of sentinel rows, and yielding negative "lead" values
+    # (reproduced: -3). Also bound above by the last real step, since a PONR past the end
+    # of the trajectory is not a point of no return we ever observe.
     adjudicator = log.get("adjudicator") or {}
     ponr_raw = adjudicator.get("point_of_no_return_step")
-    ponr = (int(ponr_raw) - base) if isinstance(ponr_raw, (int, float)) else None
+    ponr = None
+    if isinstance(ponr_raw, (int, float)) and int(ponr_raw) >= 0:
+        ponr = int(ponr_raw) - base
+        if ponr < 0 or ponr > steps[-1].index:
+            ponr = None
 
     extra_info = row.get("extra_info")
     main_task = extra_info.get("main_task_description") if isinstance(extra_info, dict) else None
