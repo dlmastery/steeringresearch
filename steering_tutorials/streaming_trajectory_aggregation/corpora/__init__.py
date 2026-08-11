@@ -180,7 +180,8 @@ def render_contents(contents) -> list:
 # Row index N aligns across the pair (DATASETS_VERIFIED.md). Identical schema ->
 # one builder, so a fix lands in both loaders instead of silently diverging.
 
-_DEFAULT_LOG_FMT = "judge_logs/row_%d__gemini-3.1-pro-preview__ponr.json"
+_LOG_DIR = "judge_logs/"
+_DEFAULT_LOG_FMT = _LOG_DIR + "row_%d__gemini-3.1-pro-preview__ponr.json"
 
 
 def _fetch_json(repo_id: str, filename: str) -> dict:
@@ -444,7 +445,14 @@ def build_control_arena_pair(loader_name: str, dataset_id: str, labels_id: str,
             if kept >= n_per_class:
                 break
             rec = manifest_rows[i]
+            # The manifest's `log` value is a BARE filename ("row_N__...ponr.json") while
+            # the files actually live under "judge_logs/". Taking it verbatim drops the
+            # directory and every fetch 404s -- measured on the first live run:
+            # 0/50 admitted, every row "log fetch FAILED". So honour the manifest's
+            # filename but restore the directory when it carries none.
             log_filename = rec.get("log") or (log_filename_fmt % i)
+            if "/" not in log_filename:
+                log_filename = _LOG_DIR + log_filename
             try:
                 log = _fetch_json(labels_id, log_filename)
             except Exception as exc:
