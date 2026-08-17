@@ -1,4 +1,10 @@
 {
+  "SUSPENDED_CAUSAL_ENCODER": {
+    "status": "SUSPENDED - the gemma ARM of this ablation is invalid. The minilm arm in results.json is unaffected.",
+    "why": "This ablation embedded with EmbeddingGemma under transformers 4.55.0, which has zero references to use_bidirectional_attention -- so the encoder ran CAUSAL. Proved behaviourally: bit-identical hidden states over a 9-token shared prefix (0.000000e+00); after upgrading to 5.15.0 the same test gives 5.74. See audits/AUDIT_2026-08-17_embeddinggemma_causal.md",
+    "what_this_puts_in_doubt": "The ablation was run to show the cross_trajectory result is aggregation, not a MiniLM artifact -- i.e. that a DIFFERENT embedder reproduces it. The second embedder was crippled, so the ablation did not test what it claimed to test. Note the direction of the doubt: the arm still REPRODUCED the effect, so this is weaker evidence than claimed rather than evidence against. Re-run to restore the claim.",
+    "superseded_at_commit": "7b55304"
+  },
   "embedder": "gemma",
   "gemma_model": "models/google/gemma-3-1b-it",
   "gemma_layer": 12,
