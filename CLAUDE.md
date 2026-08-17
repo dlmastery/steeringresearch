@@ -701,8 +701,20 @@ All of these are BLOCKED ONLY BY HOST MEMORY on the old box, not by missing code
    Only the LEAKAGE row is inadmissible; block rates and per-CE firing are judge-free.
 2. `realignment` benign half — only 25/200 measured; `over_refusal` is carried from the
    prior run and labelled as such.
-3. Unrun alpha sweeps wired but never executed: `fine_grained`, `non_identifiability`,
-   `rogue_scalpel` (+ its `negative_add` mode and per-layer guard A-E ablation).
+3. Unrun alpha sweeps — **CORRECTED 2026-08-17, this entry was STALE in two ways**:
+   - `fine_grained` — **its sweep HAS run.** `artifacts/results.json` carries a populated
+     `sweep` key plus `dense` / `best_sparse` / `thresholds`. Remove it from this list.
+   - `non_identifiability` — **genuinely unrun.** No `sweep`/`alpha` key; only a single
+     `matched_alpha`. Still open.
+   - `rogue_scalpel` — **its guard LADDER has run** at n=200 (baseline / attacked /
+     +clamp / +lock / +dual). What is actually open is (a) the `negative_add` attack
+     mode — the artifact records `attack_mode: "project_out"` — and (b) a *per-layer*
+     A–E ablation; the shipped ladder covers A(lock)/B(clamp)/D(dual) at one layer only.
+     Its README already reports the ladder honestly, including that `+lock`/`+dual`
+     collapse to gibberish 1.00 and are WORSE than `+clamp` alone — a correctly
+     reverted rung, per §9.
+   *(Generalise: this list was trusted for weeks without checking the artifacts beside
+   it. Verify contents, never a remembered status.)*
 4. `meerkat` — `bge` is the config default AND the paper's own encoder, never run;
    all numbers are MiniLM.
 5. `probe_tuning` — the promised layer sweep has NO code and NO artifact (marked KNOWN GAP).
