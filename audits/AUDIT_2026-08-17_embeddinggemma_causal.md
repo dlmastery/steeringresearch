@@ -88,6 +88,23 @@ module paths. The upgrade must be followed by (a) re-running the bidirectional t
 (b) re-running `flow.py`/`model_utils` self-tests, (c) confirming a Gemma-3-1B
 forward + hook still works — before any GPU experiment is launched on top of it.
 
+## FOLLOW-UP NOT YET DONE — deliberately deferred
+
+**Add an encoder-behaviour fingerprint to every embedding cache key.** The keys
+currently fingerprint the *data* only, so a re-run after a library change silently
+reuses vectors computed under different attention semantics. That is the mechanism
+that would have let this bug survive its own fix.
+
+**Deferred on purpose:** the STA SHADE run was already in flight when this was
+identified, and changing the key mid-run would have invalidated the embeddings being
+computed and thrown away the run. Do it *after* SHADE lands, not during.
+
+Sketch: fold `transformers.__version__` **and** a cheap behavioural probe (the
+prefix-invariance delta from `audits/test_embedder_bidirectional.py`, quantised) into
+the key alongside the data fingerprint. Version alone is not enough — the point of
+this incident is that a config field and a library version both said "bidirectional"
+while the behaviour said otherwise.
+
 ## Why this survived
 
 The exact §18.8 pattern: it failed **silently and plausibly**. Nothing crashed. The
