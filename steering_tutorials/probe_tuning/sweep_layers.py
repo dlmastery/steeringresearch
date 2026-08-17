@@ -15,20 +15,33 @@ Two axes, swept together:
                 WINDOW (concatenate w adjacent layers) at each pooling.
 Sweeping only (a) at fixed mean pooling would be a trap. Hu, Wang, Lim, Gao & Chen,
 2 May 2026, 'Tracing the Dynamics of Refusal: Exploiting Latent Refusal Trajectories
-for Robust Jailbreak Detection' (arXiv:2605.02958) — WebFetch-verified — reports that
-refusal lives in a SPARSE upstream activation pattern across layer-token positions
-that "static directions extracted from terminal or pooled representations" miss, and
-their SALO detector reads a whole *layer window* rather than one pooled layer. If
-that holds here, a mean-only sweep would dilute the signal at every layer and report
-"the layer does not matter" for the wrong reason - hence the pooling axis and the
-window cells below.
+for Robust Jailbreak Detection' (arXiv:2605.02958), Section 5.4 (Ablation Study),
+verbatim: "Mean pooling dilutes this strong 'needle' into the vast 'haystack' of
+irrelevant background noise." That line is BODY TEXT, not in the abstract. Their
+Table 2 caption makes GLOBAL MAX-POOLING the paper's own sparsity-aware default
+("Mean Pooling: Replaces the sparsity-aware Global Max-Pooling with Global Average
+Pooling"), so `max` is a first-class cell here, not an extra.
+
+  (c) THE BENIGN ARM. Appendix D of the same paper, verbatim: "sequence-level mean
+      aggregation can achieve high recall on several attack sets but yields
+      near-random XSTest AUROC." So a sweep scored ONLY on harmful-vs-benign would
+      rank mean pooling well and never see it fail on the over-refusal
+      distribution - the sweep would reproduce the documented blind spot as a
+      measurement artifact. Every cell is therefore ALSO scored zero-shot on XSTest
+      (cached as group 1). That arm is REPORTED-ONLY: selecting on it would be OOD
+      test-set peeking. If the cache has no XSTest rows, the JSON records
+      `benign_arm: "ABSENT"` and the run warns that its AUCs are attack-only.
 
 INPUT — the cache written by ``extract_layers.py`` (the GPU half):
     artifacts/layer_features_<tag>.npz   H[n_prompts, n_layers, n_poolings, hidden]
 This script loads no model; it is the same CPU model-selection job as
-``sweep_mlp.py`` and it REUSES that file's CV machinery verbatim
-(``cross_validate_config`` / ``train_one`` / ``DEFAULT``) so the layer sweep and
-the head sweep are scored by the identical protocol and are comparable.
+``sweep_mlp.py`` and it REUSES that file's CV machinery (``train_one`` /
+``stratified_val_split`` / ``proba`` / ``DEFAULT``) so the layer sweep and the head
+sweep are scored by the identical protocol and are comparable. The one local piece
+is ``cross_validate_two_arm``, which is ``sweep_mlp.cross_validate_config``'s fold
+loop plus the extra zero-shot XSTest scoring; ``--selftest`` proves the two agree
+exactly when the benign arm is absent, so "identical protocol" is checkable rather
+than merely asserted.
 
 Discipline (identical to sweep_mlp.py, restated because it is the whole point):
   * Selection is by StratifiedKFold CV mean ROC-AUC. The StandardScaler is fit
@@ -77,6 +90,94 @@ ENV_N = int(os.environ.get("PT_N", "0"))                 # 0 = use all cached ro
 ENV_SHUFFLE = os.environ.get("PT_SHUFFLE_CONTROL", "1") == "1"
 
 
+GROUP_MAIN = 0
+GROUP_XSTEST = 1
+# A cell is flagged with the SALO Appendix-D signature when it looks strong on the
+# attack arm yet lands near chance on the over-refusal arm.
+APPENDIX_D_MAIN_MIN = 0.80
+APPENDIX_D_XSTEST_MAX = 0.60
+
+
+# --------------------------------------------------------------------------- #
+# CV: the main arm (selection) + the XSTest arm (reported only)
+# --------------------------------------------------------------------------- #
+def cross_validate_two_arm(X, y, in_dim, cfg, device, X_ood=None, y_ood=None):
+    """``sweep_mlp.cross_validate_config``'s fold loop, plus zero-shot XSTest.
+
+    Every line that touches the MAIN arm is the same as ``sweep_mlp``: the same
+    StratifiedKFold(K_FOLDS, shuffle, CV_SEED), the same per-fold train-only
+    StandardScaler, the same stratified val slice for early stopping, the same
+    ``train_one``. Run ``--selftest`` to check that claim: with ``X_ood=None`` this
+    must reproduce ``sweep_mlp.cross_validate_config`` exactly.
+
+    The addition: each fold's probe ALSO scores the whole XSTest arm, standardized
+    with that fold's own train-only scaler. That is a zero-shot transfer number -
+    XSTest is never trained on and never used to select a cell (selecting on it
+    would be OOD test-set peeking). It exists to catch what SALO Appendix D
+    documents: mean aggregation can post high attack recall while its XSTest AUROC
+    is near random.
+    """
+    from sklearn.metrics import accuracy_score, roc_auc_score
+    from sklearn.model_selection import StratifiedKFold
+    from sklearn.preprocessing import StandardScaler
+
+    has_ood = X_ood is not None and len(X_ood) > 0 and len(np.unique(y_ood)) > 1
+    skf = StratifiedKFold(n_splits=SM.K_FOLDS, shuffle=True, random_state=SM.CV_SEED)
+    accs, aucs, ood_aucs = [], [], []
+    for fold, (tr, te) in enumerate(skf.split(X, y), start=1):
+        scaler = StandardScaler().fit(X[tr])            # train-only fit
+        Xtr_all = scaler.transform(X[tr]).astype(np.float32)
+        Xte = scaler.transform(X[te]).astype(np.float32)
+
+        rng = np.random.default_rng(SM.CV_SEED + fold)
+        fit_pos, val_pos = SM.stratified_val_split(y[tr], C.VAL_FRACTION, rng)
+        SM.set_seed(SM.CV_SEED + fold)                  # deterministic init per fold
+        probe = SM.train_one(Xtr_all[fit_pos], y[tr][fit_pos],
+                             Xtr_all[val_pos], y[tr][val_pos], in_dim, cfg, device)
+
+        p = SM.proba(probe, Xte, device)
+        accs.append(accuracy_score(y[te], (p >= SM.DECISION_THRESHOLD).astype(int)))
+        aucs.append(roc_auc_score(y[te], p))
+
+        if has_ood:
+            Xo = scaler.transform(X_ood).astype(np.float32)
+            ood_aucs.append(roc_auc_score(y_ood, SM.proba(probe, Xo, device)))
+
+    accs, aucs = np.array(accs), np.array(aucs)
+    out = {
+        "accuracy_mean": float(accs.mean()), "accuracy_std": float(accs.std(ddof=0)),
+        "roc_auc_mean": float(aucs.mean()), "roc_auc_std": float(aucs.std(ddof=0)),
+        "accuracy_per_fold": accs.tolist(), "roc_auc_per_fold": aucs.tolist(),
+    }
+    if has_ood:
+        o = np.array(ood_aucs)
+        out.update({"xstest_roc_auc_mean": float(o.mean()),
+                    "xstest_roc_auc_std": float(o.std(ddof=0)),
+                    "xstest_roc_auc_per_fold": o.tolist()})
+    return out
+
+
+def selftest() -> int:
+    """Prove cross_validate_two_arm == sweep_mlp.cross_validate_config (no OOD)."""
+    rng = np.random.default_rng(0)
+    n, d = 80, 16
+    y = np.array([1] * 40 + [0] * 40, dtype=np.int64)
+    X = rng.normal(size=(n, d)).astype(np.float32)
+    X[:, :2] += y[:, None] * 1.2
+    SM.K_FOLDS, SM.CV_SEED = 3, 0
+    ref = SM.cross_validate_config(X, y, d, SM.DEFAULT, "cpu")
+    got = cross_validate_two_arm(X, y, d, SM.DEFAULT, "cpu")
+    ok = True
+    for k in ("roc_auc_mean", "roc_auc_std", "accuracy_mean", "accuracy_std"):
+        same = abs(ref[k] - got[k]) < 1e-12
+        ok &= same
+        print(f"  {k:<16} sweep_mlp={ref[k]:.10f} two_arm={got[k]:.10f} "
+              f"{'OK' if same else 'MISMATCH'}")
+    print("SELFTEST", "PASS - the two arms share sweep_mlp's exact protocol" if ok
+          else "FAIL - the layer sweep is NOT running sweep_mlp's protocol")
+    return 0 if ok else 1
+
+
 # --------------------------------------------------------------------------- #
 # cache
 # --------------------------------------------------------------------------- #
@@ -120,11 +221,27 @@ def load_cache(path: Path) -> dict:
     if meta.get("layers") != layers or meta.get("poolings") != poolings:
         sys.exit("[sweep_layers] cache header layers/poolings disagree with the "
                  "stored arrays - refusing to sweep")
+
+    # ``group`` splits the main (selection) arm from the XSTest (reported) arm. A
+    # cache written before the benign arm existed simply has no group column; we
+    # treat it as all-main and let the ABSENT path downstream say so loudly, rather
+    # than inventing an arm that was never extracted.
+    if "group" in z.files:
+        group = z["group"].astype(np.int64)
+    else:
+        group = np.full(len(y), GROUP_MAIN, dtype=np.int64)
+        meta.setdefault("benign_arm", {
+            "status": "ABSENT",
+            "reason": "cache predates the benign arm (no 'group' column)",
+            "consequence": "every per-cell AUC is ATTACK-ONLY and cannot detect the "
+                           "SALO Appendix-D failure mode"})
+    n_ood = int((group == GROUP_XSTEST).sum())
     print(f"[sweep_layers] cache {path.name}: H={H.shape} "
-          f"balance={np.bincount(y).tolist()} layers={layers} poolings={poolings} "
+          f"main={int((group == GROUP_MAIN).sum())} xstest={n_ood} "
+          f"layers={layers} poolings={poolings} "
           f"fingerprint={meta.get('fingerprint')}", file=sys.stderr)
-    return {"H": H, "y": y, "layers": layers, "poolings": poolings, "meta": meta,
-            "path": path}
+    return {"H": H, "y": y, "group": group, "layers": layers, "poolings": poolings,
+            "meta": meta, "path": path}
 
 
 def subset_layers(spec: str, cached: list[int]) -> list[int]:
@@ -295,18 +412,71 @@ def write_markdown(md: Path, ranked: list[dict], dep_row: dict, winner: dict,
                  f"(`{p['head']}`). **Selection is by cross-validation mean roc_auc; "
                  "the held-out test set is never consulted.**\n")
 
+    has_ood = payload["appendix_d_flag_rule"]["evaluable"]
+    ba = payload["benign_arm_detail"]
+    lines.append("## The benign / over-refusal arm\n")
+    if has_ood:
+        lines.append(f"**PRESENT** — {ba.get('dataset')}, n={ba.get('n')}, balance "
+                     f"{ba.get('class_balance')}, loaded via "
+                     f"`{ba.get('loader')}`. It is **reported-only**: every cell is "
+                     "scored on it zero-shot per CV fold, and it is **never** used "
+                     "to select a cell (that would be OOD test-set peeking).\n")
+        lines.append("This arm exists because of arXiv:2605.02958 Appendix D — "
+                     "*\"sequence-level mean aggregation can achieve high recall on "
+                     "several attack sets but yields near-random XSTest AUROC\"*. "
+                     "Without it, a mean-pooling cell could top this leaderboard "
+                     "while being broken on over-refusal, and the sweep would never "
+                     "know.\n")
+    else:
+        lines.append(f"**ABSENT** — {ba.get('reason')}.\n")
+        lines.append("> **WARNING: every AUC on this page is ATTACK-ONLY.** "
+                     "arXiv:2605.02958 Appendix D reports that *\"sequence-level "
+                     "mean aggregation can achieve high recall on several attack "
+                     "sets but yields near-random XSTest AUROC\"*. This run cannot "
+                     "detect that failure mode, so **no pooling conclusion drawn "
+                     "here is safe**. Re-extract with the XSTest arm first.\n")
+
     lines.append("## Top cells by CV roc_auc\n")
-    lines.append("| rank | cell | in_dim | CV roc_auc | CV accuracy | note |")
-    lines.append("|---|---|---|---|---|---|")
+    xs_col = " XSTest roc_auc |" if has_ood else ""
+    lines.append(f"| rank | cell | in_dim | CV roc_auc |{xs_col} CV accuracy | note |")
+    lines.append("|---|---|---|---|---|---|" + ("---|" if has_ood else ""))
     for rank, r in enumerate(ranked[:12], start=1):
         note = "**deployed**" if r["is_deployed"] else ""
         if rank == 1 and not r["is_deployed"]:
             note = (note + " sweep-winner").strip()
+        if r.get("appendix_d_flag"):
+            note = (note + " **APPENDIX-D FLAG**").strip()
+        xs = (f" {r['xstest_roc_auc_mean']:.4f} +/- {r['xstest_roc_auc_std']:.4f} |"
+              if has_ood else "")
         lines.append(f"| {rank} | `{cell_label(r['cell'])}` | {r['in_dim']} | "
-                     f"{r['roc_auc_mean']:.4f} +/- {r['roc_auc_std']:.4f} | "
+                     f"{r['roc_auc_mean']:.4f} +/- {r['roc_auc_std']:.4f} |{xs} "
                      f"{r['accuracy_mean']:.4f} +/- {r['accuracy_std']:.4f} | "
                      f"{note} |")
     lines.append("")
+
+    flagged = payload.get("appendix_d_flagged_cells") or []
+    if has_ood:
+        lines.append("## Appendix-D check — strong on attacks, near chance on "
+                     "over-refusal\n")
+        lines.append(f"Flag rule: main roc_auc >= {APPENDIX_D_MAIN_MIN} **and** "
+                     f"XSTest roc_auc <= {APPENDIX_D_XSTEST_MAX}.\n")
+        if flagged:
+            lines.append("| cell | main roc_auc | XSTest roc_auc |")
+            lines.append("|---|---|---|")
+            for f in flagged:
+                lines.append(f"| `{f['label']}` | {f['roc_auc_mean']:.4f} | "
+                             f"{f['xstest_roc_auc_mean']:.4f} |")
+            lines.append("")
+            lines.append(f"**{len(flagged)} cell(s) reproduce the Appendix-D "
+                         "signature**: they look strong on harmful-vs-benign and "
+                         "land near chance on over-refusal. A sweep without the "
+                         "benign arm would have ranked them on the first number "
+                         "alone.\n")
+        else:
+            lines.append("**No cell trips the flag** on this data — the Appendix-D "
+                         "failure mode did not reproduce here. That is a real "
+                         "negative result, and it is only sayable BECAUSE the "
+                         "benign arm was measured.\n")
 
     lines.append("## Baseline - the deployed cell\n")
     sub = payload["deployed"]["substituted_for_missing_layer"]
@@ -373,11 +543,49 @@ def main() -> None:
     ap.add_argument("--n", type=int, default=ENV_N,
                     help="cap TOTAL rows, class-balanced (PT_N; 0 = all cached)")
     ap.add_argument("--no-shuffle-control", action="store_true")
+    ap.add_argument("--selftest", action="store_true",
+                    help="check cross_validate_two_arm == sweep_mlp's protocol, "
+                         "then exit (no cache needed)")
     args = ap.parse_args()
 
+    if args.selftest:
+        sys.exit(selftest())
+
     cache = load_cache(find_cache(args.cache))
-    H, y = cache["H"], cache["y"]
     meta = cache["meta"]
+    group = cache["group"]
+
+    # --- split the two arms --------------------------------------------------
+    main_rows = np.where(group == GROUP_MAIN)[0]
+    ood_rows = np.where(group == GROUP_XSTEST)[0]
+    H, y = cache["H"][main_rows], cache["y"][main_rows]
+    H_ood, y_ood = cache["H"][ood_rows], cache["y"][ood_rows]
+    benign_arm = dict(meta.get("benign_arm") or {"status": "ABSENT",
+                                                 "reason": "not recorded in cache"})
+    has_ood = len(ood_rows) > 0 and len(np.unique(y_ood)) > 1
+    if not has_ood:
+        benign_arm.setdefault("status", "ABSENT")
+        benign_arm["status"] = "ABSENT"
+        benign_arm.setdefault("reason", "no usable XSTest rows in the cache")
+        benign_arm["consequence"] = (
+            "every per-cell AUC below is ATTACK-ONLY and cannot detect the SALO "
+            "Appendix-D failure mode (high attack recall with near-random XSTest "
+            "AUROC)")
+        print("\n" + "!" * 70, file=sys.stderr)
+        print("[sweep_layers] WARNING - BENIGN ARM ABSENT.", file=sys.stderr)
+        print("  Every per-cell AUC in this run is ATTACK-ONLY (harmful vs benign).",
+              file=sys.stderr)
+        print("  SALO (arXiv:2605.02958) Appendix D: 'sequence-level mean "
+              "aggregation can", file=sys.stderr)
+        print("  achieve high recall on several attack sets but yields near-random "
+              "XSTest", file=sys.stderr)
+        print("  AUROC.' This run CANNOT see that failure, so a mean-pooling cell "
+              "may rank", file=sys.stderr)
+        print("  well here and still be broken on over-refusal. Re-extract with the "
+              "XSTest", file=sys.stderr)
+        print("  arm before drawing any pooling conclusion.", file=sys.stderr)
+        print("!" * 70 + "\n", file=sys.stderr)
+        H_ood, y_ood = None, None
 
     if args.n and args.n < len(y):
         per = args.n // 2
@@ -433,6 +641,18 @@ def main() -> None:
                  "hidden": int(meta["hidden"]),
                  "tier": ("EVALUATION-eligible n" if min(np.bincount(y)) >= 500
                           else "SCREENING (below the >=500/class rubric)")},
+        # Either the XSTest provenance dict, or ABSENT with the consequence spelled
+        # out. Never omitted - a missing benign arm must be visible in the artifact.
+        "benign_arm": benign_arm if has_ood else "ABSENT",
+        "benign_arm_detail": benign_arm,
+        "appendix_d_flag_rule": {
+            "source": "arXiv:2605.02958 Appendix D",
+            "quote": "sequence-level mean aggregation can achieve high recall on "
+                     "several attack sets but yields near-random XSTest AUROC",
+            "flagged_when": f"main roc_auc >= {APPENDIX_D_MAIN_MIN} AND xstest "
+                            f"roc_auc <= {APPENDIX_D_XSTEST_MAX}",
+            "evaluable": bool(has_ood),
+        },
         "deployed": {"cell": dep_cell,
                      "from": f"hello_world.config LAYER={C.LAYER} POOLING={C.POOLING}",
                      "substituted_for_missing_layer": bool(substituted)},
@@ -449,18 +669,29 @@ def main() -> None:
     dep_idx = -1
     for i, cell in enumerate(cells):
         X = cell_matrix(H, cache["layers"], cache["poolings"], cell)
-        cv = SM.cross_validate_config(X, y, X.shape[1], SM.DEFAULT, "cpu")
+        Xo = (cell_matrix(H_ood, cache["layers"], cache["poolings"], cell)
+              if has_ood else None)
+        cv = cross_validate_two_arm(X, y, X.shape[1], SM.DEFAULT, "cpu", Xo, y_ood)
         row = {"cell": cell, "label": cell_label(cell), "in_dim": int(X.shape[1]),
                "is_deployed": cell == dep_cell, **cv}
+        # The Appendix-D signature: strong on attacks, near chance on over-refusal.
+        row["appendix_d_flag"] = bool(
+            has_ood
+            and cv["roc_auc_mean"] >= APPENDIX_D_MAIN_MIN
+            and cv["xstest_roc_auc_mean"] <= APPENDIX_D_XSTEST_MAX)
         results.append(row)
         if row["is_deployed"]:
             dep_idx = i
         payload["results"] = results       # rewritten every cell: a reap keeps data
         write_json(out_json, payload)
         tail = "  <-- deployed" if row["is_deployed"] else ""
+        ood_txt = (f" xstest={cv['xstest_roc_auc_mean']:.4f}" if has_ood
+                   else " xstest=ABSENT")
+        if row["appendix_d_flag"]:
+            tail = "  [APPENDIX-D FLAG]" + tail
         print(f"[{i + 1:>3}/{len(cells)}] {cell_label(cell):<28} "
-              f"auc={cv['roc_auc_mean']:.4f}+/-{cv['roc_auc_std']:.4f} "
-              f"acc={cv['accuracy_mean']:.4f}{tail}", file=sys.stderr)
+              f"auc={cv['roc_auc_mean']:.4f}+/-{cv['roc_auc_std']:.4f}"
+              f"{ood_txt} acc={cv['accuracy_mean']:.4f}{tail}", file=sys.stderr)
 
     if dep_idx < 0:                        # anchor: the baseline must be in-sweep
         sys.exit("[sweep_layers] internal error: deployed cell missing from results")
@@ -484,7 +715,7 @@ def main() -> None:
         y_shuf = y.copy()
         rng.shuffle(y_shuf)
         Xw = cell_matrix(H, cache["layers"], cache["poolings"], winner["cell"])
-        sh = SM.cross_validate_config(Xw, y_shuf, Xw.shape[1], SM.DEFAULT, "cpu")
+        sh = cross_validate_two_arm(Xw, y_shuf, Xw.shape[1], SM.DEFAULT, "cpu")
         payload["shuffle_control"] = {
             "cell": winner["cell"], "label": cell_label(winner["cell"]),
             "roc_auc_mean": sh["roc_auc_mean"], "roc_auc_std": sh["roc_auc_std"],
@@ -499,7 +730,14 @@ def main() -> None:
                    "roc_auc_mean": winner["roc_auc_mean"],
                    "roc_auc_std": winner["roc_auc_std"],
                    "accuracy_mean": winner["accuracy_mean"],
-                   "accuracy_std": winner["accuracy_std"]},
+                   "accuracy_std": winner["accuracy_std"],
+                   "xstest_roc_auc_mean": winner.get("xstest_roc_auc_mean"),
+                   "xstest_roc_auc_std": winner.get("xstest_roc_auc_std"),
+                   "appendix_d_flag": winner.get("appendix_d_flag")},
+        "appendix_d_flagged_cells": [
+            {"label": r["label"], "roc_auc_mean": r["roc_auc_mean"],
+             "xstest_roc_auc_mean": r.get("xstest_roc_auc_mean")}
+            for r in results if r.get("appendix_d_flag")],
         "deployed_result": {"rank": dep_row["rank"],
                             "roc_auc_mean": dep_row["roc_auc_mean"],
                             "roc_auc_std": dep_row["roc_auc_std"],
@@ -520,13 +758,17 @@ def main() -> None:
     # --- ascii-only summary --------------------------------------------------
     print("\n=== LAYER x POOLING SWEEP - {}-FOLD CV (ranked by roc_auc) ====="
           .format(SM.K_FOLDS))
-    print(f"  {'#':>3}  {'cell':<28}{'in_dim':>8}{'roc_auc':>18}{'accuracy':>18}")
+    print(f"  {'#':>3}  {'cell':<28}{'in_dim':>8}{'roc_auc':>18}{'xstest':>10}"
+          f"{'accuracy':>18}")
     for r in ranked[:20]:
         tail = "  <-- deployed" if r["is_deployed"] else ""
+        if r.get("appendix_d_flag"):
+            tail = "  [APPENDIX-D FLAG]" + tail
         auc = f"{r['roc_auc_mean']:.4f}+/-{r['roc_auc_std']:.4f}"
+        xs = (f"{r['xstest_roc_auc_mean']:.4f}" if has_ood else "ABSENT")
         acc = f"{r['accuracy_mean']:.4f}+/-{r['accuracy_std']:.4f}"
         print(f"  {r['rank']:>3}  {r['label']:<28}{r['in_dim']:>8}"
-              f"{auc:>18}{acc:>18}{tail}")
+              f"{auc:>18}{xs:>10}{acc:>18}{tail}")
     if len(ranked) > 20:
         print(f"  ... {len(ranked) - 20} more cells in {out_md.name}")
     print("  ---------------------------------------------------------------")
@@ -539,6 +781,13 @@ def main() -> None:
     if sh:
         print(f"  shuffle control on the winner: roc_auc {sh['roc_auc_mean']:.4f} "
               f"({'PASS' if sh['passes'] else 'FAIL'} vs chance 0.5)")
+    if has_ood:
+        n_flag = len(payload.get("appendix_d_flagged_cells") or [])
+        print(f"  benign arm: XSTest n={len(y_ood)} (reported-only) | "
+              f"Appendix-D flagged cells: {n_flag}")
+    else:
+        print("  benign arm: ABSENT -- every AUC above is ATTACK-ONLY and cannot")
+        print("              detect the SALO Appendix-D failure mode.")
     if winner["is_deployed"]:
         print("  VERDICT: the DEPLOYED layer+pooling is the top cell. Keep it.")
     elif beats:

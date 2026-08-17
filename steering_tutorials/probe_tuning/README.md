@@ -2,7 +2,13 @@
 
 > **References:**
 > - [Understanding intermediate layers using linear classifier probes (arXiv:1610.01644)](https://arxiv.org/abs/1610.01644) — Guillaume Alain & Yoshua Bengio, ICLR 2017 workshop. The linear-probe-per-layer method that makes "which layer should we read?" a measurable question at all; the motivation for the layer axis of `sweep_layers.py`.
-> - [Tracing the Dynamics of Refusal: Exploiting Latent Refusal Trajectories for Robust Jailbreak Detection (arXiv:2605.02958)](https://arxiv.org/abs/2605.02958) — Xulin Hu, Che Wang, Wei Yang Bryan Lim, Jianbo Gao, Zhong Chen, 2 May 2026. Argues that "static directions extracted from terminal or pooled representations" miss how refusal is built across layer-token positions, and localises a **sparse** upstream pattern; their SALO detector reads a **layer window** of raw hidden states. This is why the sweep varies *pooling* and adds *multi-layer window* cells, not just the layer index. (Inspired-by, not a reproduction: we sweep a probe's read-out, we do not implement SALO.)
+> - [Tracing the Dynamics of Refusal: Exploiting Latent Refusal Trajectories for Robust Jailbreak Detection (arXiv:2605.02958)](https://arxiv.org/abs/2605.02958) — Xulin Hu, Che Wang, Wei Yang Bryan Lim, Jianbo Gao, Zhong Chen, 2 May 2026. Argues that "static directions extracted from terminal or pooled representations" miss how refusal is built across layer-token positions, and localises a **sparse** upstream pattern; their SALO detector reads a **layer window** of raw hidden states. Three lines drive this lesson's design, and **two of the three are body text, not in the abstract** — check the full text before deciding any of them is unsupported:
+>   - **Sec. 5.4 (Ablation Study):** *"Mean pooling dilutes this strong 'needle' into the vast 'haystack' of irrelevant background noise."* → the pooling axis is mandatory, not decorative.
+>   - **Table 2 caption:** *"Mean Pooling: Replaces the sparsity-aware Global Max-Pooling with Global Average Pooling."* → **Global max-pooling is the paper's own sparsity-aware default**, and mean is the ablation *of* it. So `max` is a first-class cell here and leads the default `PT_POOLINGS`.
+>   - **Appendix D:** *"sequence-level mean aggregation can achieve high recall on several attack sets but yields near-random XSTest AUROC."* → an attack-only sweep would rank mean pooling well and never see it fail on over-refusal. Hence the **benign arm** below.
+>
+>   (Inspired-by, not a reproduction: we sweep a probe's read-out, we do not implement SALO.)
+> - [XSTest: A Test Suite for Identifying Exaggerated Safety Behaviours in Large Language Models (arXiv:2308.01263)](https://arxiv.org/abs/2308.01263) — Röttger et al., NAACL 2024. The over-refusal probe used as the sweep's benign arm: safe prompts that merely *sound* dangerous, plus their genuinely-harmful contrast twins.
 
 > **Scope, stated up front.** This lesson ships **two** searches, at different
 > stages of completeness:
@@ -84,34 +90,57 @@ cross-check only, never a headline.
 
 - `extract_layers.py` — **the GPU half of the layer sweep.** One forward pass per
   prompt with a hook on **every** decoder block, capturing **every** pooling
-  (`mean` / `last` / `max`) at once, into
+  (`max` / `mean` / `last`) at once, into
   `artifacts/layer_features_<tag>.npz`. This is the step lesson 1's cache cannot
   substitute for: `features.npz` holds layer 12, mean-pooled, and nothing else.
   Defaults to the project-standard **≥500/class** length-matched harmful-vs-benign
   set from `common.data`; resumable (checkpoints every `PT_CKPT_EVERY` prompts) so a
   reaped job costs a minute, not an hour.
 
+  It also caches the **benign / over-refusal arm** — XSTest, via lesson 1's existing
+  `eval_ood.load_xstest_balanced` against the locally cached `Paul/XSTest` CSV —
+  into the same file under a `group` column (0 = main, 1 = XSTest). `--no-benign-arm`
+  turns it off, and the run then warns that everything downstream is attack-only.
+
   ```
   python -m steering_tutorials.probe_tuning.extract_layers
   ```
 
 - `sweep_layers.py` — **the CPU half**: scores every (layer × pooling × window)
-  cell by the *same* 5-fold CV protocol as `sweep_mlp.py` (it imports that file's
-  `cross_validate_config`), using the deployed head, and prices the winner against
-  the **deployed** cell (layer 12, mean) with the same 1-std noise-band gate. Adds a
-  shuffled-label control on the winning cell. The JSON is rewritten after **every**
-  cell, so a crash still leaves data.
+  cell by the *same* 5-fold CV protocol as `sweep_mlp.py` (reusing that file's
+  `train_one` / `stratified_val_split` / `DEFAULT`), using the deployed head, and
+  prices the winner against the **deployed** cell (layer 12, mean) with the same
+  1-std noise-band gate. Adds a shuffled-label control on the winning cell. The JSON
+  is rewritten after **every** cell, so a crash still leaves data.
 
   ```
   python -m steering_tutorials.probe_tuning.sweep_layers
+  python -m steering_tutorials.probe_tuning.sweep_layers --selftest
   ```
 
+  **Two arms per cell.** The *main* arm (harmful vs benign) is what selection uses.
+  The *XSTest* arm is scored **zero-shot per CV fold** and is **reported only** —
+  selecting on it would be OOD test-set peeking. Any cell that is strong on attacks
+  (`roc_auc ≥ 0.80`) yet near chance on over-refusal (`XSTest ≤ 0.60`) is stamped
+  **APPENDIX-D FLAG** in the JSON, the markdown, and the console. If the cache has no
+  XSTest rows, the JSON records `benign_arm: "ABSENT"` and the run prints a loud
+  warning that its numbers are attack-only.
+
+  `--selftest` proves `cross_validate_two_arm` reproduces
+  `sweep_mlp.cross_validate_config` to 1e-12 when the benign arm is absent, so
+  "identical protocol" is a checkable claim rather than a comment. It passes.
+
   Env caps to fit one foreground window: `PT_N`, `PT_LAYERS` (`all` / `every2` /
-  `0-25` / `0,6,12`), `PT_POOLINGS`, `PT_WINDOWS`, `PT_FOLDS`, `PT_SEED`.
+  `0-25` / `0,6,12`), `PT_POOLINGS`, `PT_WINDOWS`, `PT_FOLDS`, `PT_SEED`,
+  `PT_BENIGN_N`.
 
 - **KNOWN GAP — the layer sweep has CODE but NO RESULT.** The two scripts above are
-  written and import-checked, and were smoke-tested end-to-end on a synthetic cache
-  (a planted signal at layer 12 was recovered and ranked first). But the real
+  written and import-checked, and were smoke-tested end-to-end on synthetic caches:
+  a planted signal at layer 12 was recovered and ranked first; a planted
+  Appendix-D signature (a cell at main AUC 1.0000 with XSTest AUC 0.4208) was
+  correctly flagged while the max-pooled cell that held up on **both** arms was not;
+  and the `benign_arm: "ABSENT"` path was exercised on a cache with no `group`
+  column. But the real
   extraction is GPU work that **this lesson has still never done**: `artifacts/`
   holds no `layer_features_*.npz` and no `sweep_layers_*.{json,md,png}`. Until it is
   run, treat "layer 12" and "mean pooling" throughout the course as **unvalidated by

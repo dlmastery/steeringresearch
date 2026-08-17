@@ -13,19 +13,53 @@ needs: ONE forward pass per prompt with a hook on EVERY decoder block, capturing
 all requested poolings at once, written to a cache that
 ``sweep_layers.py`` then scores on CPU.
 
-Why both axes (layer AND pooling):
+Why both axes (layer AND pooling), and why a benign arm:
     Hu, Wang, Lim, Gao & Chen, 2 May 2026, 'Tracing the Dynamics of Refusal:
     Exploiting Latent Refusal Trajectories for Robust Jailbreak Detection'
-    (arXiv:2605.02958) — WebFetch-verified — argues that characterising refusal with
-    "static directions extracted from terminal or pooled representations" misses how
-    refusal is constructed across layer-token positions, and finds a *sparse upstream
-    activation pattern*; their SALO detector therefore reads "raw hidden-state
-    volumes from a selected layer window". Lesson 1 fixes BOTH knobs (layer 12, mean
-    pooling) by inheritance, not by measurement — exactly the pooled single-layer
-    read that paper puts in question. So the sweep must vary the layer AND the
-    pooling together, and must include multi-layer windows: a layer-only sweep held
-    at mean pooling could dilute a sparse signal at every layer and then report a
-    flat curve as if the layer did not matter.
+    (arXiv:2605.02958). Three findings from that paper shape this file, and TWO OF
+    THE THREE ARE BODY TEXT, NOT IN THE ABSTRACT — check the full text, not the
+    arXiv abs page, before deciding any of them is unsupported:
+
+    1. Section 5.4 (Ablation Study), verbatim: "Mean pooling dilutes this strong
+       'needle' into the vast 'haystack' of irrelevant background noise."
+       [BODY TEXT - Sec. 5.4. Not on the abs page.]
+       => the pooling axis is not optional. A layer-only sweep held at mean pooling
+       could dilute a sparse signal at every layer and then report a flat curve as
+       if the layer did not matter.
+
+    2. Table 2 caption, verbatim: "Mean Pooling: Replaces the sparsity-aware Global
+       Max-Pooling with Global Average Pooling."
+       [BODY TEXT - Table 2 caption.]
+       => GLOBAL MAX-POOLING is the paper's OWN sparsity-aware default, and mean is
+       the ablation OF it. So ``max`` here is a first-class cell - the condition the
+       paper actually endorses - not a curiosity thrown in beside mean. It leads the
+       default PT_POOLINGS list for that reason.
+
+    3. Appendix D, verbatim: "sequence-level mean aggregation can achieve high
+       recall on several attack sets but yields near-random XSTest AUROC."
+       [BODY TEXT - Appendix D.]
+       => THE MOST IMPORTANT ONE FOR THIS SWEEP. Mean pooling can look GOOD on
+       attack data while failing on the benign/over-refusal set. A sweep scored only
+       on harmful-vs-benign would therefore RANK MEAN POOLING WELL AND HIDE THAT
+       FAILURE - it would reproduce, as a measurement artifact, exactly the blind
+       spot the paper documents. Hence the BENIGN ARM below: we additionally cache
+       XSTest so every cell can be scored on the over-refusal distribution too.
+
+    The abstract supports the frame around all this: it says "static directions
+    extracted from terminal or pooled representations" miss how refusal is
+    constructed across layer-token positions, and that SALO reads "raw hidden-state
+    volumes from a selected layer window" - which is what the window cells test.
+
+    Lesson 1 fixes BOTH knobs (layer 12, mean pooling) by inheritance, not by
+    measurement - exactly the pooled single-layer read that paper puts in question.
+
+THE BENIGN ARM (group 1 in the cache):
+    XSTest (Rottger et al. 2024, arXiv:2308.01263) - safe prompts that merely SOUND
+    dangerous ("How do I kill a Python process?") plus their genuinely-harmful
+    contrast twins. Cached locally as ``Paul/XSTest``; loaded through lesson 1's
+    existing ``eval_ood.load_xstest_balanced`` rather than a new sampler. Both arms
+    go into ONE cache with a ``group`` column (0 = main harmful-vs-benign,
+    1 = XSTest), so the sweep can price every cell on both distributions.
 
 Reuse (cross-lesson imports are allowed; we WRITE only into probe_tuning/artifacts):
     * ``hello_world.model_utils`` — load_model / residual_layers / hidden_size.
@@ -43,6 +77,7 @@ Host discipline baked in (see CLAUDE.md 18.5):
 
 Outputs (under ``probe_tuning/artifacts/``):
     layer_features_<tag>.npz          H[n_prompts, n_layers, n_poolings, hidden] fp16
+                                      + y (labels) + group (0 = main, 1 = XSTest)
     layer_features_<tag>.partial.npz  resume checkpoint (deleted on success)
 """
 from __future__ import annotations
@@ -75,11 +110,18 @@ ENV_MODEL_ID = os.environ.get("PT_MODEL_ID", C.MODEL_ID)
 ENV_DATASET = os.environ.get("PT_DATASET", "common")     # common | jbb
 ENV_N = int(os.environ.get("PT_N", "500"))               # per class
 ENV_LAYERS = os.environ.get("PT_LAYERS", "all")          # all | every2 | 0-25 | 0,6,12
-ENV_POOLINGS = os.environ.get("PT_POOLINGS", "mean,last,max")
+# ``max`` leads the list deliberately: Global Max-Pooling is the SALO paper's own
+# sparsity-aware default (Table 2 caption), and mean is the ablation of it.
+ENV_POOLINGS = os.environ.get("PT_POOLINGS", "max,mean,last")
 ENV_SEED = int(os.environ.get("PT_SEED", "0"))
 ENV_CKPT_EVERY = int(os.environ.get("PT_CKPT_EVERY", "250"))
+ENV_BENIGN_N = int(os.environ.get("PT_BENIGN_N", "150"))  # XSTest, per class
 
 POOLING_CHOICES = ("mean", "last", "max")
+
+# Group codes in the cache's ``group`` column.
+GROUP_MAIN = 0        # harmful vs benign - the SELECTION arm
+GROUP_XSTEST = 1      # XSTest over-refusal - the REPORTED-ONLY benign arm
 
 
 # --------------------------------------------------------------------------- #
@@ -131,7 +173,7 @@ def fingerprint(meta: dict) -> str:
     were produced under a different config.
     """
     keys = ("model_id", "dataset", "n_per_class", "seed", "layers", "poolings",
-            "n_prompts", "hidden")
+            "n_prompts", "n_main", "n_benign_arm", "hidden")
     payload = {k: meta[k] for k in keys}
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()[:16]
@@ -170,6 +212,51 @@ def load_prompts(dataset: str, n_per_class: int, seed: int) -> tuple[list[str], 
             "n_per_class_effective": int(min(len(harmful), len(benign))),
             "header": rec["header"]}
     return prompts, labels, prov
+
+
+def load_benign_arm(per_class: int, seed: int) -> tuple[list[str], np.ndarray, dict]:
+    """The XSTest over-refusal arm, or ([], [], {"status": "ABSENT", ...}).
+
+    This is the arm SALO's Appendix D says you cannot do without: mean aggregation
+    "can achieve high recall on several attack sets but yields near-random XSTest
+    AUROC", so an attack-only sweep would rank mean pooling well and never see the
+    failure. XSTest is the standard over-refusal probe: safe prompts that merely
+    SOUND dangerous, plus their genuinely-harmful contrast twins.
+
+    NOTHING IS FABRICATED HERE. We reuse lesson 1's existing
+    ``eval_ood.load_xstest_balanced`` against the real cached ``Paul/XSTest`` CSV.
+    If that load fails for any reason (dataset gated, cache missing, offline), we
+    return ABSENT with the reason, and every downstream number is then explicitly
+    labelled attack-only rather than quietly scored on one distribution.
+    """
+    try:
+        from steering_tutorials.hello_world.eval_ood import load_xstest_balanced
+        prompts, labels = load_xstest_balanced(per_class=per_class, seed=seed)
+        y = np.asarray(labels, dtype=np.int64)
+        if len(prompts) == 0 or len(np.unique(y)) < 2:
+            raise ValueError(f"degenerate XSTest slice: n={len(prompts)}, "
+                             f"classes={np.unique(y).tolist()}")
+        return prompts, y, {
+            "status": "PRESENT",
+            "dataset": "XSTest (Paul/XSTest CSV; Rottger et al. 2024, "
+                       "arXiv:2308.01263)",
+            "loader": "hello_world.eval_ood.load_xstest_balanced",
+            "n": int(len(prompts)),
+            "per_class_requested": int(per_class),
+            "class_balance": np.bincount(y).tolist(),
+            "role": "REPORTED-ONLY - never used to select a cell (that would be "
+                    "OOD test-set peeking); scored zero-shot per CV fold",
+        }
+    except Exception as exc:  # pragma: no cover - depends on local cache state
+        print(f"[extract] BENIGN ARM ABSENT: {type(exc).__name__}: {exc}",
+              file=sys.stderr)
+        return [], np.zeros(0, dtype=np.int64), {
+            "status": "ABSENT",
+            "reason": f"{type(exc).__name__}: {exc}",
+            "consequence": "every per-cell AUC is ATTACK-ONLY and cannot detect the "
+                           "SALO Appendix-D failure mode (high attack recall with "
+                           "near-random XSTest AUROC)",
+        }
 
 
 # --------------------------------------------------------------------------- #
@@ -249,6 +336,12 @@ def main() -> None:
                     help="checkpoint the partial cache every N prompts (0 = never)")
     ap.add_argument("--max-prompts", type=int, default=0,
                     help="hard cap on TOTAL prompts (smoke runs only; 0 = no cap)")
+    ap.add_argument("--benign-n", type=int, default=ENV_BENIGN_N,
+                    help="XSTest prompts PER CLASS for the benign arm (PT_BENIGN_N)")
+    ap.add_argument("--no-benign-arm", action="store_true",
+                    help="skip the XSTest over-refusal arm. NOT RECOMMENDED: without "
+                         "it every per-cell AUC is attack-only and cannot detect the "
+                         "SALO Appendix-D failure mode")
     ap.add_argument("--force", action="store_true",
                     help="ignore an existing checkpoint and start over")
     args = ap.parse_args()
@@ -267,20 +360,40 @@ def main() -> None:
         print(f"[extract] SMOKE CAP: {len(prompts)} prompts total - screening only",
               file=sys.stderr)
 
+    # --- the benign / over-refusal arm, appended as group 1 ------------------
+    group = np.full(len(prompts), GROUP_MAIN, dtype=np.int64)
+    if args.no_benign_arm:
+        benign_prov = {"status": "ABSENT", "reason": "disabled via --no-benign-arm",
+                       "consequence": "every per-cell AUC is ATTACK-ONLY and cannot "
+                                      "detect the SALO Appendix-D failure mode"}
+    else:
+        b_prompts, b_y, benign_prov = load_benign_arm(args.benign_n, args.seed)
+        if b_prompts:
+            prompts = prompts + b_prompts
+            y = np.concatenate([y, b_y])
+            group = np.concatenate(
+                [group, np.full(len(b_prompts), GROUP_XSTEST, dtype=np.int64)])
+    if benign_prov["status"] == "ABSENT":
+        print("[extract] WARNING: no benign/over-refusal arm - the sweep built on "
+              "this cache will be ATTACK-ONLY", file=sys.stderr)
+
     model, tok = load_model(args.model_id)
     n_lay = num_layers(model)
     hidden = hidden_size(model)
     layers = parse_layer_spec(args.layers, n_lay)
 
+    y_main = y[group == GROUP_MAIN]
     meta = {
         "model_id": args.model_id,
         "dataset": args.dataset,
-        "n_per_class": int(min(np.bincount(y))),
+        "n_per_class": int(min(np.bincount(y_main))),   # MAIN arm only
         "n_per_class_requested": int(args.n),
         "seed": int(args.seed),
         "layers": layers,
         "poolings": poolings,
         "n_prompts": int(len(prompts)),
+        "n_main": int((group == GROUP_MAIN).sum()),
+        "n_benign_arm": int((group == GROUP_XSTEST).sum()),
         "hidden": int(hidden),
         "model_n_layers": int(n_lay),
         "deployed_layer": int(C.LAYER),
@@ -288,6 +401,7 @@ def main() -> None:
         "chat_template": True,
         "dtype": "float16",
         "provenance": prov,
+        "benign_arm": benign_prov,
     }
     meta["fingerprint"] = fingerprint(meta)
 
@@ -319,7 +433,7 @@ def main() -> None:
         H = np.zeros(shape, dtype=np.float16)
 
     def checkpoint(n_done: int) -> None:
-        np.savez(ckpt_path, H=H, y=y, n_done=np.int64(n_done),
+        np.savez(ckpt_path, H=H, y=y, group=group, n_done=np.int64(n_done),
                  meta=json.dumps(meta))
         print(f"[extract] checkpoint {n_done}/{len(prompts)}", file=sys.stderr)
 
@@ -334,6 +448,7 @@ def main() -> None:
         out_path,
         H=H,
         y=y,
+        group=group,
         layers=np.asarray(layers, dtype=np.int64),
         poolings=np.asarray(poolings),
         meta=json.dumps(meta),
@@ -347,10 +462,19 @@ def main() -> None:
     print(f"\n=== LAYER-FEATURE CACHE WRITTEN ================================")
     print(f"  path        {out_path}")
     print(f"  model       {args.model_id}")
-    print(f"  dataset     {args.dataset}  n={len(prompts)} "
-          f"({meta['n_per_class']}/class)  balance={np.bincount(y).tolist()}")
+    print(f"  main arm    {args.dataset}  n={meta['n_main']} "
+          f"({meta['n_per_class']}/class)  balance="
+          f"{np.bincount(y_main).tolist()}")
+    if benign_prov["status"] == "PRESENT":
+        print(f"  benign arm  XSTest n={meta['n_benign_arm']} "
+              f"balance={benign_prov['class_balance']} (reported-only, never "
+              f"used to select)")
+    else:
+        print(f"  benign arm  ABSENT ({benign_prov.get('reason')})")
+        print(f"              WARNING: the sweep will be ATTACK-ONLY and cannot")
+        print(f"              detect the SALO Appendix-D failure mode.")
     print(f"  layers      {len(layers)} of {n_lay}: {layers}")
-    print(f"  poolings    {poolings}")
+    print(f"  poolings    {poolings}  (max = the paper's sparsity-aware default)")
     print(f"  hidden      {hidden}   fingerprint {meta['fingerprint']}")
     print(f"  NEXT        python -m steering_tutorials.probe_tuning.sweep_layers")
     print("================================================================")
