@@ -443,8 +443,14 @@ def _print_summary(results, main_results, horizon_results, streaming_offline):
     line = "-" * 78
     print("")
     print(line)
-    print("STREAMING TRAJECTORY AGGREGATION -- corpus=%s (SCREENING TIER, n=%d/%d, "
-          "one embedder, one seed)" % (results["corpus"], results["seed"], results["n_folds"]))
+    # This header used to read "n=%d/%d" % (seed, n_folds) -- printing the SEED
+    # under the label "n". With seed=0 it rendered as "n=0/5", i.e. a run over
+    # 1000 trajectories announced itself as n=0. Print the real n, and label the
+    # seed and folds as what they are.
+    _n_total = results["sizes"]["achieved_pos"] + results["sizes"]["achieved_neg"]
+    print("STREAMING TRAJECTORY AGGREGATION -- corpus=%s (SCREENING TIER, "
+          "n=%d trajectories, seed=%d, %d-fold, one embedder)"
+          % (results["corpus"], _n_total, results["seed"], results["n_folds"]))
     print("embedder=%s dim=%d  pos=%d neg=%d groups=%d  shortfall=%s clears_rule_1=%s"
           % (results["embedder"], results["embedding_dim"], results["sizes"]["achieved_pos"],
              results["sizes"]["achieved_neg"], results["sizes"]["n_distinct_groups"],
