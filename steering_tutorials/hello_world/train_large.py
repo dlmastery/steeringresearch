@@ -42,7 +42,8 @@ import torch
 
 from . import config as C
 from .data_large import load_large_dataset
-from .model_utils import extract_features, hidden_size, load_model, num_layers
+from .model_utils import (check_cache_model, extract_features, hidden_size,
+                          load_model, num_layers)
 from .probe import MLPProbe, Scaler, predict_proba, save_probe
 # Reuse the DEPLOYED training loop + metric suite verbatim (no reimplementation).
 from .train_probe import train_probe as train_mlp, evaluate
@@ -61,18 +62,20 @@ VAL_FRACTION = 0.15         # carved from the training portion for early stoppin
 NATURAL_BASE_RATE = 0.07    # ~7% of real Toxic-Chat traffic is toxic (imbalanced)
 
 # --- Paths (ALL suffixed _large; the JBB artifacts are never overwritten) ----
-FEATURES_LARGE = C.ARTIFACTS / "features_large.npz"
-PROBE_LARGE = C.ARTIFACTS / "probe_large.pt"
-METRICS_LARGE = C.ARTIFACTS / "metrics_large.json"
-ROC_LARGE = C.ARTIFACTS / "roc_large.png"
-PR_LARGE = C.ARTIFACTS / "pr_large.png"
-CALIBRATION_LARGE = C.ARTIFACTS / "calibration_large.png"
-CONFUSION_LARGE = C.ARTIFACTS / "confusion_large.png"
-HISTORY_LARGE = C.ARTIFACTS / "history_large.png"
-CV_LARGE_JSON = C.ARTIFACTS / "cv_large.json"
-CV_LARGE_MD = C.ARTIFACTS / "cv_large.md"
-AUDIT_LARGE_JSON = C.ARTIFACTS / "audit_large.json"
-AUDIT_LARGE_MD = C.ARTIFACTS / "audit_large.md"
+# ...and additionally model-tagged (``_4b`` etc.) when the feature extractor is
+# not the default 1B, so a cross-scale run cannot clobber the 1B artifacts.
+FEATURES_LARGE = C.artifact_path("features_large", ".npz")
+PROBE_LARGE = C.artifact_path("probe_large", ".pt")
+METRICS_LARGE = C.artifact_path("metrics_large", ".json")
+ROC_LARGE = C.artifact_path("roc_large", ".png")
+PR_LARGE = C.artifact_path("pr_large", ".png")
+CALIBRATION_LARGE = C.artifact_path("calibration_large", ".png")
+CONFUSION_LARGE = C.artifact_path("confusion_large", ".png")
+HISTORY_LARGE = C.artifact_path("history_large", ".png")
+CV_LARGE_JSON = C.artifact_path("cv_large", ".json")
+CV_LARGE_MD = C.artifact_path("cv_large", ".md")
+AUDIT_LARGE_JSON = C.artifact_path("audit_large", ".json")
+AUDIT_LARGE_MD = C.artifact_path("audit_large", ".md")
 
 
 def set_seed(seed: int) -> None:
@@ -94,9 +97,8 @@ def get_features_large(prompts: list[str], labels: list[int]):
     """
     if FEATURES_LARGE.exists():
         cache = np.load(FEATURES_LARGE, allow_pickle=True)
-        if (int(cache["layer"]) == C.LAYER
-                and str(cache["model_id"]) == C.MODEL_ID
-                and cache["X"].shape[0] == len(prompts)):
+        check_cache_model(cache, FEATURES_LARGE, C.MODEL_ID)
+        if int(cache["layer"]) == C.LAYER and cache["X"].shape[0] == len(prompts):
             print(f"[features] cache hit {FEATURES_LARGE.name} X={cache['X'].shape}",
                   file=sys.stderr)
             return cache["X"], cache["y"], int(cache["layer"])
@@ -107,7 +109,8 @@ def get_features_large(prompts: list[str], labels: list[int]):
     X = extract_features(model, tok, prompts, layer, pooling=C.POOLING, log_every=25)
     y = np.asarray(labels, dtype=np.int64)
     np.savez(FEATURES_LARGE, X=X, y=y, layer=layer, model_id=C.MODEL_ID,
-             hidden=hidden_size(model), prompts=np.array(prompts, dtype=object))
+             hidden=int(X.shape[1]), hidden_declared=hidden_size(model),
+             prompts=np.array(prompts, dtype=object))
     del model                                   # free VRAM — only X is needed now
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
@@ -597,6 +600,10 @@ def cross_dataset_ood(probe, scaler) -> dict:
         return {}
     Xj = cache["X"].astype(np.float32)
     yj = cache["y"].astype(np.int64)
+    if Xj.shape[1] != int(probe.in_dim):
+        print(f"[ood] JBB cache is {Xj.shape[1]}-d but the probe is "
+              f"{probe.in_dim}-d — different models, skipping.", file=sys.stderr)
+        return {}
     # Score on whatever device the probe already lives on (avoids a cpu/cuda mix).
     dev = str(next(probe.parameters()).device)
     probs = predict_proba(probe, scaler, Xj, device=dev)        # scaler applied inside

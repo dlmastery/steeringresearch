@@ -13,8 +13,8 @@ import sys
 import torch
 
 from . import config as C
-from .model_utils import extract_features, load_model
-from .probe import load_probe, predict_proba
+from .model_utils import extract_features, hidden_size, load_model
+from .probe import check_feature_width, load_probe, predict_proba
 
 
 class Classifier:
@@ -27,6 +27,10 @@ class Classifier:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.probe, self.scaler, self.meta = load_probe(C.PROBE_PATH, device=self.device)
         self.model, self.tok = load_model(self.meta["model_id"])
+        # Check the widths agree BEFORE the first forward pass, so a probe/model
+        # mix-up reports itself here instead of as a matmul error mid-request.
+        check_feature_width(int(self.probe.in_dim), hidden_size(self.model),
+                            self.meta, where="Classifier")
         self.layer = int(self.meta["layer"])
         self.threshold = float(self.meta.get("threshold", 0.5))
 

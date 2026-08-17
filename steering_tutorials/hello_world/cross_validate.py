@@ -41,6 +41,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 
 from . import config as C
+from .model_utils import check_cache_model
 from .probe import MLPProbe
 
 # --- CV knobs ---------------------------------------------------------------
@@ -53,9 +54,11 @@ METRIC_NAMES = [
     "f1", "mcc", "cohen_kappa", "roc_auc", "pr_auc", "log_loss", "brier",
 ]
 
-CV_REPORT_JSON = C.ARTIFACTS / "cv_report.json"
-CV_REPORT_MD = C.ARTIFACTS / "cv_report.md"
-CV_METRICS_PNG = C.ARTIFACTS / "cv_metrics.png"
+# Model-tagged (``_4b`` etc. off the default 1B) so a cross-scale run reports
+# alongside the 1B numbers instead of overwriting them.
+CV_REPORT_JSON = C.artifact_path("cv_report", ".json")
+CV_REPORT_MD = C.artifact_path("cv_report", ".md")
+CV_METRICS_PNG = C.artifact_path("cv_metrics", ".png")
 
 
 def set_seed(seed: int) -> None:
@@ -69,10 +72,12 @@ def load_features() -> tuple[np.ndarray, np.ndarray]:
         sys.exit(f"[cv] missing {C.FEATURES_CACHE} — run train_probe.py first to "
                  "extract & cache features.")
     cache = np.load(C.FEATURES_CACHE, allow_pickle=True)
+    check_cache_model(cache, C.FEATURES_CACHE, C.MODEL_ID)
     X = cache["X"].astype(np.float32)
     y = cache["y"].astype(np.int64)
     print(f"[cv] loaded X={X.shape} y={y.shape} "
-          f"class balance={np.bincount(y).tolist()}", file=sys.stderr)
+          f"class balance={np.bincount(y).tolist()} model={C.MODEL_ID}",
+          file=sys.stderr)
     return X, y
 
 

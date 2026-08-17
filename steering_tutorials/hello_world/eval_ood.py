@@ -40,8 +40,10 @@ except Exception:  # pragma: no cover - optional
 import torch
 
 from steering_tutorials.hello_world import config
-from steering_tutorials.hello_world.model_utils import extract_features, load_model
-from steering_tutorials.hello_world.probe import load_probe, predict_proba
+from steering_tutorials.hello_world.model_utils import (extract_features,
+                                                        hidden_size, load_model)
+from steering_tutorials.hello_world.probe import (check_feature_width, load_probe,
+                                                  predict_proba)
 
 # XSTest ships as one CSV on the Hub. It is already in the local HF cache.
 XSTEST_REPO = "Paul/XSTest"
@@ -57,10 +59,12 @@ SHUFFLE_SEED = 0
 IN_DOMAIN_ACC = 0.95
 IN_DOMAIN_AUC = 0.98
 
-OOD_METRICS_PATH = config.ARTIFACTS / "ood_metrics.json"
-OOD_CONFUSION_PNG = config.ARTIFACTS / "ood_confusion.png"
-OOD_ROC_PNG = config.ARTIFACTS / "ood_roc.png"
-OOD_PR_PNG = config.ARTIFACTS / "ood_pr.png"
+# Model-tagged (``_4b`` etc. when the extractor is not the default 1B) so a
+# cross-scale OOD run cannot overwrite the 1B numbers on the dashboard.
+OOD_METRICS_PATH = config.artifact_path("ood_metrics", ".json")
+OOD_CONFUSION_PNG = config.artifact_path("ood_confusion", ".png")
+OOD_ROC_PNG = config.artifact_path("ood_roc", ".png")
+OOD_PR_PNG = config.artifact_path("ood_pr", ".png")
 
 
 def load_xstest_balanced(per_class: int = PER_CLASS, seed: int = SHUFFLE_SEED):
@@ -246,6 +250,9 @@ def main() -> None:
     #    layer/pooling the probe was trained on.
     model, tok = load_model(model_id, device=device)
     try:
+        # Widths must agree before we spend a few hundred forward passes on it.
+        check_feature_width(int(probe.in_dim), hidden_size(model), meta,
+                            where="eval_ood")
         feats = extract_features(model, tok, prompts, layer, pooling=pooling, log_every=25)
         # 4. Score with the frozen probe (scaler applied inside predict_proba).
         probs = predict_proba(probe, scaler, feats, device=device)

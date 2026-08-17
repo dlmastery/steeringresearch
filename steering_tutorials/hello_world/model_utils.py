@@ -87,13 +87,25 @@ def load_model(model_id: str, device: str | None = None) -> tuple[Any, Any]:
     return model, tok
 
 
+class ActivationWidthError(RuntimeError):
+    """Raised when the activations we captured are not the width we expected."""
+
+
+# Sub-module name fragments that mark a NON-text tower. Gemma-3-4B's SigLIP
+# vision encoder is 1152-d — the same width as Gemma-3-1B's text residual
+# stream — so hooking it by accident produces plausible, wrong features that a
+# 1B-trained probe would happily consume. Never fall back onto these.
+_NON_TEXT_MARKERS = ("vision", "visual", "image", "audio", "multi_modal")
+
+
 def residual_layers(model: nn.Module) -> list[nn.Module]:
-    """The list of decoder blocks whose forward output is the residual stream.
+    """The list of TEXT decoder blocks whose forward output is the residual stream.
 
     Text-only Gemma-3 (1B) exposes them at ``model.model.layers``; the multimodal
     4B (``Gemma3ForConditionalGeneration``) nests the TEXT decoder under a
     ``language_model`` sub-module. We search the common paths, then fall back to
-    the first non-empty ``.layers`` ModuleList in the tree.
+    the first non-empty ``.layers`` ModuleList that is NOT part of a vision /
+    audio tower.
     """
     candidates = (
         ("model", "layers"),
@@ -111,24 +123,103 @@ def residual_layers(model: nn.Module) -> list[nn.Module]:
         if obj is not None and hasattr(obj, "__len__") and len(obj) > 0:
             return list(obj)
     for name, mod in model.named_modules():
+        if any(marker in name.lower() for marker in _NON_TEXT_MARKERS):
+            continue  # never probe the vision/audio tower — wrong width, wrong stream
         if name.endswith("layers") and isinstance(mod, nn.ModuleList) and len(mod) > 0:
             return list(mod)
-    raise ValueError("Could not find decoder layers on this model.")
+    raise ValueError("Could not find TEXT decoder layers on this model.")
 
 
 def num_layers(model: nn.Module) -> int:
     return len(residual_layers(model))
 
 
-def hidden_size(model: nn.Module) -> int:
-    """Residual-stream width. Multimodal Gemma-3 keeps it under ``text_config``."""
-    cfg = model.config
-    if getattr(cfg, "hidden_size", None):
-        return int(cfg.hidden_size)
+def config_hidden_size(model: nn.Module) -> int | None:
+    """Text residual-stream width according to the model CONFIG, or None.
+
+    ``text_config`` is consulted FIRST: on a multimodal Gemma-3 the top-level
+    config can also carry a ``hidden_size``, and that one belongs to the vision
+    tower (1152 on the 4B) rather than to the text decoder (2560).
+    """
+    cfg = getattr(model, "config", None)
+    if cfg is None:
+        return None
     text_cfg = getattr(cfg, "text_config", None)
     if text_cfg is not None and getattr(text_cfg, "hidden_size", None):
         return int(text_cfg.hidden_size)
-    return int(residual_layers(model)[0].mlp.gate_proj.in_features)
+    if getattr(cfg, "hidden_size", None):
+        return int(cfg.hidden_size)
+    return None
+
+
+def residual_width(model: nn.Module) -> int | None:
+    """Text residual width measured from the decoder MODULE we actually hook."""
+    try:
+        block = residual_layers(model)[0]
+    except Exception:  # pragma: no cover - exotic architecture
+        return None
+    for attr_path in (("mlp", "gate_proj"), ("mlp", "up_proj"), ("self_attn", "q_proj")):
+        obj = block
+        for attr in attr_path:
+            obj = getattr(obj, attr, None)
+            if obj is None:
+                break
+        if obj is not None and getattr(obj, "in_features", None):
+            return int(obj.in_features)
+    norm_w = getattr(getattr(block, "input_layernorm", None), "weight", None)
+    if norm_w is not None and norm_w.ndim == 1:
+        return int(norm_w.shape[0])
+    return None
+
+
+def hidden_size(model: nn.Module) -> int:
+    """Residual-stream width, measured from the module we hook where possible.
+
+    The module is the ground truth (it is what ``extract_features`` reads); the
+    config is the cross-check. If the two disagree we refuse to guess — a silent
+    wrong width here is exactly how a 1152-d probe ends up eating 2560-d
+    activations three scripts downstream.
+    """
+    measured = residual_width(model)
+    declared = config_hidden_size(model)
+    if measured is not None and declared is not None and measured != declared:
+        raise ActivationWidthError(
+            f"Residual-stream width disagrees with the model config: the decoder "
+            f"block we hook is {measured}-d but config says {declared}-d. On a "
+            f"multimodal Gemma-3 this means the TEXT decoder was not the module "
+            f"found (the SigLIP vision tower is 1152-d). Refusing to guess."
+        )
+    if measured is not None:
+        return measured
+    if declared is not None:
+        return declared
+    raise ActivationWidthError("Could not determine the residual-stream width.")
+
+
+def check_cache_model(cache, path, model_id: str) -> None:
+    """Fail loudly if a feature cache was produced by a DIFFERENT model.
+
+    A cache is only reusable for the model that produced it — 1B activations are
+    1152 numbers wide and 4B activations 2560 — so a stamp mismatch is an error,
+    not a cache miss to be silently overwritten (or, worse, silently consumed by
+    a probe trained at the other width).
+    """
+    cached_id = str(cache["model_id"])
+    if cached_id != model_id:
+        raise ActivationWidthError(
+            f"[features] {getattr(path, 'name', path)} was extracted from "
+            f"{cached_id} ({cache['X'].shape[1]}-d) but this run uses {model_id}. "
+            f"Reusing or overwriting it would mix two models' activations. "
+            f"Artifact names are model-tagged by default - unset "
+            f"STEER_FEATURES_NAME, or choose a name that is not already taken."
+        )
+    stamped = int(cache["hidden"]) if "hidden" in getattr(cache, "files", []) else None
+    if stamped is not None and stamped != int(cache["X"].shape[1]):
+        raise ActivationWidthError(
+            f"[features] {getattr(path, 'name', path)} is internally inconsistent: "
+            f"X is {cache['X'].shape[1]}-d but the stamp says {stamped}-d. Delete "
+            f"it and re-extract."
+        )
 
 
 @torch.no_grad()
@@ -180,4 +271,17 @@ def extract_features(
                 print(f"[features] {i + 1}/{len(prompts)}", file=sys.stderr)
     finally:
         handle.remove()
-    return np.stack(feats).astype(np.float32)
+    X = np.stack(feats).astype(np.float32)
+
+    # Stamp check: what we captured must be as wide as the text residual stream.
+    # (If a multimodal model's vision tower were hooked instead, this fires.)
+    declared = config_hidden_size(model)
+    if declared is not None and X.shape[1] != declared:
+        raise ActivationWidthError(
+            f"Captured {X.shape[1]}-d activations from layer {layer}, but the "
+            f"model's text config declares a {declared}-d residual stream. The "
+            f"hooked module is not the text decoder (on multimodal Gemma-3 the "
+            f"vision tower is 1152-d while the 4B text stream is 2560-d). "
+            f"Refusing to return features of an unknown provenance."
+        )
+    return X

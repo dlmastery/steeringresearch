@@ -775,6 +775,48 @@ into a single refusal representation.
 | gemma-3-4b-it abliterated variants | 4B | ~4 GB | download |
 | gemma-3-12b-it abliterated variants | 12B | ~9 GB | download |
 
+### Swapping the model: artifacts are model-tagged, and widths are checked
+
+A probe is **welded to the width of the model it was trained on**: Gemma-3-1B's
+residual stream is **1152** numbers wide, Gemma-3-4B's is **2560**. A 1152-d probe
+cannot score 2560-d activations, and no truncation or projection would make the
+answer mean anything. Two mechanisms keep that honest:
+
+1. **The filename carries the model.** `config.model_tag()` gives the default 1B
+   the historical names (`probe.pt`, `features.npz`, `metrics.json`) and any other
+   model a suffix — the 4B run writes `probe_4b.pt`, `features_4b.npz`,
+   `metrics_4b.json`, `roc_curve_4b.png`. A 1B cache can therefore never be picked
+   up by a 4B run, and `save_probe` additionally *refuses* to overwrite a
+   checkpoint trained on a different model.
+2. **Every entry point checks the width and fails loudly.** `predict_proba`,
+   `Scaler.transform`, `MLPProbe.forward`, `load_probe(expect_dim=…)` and the
+   `Classifier` all raise `ProbeDimensionMismatch`, which names both models and
+   tells you how to fix it — instead of a bare
+   `mat1 and mat2 shapes cannot be multiplied (1x2560 and 1152x128)` from inside a
+   matmul. `extract_features` likewise refuses activations whose width disagrees
+   with the model's text config, which is what catches a multimodal Gemma-3 whose
+   **SigLIP vision tower is also 1152-d**.
+
+The cross-scale (4B) run, end to end:
+
+```bash
+# 1. train a 4B probe (GPU; writes probe_4b.pt / features_4b.npz / metrics_4b.json)
+set STEER_MODEL_ID=DavidAU/gemma-3-4b-it-heretic-uncensored-abliterated-Extreme
+set STEER_LOAD_4BIT=1
+python -m steering_tutorials.hello_world.train_probe
+
+# 2. anything downstream that gates on the probe must ask for the MATCHING one:
+#    from steering_tutorials.hello_world import config as C
+#    C.probe_path_for(model_id)   ->  artifacts/probe_4b.pt
+```
+
+The guard itself is proved without a GPU — synthetic 1152-d and 2560-d tensors,
+no model loaded:
+
+```bash
+python -m steering_tutorials.hello_world.test_dim_guard    # 8/8 PASS
+```
+
 Other abliterated families exist beyond the Gemma line — e.g. **mlabonne** and
 **huihui-ai** publish abliterated versions of many popular chat models on the Hub.
 All of the above comfortably fit a 16 GB 4090 in 4-bit. **Be honest with

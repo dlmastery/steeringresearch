@@ -32,6 +32,7 @@ import numpy as np
 
 from . import config as C
 from .data import load_safety_dataset
+from .model_utils import check_cache_model
 from .train_probe import stratified_split
 
 
@@ -78,6 +79,7 @@ def main() -> None:
     if not C.FEATURES_CACHE.exists():
         raise SystemExit(f"missing feature cache: {C.FEATURES_CACHE}")
     cache = np.load(C.FEATURES_CACHE, allow_pickle=True)
+    check_cache_model(cache, C.FEATURES_CACHE, C.MODEL_ID)
     X = cache["X"].astype(np.float32)
     y = cache["y"].astype(np.int64)
     print(f"[audit] loaded features X={X.shape} y={y.shape} "
@@ -277,7 +279,8 @@ def main() -> None:
     report["overall_verdict"] = overall
 
     # ---- Write JSON -------------------------------------------------------- #
-    (C.ARTIFACTS / "audit_report.json").write_text(json.dumps(report, indent=2))
+    # Model-tagged so a cross-scale (4B) audit does not overwrite the 1B one.
+    C.artifact_path("audit_report", ".json").write_text(json.dumps(report, indent=2))
 
     # ---- Write + print the readable summary -------------------------------- #
     c1 = report["checks"]["1_disjointness"]
@@ -326,7 +329,7 @@ def main() -> None:
         f"Flags: {report['flags'] if report['flags'] else 'none'}",
     ]
     summary = "\n".join(lines)
-    (C.ARTIFACTS / "audit_report.md").write_text(summary, encoding="utf-8")
+    C.artifact_path("audit_report", ".md").write_text(summary, encoding="utf-8")
     print("\n" + summary)
 
 

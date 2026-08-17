@@ -23,7 +23,8 @@ import torch.nn as nn
 
 from . import config as C
 from .data import load_safety_dataset
-from .model_utils import extract_features, hidden_size, load_model, num_layers
+from .model_utils import (check_cache_model, extract_features, hidden_size,
+                          load_model, num_layers)
 from .probe import MLPProbe, Scaler, predict_proba, save_probe
 
 
@@ -36,12 +37,11 @@ def set_seed(seed: int) -> None:
 
 # --- Step 2 helper: extract-or-load cached features -------------------------
 def get_features(prompts: list[str], labels: list[int]) -> tuple[np.ndarray, np.ndarray, int]:
-    """Return (X, y, layer). Uses artifacts/features.npz if it matches this config."""
+    """Return (X, y, layer). Uses the model-tagged feature cache if it matches."""
     if C.FEATURES_CACHE.exists():
         cache = np.load(C.FEATURES_CACHE, allow_pickle=True)
-        if (int(cache["layer"]) == C.LAYER
-                and str(cache["model_id"]) == C.MODEL_ID
-                and cache["X"].shape[0] == len(prompts)):
+        check_cache_model(cache, C.FEATURES_CACHE, C.MODEL_ID)
+        if int(cache["layer"]) == C.LAYER and cache["X"].shape[0] == len(prompts):
             print(f"[features] cache hit {C.FEATURES_CACHE.name} "
                   f"X={cache['X'].shape}", file=sys.stderr)
             return cache["X"], cache["y"], int(cache["layer"])
@@ -50,8 +50,10 @@ def get_features(prompts: list[str], labels: list[int]) -> tuple[np.ndarray, np.
     layer = max(0, min(C.LAYER, num_layers(model) - 1))
     X = extract_features(model, tok, prompts, layer, pooling=C.POOLING)
     y = np.asarray(labels, dtype=np.int64)
+    # Stamp the MEASURED width (what is in X), not just the declared one.
     np.savez(C.FEATURES_CACHE, X=X, y=y, layer=layer,
-             model_id=C.MODEL_ID, hidden=hidden_size(model))
+             model_id=C.MODEL_ID, hidden=int(X.shape[1]),
+             hidden_declared=hidden_size(model))
     # free VRAM — we only need X from here on
     del model
     if torch.cuda.is_available():
