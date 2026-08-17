@@ -573,6 +573,73 @@ three ways. The scoop is TWO papers, not seven, and both were already known here
   negative — at T=0.02 coherence is intact yet refusal already falls 0.32→0.26.
 - **Voice F1.** On SVD, **age alone → ROC-AUC 0.871**; 200/1853 speakers have >1 session.
 
+## 18.9 SESSION CHECKPOINT — 2026-08-17 (NEWEST — read before 18.6)
+
+### Two instrument bugs, each of which silently manufactured a "finding"
+
+**1. EmbeddingGemma has been running CAUSAL, not bidirectional.**
+`transformers` 4.55.0 contains **zero** references to `use_bidirectional_attention`,
+so EmbeddingGemma-300M's config flag bound to nothing and was silently dropped.
+Proved by BEHAVIOUR, not by reading the config: two sequences sharing a 9-token prefix
+gave **bit-identical** hidden states (`max |Δh| = 0.000000e+00`). After upgrading to
+**transformers 5.15.0** the same test gives **5.74**. Test shipped as
+`audits/test_embedder_bidirectional.py`; full writeup in
+`audits/AUDIT_2026-08-17_embeddinggemma_causal.md`.
+
+- **`biencoder_guard` results SUSPENDED** (not reversed). Its conclusion — bi-encoder
+  loses to a trained head (macro-AP 0.240 frozen / 0.575 contrastive vs 0.658), binary
+  harm AUC ~0.59 against a 0.526 length confound — has a crippled encoder as a
+  *sufficient* alternative explanation. **What survives** (attention-mode-independent):
+  the **43.9×** latency/scaling result, and that a trained head structurally cannot
+  score a held-out policy.
+- **`cross_trajectory` gemma ablation SUSPENDED.** It existed to prove the effect is
+  aggregation, not a MiniLM artifact — and its "different embedder" was crippled. Note
+  the direction: the arm still *reproduced* the effect, so this is weaker evidence than
+  claimed, **not** evidence against.
+- Unaffected: `meerkat` (bge/minilm), `cross_trajectory/results.json` (minilm).
+  `multiturn_jailbreak` was `PENDING_RUN` with no metrics — nothing to suspend.
+- The upgrade to 5.x is a MAJOR bump; it was **verified, not assumed**: flas self-test,
+  a real Gemma-3-1B forward + hook (`hook restores exactly`), imports across 5 lessons.
+- **All causal `.npz` caches quarantined** to `_causal_invalid_caches/` (gitignored).
+- **OPEN:** cache keys fingerprint the DATA, not the encoder's BEHAVIOUR, so a naive
+  re-run would silently reuse causal vectors. Deferred *on purpose* while the SHADE run
+  was in flight; do it after. Version alone is not a sufficient key — a config field and
+  a version string both said "bidirectional" while the behaviour said otherwise.
+
+**2. `flas` v2 did not measure a dial; it diverged to NaN.** Field trained on
+last-token activations only while `FlowContext` transports every position ⇒ `‖v‖`=11.7
+off-distribution, and the step `dt·‖x‖·v` is a feedback loop: rel displacement
+0.69 → 6.09 → **99694**, NaN at ~10× residual norm ⇒ empty completions ⇒ **graded
+GIBBERISH and published as "the citable one."** Fixed (all-position training,
+`unit_velocity` making displacement `T·‖h‖` by construction, `BROKEN` verdict,
+representative probe). Guard verified load-bearing: **0/16 cells fail with the fix,
+16/16 without**. v2 artifacts quarantined; README retracted in place. **Retrain +
+re-run still PENDING.**
+
+### STA (`streaming_trajectory_aggregation`) — the live experiment
+Apparatus complete; **`results_agentdojo.json` was never persisted** and its corpora
+cache is gone, so the agentdojo log is NOT evidence (§18.8). That log recorded
+F0/F2/F3 **HOLD**, **F4 FAILS** (esn_cusum 0.796 vs binding bar 0.889; safetydrift
+0.386) — and it ran on causal embeddings, so F4's failure is doubly suspect.
+**SHADE run launched 2026-08-17** (n=500/class, pool 749/744, median 131 steps,
+`has_lead_time=True`) — the only corpus that can evaluate **F1** (the horizon
+hypothesis) and **F5** (lead time); both were `N/A` on agentdojo.
+
+### Literature added
+`corpus/LIT_2026-08_longcontext_crosstrajectory_latent.md` — 16 papers, 9
+WebFetch-verified. Unifying frame: **every attack is the same move at a different
+granularity — fragment the signal below the defender's scoring window**. Two findings
+that bear on existing lessons: SALO (2605.02958) says mean pooling *dilutes* the sparse
+refusal needle (our `hello_world` mean-pools at a fixed layer 12; `probe_tuning`'s layer
+sweep still has no code); and 2604.28129 attributes **50–59% FPR to binary turn labels**
+(`trajguard`/`multiturn_jailbreak` both label binary). Gate on everything latent:
+**2412.09565 drops latent-defence recall 100%→0% at ~90% jailbreak rate**, and every
+2026 method above is measured against non-adaptive attacks only.
+
+### The rule these two bugs pay for
+**A library warning about a silently-ignored parameter is a BLOCKER, not noise** — and
+**verify the behaviour, never the config field.** The config said `True` the whole time.
+
 ## 18.6 SESSION CHECKPOINT — 2026-08-02 (read this first on a new machine)
 
 ### What this session did, in one line
