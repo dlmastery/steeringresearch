@@ -589,9 +589,19 @@ gave **bit-identical** hidden states (`max |Δh| = 0.000000e+00`). After upgradi
 - **`biencoder_guard` results SUSPENDED** (not reversed). Its conclusion — bi-encoder
   loses to a trained head (macro-AP 0.240 frozen / 0.575 contrastive vs 0.658), binary
   harm AUC ~0.59 against a 0.526 length confound — has a crippled encoder as a
-  *sufficient* alternative explanation. **What survives** (attention-mode-independent):
-  the **43.9×** latency/scaling result, and that a trained head structurally cannot
-  score a held-out policy.
+  *sufficient* alternative explanation.
+  **What survives unambiguously:** only that a trained head structurally *cannot* score
+  a held-out policy (reported `N/A`, not a low score) — an architectural property.
+  **CONTESTED, and I got this wrong twice before checking:** I claimed the **43.9×**
+  latency result survives because cost does not depend on attention mode. True as far as
+  it goes, but this *specific ratio* is independently disputed — §18.5 names "the
+  withdrawn 64x / 40x / **43.91x** sequence", and git dates show that withdrawal
+  (`44e92ba`, 08-02) was written **after** the witnessed measurement (`9663880`, 07-31)
+  and still names it. The artifact does satisfy §18.5's own quoting rule
+  (`contended:false` in BOTH witnesses, 0 concurrent jobs). Either §18.5 is over-broad
+  or the witnesses do not rescue it — **unresolved; treat 43.91× as CONTESTED.** The
+  qualitative shape (bi flat 0.974→0.977s across 16→1024 labels; uni linear
+  0.98→42.92s) rests on the per-point seconds, not on the disputed ratio, and is safe.
 - **`cross_trajectory` gemma ablation — I SUSPENDED IT, THEN WITHDREW THAT.** I read
   `"embedder": "gemma"` as EmbeddingGemma. `config.py:70` defines
   `EMBEDDER_CHOICES = ("embeddinggemma", "gemma", "minilm")` as **three distinct
