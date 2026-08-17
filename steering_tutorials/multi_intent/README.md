@@ -74,9 +74,45 @@ under which orthogonalization should matter.
 |---|---|
 | source / loader | `common.data.load_concepts` — toxic-chat `openai_moderation` harm categories |
 | K concepts | 3 **well-populated** toxic-chat categories (sexual ~388, harassment ~143, violence ~111), ordered most-distinct-first. *Concept lessons are pool-limited: no category reaches 500, so this uses the available pool, not 500/class.* |
-| per concept | up to `N_PER_CONCEPT = 150` drawn → build the vector / `N_EVAL_PER_CONCEPT = 30` held-out eval (bumped from a trivially-tiny 5) |
+| per concept | `N_PER_CONCEPT = 500` requested (the whole pool); the shared loader's disjoint 40/30/30 split then yields the real eval `n` below. `N_EVAL_PER_CONCEPT` is **ignored** — the loader owns the split |
+| held-out eval **n** (the denominator of every rate) | **sexual 117 · harassment 43 · violence 34** at `N_PER_CONCEPT = 500`. Hard floor `MIN_EVAL_PER_CONCEPT = 30`, enforced at run time — the run **aborts** before the GPU if any concept is short |
 | shared baseline | benign prompts (common contrast origin) |
-| model + judge | abliterated `DavidAU/gemma-3-1b-it-heretic-...` (steered); off-family **Qwen2.5-3B** judge |
+| model + judge | abliterated `DavidAU/gemma-3-1b-it-heretic-...` (steered); off-family **Qwen2.5-3B** judge required (`STEER_JUDGE_MODEL`) and stamped into `results.json` |
+
+### Denominators and provenance
+
+Every rate this lesson reports is `count / eval_n` on a concept's held-out split,
+and `results.json` now carries both halves of that fraction:
+
+- **`eval_n`** (header) — per concept: `pool_available`, `extract_n`,
+  `achieved_n`, `pool_capped`; plus the enforced `floor_per_concept` (30), the
+  rubric target (`target_per_class` 500) and `min_achieved_eval_n`.
+- **per rung** — `n.per_concept`, `n.n_items`, `n.crosstalk_concept`,
+  `n.crosstalk_n`, and inside each arm a `per_concept` breakdown giving the `n`,
+  `success` and `gibberish` behind the mean.
+- **judge stamp** — `judge_id` / `is_self_judge` / `judge_model_id` /
+  `off_family`, taken from the judge object rather than from this README.
+
+`success` is the **unweighted mean of the K active concepts' refusal rates**, so
+it has no single denominator; `n_items` is the total graded at that rung, not a
+divisor. The flag `success_is_unweighted_mean_of_per_concept_rates` says so in
+the artifact.
+
+**Pool ceiling, stated plainly.** These toxic-chat harm concepts hold 388 / 143 /
+111 deduped prompts, so the repo's 500-per-class floor is **unreachable here** no
+matter what we request. Per the pool-limited rule we request the whole pool and
+report what it gives; `pool_capped: true` is written into the artifact and
+printed by the runner. Every rate is **SCREENING tier**.
+
+> ⚠ **The shipped `artifacts/results.json` predates all of this.** It was written
+> on 2026-07-24 and contains **no `n` key and no judge key anywhere** — so its
+> "off-family Qwen-3B judge" attribution below is a README claim that the
+> artifact cannot corroborate (this lesson is one of the eight UNKNOWN-judge
+> lessons in the CLAUDE.md §18.6 inventory). Its denominators were recovered
+> arithmetically from the reported rates: **sexual 45 · harassment 43 ·
+> violence 34** (it ran at the old `N_PER_CONCEPT = 150`). Those clear the 30
+> floor, but nothing in the file said so. The numbers stand as-is until a re-run
+> under the stamped runner replaces them.
 
 **What the lesson uses it for:** steer all K "refuse this category" directions at
 once and measure **interference** — naive raw-sum vs Gram-Schmidt
@@ -234,40 +270,68 @@ steering_tutorials.multi_intent.data, steering_tutorials.multi_intent.config"
 # unit test: Gram-Schmidt orthonormality, norm budget, mixture recovery
 python -m steering_tutorials.multi_intent.multi_intent
 
-# unit test: rate helpers + ladder summary
+# unit test: rate helpers, denominator block, eval-floor gate, ladder summary
+# (loads NO model; a bare invocation never touches the GPU)
 python -m steering_tutorials.multi_intent.run_multi_intent
 
-# data smoke: downloads JBB CSVs, builds the K concept splits (no model)
+# preflight: build the splits, print the real per-concept eval n, run the
+# 30/concept floor gate, and report which judge the env resolves to. Still CPU.
+python -m steering_tutorials.multi_intent.run_multi_intent --preflight
+
+# data smoke: downloads the shared CSVs, builds the K concept splits (no model)
 python -m steering_tutorials.multi_intent.data
 ```
 
 The full experiment (needs the GPU + the abliterated Gemma-3-1B):
 
 ```bash
-# Grade with an OFF-FAMILY judge (recommended): a 1B target self-judging is
-# unreliable, so point STEER_JUDGE_MODEL at an independent model.
+# The OFF-FAMILY judge is MANDATORY for reportable numbers: a 1B target
+# self-judging inflates refusal. Unset => the runner warns loudly and stamps
+# judge_id="self" / is_self_judge=true into results.json.
 STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
 python -c "from steering_tutorials.multi_intent.run_multi_intent import main; main()"
 # writes artifacts/results.json + success_vs_k.png
+
+# same thing via the module, on a host where a here-doc is awkward:
+STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
+python -m steering_tutorials.multi_intent.run_multi_intent --run
+
+# RAM-pressured host: shrink the whole ladder into one foreground window.
+# Anything below the pool is smoke tier and lands as pool_capped=true.
+MULTI_INTENT_N_PER_CONCEPT=150 STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
+python -m steering_tutorials.multi_intent.run_multi_intent --run
 ```
+
+At the default `N_PER_CONCEPT = 500` the ladder grades
+`2 arms x (117 + 43 + 34 eval prompts)` at K = 2 and K = 3 and `2 x (117 + 43)`
+at K = 1 — about **1.1k steered generations** plus one judge call each, up from
+~664 at the old `150`. Budget the GPU window accordingly.
 
 ---
 
 ## Results — measured vs. the claim
 
-The screening run (`artifacts/results.json`, one abliterated 1B target graded by
-an **off-family Qwen-3B judge** on the shared toxic-chat-derived concept prompts,
-per-concept α = 0.06) walks the ladder for both arms. **The ladder that actually
-ran is K = 1, 2, 3** — the run used three toxic-chat concepts, so **K = 4 and
-K = 5 never ran** and no number is reported for them anywhere on this page.
+The screening run (`artifacts/results.json`, one abliterated 1B target on the
+shared toxic-chat-derived concept prompts, per-concept α = 0.06) walks the ladder
+for both arms. **The ladder that actually ran is K = 1, 2, 3** — the run used
+three toxic-chat concepts, so **K = 4 and K = 5 never ran** and no number is
+reported for them anywhere on this page. The judge for this artifact is
+**unverifiable** — the file carries no judge stamp (see the warning above).
 
-Every rung, both arms, straight out of `results.json`:
+Every rung, both arms, straight out of `results.json`. The `n` columns are the
+denominators, **recovered arithmetically** because the artifact does not record
+them: per-concept eval splits of sexual 45 / harassment 43 / violence 34 at the
+`N_PER_CONCEPT = 150` this run used.
 
-| K | active concepts | raw success | raw gibberish | ortho success | ortho gibberish | budget √(Σα²) | cross-talk (raw / ortho) |
-|---|---|---|---|---|---|---|---|
-| 1 | sexual | 0.333 | 0.267 | 0.333 | 0.267 | 0.060 | 0.186 / 0.186 |
-| 2 | + harassment | 0.193 | 0.316 | **0.216** | 0.294 | 0.085 | 0.265 / 0.412 |
-| 3 | + violence | 0.137 | 0.523 | **0.237** | **0.217** | 0.104 | n/a / n/a |
+| K | active concepts | n graded (per arm) | raw success | raw gibberish | ortho success | ortho gibberish | budget √(Σα²) | cross-talk (raw / ortho) | n cross-talk |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | sexual | 45 | 0.333 | 0.267 | 0.333 | 0.267 | 0.060 | 0.186 / 0.186 | 43 |
+| 2 | + harassment | 88 | 0.193 | 0.316 | **0.216** | 0.294 | 0.085 | 0.265 / 0.412 | 34 |
+| 3 | + violence | 122 | 0.137 | 0.523 | **0.237** | **0.217** | 0.104 | n/a / n/a | — |
+
+`success` is the unweighted mean of the active concepts' rates, so the `n graded`
+column is the total items behind it, not a divisor: at K = 1, 0.333 is 15/45; at
+K = 2, 0.193 is the mean of 10/45 and 7/43.
 
 At K = 1 the two arms are identical by construction (Gram-Schmidt leaves the first
 vector untouched). Cross-talk is `NaN` at K = 3 because no inactive concept
@@ -292,11 +356,21 @@ the lesson predicts, visible in one screening run.
 Two things to hold against it. First, the one cross-talk rung that exists points
 the *other* way (ortho 0.412 vs raw 0.265) — orthogonalization bought coherence
 and success here, not off-target cleanliness. Second, this is screening tier: one
-seed, `N_EVAL_PER_CONCEPT = 30` per concept, a 1B target, and a judge measured at
-ROC-AUC 0.665–0.751 (see the instrument caveat above). Differences of a few
-points sit inside the judge's noise floor; the K=1→K=3 *trends* (a 0.20 success
-drop, a 0.26 gibberish rise in the raw arm) are the part large enough to read.
-None of this reaches the CLAUDE.md §7 evaluation bar.
+seed, per-concept eval splits of 45 / 43 / 34 (a single flipped verdict moves a
+concept's rate by 2–3 points), a 1B target, and a judge that the artifact does
+not even identify — measured elsewhere at ROC-AUC 0.665–0.751 (see the instrument
+caveat above). Differences of a few points sit inside the judge's noise floor;
+the K=1→K=3 *trends* (a 0.20 success drop, a 0.26 gibberish rise in the raw arm)
+are the part large enough to read. None of this reaches the CLAUDE.md §7
+evaluation bar.
+
+**What a re-run changes.** Under the current runner, `sexual`'s eval split goes
+45 → 117 (the whole pool) and its extract half 105 → 271, so the K = 1 rung and
+the shared-concept direction both get materially better estimated;
+`harassment` (43) and `violence` (34) are already at their pool ceiling and will
+not move. The re-run also writes the per-rung `n`, the `eval_n` header and the
+judge stamp, which is what makes the table above auditable rather than merely
+believable. Treat every number on this page as provisional until then.
 
 ---
 

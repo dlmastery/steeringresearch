@@ -73,13 +73,30 @@ CONCEPTS = [
 ]
 
 # Prompts to draw PER concept before the shared loader's 40/30/30 exemplars/steer/
-# eval split (``extract`` = exemplars + steer; ``eval`` = the disjoint 30%). These
-# concepts are POOL-LIMITED (sexual ~388, harassment ~143, violence ~111), so a
-# per-concept count cannot reach 500 — 150 just requests the available pool and the
-# loader returns what each concept has. The benign baseline is a shared, larger,
-# lower-variance origin.
-N_PER_CONCEPT = 150
+# eval split (``extract`` = exemplars + steer; ``eval`` = the disjoint 30%).
+#
+# POOL-LIMITED, and we now say so in the artifact rather than only in a comment.
+# The kept toxic-chat concepts hold roughly sexual ~388 / harassment ~143 /
+# violence ~111 deduped prompts, so the CLAUDE.md sec.17 rubric-1 floor of 500 per
+# class is UNREACHABLE here no matter what we request. Rubric item 2 governs
+# instead: maximise within the pool and state the cap explicitly. We therefore
+# REQUEST 500 (was 150, which left ~60% of the sexual pool unused) and let the
+# loader return whatever each concept actually has. Effect on the eval split:
+#   sexual      388 pool -> ~116 eval  (was 45)
+#   harassment  143 pool -> ~ 43 eval  (unchanged; 150 already exceeded the pool)
+#   violence    111 pool -> ~ 33 eval  (was 34)
+# Larger ``extract`` halves also mean a better-estimated diff-of-means direction
+# (rubric item 6: small-N directions are provisional and have flipped findings).
+#
+# ``MULTI_INTENT_N_PER_CONCEPT`` shrinks the whole run into one foreground GPU
+# window on a RAM-pressured host; anything below the pool is SMOKE tier and the
+# runner stamps ``pool_capped`` / ``achieved_n`` so the artifact shows it.
+N_PER_CONCEPT = int(os.environ.get("MULTI_INTENT_N_PER_CONCEPT", "500"))
 N_BENIGN_BASELINE = 40
+
+# Rubric-1 target, recorded in results.json alongside what we actually achieved so
+# the gap between the standard and this lesson's pool ceiling is on the record.
+TARGET_PER_CLASS = 500
 
 # --- Steering strengths ------------------------------------------------------
 # Per-concept alpha under ``operation="relative_add"``: each concept's unit
@@ -98,6 +115,20 @@ PER_CONCEPT_ALPHA = 0.06     # the alpha used in the K=1..N stacking ladder
 # this value), so this value is passed through but IGNORED — kept only for
 # backward-compatible call sites.
 N_EVAL_PER_CONCEPT = 30  # was a trivially-tiny 5
+
+# HARD FLOOR, enforced at run time (not a comment, not a hope). If any concept's
+# held-out eval split comes back below this, ``run_multi_intent.main()`` ABORTS
+# before touching the GPU rather than shipping a rate whose denominator is too
+# small to read. CLAUDE.md sec.17 rubric item 2: never build a per-concept number
+# from < 30 examples.
+MIN_EVAL_PER_CONCEPT = 30
+
+# How many (prompt, response, verdict) triples we keep verbatim in results.json.
+# This is a SAMPLE for reading, never a denominator — the rates are computed over
+# every eval prompt, and results.json records both numbers so the two cannot be
+# confused.
+EXAMPLES_CAP = 40
+
 SEED = 0
 MAX_NEW_TOKENS = 48
 

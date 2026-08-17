@@ -23,12 +23,18 @@ We return a nested structure:
 
     {
       "concepts": {
-          "sexual":     {"extract": [...], "eval": [...]},
-          "harassment": {"extract": [...], "eval": [...]},
+          "sexual":     {"extract": [...], "eval": [...], "n_available": 388},
+          "harassment": {"extract": [...], "eval": [...], "n_available": 143},
           ...
       },
       "baseline": [ ...benign prompts... ],   # the shared contrast origin
     }
+
+``n_available`` is the concept's FULL deduped pool in the shared dataset, carried
+through untouched so the runner can state, in ``results.json``, whether a small
+``eval`` is a pool ceiling (honest, unavoidable) or an under-request (a defect).
+Every rate this lesson reports is `count / len(eval)`, so that denominator has to
+travel with the number.
 
 ``extract`` prompts build each concept's diff-of-means vector (the shared loader's
 exemplars + steer halves pooled); ``eval`` prompts (disjoint) measure steering
@@ -82,13 +88,21 @@ def load_multi_intent(
         s = src[name]
         extract = list(s["exemplars"]) + list(s["steer"])
         evalset = list(s["eval"])
-        out_concepts[name] = {"extract": extract, "eval": evalset}
+        out_concepts[name] = {
+            "extract": extract,
+            "eval": evalset,
+            # The concept's FULL pool before ``n_per_concept`` capping. The runner
+            # writes this into results.json so a reader can tell a pool ceiling
+            # apart from an under-request without re-running the loader.
+            "n_available": int(s.get("n_available", len(extract) + len(evalset))),
+        }
 
     baseline = list(common["baseline"])[:n_benign_baseline]
 
     for name, split in out_concepts.items():
-        print(f"[data] {name:12s} extract={len(split['extract'])} "
-              f"eval={len(split['eval'])}", file=sys.stderr)
+        print(f"[data] {name:12s} pool={split['n_available']:4d} "
+              f"extract={len(split['extract'])} eval={len(split['eval'])}",
+              file=sys.stderr)
     print(f"[data] shared benign baseline = {len(baseline)}", file=sys.stderr)
     return {"concepts": out_concepts, "baseline": baseline}
 
@@ -106,5 +120,6 @@ if __name__ == "__main__":  # smoke: python -m steering_tutorials.multi_intent.d
     print(f"concepts={list(d['concepts'])}  baseline={len(d['baseline'])}")
     for name, split in d["concepts"].items():
         ex = split["extract"][0] if split["extract"] else "(none)"
-        print(f"[{name}] extract={len(split['extract'])} eval={len(split['eval'])} "
+        print(f"[{name}] pool={split['n_available']} "
+              f"extract={len(split['extract'])} eval={len(split['eval'])} "
               f"extract[0]={ex[:70]}")
