@@ -617,8 +617,15 @@ representative probe). Guard verified load-bearing: **0/16 cells fail with the f
 re-run still PENDING.**
 
 ### STA (`streaming_trajectory_aggregation`) — the live experiment
-Apparatus complete; **`results_agentdojo.json` was never persisted** and its corpora
-cache is gone, so the agentdojo log is NOT evidence (§18.8). That log recorded
+Apparatus complete. **`results_agentdojo.json` is absent because the run was
+DELIBERATELY DISCARDED, not because persistence failed** — traced 2026-08-17. The
+write path is sound (`json.dump` → `[write]` → summary, `run_sta.py:431-434`) and the
+log contains its `[write]` line at line 37, so the file was created and then removed
+by commit `581dd98` ("the in-flight run is INVALID and discarded") after a code audit
+found three critical bugs. `_sta_agentdojo.log` is a leftover of that discarded run.
+**Do not re-derive a persistence bug from its absence.** The log is still not evidence
+(§18.8) — but because the run was voided, not because the harness lost it. That log
+recorded
 F0/F2/F3 **HOLD**, **F4 FAILS** (esn_cusum 0.796 vs binding bar 0.889; safetydrift
 0.386) — and it ran on causal embeddings, so F4's failure is doubly suspect.
 **SHADE run launched 2026-08-17** (n=500/class, pool 749/744, median 131 steps,
