@@ -1,0 +1,7 @@
+# The layer-feature cache written by extract_layers.py is a LARGE regenerable
+# intermediate, not a lesson artifact: H is fp16 [n_prompts, n_layers, n_poolings,
+# hidden], i.e. ~180 MB at 1000 prompts x 26 layers x 3 poolings x 1152 dims.
+# Unlike the small lesson binaries (probe.pt, features.npz) it is NOT force-added.
+# It is fully reproducible from the config stamped in its own header (`meta`), and
+# every number derived from it carries that fingerprint in sweep_layers_*.json.
+layer_features_*.npz
