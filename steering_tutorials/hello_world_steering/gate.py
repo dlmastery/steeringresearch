@@ -57,11 +57,20 @@ class HarmGate:
         self.model = model
         self.tok = tok
 
-        # Default to the lesson-1 artifact, resolved relative to THIS file so
-        # the tutorial runs from any working directory.
+        # Default to the lesson-1 probe TRAINED ON THIS MODEL — not to a fixed
+        # filename. This line used to hardcode `hello_world/artifacts/probe.pt`,
+        # which is the 1B (1152-d) probe, so running the gate on Gemma-3-4B fed
+        # 2560-d activations into it and died in `predict_proba` below. The
+        # matching `probe_4b.pt` already existed; nothing routed to it.
+        #
+        # `probe_path_for` resolves the checkpoint by model, so 1B keeps the
+        # historical name and 4B resolves to the 4B artifact. An explicit
+        # `probe_path` argument still wins.
         if probe_path is None:
-            probe_path = (Path(__file__).resolve().parent.parent
-                          / "hello_world" / "artifacts" / "probe.pt")
+            from steering_tutorials.hello_world import config as hw_config
+            model_id = getattr(getattr(model, "config", None), "_name_or_path", None)
+            probe_path = (hw_config.probe_path_for(model_id) if model_id
+                          else hw_config.artifact_path("probe", ".pt"))
         self.probe_path = Path(probe_path)
 
         # load_probe returns (probe, scaler, meta). meta carries model_id,
