@@ -60,11 +60,19 @@ import time
 import numpy as np
 
 from . import config as C
+from . import data_floor as DF
 from .stacking import Prior, build_priors
 
-# --- run-size knobs (env-capped so the whole thing fits one foreground window)
-N_HARM = int(os.environ.get("STACK_HC_N_HARM") or 40)
-N_BENIGN = int(os.environ.get("STACK_HC_N_BENIGN") or 20)
+# --- run-size knobs -------------------------------------------------------- #
+# DEFAULTS SIT AT THE RUBRIC FLOOR (CLAUDE.md sec.17 item 1: >=500 per class).
+# The first version of this file defaulted to 40 harmful / **20 benign** and said
+# nothing about it, so a hard floor violation shipped as a headline table. The
+# env caps still exist -- a capped run is a legitimate screening slice on this
+# host -- but now the achieved n is stamped into results["data_floor"], a
+# shortfall prints a warning, and ``capped_by`` records whether the corpus or the
+# operator caused it. See data_floor.py.
+N_HARM = int(os.environ.get("STACK_HC_N_HARM") or DF.FLOOR_PER_CLASS)
+N_BENIGN = int(os.environ.get("STACK_HC_N_BENIGN") or DF.FLOOR_PER_CLASS)
 N_EXTRACT = int(os.environ.get("STACK_HC_N_EXTRACT") or C.N_EXTRACT)
 N_BUDGET = int(os.environ.get("STACK_HC_BUDGET_N") or C.N_NORM_BUDGET_PROMPTS)
 CLAMP_CAP = float(os.environ.get("STACK_HC_CLAMP_CAP") or 0.10)
@@ -206,13 +214,31 @@ def _fmt(x, nd=3):
     return "  n/a " if x is None else f"{x:>6.{nd}f}"
 
 
+def _floor_line(res: dict) -> str:
+    """One line stating whether this run met the >=500/class rubric floor.
+
+    Printed inside the summary table so the floor cannot be read past. A report
+    rebuilt from an older checkpoint that predates the stamp says so, rather than
+    implying compliance it cannot demonstrate.
+    """
+    d = res.get("data_floor")
+    if not d:
+        return ("data floor: NOT STAMPED (this report was rebuilt from a checkpoint "
+                "written before data_floor.py existed; n is in meta)")
+    return (f"data floor: harmful n={d['achieved_n_harmful']} "
+            f"benign n={d['achieved_n_benign']} (floor {d['floor_per_class']}, "
+            f"meets={d['meets_floor']}, pool_capped={d['pool_capped']}, "
+            f"env_capped={d['env_capped']})")
+
+
 def summary_text(res: dict) -> str:
-    L = ["", "=" * 96, "STACKING HILL-CLIMB — additive ladder (SCREENING tier)", "=" * 96,
+    L = ["", "=" * 96, "STACKING HILL-CLIMB - additive ladder (SCREENING tier)", "=" * 96,
          f"model {res['meta']['model_id']}",
          f"n_harm={res['meta']['n_harm']}  n_benign={res['meta']['n_benign']}  "
          f"extract={res['meta']['n_extract']}/class  clamp_cap={res['meta']['clamp_cap']}  "
          f"judge={res['meta']['judge_id']}",
          f"cos(C, v_refusal) = {res['directions']['cos_C_refusal']:.2e}",
+         _floor_line(res),
          "",
          f"  {'rung':<5} {'added':<7} {'refus':>7} {'p_ref':>7} {'gibb':>7} "
          f"{'budget':>7} {'dRefus':>7} {'standln':>8} {'competes':>9} {'ben_gib':>8}"]
@@ -254,7 +280,7 @@ def main() -> dict:
     from steering_tutorials.hello_world_steering.judge import Judge, JudgeUnavailable
     from steering_tutorials.hello_world_steering.gate import HarmGate
     from steering_tutorials.hello_world_steering.steer_vector import load_vector
-    from steering_tutorials.common.data import load_harmful_benign
+    from steering_tutorials.common.data import build_harmful_benign
 
     from .hillclimb import apply_config, measure_norm_budget, orthogonal_direction
 
@@ -267,13 +293,37 @@ def main() -> dict:
     primary = min(C.PRIMARY_LAYER, num_layers(model) - 1)
     orthogonal = min(C.ORTHOGONAL_LAYER, num_layers(model) - 1)
 
-    data = load_harmful_benign(C.N_PER_CLASS, C.SEED)
-    ex_h = data["harmful"][:N_EXTRACT]
-    ex_b = data["benign"][:N_EXTRACT]
-    ev_h = data["harmful"][C.N_EXTRACT:C.N_EXTRACT + N_HARM]
-    ev_b = data["benign"][C.N_EXTRACT:C.N_EXTRACT + N_BENIGN]
-    print(f"[split] extract {len(ex_h)}h/{len(ex_b)}b   eval {len(ev_h)}h/{len(ev_b)}b",
-          file=sys.stderr)
+    # --- data: ask for extract + the eval floor, then report what was achieved --
+    # The loader returns a BALANCED set, so both classes cap at the harmful pool
+    # (792 at seed 0: 693 unique toxic-chat + 99 length-windowed JBB). The extract
+    # offset is PINNED at C.N_EXTRACT because the pre-registration
+    # (PREREGISTRATION_hillclimb.md) names "300 harmful vs 300 benign" and the
+    # committed refusal_vector.pt was built at n=300 -- so the eval slice lands at
+    # 492/class, eight short of the floor, and is reported pool_capped rather than
+    # bought by silently re-cutting a pre-registered split. (run_near_orthogonal,
+    # which has no pre-registered extract to honour, trims to 292 and reaches 500.)
+    want_per_class = C.N_EXTRACT + max(N_HARM, N_BENIGN)
+    rec = build_harmful_benign(n_per_class=want_per_class, seed=C.SEED)
+    harmful_all = [r["prompt"] for r in rec["harmful"]]
+    benign_all = [r["prompt"] for r in rec["benign"]]
+    hdr = rec["header"]
+    pool_per_class = min(len(harmful_all), len(benign_all))
+    plan = DF.plan_split(pool_per_class, C.N_EXTRACT, max(N_HARM, N_BENIGN),
+                         preserve_extract=True)
+
+    ex_h = harmful_all[:N_EXTRACT]
+    ex_b = benign_all[:N_EXTRACT]
+    ev_h = harmful_all[C.N_EXTRACT:C.N_EXTRACT + N_HARM]
+    ev_b = benign_all[C.N_EXTRACT:C.N_EXTRACT + N_BENIGN]
+    data_floor = DF.floor_report(
+        len(ev_h), len(ev_b), plan,
+        requested_harmful=N_HARM, requested_benign=N_BENIGN,
+        pool_harmful_raw=hdr.get("harmful_pool_after_topup"),
+        pool_benign_raw=hdr.get("benign_pool"))
+    print(f"[split] extract {len(ex_h)}h/{len(ex_b)}b   eval {len(ev_h)}h/{len(ev_b)}b   "
+          f"pool {pool_per_class}/class", file=sys.stderr)
+    print(f"[split] {plan['note']}", file=sys.stderr)
+    DF.warn_if_below_floor(data_floor)
 
     # --- directions ---------------------------------------------------------
     # One pass over the extract set gives BOTH the refusal diff-of-means (the
@@ -467,9 +517,15 @@ def main() -> dict:
             # before, plus is_self_judge / judge_model_id so a self-judged run
             # is unmistakable on disk (CLAUDE.md sec.17, rubric item 3).
             **judge.stamp(),
-            "tier": "SCREENING (single seed, small n, judge below 0.85 AUC bar)",
+            "tier": "SCREENING (single seed, one alpha, judge below 0.85 AUC bar)",
             "preregistration": "PREREGISTRATION_hillclimb.md",
         },
+        # The rubric floor, stamped rather than remembered. meets_floor=false is a
+        # fact about THIS run and travels with its numbers wherever they are read.
+        "data_floor": data_floor,
+        "dataset_header": {k: hdr[k] for k in
+                           ("n_harmful", "n_benign", "harmful_pool_after_topup",
+                            "benign_pool", "median_char_length") if k in hdr},
         "vector_check": vector_check,
         "directions": {"cos_C_refusal": cos_c, "refusal_norm": v_norm},
         "configs": partial,
@@ -483,6 +539,7 @@ def main() -> dict:
         print(f"[warn] plot failed: {e}", file=sys.stderr)
     print(f"[save] {RESULTS_PATH}", file=sys.stderr)
     print(summary_text(results))
+    DF.warn_if_below_floor(data_floor)   # last thing on screen, not the first
     return results
 
 
@@ -564,7 +621,7 @@ def _find_contradictions(cfg: dict, ladder: "list[dict]") -> "list[str]":
         out.append(
             f"DIRECTION SPECIFICITY: prior A (the refusal diff-of-means) scores "
             f"{a:.3f} and prior C (an EXACTLY orthogonal direction, cos=0, same "
-            f"site, same alpha) scores {c:.3f} — indistinguishable. At this alpha "
+            f"site, same alpha) scores {c:.3f} - indistinguishable. At this alpha "
             f"the measured effect is NOT direction-specific, so no rung of this "
             f"ladder can be attributed to the refusal concept.")
 
@@ -576,7 +633,7 @@ def _find_contradictions(cfg: dict, ladder: "list[dict]") -> "list[str]":
         if singles_all and all(v < r0 for v in singles_all.values()):
             out.append(
                 f"NO PRIOR HELPS: every single prior scores BELOW the unsteered "
-                f"baseline ({r0:.3f}) — "
+                f"baseline ({r0:.3f}) - "
                 + ", ".join(f"{k}={v:.3f}" for k, v in singles_all.items())
                 + ". The ladder composes priors none of which raise refusal on "
                   "their own, so 'stacking' has no positive effect to add.")
@@ -588,7 +645,7 @@ def _find_contradictions(cfg: dict, ladder: "list[dict]") -> "list[str]":
                 f"{row['rung']}: stack refusal {row['refusal_rate']:.3f} is BELOW its "
                 f"best constituent {row['best_constituent']} "
                 f"({row['best_constituent_refusal']:.3f}, delta "
-                f"{row['vs_best_constituent']:+.3f}) — competition by the README's own "
+                f"{row['vs_best_constituent']:+.3f}) - competition by the README's own "
                 f"'no gain over the best single prior' criterion.")
 
     # The base-prior audit: is the ladder anchored on the worse single prior?
@@ -599,7 +656,7 @@ def _find_contradictions(cfg: dict, ladder: "list[dict]") -> "list[str]":
         if others[bk] > r1:
             out.append(
                 f"LADDER ANCHOR: the base rung [A] ({r1:.3f} refusal) is NOT the best "
-                f"single prior — {bk} scores {others[bk]:.3f}. Every marginal measured "
+                f"single prior - {bk} scores {others[bk]:.3f}. Every marginal measured "
                 f"from [A] is measured from the wrong base.")
     return out
 
@@ -705,9 +762,17 @@ def _self_test() -> None:
         finally:
             z.close()   # Windows will not unlink an npz whose handle is open
 
+    # (f) the data-floor line reports the stamp, and says so when there is none.
+    assert "meets=False" in _floor_line({"data_floor": DF.floor_report(
+        40, 20, DF.plan_split(792, 300, 500, preserve_extract=True), 40, 20)})
+    assert "NOT STAMPED" in _floor_line({"meta": {}})
+    assert "meets=True" in _floor_line({"data_floor": DF.floor_report(
+        500, 500, DF.plan_split(792, 292, 500), 500, 500)})
+
     print("[self-test] OK - summarize counts skips; marginal-vs-standalone "
           "competition test correct; missing cells stay None; contradiction "
-          "detector fires; directions stamp round-trips.")
+          "detector fires; directions stamp round-trips; the data-floor line "
+          "reports meets/NOT STAMPED honestly.")
 
 
 def rebuild_report() -> dict:
@@ -718,7 +783,7 @@ def rebuild_report() -> dict:
     the report can never claim a provenance it did not have.
     """
     if not RESULTS_PATH.exists():
-        raise SystemExit(f"no {RESULTS_PATH} to rebuild from — run the measurement first")
+        raise SystemExit(f"no {RESULTS_PATH} to rebuild from - run the measurement first")
     prev = json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
     cfg = prev["configs"]
     ladder = build_ladder_table(cfg)
@@ -727,6 +792,11 @@ def rebuild_report() -> dict:
         "directions": prev["directions"], "configs": cfg, "ladder": ladder,
         "contradictions": _find_contradictions(cfg, ladder),
     }
+    # Carried verbatim when the measuring run stamped them; ABSENT (not fabricated)
+    # when it did not, which is what _floor_line reports.
+    for k in ("data_floor", "dataset_header"):
+        if k in prev:
+            out[k] = prev[k]
     RESULTS_PATH.write_text(json.dumps(out, indent=2), encoding="utf-8")
     try:
         _plot(out, LADDER_PNG)

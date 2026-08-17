@@ -63,6 +63,9 @@ Full file-by-file walkthrough below.
 6. [Code walkthrough, file by file](#6-code-walkthrough-file-by-file)
 7. [Run it](#7-run-it)
 8. [How to read the output](#8-how-to-read-the-output)
+8b. [The stacking hill-climb](#8b-the-stacking-hill-climb--a-wider-ladder-pre-registered)
+8c. [The near-orthogonal arm — clause 3, with a stopping condition](#8c-the-near-orthogonal-arm--clause-3-with-a-stopping-condition)
+8d. [The data floor](#8d-the-data-floor--what-changed-and-what-the-pool-actually-holds)
 9. [Honest caveats](#9-honest-caveats)
 10. [Links](#10-links)
 
@@ -229,6 +232,13 @@ its gibberish rate climbs. The right panel of `artifacts/ladder.png` plots this
 budget per rung next to the refusal/gibberish panel, so you can read the collapse
 as a budget story, not a mystery.
 
+This section says the budget *decides* stack-vs-compete but never says **how
+much** a given direction costs, so it can never say when to stop.
+[Section 8c](#8c-the-near-orthogonal-arm--clause-3-with-a-stopping-condition)
+supplies the closed form — `alpha·√(1ᵀG1)` over the pairwise cosine matrix `G`,
+i.e. `alpha·k` for parallel directions and `alpha·√k` for orthogonal ones — which
+turns the ceiling into a countable capacity and gives the ladder a stopping rule.
+
 ---
 
 ## 6. Code walkthrough, file by file
@@ -238,6 +248,11 @@ as a budget story, not a mystery.
 | `config.py` | every knob: `MODEL_ID`, the two sites (`PRIMARY_LAYER=12`, `ORTHOGONAL_LAYER=8`), `STACK_ALPHA`, `COMPETE_ADD_FRACTION`, data split, paths. |
 | `stacking.py` | the mechanical core: `Prior`, `stack_contexts` (compose N `SteeringContext`s via `ExitStack`), `apply_stack` (steered decode under the whole stack), `build_priors` (A/B/B' from one refusal direction), `ladder_rungs` (the 2→N ladder). CPU self-test verifies composed-delta math (disjoint + same-site) **and** that every hook is removed on exit. |
 | `run_stacking.py` | the orchestrator (all model work under `main()`): extract the refusal vector, rescale B', walk the ladder measuring refusal/gibberish/norm-budget per rung, classify stack-vs-compete, save `results.json` + `ladder.png`. Pure helpers (`_rates`, `classify_ladder`) are unit-testable without a model. |
+| `hillclimb.py` | the extra pieces §8b needs: an exactly-orthogonal direction, the norm/manifold `norm_clamp`, the CAST `gated_generate`, and `measure_norm_budget` (N5, clamp-aware). CPU self-test. |
+| `run_hillclimb.py` | §8b's pre-registered wider ladder: unsteered R0, every prior's standalone, the two meta-layers, the contradiction detector. Resumable. |
+| `near_orthogonal.py` | §8c's mechanics: `rotate_toward` (a direction at an EXACT cosine), `orthonormal_complement_basis`, `gram_cosines`, `predicted_budget` (`alpha·√(1ᵀG1)`), `orthogonal_capacity`, `admit_direction`, and `replay_ladder` (the revertible KEEP/DROP/STOP walk). CPU self-test covers all of it. |
+| `run_near_orthogonal.py` | §8c's orchestrator: the cosine sweep + the budget-limited ladder, pre-flight admission before any generation, resumable per-config checkpoints, `--report` / `--selftest`. |
+| `data_floor.py` | §8d: the ≥500/class floor as code — `plan_split`, `floor_report` (`pool_capped` vs `env_capped`), `warn_if_below_floor`. CPU self-test. |
 | `README.md` | this file. |
 
 ### Reused verbatim from lesson 2 (`hello_world_steering`)
@@ -267,6 +282,12 @@ python -m steering_tutorials.stacking.stacking
 
 # 2. import + pure-helper sanity (no model touched)
 python -c "import steering_tutorials.stacking.run_stacking as R; print(R.classify_ladder)"
+
+# 3. the near-orthogonal mechanics + the data-floor planner (sections 8c / 8d)
+python -m steering_tutorials.stacking.near_orthogonal
+python -m steering_tutorials.stacking.data_floor
+python -m steering_tutorials.stacking.run_near_orthogonal --selftest
+python -m steering_tutorials.stacking.run_hillclimb --selftest
 ```
 
 The full ladder (needs the abliterated Gemma-3-1B + a GPU; greedy decoding):
@@ -372,9 +393,17 @@ never tests the third (**near-orthogonal direction**), never runs the two
 has no unsteered baseline — so a "marginal" can never be compared to a prior's
 standalone effect, and competition is undetectable.
 
-`run_hillclimb.py` closes that. Classifications were written to
+`run_hillclimb.py` closes most of that. Classifications were written to
 [`PREREGISTRATION_hillclimb.md`](PREREGISTRATION_hillclimb.md) **before** the
 run; they are reported below unrevised, whether or not the measurement agreed.
+
+It does **not** close the near-orthogonal clause, and it is worth being exact
+about why. Prior C is *exactly* orthogonal (cos = 3e-08), it is added **once**,
+and no rung of that ladder can ever stop — so the clause's own wording, *stack
+**until the norm budget is spent***, is never put to a test. A clause with a
+stopping condition in it cannot be tested by a ladder without one. That is what
+[section 8c](#8c-the-near-orthogonal-arm--clause-3-with-a-stopping-condition)
+adds.
 
 ```bash
 STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
@@ -406,6 +435,18 @@ same direction, different operation). Every other pair was predicted **STACK**;
 A × C and B′ × C were predicted "STACK *until the norm budget is spent*".
 
 ### The measured ladder — n=40 held-out harmful, off-family Qwen-3B judge, SCREENING
+
+> **DATA-FLOOR VIOLATION in the table below — do not quote it as a headline.**
+> These cells were measured at **n=40 harmful / n=20 benign**. The course rubric
+> (CLAUDE.md §17 item 1) sets a hard floor of **≥500 per class**, and 20 benign
+> is not a borderline call. The defect was in the code, not just the write-up:
+> `run_hillclimb.py` *defaulted* to 40/20 and nothing in the run said so. Fixed —
+> the defaults now sit at the floor, every run stamps `results["data_floor"]`
+> with the achieved n, and a shortfall prints a warning that distinguishes a
+> corpus limit (`pool_capped`) from an operator's env cap (`env_capped`). See
+> [section 8d](#8d-the-data-floor-what-changed-and-what-the-pool-actually-holds).
+> **The numbers below are the old capped run and have not been re-measured**;
+> re-running at the new defaults will produce different ones.
 
 Each rung adds exactly one prior. The forbidden all-on hybrid is not built: the
 ladder contains only priors pre-classified STACK, and the COMPETE pair is a
@@ -494,6 +535,206 @@ the ladder there — not more rungs at this α.
 *(`AUDIT.md` on this lesson is **stale**: its check #3 verifies the README
 against refusal 0.667/0.333/0.667/0.50 at n≈12, numbers that no longer exist in
 `results.json` (now 0.20/0.06/0.073/0.04 at n=150). It should be re-run.)*
+
+---
+
+## 8c. The near-orthogonal arm — clause 3, with a stopping condition
+
+**Status: code complete, CPU-verified, NOT YET RUN.** Every number in this
+section is a *prediction* or a *definition*; there is no measured table here
+because the 4090 was busy. `artifacts/near_ortho_results.json` does not exist
+until someone runs it, and its absence is the honest state of this claim.
+
+The §9 rule has three clauses. §8b measured two. The third —
+
+```
+ near-orthogonal DIRECTIONS ....... STACK **until the norm budget is spent**
+```
+
+— has two halves, and this lesson had tested neither. *How near is "near"?* was
+answered only at cos = 0 (prior C). *When do you stop?* was never asked at all,
+because no ladder here could stop.
+
+### Arm 1 — the cosine sweep: "near-orthogonal" as a dial
+
+`near_orthogonal.rotate_toward(v, u, t)` returns a unit direction at **exactly**
+cosine `t` to the refusal direction: `w = t·v + √(1−t²)·u` with `u ⟂ v`, so
+`|w| = 1` and `w·v = t` identically — no fitting, no approximation. Sweeping
+`t ∈ {0.0, 0.25, 0.5, 0.75, 0.95}` walks the same-site pair `[A, W(t)]`
+continuously **out of** the STACK clause and **into** the COMPETE clause (at
+`t = 1` the pair is literally A at double strength). If the §9 boundary is real
+it has a location, and this is where it would appear.
+
+Every cosine in the report is **re-measured from the arrays actually handed to
+the hooks** (`gram_cosines`), never quoted from the construction — the same
+discipline HC-S earned the hard way, where cos = 0.966 directions turned out
+*not* to be interchangeable.
+
+Each cell is read against **both** criteria, and neither is swapped in after the
+fact: `vs_best_constituent` (this README's own bar — a stack that does not beat
+the better of its two constituents has not stacked) and
+`marginal_vs_standalone` (the bar §8b pre-registered).
+
+### Arm 2 — the budget-limited, revertible ladder
+
+Base `[A]`, then one near-orthogonal direction per rung. The candidates `w_i` are
+built at `cos(w_i, v) = 0.20` — *near*-orthogonal, not orthogonal, since the
+orthogonal endpoint is what §8b already measured — from activation variance left
+after deflating the refusal axis, so `cos(w_i, w_j) = 0.04` in closed form and is
+checked against the measured Gram matrix.
+
+**The norm budget, as arithmetic.** For unit directions injected at one site with
+equal relative step `alpha`, the first-order composed displacement is
+
+```
+   ||Δh|| / ||h||  =  alpha · sqrt( 1ᵀ G 1 ),     G = pairwise cosine matrix
+```
+
+which *is* the stack-vs-compete mechanism in closed form:
+
+| geometry | G | budget cost | §9 clause |
+|---|---|---|---|
+| k parallel directions | all-ones | `alpha·k` | COMPETE (double-counts the plane) |
+| k orthogonal directions | identity | `alpha·√k` | STACK |
+| k at cos=0.20 | 1 on the diagonal, 0.04 off | between the two | STACK, at a measurable premium |
+
+So orthogonality buys exactly a factor `√k`, and the budget ceiling converts into
+a **capacity**: `orthogonal_capacity(alpha, ceiling)` = `⌊(ceiling² − spent²)/alpha²⌋`
+more steps.
+
+**This is where the arm earns its keep, and it costs no GPU time.** At
+`alpha=0.08` under a `ceiling=0.20`:
+
+| family | budget after k additions to `[A]` | how many fit |
+|---|---|---|
+| exactly orthogonal (`cos=0`) | `0.08·√(k+1)` | **5** |
+| this ladder's `cos=0.20` family | 0.124 · 0.158 · 0.187 · **0.213** | **3** |
+
+The 4th candidate is refused at **pre-flight**, before a single token is
+generated, on `BUDGET_EXCEEDED` — 0.213 > 0.20. That gap, 5 → 3, *is* the
+near-orthogonality premium: a cosine of 0.20 looks negligible and costs 40 % of
+the stack's capacity, because the cross terms enter `1ᵀG1` linearly while the
+diagonal only grows by one. (Verified arithmetically in the module's self-test
+and in a synthetic dry run of the ladder; the numbers above are exact
+consequences of the geometry, not measurements of the model.)
+
+An earlier draft of this section predicted the opposite — that `K=4` would sit
+comfortably under the ceiling and coherence would bind first. That was the
+exactly-orthogonal capacity (6) misapplied to a `cos=0.20` family. The dry run
+caught it. It is corrected here rather than quietly deleted, because the mistake
+is the point: *near*-orthogonal is not "basically orthogonal", and eyeballing a
+cosine is not an account of the budget.
+
+The pre-flight table is the **plan** (it assumes every candidate is kept); the
+live ladder re-runs the same admission test against the rungs actually **kept**,
+since a dropped rung hands its budget back. Both are in the JSON
+(`preflight` and `admissions`).
+
+The prediction is reported beside the **measured** N5 budget on every rung. The
+formula drops an O(alpha²) term (the hooks fire sequentially, so each one's
+`||h||` reference is already nudged), so a measured/predicted ratio above 1 is
+that compounding — the gap is data, not error.
+
+**Two gates, and a revert.** A candidate must first pass
+`admit_direction` — pure arithmetic, run *before any generation*, refusing on
+`NOT_NEAR_ORTHOGONAL` (|cos| ≥ 0.35 against an admitted direction; above that bar
+§9 calls it the same direction, i.e. COMPETE, and it does not belong in a stack
+ladder) or `BUDGET_EXCEEDED`. Measured rungs then face four pre-registered rules:
+
+| rule | fires when | consequence |
+|---|---|---|
+| `BUDGET` | measured N5 > ceiling | DROP + **STOP** the ladder |
+| `COHERENCE` | harmful gibberish rises > 0.05 vs the last **kept** rung | DROP, revert |
+| `COMPETE` | harmful refusal falls vs the last **kept** rung | DROP, revert |
+| `SELECTIVITY` | benign refusal rises > 0.10 (over-refusal) | DROP, revert |
+
+"Revert" is load-bearing and is unit-tested: every comparison is against the last
+**KEPT** rung, so a dropped direction leaves no trace in the reference state and
+the next candidate is judged as if it had never been added. The forbidden all-on
+hybrid is therefore **unreachable by construction** — no configuration in this
+run can carry a prior that failed its own gate.
+
+### Run it
+
+```bash
+# CPU only, no model, no network — the mechanics and the report logic
+python -m steering_tutorials.stacking.near_orthogonal              # cosines, budget, ladder rules
+python -m steering_tutorials.stacking.data_floor                   # the >=500/class planner
+python -m steering_tutorials.stacking.run_near_orthogonal --selftest
+
+# The measurement. Defaults are 500 harmful + 500 benign per cell (the rubric
+# floor) => ~10k generations across both arms. It is RESUMABLE: every config is
+# checkpointed to artifacts/near_ortho_partial.json the moment it finishes.
+STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
+  python -m steering_tutorials.stacking.run_near_orthogonal
+
+# One arm per foreground window (the normal mode on this host — one 4090):
+NORTHO_ARMS=ladder STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
+  python -m steering_tutorials.stacking.run_near_orthogonal
+NORTHO_ARMS=sweep  STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
+  python -m steering_tutorials.stacking.run_near_orthogonal
+
+# A capped SCREENING slice (labelled env_capped=true in the JSON, warned on stdout):
+NORTHO_N_HARM=40 NORTHO_N_BENIGN=40 NORTHO_MAX_CONFIGS=3 \
+  STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
+  python -m steering_tutorials.stacking.run_near_orthogonal
+
+python -m steering_tutorials.stacking.run_near_orthogonal --report   # rebuild, no GPU
+```
+
+Knobs: `NORTHO_N_HARM`, `NORTHO_N_BENIGN`, `NORTHO_N_EXTRACT`, `NORTHO_LADDER_K`,
+`NORTHO_NEAR_COS`, `NORTHO_COS_GRID`, `NORTHO_BUDGET_CEILING`,
+`NORTHO_COHERENCE_TOL`, `NORTHO_COMPETE_TOL`, `NORTHO_SELECTIVITY_TOL`,
+`NORTHO_ARMS`, `NORTHO_MAX_CONFIGS`, `NORTHO_BUDGET_N`.
+Outputs: `artifacts/near_ortho_results.json`, `near_ortho_partial.json`,
+`near_ortho_directions.npz`, `near_ortho.png`.
+
+**Honesty note carried forward from §8b.** The `w_i` are **orthogonality
+controls**, not second concepts — this pool carries exactly one labelled
+contrast. And §8b's biggest result stands as a prior on this arm: at α=0.08 the
+refusal direction and an exactly orthogonal one were *indistinguishable*, so if
+this sweep also comes back flat across cosine, the honest reading is that the
+substrate has no coherence headroom, not that the §9 clause is false. The α sweep
+§8b called for is still the right next experiment.
+
+---
+
+## 8d. The data floor — what changed, and what the pool actually holds
+
+The rubric is ≥500 per class for any headline number. This lesson was shipping a
+**20-prompt benign arm**. The fix is `data_floor.py`, which makes the floor a
+build-time object rather than something to remember:
+
+- **Defaults sit at the floor.** `STACK_HC_N_HARM` / `STACK_HC_N_BENIGN` and
+  `NORTHO_N_HARM` / `NORTHO_N_BENIGN` all default to 500.
+- **The split is planned against the real pool**, not against a hope.
+- **The achieved n is stamped** into `results["data_floor"]` and printed inside
+  the summary table, so it travels with the numbers.
+- **`pool_capped` and `env_capped` are kept apart.** Collapsing them is how a
+  violation gets laundered into a caveat: `pool` means the corpus is exhausted
+  and the number is at its honest maximum; `env` means the data exists and *this
+  run chose not to use it* (screening, never a headline).
+
+**The pool, measured** (`common.data.build_harmful_benign`, seed 0, 2026-08):
+
+| | count |
+|---|---|
+| harmful pool | **792** (693 unique toxic-chat + 99 length-windowed JBB top-up) |
+| benign pool (raw) | 8889 |
+| benign returned | **792** — the loader returns a *balanced* set, so the harmful pool binds |
+
+So 500/class of held-out eval is reachable, but only just: with a 300/class
+extract slice the disjoint remainder is **492**, eight short.
+
+- **`run_near_orthogonal`** has no pre-registered extract size, so its planner
+  trims the extract **300 → 292** and reaches **500/500 exactly**.
+- **`run_hillclimb`** does not: `PREREGISTRATION_hillclimb.md` names "300 harmful
+  vs 300 benign" and the committed `refusal_vector.pt` was built at n=300.
+  Silently re-cutting a pre-registered split to buy 8 prompts is the worse trade,
+  so it keeps the 300 extract and reports **492/class** with
+  `pool_capped: true` and the reason on the record.
+
+That is a real, documented corpus limit — not a defaulted 20.
 
 ---
 
