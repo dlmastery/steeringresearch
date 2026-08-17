@@ -2,7 +2,7 @@
 # Torch is installed separately with the correct CUDA wheel (cu124 on the 4090):
 #   pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
 torch>=2.6
-transformers>=4.55
+transformers>=4.56.2  # 4.55 silently DROPS use_bidirectional_attention -> EmbeddingGemma runs causal (audits/AUDIT_2026-08-17_embeddinggemma_causal.md). Verified on 5.15.0.
 bitsandbytes>=0.43
 accelerate>=0.30
 numpy>=1.26

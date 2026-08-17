@@ -52,3 +52,8 @@ autoresearch_results/judge_cache/
 .dash_v2/
 .dircache_*.npy
 steering_tutorials/*/artifacts/_run_checkpoint.json
+
+# Embedding caches computed under transformers 4.55 with EmbeddingGemma silently
+# running CAUSAL (audits/AUDIT_2026-08-17_embeddinggemma_causal.md). Invalid, and
+# regenerable -- kept out of the tree rather than shipped as if they were evidence.
+_causal_invalid_caches/

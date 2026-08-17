@@ -1,4 +1,12 @@
 {
+  "SUSPENDED_CAUSAL_ENCODER": {
+    "status": "SUSPENDED - do not cite. Not reversed; suspended.",
+    "why": "Every embeddinggemma vector behind these numbers was computed with the encoder running CAUSAL. transformers 4.55.0 has zero references to use_bidirectional_attention, so EmbeddingGemma-300M -- a BIDIRECTIONAL encoder -- silently fell back to causal attention. Proved behaviourally: hidden states over a 9-token shared prefix were bit-identical (max abs diff 0.000000e+00) across two sequences with different suffixes. After upgrading to transformers 5.15.0 the same test gives 5.74.",
+    "what_this_puts_in_doubt": "The lesson concluded the bi-encoder LOSES to a trained head on seen labels (macro_ap 0.240 frozen / 0.575 contrastive vs 0.658) and that binary_harm_auc ~0.59 against a 0.526 length confound makes it near-useless as a harm detector. A sentence encoder crippled to causal attention is a SUFFICIENT explanation for all of that. The conclusion may or may not survive re-measurement -- the point is the instrument was not the instrument claimed.",
+    "what_is_NOT_in_doubt": "The latency/scaling arm (bi 0.974-0.977s flat vs uni 0.98-42.9s, 43.9x at 1024 labels) is an ARCHITECTURAL cost measurement and does not depend on attention mode. Likewise the structural fact that trained_head cannot score a held-out policy at all.",
+    "caches_quarantined_to": "_causal_invalid_caches/ at repo root",
+    "superseded_at_commit": "7b55304"
+  },
   "embedder": "embeddinggemma",
   "embed_model": "google/embeddinggemma-300m",
   "emb_dim": 768,

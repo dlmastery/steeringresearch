@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gemma = ["transformers>=4.55", "bitsandbytes>=0.43", "accelerate>=0.30"]
+gemma = ["transformers>=4.56.2", "bitsandbytes>=0.43", "accelerate>=0.30"]
 dev = ["pytest>=8.0", "pandas>=2.0", "matplotlib>=3.8", "datasets>=2.18"]
 
 [tool.setuptools]
