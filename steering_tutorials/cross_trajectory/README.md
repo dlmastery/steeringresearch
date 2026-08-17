@@ -647,8 +647,24 @@ as prominently as the in-distribution win, and it is now stated accurately.
 
 ### 9.3 Embedder ablation — the ordering reproduces on Gemma (hand-transcribed, NOT regenerable)
 
-> **`artifacts/results_gemma_ablation.json` was hand-transcribed from a run log and
-> is not regenerable from this code.** No code in the repository emits its keys
+> **A causal-encoder suspension was applied to this file on 2026-08-17 and then
+> WITHDRAWN the same day — the discrepancy above was resolved, and the suspension was
+> the thing that was wrong.** It was applied on the assumption that `"embedder": "gemma"`
+> meant EmbeddingGemma, which ran causal under transformers 4.55.0
+> ([`audits/AUDIT_2026-08-17_embeddinggemma_causal.md`](../../audits/AUDIT_2026-08-17_embeddinggemma_causal.md)).
+> It does not. `config.py:70` defines `EMBEDDER_CHOICES = ("embeddinggemma", "gemma",
+> "minilm")` as **three distinct options**: `"gemma"` is a Gemma-3-1B **decoder**
+> layer-12 residual (`hidden: 1152`), which is causal *by design* and cannot be affected
+> by a dropped bidirectional flag; `"embeddinggemma"` is the 768-dim EmbeddingGemma-300M
+> and is separately `[PENDING RUN]` with **no number in existence**. The file is back at
+> `artifacts/results_gemma_ablation.json` and carries a `SUSPENSION_WITHDRAWN_2026-08-17`
+> block recording the error.
+>
+> **The original caveat below is unaffected by any of that and remains the live reason to
+> distrust this table.**
+>
+> **`artifacts/results_gemma_ablation.json` was hand-transcribed from a
+> run log and is not regenerable from this code.** No code in the repository emits its keys
 > (`hidden`, `n_per_class`, `note`, `margin_over_bar`, `replication_verdict`); the
 > runner writes a different schema. At the time it was written `RESULTS_PATH` was
 > the **constant** `artifacts/results.json` with no `--out`, so running the gemma

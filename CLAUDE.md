@@ -592,11 +592,19 @@ gave **bit-identical** hidden states (`max |Δh| = 0.000000e+00`). After upgradi
   *sufficient* alternative explanation. **What survives** (attention-mode-independent):
   the **43.9×** latency/scaling result, and that a trained head structurally cannot
   score a held-out policy.
-- **`cross_trajectory` gemma ablation SUSPENDED.** It existed to prove the effect is
-  aggregation, not a MiniLM artifact — and its "different embedder" was crippled. Note
-  the direction: the arm still *reproduced* the effect, so this is weaker evidence than
-  claimed, **not** evidence against.
-- Unaffected: `meerkat` (bge/minilm), `cross_trajectory/results.json` (minilm).
+- **`cross_trajectory` gemma ablation — I SUSPENDED IT, THEN WITHDREW THAT.** I read
+  `"embedder": "gemma"` as EmbeddingGemma. `config.py:70` defines
+  `EMBEDDER_CHOICES = ("embeddinggemma", "gemma", "minilm")` as **three distinct
+  options**: `"gemma"` is a Gemma-3-1B **decoder** layer-12 residual (`hidden: 1152`),
+  causal *by design*, so a dropped bidirectional flag cannot touch it. Suspension
+  withdrawn; file restored to `results_gemma_ablation.json`. Its real defect is the
+  pre-existing one: **hand-transcribed from a run log, not regenerable from the code.**
+  *(Caught by a subagent reviewing my own change. Blast-radius estimates need the same
+  verify-the-behaviour discipline as the bug that prompted them — I matched on a
+  substring.)*
+- Unaffected: `meerkat` (bge/minilm), `cross_trajectory/results.json` (minilm),
+  `cross_trajectory` gemma-decoder arm. `cross_trajectory`'s actual `embeddinggemma`
+  arm is `[PENDING RUN]` — no number exists to suspend.
   `multiturn_jailbreak` was `PENDING_RUN` with no metrics — nothing to suspend.
 - The upgrade to 5.x is a MAJOR bump; it was **verified, not assumed**: flas self-test,
   a real Gemma-3-1B forward + hook (`hook restores exactly`), imports across 5 lessons.

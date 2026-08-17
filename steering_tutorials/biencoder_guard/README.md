@@ -2,6 +2,24 @@
 
 > **Reference:** [The Million-Label NER: Breaking Scale Barriers with GLiNER bi-encoder (arXiv:2602.18487)](https://arxiv.org/abs/2602.18487) — Stepanov, Shtopko, Vodianytskyi, Lukashov (Feb 2026); [GLiNER Guard: Unified Encoder Family for Production LLM Safety and Privacy (arXiv:2605.05277)](https://arxiv.org/abs/2605.05277) — Minko, Sadiekh, Kokuykin (May 2026); [Opir: Efficient Multi-Task Safety Classification for Toxicity, Jailbreaks, Hate Speech, and Harmful Content (arXiv:2605.29659)](https://arxiv.org/abs/2605.29659) — Stepanov, Smechov (May 2026); [GLiGuard: Schema-Conditioned Classification for LLM Safeguard (arXiv:2605.07982)](https://arxiv.org/abs/2605.07982) — Zaratiana, Newhauser, Hurn-Maloney, Lewis (May 2026); the shared backbone [EmbeddingGemma-300M (model card)](https://huggingface.co/google/embeddinggemma-300m). Hard-negative data-synthesis line: [ECIsem: Semantic Residual Effective Contrastive Information for Evaluating Hard Negatives (arXiv:2603.20990)](https://arxiv.org/abs/2603.20990) — Sinha, Seetharaman, Bansal (Mar 2026); [ARHN: Answer-Centric Relabeling of Hard Negatives with Open-Source LLMs for Dense Retrieval (arXiv:2604.11092)](https://arxiv.org/abs/2604.11092) — Choi et al. (SIGIR 2026); [When Hard Negatives Hurt: Bridging the Generative-Discriminative Gap in Hard Negative Synthesis for Retrieval (arXiv:2606.01304)](https://arxiv.org/abs/2606.01304) — Zhang et al. (KDD 2026); method name **CausalNeg**.
 
+> ## SUSPENDED 2026-08-17 — every ACCURACY number in this lesson
+>
+> `google/embeddinggemma-300m` is a **bidirectional** encoder, but transformers 4.55.0
+> contains zero references to `use_bidirectional_attention`, so the flag was silently
+> dropped and **both towers ran causal**. Proved behaviourally: bit-identical hidden
+> states (`0.000000e+00`) over a 9-token shared prefix. Full write-up:
+> [`audits/AUDIT_2026-08-17_embeddinggemma_causal.md`](../../audits/AUDIT_2026-08-17_embeddinggemma_causal.md).
+>
+> - **The artifact has been renamed** to `artifacts/results_CAUSAL_ENCODER_SUSPENDED.json`.
+>   Every reference to `artifacts/results.json` below points at that file.
+> - **SUSPENDED — do not cite:** all macro-AP / AUC / AP / FPR figures in §10, and every
+>   verdict resting on them. They were produced by an instrument that is not the
+>   instrument claimed, so they cannot be cited **in either direction** until re-measured.
+> - **SURVIVES — still citable:** the **latency/scaling** result (bi-encoder flat at
+>   ~0.97 s while the uni-encoder reaches 42.9 s at 1024 labels, **43.9×**) and the
+>   **structural** fact that a trained head has no column for a held-out policy and so
+>   cannot score it at all. Neither depends on the attention mode.
+
 > Earlier safety lessons catch an attack **inside one trajectory** — across
 > conversation turns (`multiturn_jailbreak`), generated tokens (`trajguard`),
 > cooperating agents (`cross_trajectory`), or a sparse campaign in a trace
@@ -620,6 +638,18 @@ so the off-family-judge discipline of the steering lessons does not apply here
 ---
 
 ## 10. Results — measured vs. the claim
+
+> ### ACCURACY NUMBERS IN THIS SECTION ARE SUSPENDED (2026-08-17)
+>
+> The EmbeddingGemma backbone ran **causal**, not bidirectional — see the banner at the
+> top of this README and
+> [`audits/AUDIT_2026-08-17_embeddinggemma_causal.md`](../../audits/AUDIT_2026-08-17_embeddinggemma_causal.md).
+> Every macro-AP / AUC / AP / FPR figure below is therefore **not a current finding** and
+> must not be quoted as one, in either direction: a crippled sentence encoder is a
+> sufficient explanation for the weak accuracy, so these numbers do not license a claim
+> about bi-encoders. **EXP-D (latency vs label count) is unaffected and stands.** The
+> artifact these tables were read from is now
+> `artifacts/results_CAUSAL_ENCODER_SUSPENDED.json`.
 
 > ### PROVENANCE OF EVERY NUMBER IN §10 (read before the tables)
 >
@@ -1274,6 +1304,15 @@ construction, and it is the finding.
 | **(iii) Hard-negative sharpening** | **SURVIVES — against a floor** | FPR@recall0.90 falls **1.000 → 0.458** with the contrastive adapter (a 0.542 reduction). But **1.000 is the literal maximum the metric can take**: the frozen baseline flags *every* hard negative at the 90%-recall threshold, so any non-degenerate adapter produces a positive delta and this falsifier cannot fail. It is a true statement about a very low bar. Cause and fix in the EXP-F note above (the miner was drawing ~69% of the benign pool; `BG_N_BENIGN` 500 → 3000). **Re-measure before quoting.** |
 | **(iv)–(vii)** | **[PENDING RUN]** | Pre-registered 2026-08-08, before the re-run. No verdict may be written until that run exists. |
 
+> **SUSPENDED 2026-08-17 — (ii) and (iii) only.** Both are decided by accuracy figures
+> (macro-AP; FPR@recall0.90) measured with EmbeddingGemma running **causal**, so neither
+> verdict is currently admissible; they revert to undecided until the re-run. **(i)
+> Scaling is unaffected and stands** — it is a latency-vs-label-count measurement and does
+> not depend on the attention mode. The base-rate table below is likewise suspended: the
+> per-column positive counts are corpus properties and survive, but the **0.382** they are
+> divided into does not. See
+> [`audits/AUDIT_2026-08-17_embeddinggemma_causal.md`](../../audits/AUDIT_2026-08-17_embeddinggemma_causal.md).
+
 **On (ii) — reporting the trip, and a specification error I will not hide behind.**
 The falsifier is recorded as tripped because that is what the pre-registered rule
 says, and rules are not renegotiated after seeing data. But the threshold itself was
@@ -1319,6 +1358,11 @@ only to the *next* run — it does not retroactively rescue this one.
 
 ## 11. Honest caveats
 
+- **The encoder was not the encoder claimed (2026-08-17).** EmbeddingGemma ran causal,
+  so every accuracy number here is SUSPENDED; the scaling result and the trained head's
+  structural inability to score a held-out policy survive. This belongs at the top of the
+  caveat list because it outranks all of the ones below it:
+  [`audits/AUDIT_2026-08-17_embeddinggemma_causal.md`](../../audits/AUDIT_2026-08-17_embeddinggemma_causal.md).
 - **Screening tier, not evaluation.** One embedder, one seed, a constructed corpus
   — a directional demo, not the n ≥ 7 seeds + rigor contract CLAUDE.md reserves
   the word "winner" for. Do not over-read the orderings.

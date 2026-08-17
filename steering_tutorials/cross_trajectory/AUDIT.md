@@ -45,8 +45,8 @@ WebFetch-verify every arXiv id and HF dataset before merge.
 | Fidelity nuance | **CONCERN** | Positives are **constructed**: an ActorAttack attack's sub-queries are reused *as if* each were a separate agent-trajectory. These are **not** live multi-agent execution traces. Faithful in spirit (the latent structure of a decomposition), but not a reproduction of any deployed multi-agent attack. README Section 10 states this plainly. |
 | Leakage control | **PASS** | HARD negatives use disjoint `query_id`s from positives; group-aware `GroupKFold` by `query_id` prevents an attack straddling folds; the confound audit (`kcount_auc`, `totalchar_auc`) checks the trajectory-count/length shortcuts. |
 | OOD honesty | **CONCERN** | The OOD table depends entirely on `intrinsec-ai/cstm-bench` existing with the assumed schema (`[UNVERIFIED]`). If the repo is absent or shaped differently, `load_ood_cstm` fails and the OOD table cannot be filled. README already flags CSTM-Bench as small/OOD; the existence risk is the open item. |
-| Claim accuracy | **PASS** | README frames the result as a screening demo, marks the table **[PENDING GPU RUN]**, and pre-registers the falsifier (set-aggregators ≤ `per_traj_max` on HARD ⇒ thesis FALSE) before the run, with an explicit no-HARKing clause. |
-| Results honesty (code-only) | **PASS** | No numbers are claimed yet; table is `_pending_`; screening-tier, constructed-decomposition, small-OOD, and honest-baseline caveats are all disclosed in Section 10. |
+| Claim accuracy | **PASS** — **`[STALE 2026-08-08]`** | README frames the result as a screening demo, marks the table **[PENDING GPU RUN]**, and pre-registers the falsifier (set-aggregators ≤ `per_traj_max` on HARD ⇒ thesis FALSE) before the run, with an explicit no-HARKing clause. **The `[PENDING GPU RUN]` marker is gone from the shipped README** — `artifacts/results.json` (mtime Jul 23 23:11) carries measured AUCs for `easy`, `hard` and `ood`. |
+| Results honesty (code-only) | **PASS** — **`[STALE 2026-08-08]`** | No numbers are claimed yet; table is `_pending_`; screening-tier, constructed-decomposition, small-OOD, and honest-baseline caveats are all disclosed in Section 10. **Contradicted by the artifact:** `results.json` claims numbers (hard `mean_agg` 0.9358 vs a 0.7037 `totalchar_auc` bar; OOD `mean_agg` 0.500, CI [0.500, 0.500]) and README §9 carries a full results table. This row certified a pre-results file. |
 
 ## Overall verdict
 
@@ -68,6 +68,18 @@ family with the author).*
 ---
 
 ## Addendum 2026-07-28 — the embedder ablation, and what it rules out
+
+> **A causal-encoder suspension was applied here on 2026-08-17 and WITHDRAWN the same
+> day.** It assumed `"embedder": "gemma"` meant EmbeddingGemma. It does not:
+> `config.py:70` lists `"embeddinggemma"`, `"gemma"` and `"minilm"` as three distinct
+> options, and this ablation used `"gemma"` — a Gemma-3-1B **decoder** residual
+> (`hidden: 1152`), causal by design and unaffected by the dropped bidirectional flag.
+> The file is back at `artifacts/results_gemma_ablation.json`.
+>
+> **The verdict below still may not be quoted as a live finding** — but for the reason
+> that was always on the record, not the encoder bug: the artifact was hand-transcribed
+> from a run log and is **not regenerable** from this code (README §9.3). The MiniLM
+> column is unaffected.
 
 The headline was measured entirely with **MiniLM**. That left an unpriced alternative
 explanation: *"aggregation recovers fractured intent"* might be a property of the
