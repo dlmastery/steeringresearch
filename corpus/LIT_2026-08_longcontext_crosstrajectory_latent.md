@@ -75,10 +75,27 @@ operates on **raw hidden-state volumes from a selected layer window**, preservin
 layer×token geometry. Evaluated on Qwen / Llama / Mistral, calibrated with XSTest,
 attacked with GCG.
 
-**The line that indicts our own lesson 1:**
+**The line that indicts our own lesson 1** — verbatim, **§5.4 Ablation Study** (NOT the
+abstract; a subagent checking only the abs page could not confirm it and correctly
+dropped it, so the section pointer is recorded here to stop that recurring):
 
-> *the refusal trajectory is highly sparse — **mean pooling dilutes this strong
-> "needle" into the vast "haystack"** of irrelevant background noise.*
+> *"Mean pooling dilutes this strong "needle" into the vast "haystack" of irrelevant
+> background noise."*
+
+Two further details from the full text, both load-bearing and both stronger than the
+quote alone:
+
+- **The paper's own method uses Global Max-Pooling**, and its §5.4 ablation *replaces*
+  that with Global Average Pooling to demonstrate the collapse — Table 2 caption:
+  *"Mean Pooling: Replaces the sparsity-aware Global Max-Pooling with Global Average
+  Pooling."* So max-pool is the paper's sparsity-aware default, not an afterthought.
+  Our `probe_tuning` sweep must therefore include **max** as a first-class cell.
+- **Appendix D is the sharper warning for us:** *"sequence-level mean aggregation can
+  achieve high recall on several attack sets but yields near-random XSTest AUROC."*
+  That is mean pooling looking **good on attacks and failing on the benign/over-refusal
+  set** — a selectivity failure that an attack-only evaluation cannot see. Any layer/
+  pooling sweep we run must score an XSTest-style benign arm, or it will reproduce
+  exactly this blind spot.
 
 `hello_world` classifies **layer-12 mean-pooled** activations. `probe_tuning`'s layer
 sweep was never built. If SALO is right, our probe is discarding the signal by
