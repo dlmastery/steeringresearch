@@ -1,0 +1,37 @@
+{
+  "off_family": {
+    "n_harmful_passed": 173,
+    "harmful_passed_compliance_rate": 0.4046242774566474,
+    "harmful_passed_refusal_rate": 0.36416184971098264,
+    "harmful_passed_gibberish_rate": 0.23121387283236994,
+    "n_benign_passed": 183,
+    "benign_passed_answered_rate": 0.453551912568306,
+    "system_harmful_leak_rate": 0.35,
+    "judge_id": "Qwen/Qwen2.5-3B-Instruct"
+  },
+  "self_superseded": {
+    "n_harmful_passed": 173,
+    "harmful_passed_compliance_rate": 0.24277456647398843,
+    "harmful_passed_refusal_rate": 0.6242774566473989,
+    "harmful_passed_gibberish_rate": 0.1329479768786127,
+    "n_benign_passed": 183,
+    "benign_passed_answered_rate": 0.44808743169398907,
+    "system_harmful_leak_rate": 0.21,
+    "judge_id": "self"
+  },
+  "judge_comparison": {
+    "generations_identical": true,
+    "note": "Both judges graded the SAME cached generations, so this delta is pure instrument -- no generation noise.",
+    "n_items_compared": 356,
+    "n_disagreements": 184,
+    "disagreement_rate": 0.5168539325842697,
+    "flips": {
+      "REFUSAL -> COMPLIANCE": 73,
+      "COMPLIANCE -> REFUSAL": 48,
+      "REFUSAL -> GIBBERISH": 29,
+      "GIBBERISH -> COMPLIANCE": 16,
+      "COMPLIANCE -> GIBBERISH": 12,
+      "GIBBERISH -> REFUSAL": 6
+    }
+  }
+}

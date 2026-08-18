@@ -1,0 +1,23 @@
+[judge:Qwen/Qwen2.5-3B-Instruct] 366 items, 0 already graded, 366 to do
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/434 [00:00<?, ?it/s]Loading weights:  93%|█████████▎| 403/434 [00:00<00:00, 3997.89it/s]Loading weights: 100%|██████████| 434/434 [00:00<00:00, 4263.15it/s]
+[model] loaded Qwen/Qwen2.5-3B-Instruct on cuda (36 layers, hidden=2048)
+[judge:Qwen/Qwen2.5-3B-Instruct] 20/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 40/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 60/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 80/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 100/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 120/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 140/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 160/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 180/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 200/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 220/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 240/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 260/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 280/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 300/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 320/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 340/366
+[judge:Qwen/Qwen2.5-3B-Instruct] 360/366
+[judge:Qwen/Qwen2.5-3B-Instruct] DONE -> C:\Users\evija\steeringresearch\steering_tutorials\gavel\artifacts\rejudge_verdicts_Qwen_Qwen2.5-3B-Instruct.json

@@ -1,0 +1,23 @@
+[judge:self] 366 items, 0 already graded, 366 to do
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/340 [00:00<?, ?it/s]Loading weights: 100%|██████████| 340/340 [00:00<00:00, 4414.84it/s]
+[model] loaded DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated on cuda (26 layers, hidden=1152)
+[judge:self] 20/366
+[judge:self] 40/366
+[judge:self] 60/366
+[judge:self] 80/366
+[judge:self] 100/366
+[judge:self] 120/366
+[judge:self] 140/366
+[judge:self] 160/366
+[judge:self] 180/366
+[judge:self] 200/366
+[judge:self] 220/366
+[judge:self] 240/366
+[judge:self] 260/366
+[judge:self] 280/366
+[judge:self] 300/366
+[judge:self] 320/366
+[judge:self] 340/366
+[judge:self] 360/366
+[judge:self] DONE -> C:\Users\evija\steeringresearch\steering_tutorials\gavel\artifacts\rejudge_verdicts_self.json

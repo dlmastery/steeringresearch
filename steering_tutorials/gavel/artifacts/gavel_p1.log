@@ -1,0 +1,85 @@
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/340 [00:00<?, ?it/s]Loading weights: 100%|██████████| 340/340 [00:00<00:00, 4274.37it/s]
+[model] loaded DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated on cuda (26 layers, hidden=1152)
+[split] extract 300h/300b   eval 200h/200b
+[acts:A_harm] 25/300
+[acts:A_harm] 50/300
+[acts:A_harm] 75/300
+[acts:A_harm] 100/300
+[acts:A_harm] 125/300
+[acts:A_harm] 150/300
+[acts:A_harm] 175/300
+[acts:A_harm] 200/300
+[acts:A_harm] 225/300
+[acts:A_harm] 250/300
+[acts:A_harm] 275/300
+[acts:A_harm] 300/300
+[acts:A_ben] 25/300
+[acts:A_ben] 50/300
+[acts:A_ben] 75/300
+[acts:A_ben] 100/300
+[acts:A_ben] 125/300
+[acts:A_ben] 150/300
+[acts:A_ben] 175/300
+[acts:A_ben] 200/300
+[acts:A_ben] 225/300
+[acts:A_ben] 250/300
+[acts:A_ben] 275/300
+[acts:A_ben] 300/300
+[CE] harassment   n_pos=73 tau=1521.334
+[CE] sexual       n_pos=158 tau=1024.174
+[CE] violence     n_pos=44 tau=2129.295
+[acts:E_harm] 25/200
+[acts:E_harm] 50/200
+[acts:E_harm] 75/200
+[acts:E_harm] 100/200
+[acts:E_harm] 125/200
+[acts:E_harm] 150/200
+[acts:E_harm] 175/200
+[acts:E_harm] 200/200
+[acts:E_ben] 25/200
+[acts:E_ben] 50/200
+[acts:E_ben] 75/200
+[acts:E_ben] 100/200
+[acts:E_ben] 125/200
+[acts:E_ben] 150/200
+[acts:E_ben] 175/200
+[acts:E_ben] 200/200
+[anchor] judge-free numbers reproduce results.json EXACTLY (block rates, broad baseline, per-CE firing) -- the only remaining difference is the judge.
+[gen] 10 cached (10 new)
+[gen] 20 cached (20 new)
+[gen] 30 cached (30 new)
+[gen] 40 cached (40 new)
+[gen] 50 cached (50 new)
+[gen] 60 cached (60 new)
+[gen] 70 cached (70 new)
+[gen] 80 cached (80 new)
+[gen] 90 cached (90 new)
+[gen] 100 cached (100 new)
+[gen] 110 cached (110 new)
+[gen] 120 cached (120 new)
+[gen] 130 cached (130 new)
+[gen] 140 cached (140 new)
+[gen] 150 cached (150 new)
+[gen] 160 cached (160 new)
+[gen] 170 cached (170 new)
+[gen] 180 cached (180 new)
+[gen] 190 cached (190 new)
+[gen] 200 cached (200 new)
+[gen] 210 cached (210 new)
+[gen] 220 cached (220 new)
+[gen] 230 cached (230 new)
+[gen] 240 cached (240 new)
+[gen] 250 cached (250 new)
+[gen] 260 cached (260 new)
+[gen] 270 cached (270 new)
+[gen] 280 cached (280 new)
+[gen] 290 cached (290 new)
+[gen] 300 cached (300 new)
+[gen] 310 cached (310 new)
+[gen] 320 cached (320 new)
+[gen] 330 cached (330 new)
+[gen] 340 cached (340 new)
+[gen] 350 cached (350 new)
+[gen] 360 cached (360 new)
+[gen] DONE -- 366 cached generations -> C:\Users\evija\steeringresearch\steering_tutorials\gavel\artifacts\rejudge_generations.json
