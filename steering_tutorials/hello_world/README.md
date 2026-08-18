@@ -348,11 +348,11 @@ and **mean-pool** the captured activation over token positions:
 
 ```python
 # model_utils.py  (the per-prompt loop)
-ids = tok.apply_chat_template(
-    [{"role": "user", "content": prompt}],
-    add_generation_prompt=True,
-    return_tensors="pt",
-).to(device)
+# chat_ids() wraps apply_chat_template because transformers 5.x returns a
+# BatchEncoding where 4.x returned a raw Tensor; it normalises by key so both
+# versions work. Passing the BatchEncoding straight to model() raises
+# "TypeError: embedding(): argument 'indices' must be Tensor, not BatchEncoding".
+ids = chat_ids(tok, prompt, device)
 model(ids)
 h = captured["h"][0]                              # [seq, hidden]
 vec = h.mean(0) if pooling == "mean" else h[-1]   # pool over tokens

@@ -60,8 +60,11 @@ def _last_tok_acts(model, tok, prompts: list[str], layer: int) -> np.ndarray:
     dev = next(model.parameters()).device
     out = []
     for p in prompts:
-        ids = tok.apply_chat_template([{"role": "user", "content": p}],
-                                      add_generation_prompt=True, return_tensors="pt").to(dev)
+        # transformers 5.x returns a BatchEncoding here where 4.x returned a
+        # Tensor; normalise by key so both versions work.
+        _tpl = tok.apply_chat_template([{"role": "user", "content": p}],
+                                       add_generation_prompt=True, return_tensors="pt")
+        ids = (_tpl["input_ids"] if hasattr(_tpl, "keys") else _tpl).to(dev)
         h = probe_activations(model, ids, [layer])[layer]  # [1, seq, dim]
         out.append(h[0, -1].float().cpu().numpy())
     return np.stack(out).astype(np.float32)

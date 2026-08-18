@@ -38,6 +38,24 @@ _LOCAL_RUBRIC = f"{AXBENCH_RUBRIC_VERSION}-local"
 _JSON_RE = re.compile(r"\{[^{}]*\}", re.DOTALL)
 
 
+def _chat_ids(tok: Any, msgs: list) -> Any:
+    """Chat-template ``msgs`` and return a plain ``[1, seq]`` id Tensor.
+
+    transformers 5.x changed ``apply_chat_template``: 4.x with
+    ``return_tensors="pt"`` returned a raw Tensor, 5.x defaults to
+    ``return_dict=True`` and returns a ``BatchEncoding``, which blows up inside
+    the embedding layer. Normalise BY KEY rather than by passing
+    ``return_dict=False``, so this works under both major versions.
+
+    Mirrors ``steering_tutorials/hello_world_steering/model_utils.chat_ids``.
+    Duplicated deliberately: ``src/steering`` is the research harness and the
+    tutorials are standalone by design, so neither may import the other.
+    """
+    out = tok.apply_chat_template(msgs, add_generation_prompt=True,
+                                  return_tensors="pt")
+    return out["input_ids"] if hasattr(out, "keys") else out
+
+
 def _clamp2(v: Any) -> float:
     return max(0.0, min(2.0, float(v)))
 
@@ -113,8 +131,7 @@ class LocalJudge:
         import torch
 
         msgs = [{"role": "user", "content": prompt}]
-        ids = self.tok.apply_chat_template(
-            msgs, add_generation_prompt=True, return_tensors="pt").to(self.device)
+        ids = _chat_ids(self.tok, msgs).to(self.device)
         with torch.no_grad():
             out = self.model.generate(
                 ids, max_new_tokens=self.max_new_tokens, do_sample=False, num_beams=1,
@@ -142,8 +159,7 @@ class LocalJudge:
         import torch
 
         msgs = [{"role": "user", "content": build_axbench_prompt(text, concept, instruction)}]
-        ids = self.tok.apply_chat_template(
-            msgs, add_generation_prompt=True, return_tensors="pt").to(self.device)
+        ids = _chat_ids(self.tok, msgs).to(self.device)
         prefix = self.tok('{"concept": ', add_special_tokens=False,
                           return_tensors="pt").input_ids.to(self.device)
         full = torch.cat([ids, prefix], dim=1)
