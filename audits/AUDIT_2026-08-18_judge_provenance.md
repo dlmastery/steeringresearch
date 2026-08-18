@@ -198,3 +198,41 @@ that must be remembered will eventually be skipped."
    and arguably worse defect than an unknown judge.
 7. **`trajguard` generates text but is still class A** — nothing grades the text;
    a classifier reads the trajectory. Generation alone does not trigger rule 3.
+
+---
+
+## 5. Addendum (lead, 2026-08-18) — STA label provenance, resolved precisely
+
+The audit flagged that STA's labels come from a Gemini judge log
+(`types.py:143`) and that this is a provenance axis rule 3 does not cover. Correct
+that it is uncovered, but the blast radius needed pinning down, because
+`Corpus.label_provenance` reads as if it describes the *trajectory* labels:
+
+    label_provenance: "gemini-3.1-pro-preview judge log (LLM-generated, not human)"
+
+Traced it. There are **two different label populations** and they have **different
+provenance**:
+
+| population | source | judge-free? |
+|---|---|---|
+| **trajectory** label (pos/neg) | the dataset's own `ground_truth` 0/1 field, `corpora/__init__.py:485` | **YES** |
+| **per-step** labels (`ideal_flagging_step`, `point_of_no_return_step`) | Gemini-3.1-Pro judge log | **NO** |
+
+Consequences, and they cut opposite ways:
+
+- **F1 and F3 are unaffected.** The whole main AUC ladder — mean_pool 0.7397 vs
+  max_pool 0.8581 vs gru 0.9051, and best-vs-last_step — is scored against
+  trajectory `ground_truth`. The mean-pooling collapse stands as a judge-free
+  result. Reading `label_provenance` alone would wrongly discredit it.
+- **F5 gets worse, not better.** Lead time is measured against the Gemini
+  *oracle* step, so it is not "steps of warning before harm" but "steps before a
+  judge would have flagged it". `shade.py:44-52` states this outright: *"lead time
+  is measured against a judge ORACLE, never against truth."* Stacked on the
+  already-recorded hollowness (3 detections of 132 eligible, 0.294 false alarm),
+  **F5's HOLD should not be quoted at all** without both caveats attached.
+
+**Defect to fix:** the field name `label_provenance` is singular and sits on
+`Corpus`, so it reads as covering the labels the ladder is scored against — which
+it does not. It should be split (`trajectory_label_provenance` vs
+`step_label_provenance`) or renamed, because as it stands the honest string
+invites the wrong inference in both directions.
