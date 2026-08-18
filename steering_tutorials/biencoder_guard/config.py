@@ -43,6 +43,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from steering_tutorials.biencoder_guard import encoder_behaviour as _EB
+
 
 def _env_int(name: str, default: int) -> int:
     return int(os.environ.get(name) or default)
@@ -264,12 +266,35 @@ OPIR_PAPER_TOP = 16       # the top-level count at which Opir's 16/126/854 is ex
 ROOT = Path(__file__).resolve().parent
 ARTIFACTS = ROOT / "artifacts"
 RESULTS_PATH = ARTIFACTS / "results.json"
+# --- Cache filenames carry the ENCODER STACK ---------------------------------
+# Every cached .npz below is a matrix of vectors, and a vector is a function of the
+# encoder's BEHAVIOUR as much as of the text. On 2026-08-17 EmbeddingGemma was found
+# to have been running strictly CAUSAL under transformers 4.55.0 while its config said
+# `use_bidirectional_attention=True` (audits/AUDIT_2026-08-17_embeddinggemma_causal.md).
+# Because the old filenames encoded only "which split, which embedder", a re-run after
+# the library fix would have loaded the causal vectors straight back in.
+#
+# `_stack()` is a 12-char hash of {transformers, sentence-transformers, torch} versions
+# + the model id -- read from installed-package METADATA, so building a path loads no
+# library and no model. Caches from a different stack land on a different filename and
+# can never be reached. The measured behavioural bucket cannot live in a filename (it
+# needs a forward pass); it is stored in each .npz and checked on load by the runner.
+_MODEL_ID = {"embeddinggemma": EMBED_MODEL, "minilm": MINILM_ID}
+
+
+def _stack(m: str) -> str:
+    return _EB.key_component(_MODEL_ID.get(m, m), {"emb_dim": EMB_DIM})
+
+
+STACK_KEY = {m: _stack(m) for m in ("embeddinggemma", "minilm")}
+
 # content embeddings cached per split x embedder; policy-bank cached per embedder.
-EMB_CACHE = {(split, m): ARTIFACTS / f"emb_{split}_{m}.npz"
+EMB_CACHE = {(split, m): ARTIFACTS / f"emb_{split}_{m}_{STACK_KEY[m]}.npz"
              for split in ("train", "test", "heldout", "ood",
                            "heldout_split", "cross_annotator", "ood_benchmark")
              for m in ("embeddinggemma", "minilm")}
-POLICY_CACHE = {m: ARTIFACTS / f"policy_bank_{m}.npz" for m in ("embeddinggemma", "minilm")}
+POLICY_CACHE = {m: ARTIFACTS / f"policy_bank_{m}_{STACK_KEY[m]}.npz"
+                for m in ("embeddinggemma", "minilm")}
 PR_PNG = ARTIFACTS / "pr_by_method.png"            # precision-recall, seen policies
 HELDOUT_PNG = ARTIFACTS / "heldout_zeroshot.png"   # zero-shot on unseen policies
 SCALE_PNG = ARTIFACTS / "latency_vs_labels.png"    # the scaling claim
@@ -277,12 +302,12 @@ ADAPTER_CACHE = ARTIFACTS / "contrastive_adapter.pt"   # trained hard-negative a
 HARDNEG_PNG = ARTIFACTS / "hardneg_fpr.png"        # FPR@recall: frozen vs adapter
 # Distractor policy bank, cached per embedder. The cache stores the generator
 # FINGERPRINT alongside the matrix; a mismatch invalidates it (stamp your inputs).
-DISTRACTOR_CACHE = {m: ARTIFACTS / f"distractor_bank_{m}.npz"
+DISTRACTOR_CACHE = {m: ARTIFACTS / f"distractor_bank_{m}_{STACK_KEY[m]}.npz"
                     for m in ("embeddinggemma", "minilm")}
 LABEL_SCALE_PNG = ARTIFACTS / "label_scale_accuracy.png"   # accuracy vs #labels
 # EXP-H: the 980 mid+leaf taxonomy vectors, cached per embedder with the generator
 # fingerprint stored alongside (a mismatch invalidates the cache, as in EXP-G).
-TAXONOMY_CACHE = {m: ARTIFACTS / f"opir_taxonomy_{m}.npz"
+TAXONOMY_CACHE = {m: ARTIFACTS / f"opir_taxonomy_{m}_{STACK_KEY[m]}.npz"
                   for m in ("embeddinggemma", "minilm")}
 OPIR_PNG = ARTIFACTS / "opir_taxonomy.png"                 # related vs unrelated, EXP-H
 

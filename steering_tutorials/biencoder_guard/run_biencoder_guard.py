@@ -92,6 +92,7 @@ import time
 import numpy as np
 
 from . import config as C
+from . import encoder_behaviour as EB
 
 
 # ===========================================================================
@@ -175,6 +176,67 @@ def _bank_fingerprint(policies, n_proto) -> str:
     return h.hexdigest()[:12]
 
 
+# --- the ENCODER-BEHAVIOUR half of every cache key --------------------------
+# A cached vector is a function of the encoder's BEHAVIOUR as much as of the text.
+# On 2026-08-17 EmbeddingGemma was found to have been running strictly CAUSAL under
+# transformers 4.55.0 while its config said `use_bidirectional_attention=True`; a
+# shared 9-token prefix gave BIT-IDENTICAL hidden states (max abs diff 0.0) where a
+# bidirectional encoder gives ~5.74. Every .npz below was therefore produced by an
+# instrument that was not the instrument claimed -- and, keyed on the text alone,
+# would have been silently reloaded after the library fix. That is the mechanism by
+# which the bug survives its own fix. See
+# audits/AUDIT_2026-08-17_embeddinggemma_causal.md.
+#
+# The stack half (library versions + model id) is in the FILENAME (config.STACK_KEY,
+# metadata reads only). The measured behavioural bucket is stored in the .npz and
+# checked here on load. `_behaviour_block(None)` loads nothing; `_behaviour_block(
+# embedder)` costs one forward pass and is memoised per process, so it is only ever
+# called on a cache WRITE, where the model is loaded anyway.
+def _behaviour_block(embedder=None) -> dict:
+    model_id = C.EMBED_MODEL if C.EMBEDDER == "embeddinggemma" else C.MINILM_ID
+    extra = {"emb_dim": C.EMB_DIM}
+    if embedder is None:
+        return EB.cheap_fingerprint(model_id, extra)
+    return EB.probe_fingerprint(embedder, model_id=model_id, extra=extra)
+
+
+def _behaviour_of(blob) -> dict | None:
+    """Read the stored behaviour block out of a loaded .npz (None if absent).
+
+    Call this INSIDE the `with np.load(...)` block: `NpzFile` is lazy and holds the
+    file open, and on Windows an open handle makes the quarantine rename fail with
+    WinError 32 -- i.e. a rejected cache would be left exactly where the next run
+    would find it again.
+    """
+    try:
+        if "behaviour_json" not in blob.files:
+            return None
+        return json.loads(str(blob["behaviour_json"].item()))
+    except Exception:
+        return None
+
+
+def _behaviour_reject(tag, path, got) -> bool:
+    """True (+ a loud REJECT and a quarantine) if this cache's encoder has changed.
+
+    `got` is the block already parsed out of the (now CLOSED) .npz. Rejection is LOUD
+    and the stale file is RENAMED ASIDE, never overwritten in place: an artifact
+    produced under different attention semantics is evidence of what went wrong and
+    should survive its own rejection.
+    """
+    want = _behaviour_block(None)          # cheap: no model is loaded to check a cache
+    diffs = EB.compare(want, got)
+    if not diffs:
+        return False
+    print("[%s] cache REJECTED %s: %s" % (tag, path.name, "; ".join(diffs)))
+    print("[%s]   vectors computed under a different encoder behaviour are not "
+          "interchangeable (audits/AUDIT_2026-08-17_embeddinggemma_causal.md: "
+          "EmbeddingGemma ran CAUSAL under transformers 4.55.0 while its config said "
+          "bidirectional). Re-embedding." % tag)
+    EB.quarantine(path, tag="behaviour_mismatch")
+    return True
+
+
 def _encode_content_cached(embedder, texts, split):
     """Embed a batch of texts with the CONTENT tower, cached to disk per split.
 
@@ -195,11 +257,19 @@ def _encode_content_cached(embedder, texts, split):
     path = C.EMB_CACHE.get(key)
     fp = _content_fingerprint(texts)
     if path is not None and path.exists():
+        X = cached_fp = cached_behaviour = None
         try:
-            blob = np.load(path)
-            X = blob["X"].astype(np.float32)
-            cached_fp = str(blob["fp"]) if "fp" in blob.files else None
-            if cached_fp is None:
+            # `with`, so the handle is CLOSED before a rejection tries to rename it.
+            with np.load(path) as blob:
+                X = blob["X"].astype(np.float32)
+                cached_fp = str(blob["fp"]) if "fp" in blob.files else None
+                cached_behaviour = _behaviour_of(blob)
+        except Exception as exc:
+            print("[embed] cache reload failed (%s); re-encoding" % exc)
+        if X is not None:
+            if _behaviour_reject("embed", path, cached_behaviour):
+                pass                      # already reported + quarantined; re-encode
+            elif cached_fp is None:
                 print("[embed] cache REJECTED %s: no fingerprint (predates stamping); "
                       "re-encoding" % path.name)
             elif cached_fp != fp:
@@ -212,12 +282,16 @@ def _encode_content_cached(embedder, texts, split):
                 print("[embed] loaded cache %s  shape=%s fp=%s"
                       % (path.name, X.shape, fp))
                 return X
-        except Exception as exc:
-            print("[embed] cache reload failed (%s); re-encoding" % exc)
     X = np.asarray(embedder.encode(list(texts), "content"), dtype=np.float32)
     if path is not None:
         try:
-            np.savez_compressed(path, X=X, fp=np.array(fp))
+            # The model is live here, so the behavioural probe is one forward pass
+            # (memoised per process). Stamped INTO the .npz so the cache can be
+            # audited later without re-deriving anything.
+            np.savez_compressed(
+                path, X=X, fp=np.array(fp),
+                behaviour_json=np.array(json.dumps(_behaviour_block(embedder),
+                                                   sort_keys=True)))
         except Exception as exc:
             print("[embed] cache save failed: %s" % exc)
     print("[embed] encoded %d texts -> shape=%s (split=%s fp=%s)"
@@ -236,14 +310,21 @@ def _build_bank_cached(encoders, policies, embedder, n_proto, cache):
     path = C.POLICY_CACHE.get(C.EMBEDDER)
     fp = _bank_fingerprint(policies, n_proto)
     if cache and path is not None and path.exists():
+        B = cached_fp = cached_behaviour = None
         try:
-            blob = np.load(path)
-            B = blob["B"].astype(np.float32)
-            cached_fp = str(blob["fp"]) if "fp" in blob.files else None
+            with np.load(path) as blob:   # closed before any quarantine rename
+                B = blob["B"].astype(np.float32)
+                cached_fp = str(blob["fp"]) if "fp" in blob.files else None
+                cached_behaviour = _behaviour_of(blob)
+        except Exception as exc:
+            print("[bank] cache reload failed (%s); rebuilding" % exc)
+        if B is not None:
             # A row-count check on 16 rows guards nothing: edit a policy DESCRIPTION
             # or a paraphrase and the count is unchanged, so every cosine in
             # EXP-A/B/C/E/G/H would be against the old text. Fingerprint the TEXTS.
-            if cached_fp is None:
+            if _behaviour_reject("bank", path, cached_behaviour):
+                pass                      # already reported + quarantined; rebuild
+            elif cached_fp is None:
                 print("[bank] cache REJECTED %s: no fingerprint (predates stamping); "
                       "rebuilding" % path.name)
             elif cached_fp != fp:
@@ -256,13 +337,14 @@ def _build_bank_cached(encoders, policies, embedder, n_proto, cache):
             else:
                 print("[bank] loaded cache %s  shape=%s fp=%s" % (path.name, B.shape, fp))
                 return B
-        except Exception as exc:
-            print("[bank] cache reload failed (%s); rebuilding" % exc)
     B = np.asarray(encoders.build_policy_bank(policies, embedder, n_proto=n_proto),
                    dtype=np.float32)
     if cache and path is not None:
         try:
-            np.savez_compressed(path, B=B, fp=np.array(fp))
+            np.savez_compressed(
+                path, B=B, fp=np.array(fp),
+                behaviour_json=np.array(json.dumps(_behaviour_block(embedder),
+                                                   sort_keys=True)))
         except Exception as exc:
             print("[bank] cache save failed: %s" % exc)
     print("[bank] built policy bank n_proto=%d -> shape=%s" % (n_proto, B.shape))
@@ -569,17 +651,24 @@ def _distractor_bank_cached(encoders, distractors, embedder, n_needed, policies)
 
     path = C.DISTRACTOR_CACHE.get(C.EMBEDDER)
     if path is not None and path.exists():
+        B = cached_behaviour = None
+        cached_fp = ""
         try:
-            data = np.load(path, allow_pickle=False)
-            B = data["B"].astype(np.float32)
-            cached_fp = str(data["fingerprint"].item()) if "fingerprint" in data else ""
-            if B.shape[0] == len(dpols) and cached_fp == fp:
-                print("[distract] loaded cache %s shape=%s fp=%s" % (path.name, B.shape, fp))
-                return B, dpols, built["audit"]
-            print("[distract] cache REJECTED (shape %s vs %d, fp %r vs %r); rebuilding"
-                  % (B.shape, len(dpols), cached_fp, fp))
+            with np.load(path, allow_pickle=False) as data:   # closed before rename
+                B = data["B"].astype(np.float32)
+                cached_fp = str(data["fingerprint"].item()) if "fingerprint" in data else ""
+                cached_behaviour = _behaviour_of(data)
         except Exception as exc:
             print("[distract] cache reload failed (%s); rebuilding" % exc)
+        if B is not None:
+            if _behaviour_reject("distract", path, cached_behaviour):
+                pass                      # already reported + quarantined; rebuild
+            elif B.shape[0] == len(dpols) and cached_fp == fp:
+                print("[distract] loaded cache %s shape=%s fp=%s" % (path.name, B.shape, fp))
+                return B, dpols, built["audit"]
+            else:
+                print("[distract] cache REJECTED (shape %s vs %d, fp %r vs %r); rebuilding"
+                      % (B.shape, len(dpols), cached_fp, fp))
 
     t0 = time.perf_counter()
     B = np.asarray(encoders.build_policy_bank(dpols, embedder, n_proto=C.LABEL_SCALE_PROTO),
@@ -588,7 +677,10 @@ def _distractor_bank_cached(encoders, distractors, embedder, n_needed, policies)
           % (len(dpols), C.LABEL_SCALE_PROTO, time.perf_counter() - t0, B.shape))
     if path is not None:
         try:
-            np.savez_compressed(path, B=B, fingerprint=np.array(fp))
+            np.savez_compressed(
+                path, B=B, fingerprint=np.array(fp),
+                behaviour_json=np.array(json.dumps(_behaviour_block(embedder),
+                                                   sort_keys=True)))
         except Exception as exc:
             print("[distract] cache save failed: %s" % exc)
     return B, dpols, built["audit"]
@@ -855,17 +947,24 @@ def _taxonomy_bank_cached(encoders, taxonomy, embedder, policies):
 
     path = C.TAXONOMY_CACHE.get(C.EMBEDDER)
     if path is not None and path.exists():
+        B = cached_behaviour = None
+        cached_fp = ""
         try:
-            data = np.load(path, allow_pickle=False)
-            B = data["B"].astype(np.float32)
-            cached_fp = str(data["fingerprint"].item()) if "fingerprint" in data else ""
-            if B.shape[0] == len(nodes) and cached_fp == fp:
-                print("[taxo] loaded cache %s shape=%s fp=%s" % (path.name, B.shape, fp))
-                return B, nodes, built["audit"]
-            print("[taxo] cache REJECTED (shape %s vs %d, fp %r vs %r); rebuilding"
-                  % (B.shape, len(nodes), cached_fp, fp))
+            with np.load(path, allow_pickle=False) as data:   # closed before rename
+                B = data["B"].astype(np.float32)
+                cached_fp = str(data["fingerprint"].item()) if "fingerprint" in data else ""
+                cached_behaviour = _behaviour_of(data)
         except Exception as exc:
             print("[taxo] cache reload failed (%s); rebuilding" % exc)
+        if B is not None:
+            if _behaviour_reject("taxo", path, cached_behaviour):
+                pass                      # already reported + quarantined; rebuild
+            elif B.shape[0] == len(nodes) and cached_fp == fp:
+                print("[taxo] loaded cache %s shape=%s fp=%s" % (path.name, B.shape, fp))
+                return B, nodes, built["audit"]
+            else:
+                print("[taxo] cache REJECTED (shape %s vs %d, fp %r vs %r); rebuilding"
+                      % (B.shape, len(nodes), cached_fp, fp))
 
     t0 = time.perf_counter()
     B = np.asarray(encoders.build_policy_bank(nodes, embedder, n_proto=C.OPIR_PROTO),
@@ -874,7 +973,10 @@ def _taxonomy_bank_cached(encoders, taxonomy, embedder, policies):
           % (len(nodes), C.OPIR_PROTO, time.perf_counter() - t0, B.shape))
     if path is not None:
         try:
-            np.savez_compressed(path, B=B, fingerprint=np.array(fp))
+            np.savez_compressed(
+                path, B=B, fingerprint=np.array(fp),
+                behaviour_json=np.array(json.dumps(_behaviour_block(embedder),
+                                                   sort_keys=True)))
         except Exception as exc:
             print("[taxo] cache save failed: %s" % exc)
     return B, nodes, built["audit"]
@@ -2276,5 +2378,107 @@ def _print_summary(results):
     print(line)
 
 
+# ===========================================================================
+# CPU self-test for the ENCODER-BEHAVIOUR cache gate.
+#   python -m steering_tutorials.biencoder_guard.run_biencoder_guard --selftest-cache
+# No model, no GPU, no network, no dataset -- it fakes two behaviour fingerprints
+# and asserts the mismatch REJECTS.
+# ===========================================================================
+def _selftest_cache_behaviour() -> None:
+    import tempfile
+    from pathlib import Path
+
+    class _FakeEmbedder:
+        """Deterministic, backbone-less. Loading a real model here would defeat the
+        point: the gate must be provable on CPU."""
+
+        calls = 0
+
+        def encode(self, texts, kind):
+            _FakeEmbedder.calls += 1
+            return np.zeros((len(texts), 4), dtype=np.float32)
+
+    texts = ["alpha", "beta", "gamma"]
+    fake = _FakeEmbedder()
+    tmp = Path(tempfile.mkdtemp(prefix="bg_behaviour_test_"))
+    key = ("train", C.EMBEDDER)
+    old_path = C.EMB_CACHE.get(key)
+    C.EMB_CACHE[key] = tmp / "emb_train_selftest.npz"
+    path = C.EMB_CACHE[key]
+    try:
+        fp = _content_fingerprint(texts)
+        X_cached = np.arange(len(texts) * 4, dtype=np.float32).reshape(len(texts), 4)
+
+        # (1) A cache written by THIS stack, with matching texts, must HIT -- and must
+        #     do so without loading a model (the fake has no backbone at all, so any
+        #     probe on the read path would have shown up as a warning here).
+        np.savez_compressed(
+            path, X=X_cached, fp=np.array(fp),
+            behaviour_json=np.array(json.dumps(_behaviour_block(None), sort_keys=True)))
+        before = _FakeEmbedder.calls
+        X = _encode_content_cached(fake, texts, "train")
+        assert _FakeEmbedder.calls == before, "a cache HIT re-encoded anyway"
+        assert np.array_equal(X, X_cached), "the cache HIT did not return the cached rows"
+        print("[selftest] matching stack -> cache HIT, no encode, no model load")
+
+        # (2) THE REGRESSION. Identical texts, identical fingerprint -- the ONLY thing
+        #     different is the encoder behaviour the vectors were computed under
+        #     (transformers 4.55.0, prefix-delta bucket "causal"). This is the
+        #     2026-08-17 incident in miniature, and it MUST be refused.
+        stale = _behaviour_block(None)
+        stale["libs"] = dict(stale["libs"])
+        stale["libs"]["transformers"] = "4.55.0"
+        stale["prefix_delta_bucket"] = "causal"
+        stale["prefix_delta"] = 0.0
+        np.savez_compressed(path, X=X_cached, fp=np.array(fp),
+                            behaviour_json=np.array(json.dumps(stale, sort_keys=True)))
+        before = _FakeEmbedder.calls
+        X = _encode_content_cached(fake, texts, "train")
+        assert _FakeEmbedder.calls == before + 1, \
+            "a cache computed under CAUSAL attention was reused -- the gate is not binding"
+        assert not np.array_equal(X, X_cached), "the stale causal vectors came back"
+        quarantined = sorted(p.name for p in tmp.glob("*behaviour_mismatch*"))
+        assert quarantined, "the rejected cache was overwritten instead of quarantined"
+        print("[selftest] causal-vs-bidirectional -> REJECTED, re-encoded, stale file "
+              "quarantined as %s" % quarantined[0])
+
+        # (3) A pre-stamping cache proves nothing about itself and is refused too.
+        np.savez_compressed(path, X=X_cached, fp=np.array(fp))
+        before = _FakeEmbedder.calls
+        _encode_content_cached(fake, texts, "train")
+        assert _FakeEmbedder.calls == before + 1, \
+            "a cache with NO behaviour block was trusted"
+        print("[selftest] unstamped legacy cache -> REJECTED (unattributable)")
+
+        # (4) The freshly written cache carries an auditable behaviour block.
+        with np.load(path) as blob:
+            got = _behaviour_of(blob)
+        assert got and got["libs"]["transformers"], \
+            "the new cache is not auditable without re-deriving the fingerprint"
+        print("[selftest] the rewritten cache stamps libs=%s bucket=%r"
+              % (json.dumps(got["libs"]), got.get("prefix_delta_bucket")))
+
+        print("OK -- biencoder_guard cache gate: a cache whose ENCODER BEHAVIOUR "
+              "disagrees is REJECTED loudly and quarantined, never silently reused. "
+              "No model, no GPU, no network.")
+    finally:
+        if old_path is not None:
+            C.EMB_CACHE[key] = old_path
+        for f in tmp.glob("*"):
+            try:
+                f.unlink()
+            except OSError:
+                pass
+        try:
+            tmp.rmdir()
+        except OSError:
+            pass
+
+
 if __name__ == "__main__":
-    main()
+    import sys
+
+    if "--selftest-cache" in sys.argv:
+        _selftest_cache_behaviour()
+    else:
+        main()
