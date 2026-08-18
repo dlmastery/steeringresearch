@@ -218,6 +218,18 @@ def main() -> dict:
     from steering_tutorials.hello_world_steering.judge import Judge
     # Shared >=500/class harmful/benign set (replaces lesson 2's 100-prompt JBB loader).
     from steering_tutorials.common.data import load_harmful_benign
+    from steering_tutorials.common.judge_gate import (
+        assert_publishable, require_off_family_judge)
+
+    # Refuse BEFORE the model loads. This runner's stack/compete verdict is read
+    # off judged refusal rates, so it cannot be salvaged self-judged. Lesson 12's
+    # JUDGE-FREE arm is a SEPARATE entrypoint -- run_near_orthogonal.py measures
+    # cosines and norm budgets with no judge at all -- and is deliberately NOT
+    # gated here, so a user without an off-family judge still has that arm.
+    require_off_family_judge("stacking", judge_free_metrics=[
+        "rungs[].norm_budget (geometry; also computed judge-free by "
+        "run_near_orthogonal.py, which this gate does NOT block)",
+    ])
 
     random.seed(C.SEED)
     np.random.seed(C.SEED)
@@ -339,6 +351,8 @@ def main() -> dict:
     }
 
     # --- 3. Persist + plot + print -------------------------------------------
+    # Publish gate IN the write path (CLAUDE.md sec.18.8).
+    assert_publishable(results, "stacking")
     C.RESULTS_PATH.write_text(json.dumps(results, indent=2), encoding="utf-8")
     _plot_ladder(rung_results, C.LADDER_PNG)
     print(f"[save] {C.RESULTS_PATH}", file=sys.stderr)

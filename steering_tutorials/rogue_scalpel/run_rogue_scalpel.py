@@ -115,6 +115,14 @@ def main() -> dict:
     from steering_tutorials.hello_world_steering.steer_vector import save_vector
     from .attack import refusal_direction, attack_generate
     from .guard import guarded_generate, enforce_dual_forward
+    from steering_tutorials.common.judge_gate import (
+        assert_publishable, require_off_family_judge)
+
+    # Refuse BEFORE the model loads. EVERY number this lesson reports -- the ASR
+    # ladder, the refusal/gibberish split, the benign collateral -- is a judge
+    # verdict, so there is nothing to salvage from a self-judged run, and a
+    # self-judge would inflate exactly the refusal the guard is meant to restore.
+    require_off_family_judge("rogue_scalpel")
 
     random.seed(C.SEED); np.random.seed(C.SEED); torch.manual_seed(C.SEED)
 
@@ -240,6 +248,8 @@ def main() -> dict:
         "plots": {"asr_ladder": C.ASR_PNG.name},
     }
 
+    # Publish gate IN the write path (CLAUDE.md sec.18.8).
+    assert_publishable(results, "rogue_scalpel")
     C.RESULTS_PATH.write_text(json.dumps(results, indent=2), encoding="utf-8")
     _plot_asr_ladder(ladder, C.ASR_PNG)
     print(f"[save] {C.RESULTS_PATH}", file=sys.stderr)

@@ -275,6 +275,14 @@ def main() -> None:
     from steering_tutorials.hello_world_steering.judge import Judge
 
     from .data import load_multi_intent
+    from steering_tutorials.common.judge_gate import (
+        assert_publishable, require_off_family_judge)
+
+    # JUDGE PROVENANCE FIRST -- before the data, before the model, before a
+    # single token. Every headline here (per-concept success, cross-talk,
+    # gibberish) is a judged refusal rate, so a self-judged run has nothing to
+    # salvage.
+    require_off_family_judge("multi_intent")
 
     # DATA FIRST, then the denominator gate, THEN the model. Loading prompts is
     # cheap and CPU-only; a run that cannot clear the floor should fail in
@@ -417,6 +425,8 @@ def main() -> None:
         "examples_cap": int(C.EXAMPLES_CAP),
         "plots": {"success_vs_k": C.LADDER_PNG.name},
     }
+    # Publish gate IN the write path (CLAUDE.md sec.18.8).
+    assert_publishable(results, "multi_intent")
     C.RESULTS_PATH.write_text(json.dumps(results, indent=2), encoding="utf-8")
     print(f"[run] wrote {C.RESULTS_PATH}", file=sys.stderr)
 

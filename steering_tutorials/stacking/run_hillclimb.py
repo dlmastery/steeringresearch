@@ -62,6 +62,10 @@ import numpy as np
 from . import config as C
 from . import data_floor as DF
 from .stacking import Prior, build_priors
+# Module scope on purpose: rebuild_report() writes the same publishable artifact
+# as main() and must carry the same gate. judge_gate imports nothing heavy.
+from steering_tutorials.common.judge_gate import (
+    assert_publishable, require_off_family_judge)
 
 # --- run-size knobs -------------------------------------------------------- #
 # DEFAULTS SIT AT THE RUBRIC FLOOR (CLAUDE.md sec.17 item 1: >=500 per class).
@@ -283,6 +287,12 @@ def main() -> dict:
     from steering_tutorials.common.data import build_harmful_benign
 
     from .hillclimb import apply_config, measure_norm_budget, orthogonal_direction
+
+    # Refuse BEFORE the model loads: the champion is CHOSEN by judged refusal
+    # score, so a self-judge would not merely mis-report the hill-climb, it would
+    # pick a different winner. Lesson 12's judge-free arm is the separate
+    # run_near_orthogonal.py entrypoint, which this gate does NOT block.
+    require_off_family_judge("stacking")
 
     t0 = time.time()
     random.seed(C.SEED)
@@ -532,6 +542,10 @@ def main() -> dict:
         "ladder": ladder,
         "contradictions": _find_contradictions(partial, ladder),
     }
+    # Publish gate IN the write path (CLAUDE.md sec.18.8). Deliberately NOT on
+    # PARTIAL_PATH above: that is the resumability checkpoint, not the artifact
+    # anyone reports from, and a reaped run must still be able to write it.
+    assert_publishable(results, "stacking")
     RESULTS_PATH.write_text(json.dumps(results, indent=2), encoding="utf-8")
     try:
         _plot(results, LADDER_PNG)
@@ -797,6 +811,11 @@ def rebuild_report() -> dict:
     for k in ("data_floor", "dataset_header"):
         if k in prev:
             out[k] = prev[k]
+    # Same gate on the rebuild-from-previous path: it rewrites the SAME
+    # publishable artifact, so it inherits the same bar. A legacy results.json
+    # that predates Judge.stamp() will fail here -- correctly: an artifact whose
+    # judge cannot be read off it is not evidence (CLAUDE.md sec.18.6).
+    assert_publishable(out, "stacking")
     RESULTS_PATH.write_text(json.dumps(out, indent=2), encoding="utf-8")
     try:
         _plot(out, LADDER_PNG)

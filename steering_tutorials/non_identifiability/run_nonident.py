@@ -230,6 +230,14 @@ def main() -> dict:
     from steering_tutorials.hello_world_steering.judge import Judge
     from steering_tutorials.common.data import load_harmful_benign
     from .vectors import build_candidate_directions, save_directions
+    from steering_tutorials.common.judge_gate import (
+        assert_publishable, require_off_family_judge)
+
+    # Refuse BEFORE the model loads. The whole claim here is "many directions
+    # with cosine well below 1 reach a SIMILAR refusal rate" -- a self-judge that
+    # inflates refusal uniformly would manufacture that similarity, so this is
+    # the lesson a self-judged run would corrupt most cheaply.
+    require_off_family_judge("non_identifiability")
 
     # Reproducibility.
     random.seed(C.SEED)
@@ -329,6 +337,8 @@ def main() -> dict:
         "plots": {"nonident": C.PLOT_PATH.name},
     }
 
+    # Publish gate IN the write path (CLAUDE.md sec.18.8).
+    assert_publishable(results, "non_identifiability")
     C.RESULTS_PATH.write_text(json.dumps(results, indent=2), encoding="utf-8")
     _plot(results, C.PLOT_PATH)
     print(f"[save] {C.RESULTS_PATH}", file=sys.stderr)

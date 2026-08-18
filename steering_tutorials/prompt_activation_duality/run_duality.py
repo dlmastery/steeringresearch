@@ -161,6 +161,18 @@ def main() -> dict:
     )
     from steering_tutorials.hello_world_steering.judge import Judge
     from steering_tutorials.common.data import load_harmful_benign
+    from steering_tutorials.common.judge_gate import (
+        assert_publishable, require_off_family_judge)
+
+    # Refuse BEFORE the model loads. The DUALITY COSINES are judge-free -- they
+    # compare activation shifts, not text -- but this runner has no cosines-only
+    # path, since the effect table judges three generations per prompt. So the
+    # block is total and the message names the judge-free half being lost.
+    require_off_family_judge("prompt_activation_duality", judge_free_metrics=[
+        "duality.cos_refusal_shift_vs_vector (geometry, no judge)",
+        "duality.cos_control_shift_vs_vector / random_cosine_baseline",
+        "duality.refusal_shift_norm / control_shift_norm",
+    ])
 
     # Reproducibility: pin every RNG before anything stochastic happens.
     random.seed(C.SEED)
@@ -287,6 +299,8 @@ def main() -> dict:
     }
 
     # --- Persist FIRST, then plot, then print (results saved before summary) --
+    # Publish gate IN the write path (CLAUDE.md sec.18.8).
+    assert_publishable(results, "prompt_activation_duality")
     C.RESULTS_PATH.write_text(json.dumps(results, indent=2), encoding="utf-8")
     _plot_cosine(duality, C.COSINE_PNG)
     _plot_effect(effect, C.EFFECT_PNG)

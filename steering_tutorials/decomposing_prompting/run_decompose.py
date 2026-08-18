@@ -190,6 +190,18 @@ def main() -> dict:
     from steering_tutorials.hello_world_steering.judge import Judge
     from steering_tutorials.common.data import load_harmful_benign
     from .decompose import prompt_deltas, decompose_prompt_deltas
+    from steering_tutorials.common.judge_gate import (
+        assert_publishable, require_off_family_judge)
+
+    # Refuse BEFORE the model loads. The DECOMPOSITION headline (on_direction_frac,
+    # consistency, shared_translation_frac) is pure geometry and needs no judge,
+    # but this runner has no geometry-only path -- the recovery arm judges every
+    # generation -- so the block is total and the message names what is lost.
+    require_off_family_judge("decomposing_prompting", judge_free_metrics=[
+        "decomposition.on_direction_frac (geometry, no judge)",
+        "decomposition.consistency / shared_translation_frac",
+        "decomposition.mean_delta_norm / mean_abs_proj / mean_residual_norm",
+    ])
 
     # Reproducibility: pin every RNG before anything stochastic happens.
     random.seed(C.SEED)
@@ -304,6 +316,8 @@ def main() -> dict:
     }
 
     # --- 4. Persist + plot + print (numbers first, takeaway last) -------------
+    # Publish gate IN the write path (CLAUDE.md sec.18.8).
+    assert_publishable(results, "decomposing_prompting")
     C.RESULTS_PATH.write_text(json.dumps(results, indent=2), encoding="utf-8")
     # Save the raw reconstruction vectors so infer.py can steer one prompt with
     # exactly the translation this run extracted.

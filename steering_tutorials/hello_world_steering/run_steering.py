@@ -399,6 +399,16 @@ def main() -> dict:
     # The shared >=500/class harmful/benign set (toxic-chat + JBB top-up,
     # deduped + length-matched) replaces the lesson's old 100-prompt JBB loader.
     from steering_tutorials.common.data import load_harmful_benign
+    from steering_tutorials.common.judge_gate import (
+        assert_publishable, require_off_family_judge)
+
+    # Refuse BEFORE the model loads. Every arm here -- the alpha sweep, the
+    # conditional gate arm, the extraction contrast -- is scored by the judge,
+    # and this lesson's whole corrected finding ("refusal rises NOWHERE; the
+    # vector removes compliance and destroys coherence") is a claim about WHERE
+    # the non-compliant mass lands. A self-judge that inflates REFUSAL is the one
+    # instrument error that would un-correct it.
+    require_off_family_judge("hello_world_steering")
 
     # Reproducibility: pin every RNG before anything stochastic happens.
     random.seed(C.SEED)
@@ -740,6 +750,9 @@ def main() -> dict:
     }
 
     # --- 4. Persist + plot + print -------------------------------------------
+    # Publish gate IN the write path (CLAUDE.md sec.18.8). Line 255's resume
+    # checkpoint is deliberately NOT gated -- it is not the reported artifact.
+    assert_publishable(results, "hello_world_steering")
     C.RESULTS_PATH.write_text(json.dumps(results, indent=2), encoding="utf-8")
     _plot_rates_vs_alpha(unconditional, C.RATES_PNG)
     _plot_conditional(conditional, C.CONDITIONAL_PNG)

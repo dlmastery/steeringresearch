@@ -169,6 +169,19 @@ def main() -> dict:
     from steering_tutorials.hello_world_steering.judge import Judge
     # Shared >=500/class harmful/benign set WITH per-prompt harm category.
     from steering_tutorials.common.data import build_harmful_benign
+    from steering_tutorials.common.judge_gate import (
+        assert_publishable, require_off_family_judge)
+
+    # Refuse BEFORE the model loads if the target would grade its own output.
+    # gavel's HEADLINE (the block-rate gate curve and the per-CE firing rates) is
+    # judge-free, but this runner has no judge-free-only path -- the passthrough
+    # arm judges every prompt the monitor let through -- so the block is total
+    # and the message names what a blocked user is losing.
+    require_off_family_judge("gavel", judge_free_metrics=[
+        "gavel.block_rate_harmful / false_block_benign (probe gate, no judge)",
+        "broad_baseline.block_rate_harmful / false_block_benign",
+        "ce_firing_rates (per-cognitive-element firing, no judge)",
+    ])
 
     random.seed(C.SEED); np.random.seed(C.SEED); torch.manual_seed(C.SEED)
 
@@ -324,6 +337,10 @@ def main() -> dict:
         })
 
     results = {
+        # PROVENANCE (metadata only -- changes no metric). Everything under
+        # "passthrough" is judged; without this stamp the artifact cannot say
+        # who graded it, and assert_publishable below refuses to write it.
+        **judge.stamp(),
         "model_id": C.MODEL_ID,
         "layer": int(layer),
         "pooling": C.POOLING,
@@ -349,6 +366,9 @@ def main() -> dict:
     }
 
     # --- 7. Save BEFORE any summary print, then plot, then summarize ------------
+    # The publish gate sits IN the write path on purpose (CLAUDE.md sec.18.8: a
+    # check that must be remembered will eventually be skipped).
+    assert_publishable(results, "gavel")
     C.RESULTS_PATH.write_text(json.dumps(results, indent=2), encoding="utf-8")
     print("[save] %s" % C.RESULTS_PATH, file=sys.stderr)
     _plot_block_vs_falseblock(results, C.GATE_PNG)
