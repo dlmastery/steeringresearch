@@ -44,6 +44,7 @@ from typing import Any, Iterator
 import numpy as np
 
 from steering_tutorials.hello_world_steering.model_utils import (
+    chat_ids,
     generate,
     residual_layers,
 )
@@ -222,10 +223,7 @@ def measure_norm_budget(model: Any, tok: Any, prompt: str, priors: "list[Prior]"
     if not target_idx:
         return 0.0
 
-    ids = tok.apply_chat_template(
-        [{"role": "user", "content": prompt}],
-        add_generation_prompt=True, return_tensors="pt",
-    ).to(device)
+    ids = chat_ids(tok, prompt, device)
 
     def _capture() -> "dict[int, torch.Tensor]":
         grabbed: dict[int, torch.Tensor] = {}

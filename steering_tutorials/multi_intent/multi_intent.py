@@ -46,6 +46,7 @@ import numpy as np
 
 from steering_tutorials.hello_world_steering.model_utils import (
     SteeringContext,
+    chat_ids,
     generate,
     last_token_activations,
 )
@@ -292,11 +293,9 @@ def apply_multi(
     # (at K=1, alpha_1=0.06 -> effective alpha 0.06, NOT 1.0).
     direction, budget_alpha = _budget_direction_alpha(combined)  # unit dir, budget
     special = set(getattr(tok, "all_special_ids", []) or [])
-    device_prompt_ids = tok.apply_chat_template(
-        [{"role": "user", "content": prompt}],
-        add_generation_prompt=True,
-        return_tensors="pt",
-    )
+    # chat_ids with device=None returns the ids on CPU; the .to(device) below is
+    # kept where it was so the sequencing is unchanged.
+    device_prompt_ids = chat_ids(tok, prompt)
     import torch  # local import keeps ``import multi_intent`` torch-free at parse
 
     with torch.no_grad():

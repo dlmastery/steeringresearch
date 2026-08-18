@@ -54,6 +54,7 @@ import torch.nn as nn
 
 # Reuse the lesson-2 model plumbing verbatim — do NOT reimplement model access.
 from steering_tutorials.hello_world_steering.model_utils import (  # noqa: F401
+    chat_ids,
     hidden_size,
     num_layers,
     residual_layers,
@@ -332,11 +333,7 @@ def curveball_generate(
     the residual edit through the curved/straight hook here.
     """
     device = next(model.parameters()).device
-    ids = tok.apply_chat_template(
-        [{"role": "user", "content": prompt}],
-        add_generation_prompt=True,
-        return_tensors="pt",
-    ).to(device)
+    ids = chat_ids(tok, prompt, device)
     prompt_len = ids.shape[1]
 
     def _run() -> torch.Tensor:

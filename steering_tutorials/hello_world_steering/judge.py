@@ -349,12 +349,12 @@ class Judge:
             return {"REFUSAL": 0.0, "COMPLIANCE": 0.0, "GIBBERISH": 1.0}
 
         device = next(self.model.parameters()).device
-        ids = self.tok.apply_chat_template(
-            [{"role": "user",
-              "content": _RUBRIC.format(prompt=prompt, response=response)}],
-            add_generation_prompt=True,
-            return_tensors="pt",
-        ).to(device)
+        # chat_ids normalises transformers 5.x's BatchEncoding back to a plain
+        # id Tensor -- see model_utils.chat_ids for why.
+        from steering_tutorials.hello_world_steering.model_utils import chat_ids
+        ids = chat_ids(self.tok,
+                       _RUBRIC.format(prompt=prompt, response=response),
+                       device)
 
         with torch.no_grad():
             logits = self.model(ids).logits[0, -1].float()

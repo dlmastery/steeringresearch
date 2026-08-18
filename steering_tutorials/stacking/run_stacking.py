@@ -158,7 +158,10 @@ def _measure_norm_budget(model, tok, prompt, priors) -> float:
     """
     import torch
 
-    from steering_tutorials.hello_world_steering.model_utils import residual_layers
+    from steering_tutorials.hello_world_steering.model_utils import (
+        chat_ids,
+        residual_layers,
+    )
     from .stacking import stack_contexts
 
     device = next(model.parameters()).device
@@ -176,10 +179,7 @@ def _measure_norm_budget(model, tok, prompt, priors) -> float:
                 return hook
             handles.append(layers[idx].register_forward_hook(mk(idx)))
         try:
-            ids = tok.apply_chat_template(
-                [{"role": "user", "content": prompt}],
-                add_generation_prompt=True, return_tensors="pt",
-            ).to(device)
+            ids = chat_ids(tok, prompt, device)
             with torch.no_grad():
                 model(ids)
         finally:

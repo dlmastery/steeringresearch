@@ -59,15 +59,17 @@ def generate_and_capture(
     """
     import torch
 
+    # Lesson 2 owns the chat-template call: transformers 5.x returns a
+    # BatchEncoding from apply_chat_template where 4.x returned a Tensor, and
+    # chat_ids normalises that by key. Imported HERE (not at module scope) so
+    # `import ...trajguard.trajectory` stays torch-free, as the docstring says.
+    from steering_tutorials.hello_world_steering.model_utils import chat_ids
+
     device = next(model.parameters()).device
     model.eval()
 
     # 1) Build the chat-templated prompt ids and greedily generate.
-    ids = tok.apply_chat_template(
-        [{"role": "user", "content": prompt}],
-        add_generation_prompt=True,
-        return_tensors="pt",
-    ).to(device)
+    ids = chat_ids(tok, prompt, device)
     prompt_len = int(ids.shape[1])
 
     with torch.no_grad():

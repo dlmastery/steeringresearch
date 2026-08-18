@@ -53,7 +53,7 @@ import torch
 import torch.nn.functional as F
 from torch.optim import Adam
 
-from steering_tutorials.hello_world_steering.model_utils import load_model
+from steering_tutorials.hello_world_steering.model_utils import chat_ids, load_model
 from steering_tutorials.talan import config as C
 from steering_tutorials.talan.data import load_train_eval
 from steering_tutorials.talan.talan import (
@@ -72,11 +72,7 @@ def _refusal_ce(model, tok, prompt: str, adapter: TalanAdapter, device) -> torch
     (logits[t] predicts token t+1) means each refusal token is predicted from the
     prompt + the refusal tokens before it.
     """
-    prompt_ids = tok.apply_chat_template(
-        [{"role": "user", "content": prompt}],
-        add_generation_prompt=True,
-        return_tensors="pt",
-    ).to(device)
+    prompt_ids = chat_ids(tok, prompt, device)
     # add_special_tokens=False: the refusal is a CONTINUATION, so it must not get
     # its own BOS inserted in the middle of the sequence.
     target_ids = tok(
@@ -109,11 +105,7 @@ def _benign_kl(model, tok, prompt: str, adapter: TalanAdapter, device) -> torch.
     and from a plain UNADAPTED forward (no grad -- the reference), and penalise how
     far the adapted distribution has drifted from the base one.
     """
-    ids = tok.apply_chat_template(
-        [{"role": "user", "content": prompt}],
-        add_generation_prompt=True,
-        return_tensors="pt",
-    ).to(device)
+    ids = chat_ids(tok, prompt, device)
 
     adapted_logits = grad_talan_forward(model, ids, adapter, C.LAYER)[
         :, -1, :

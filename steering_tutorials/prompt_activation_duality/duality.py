@@ -259,7 +259,7 @@ def steered_generate(
     """
     import torch
 
-    from steering_tutorials.hello_world_steering.model_utils import generate
+    from steering_tutorials.hello_world_steering.model_utils import chat_ids, generate
 
     steering = vector is not None and alpha != 0.0 and site != "none"
     if not steering or site == "residual" or site == "none":
@@ -277,10 +277,7 @@ def steered_generate(
 
     # --- attention arm: same greedy generate, wrapped in the attention hook ---
     device = next(model.parameters()).device
-    ids = tok.apply_chat_template(
-        [{"role": "user", "content": prompt}],
-        add_generation_prompt=True, return_tensors="pt",
-    ).to(device)
+    ids = chat_ids(tok, prompt, device)
     prompt_len = ids.shape[1]
     special = set(getattr(tok, "all_special_ids", []) or [])
 

@@ -95,6 +95,7 @@ import torch
 # Cross-lesson imports (read-only reuse of lesson 1's loader + geometry helpers).
 from steering_tutorials.hello_world import config as C
 from steering_tutorials.hello_world.model_utils import (
+    chat_ids,
     hidden_size,
     load_model,
     num_layers,
@@ -298,11 +299,7 @@ def extract_all_layers(model, tok, prompts, layers, poolings, H, start_at,
     try:
         for i in range(start_at, len(prompts)):
             captured.clear()
-            ids = tok.apply_chat_template(
-                [{"role": "user", "content": prompts[i]}],
-                add_generation_prompt=True,
-                return_tensors="pt",
-            ).to(device)
+            ids = chat_ids(tok, prompts[i], device)
             model(ids)
             for li in range(len(layers)):
                 h = captured[li][0]                       # [seq, hidden]

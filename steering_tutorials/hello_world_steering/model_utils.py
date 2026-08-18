@@ -130,6 +130,35 @@ def load_model(model_id: str, device: str | None = None) -> tuple[Any, Any]:
     return model, tok
 
 
+def chat_ids(tok: Any, prompt: str, device=None) -> torch.Tensor:
+    """Chat-template ``prompt`` and return a PLAIN ``[1, seq]`` id Tensor.
+
+    Exists because **transformers 5.x changed the return type of
+    ``apply_chat_template``**. Under 4.x, ``return_tensors="pt"`` returned a raw
+    Tensor; under 5.x it defaults to ``return_dict=True`` and returns a
+    ``BatchEncoding``. Passing that straight into ``model(ids)`` fails deep inside
+    the embedding layer with::
+
+        TypeError: embedding(): argument 'indices' (position 2) must be Tensor,
+                   not BatchEncoding
+
+    which is what broke every GPU job after the 4.55.0 -> 5.15.0 upgrade that the
+    causal-attention fix required.
+
+    We normalise by KEY rather than by passing ``return_dict=False``, so this
+    works on both major versions and cannot silently change behaviour if the flag
+    is renamed again. A dict-like result yields ``input_ids``; a Tensor passes
+    through untouched.
+    """
+    out = tok.apply_chat_template(
+        [{"role": "user", "content": prompt}],
+        add_generation_prompt=True,
+        return_tensors="pt",
+    )
+    ids = out["input_ids"] if hasattr(out, "keys") else out
+    return ids.to(device) if device is not None else ids
+
+
 def residual_layers(model: nn.Module) -> list[nn.Module]:
     """The decoder blocks whose forward output is the residual stream.
 
@@ -200,11 +229,7 @@ def _forward_capture(model: Any, tok: Any, prompt: str, layer: int) -> torch.Ten
 
     handle = target.register_forward_hook(hook)
     try:
-        ids = tok.apply_chat_template(
-            [{"role": "user", "content": prompt}],
-            add_generation_prompt=True,
-            return_tensors="pt",
-        ).to(device)
+        ids = chat_ids(tok, prompt, device)
         model(ids)
     finally:
         handle.remove()
@@ -416,11 +441,7 @@ def generate(
     steered. Otherwise this is a plain unsteered baseline generation.
     """
     device = next(model.parameters()).device
-    ids = tok.apply_chat_template(
-        [{"role": "user", "content": prompt}],
-        add_generation_prompt=True,
-        return_tensors="pt",
-    ).to(device)
+    ids = chat_ids(tok, prompt, device)
     prompt_len = ids.shape[1]
 
     def _run() -> torch.Tensor:
