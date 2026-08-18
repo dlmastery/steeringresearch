@@ -114,3 +114,37 @@ Well-formed, confident, wrong.
 **Rule this pays for:** *a library warning about a silently-ignored parameter is a
 BLOCKER, not noise.* And: verify the behaviour, never the config field — the config
 said `True` the whole time.
+
+---
+
+## Addendum 2026-08-18 — the fix is in, and it retro-flags my own SHADE run
+
+The behaviour fingerprint is now folded into both lessons' cache keys
+(`biencoder_guard/encoder_behaviour.py`), and its self-test demonstrates the case
+that motivated all of this: a cache with the **same library versions** but
+**different measured behaviour** is rejected — *"versions alone would have passed
+it."*
+
+**It also correctly flags the two caches I created yesterday.** The SHADE (172 MB)
+and AgentDojo (24 MB) STA embedding caches were written *before* the fingerprint
+existed, so they carry no behaviour block. Under the new rule they are
+**unattributable and will be rejected on any re-run**, forcing a re-embed.
+
+That is the right behaviour, and it should not be softened. But the honest
+statement about the results already committed is narrower than either "verified"
+or "suspect":
+
+- **The SHADE result is correct.** It was run *after* the transformers 5.15.0
+  upgrade, after the causal caches were quarantined, and after the prefix
+  test measured 5.74 (bidirectional). The encoder was right.
+- **The artifact cannot prove that on its own.** The provenance lives in the
+  session's commit history, not in `results_shade.json`. By this repo's own
+  standard — *an artifact that cannot be regenerated from the code beside it is
+  not evidence* — that is a real weakness, just a different one from a wrong
+  encoder.
+
+**Do NOT retroactively write a behaviour block into those artifacts.** Fabricating
+provenance into an existing file is worse than lacking it. The stamp lands
+naturally when the run is next repeated; until then this note is the provenance,
+and it is deliberately external to the artifact so it reads as the weaker claim it
+is.
