@@ -255,7 +255,7 @@ verdict was redefined after the numbers came in.
 |---|---|---|---|
 | `F0_shuffle_control` | **HOLDS** | shuffle AUC 0.5217 in [0.45, 0.55] | no leakage in the confound instrument (but see §8(e) — it does not certify the ladder) |
 | `F1_mean_pool_collapses_long` | **HOLDS** | mean 0.7397 vs max 0.8581 (margin 0.1185), gru 0.9051 | dilution is real on a 126-step corpus |
-| `F2_mean_pool_survives_short` | **PENDING** | — | AgentDojo-only. **The AgentDojo run is in flight as of 2026-08-17; F2 is unanswered, not answered N/A.** |
+| `F2_mean_pool_survives_short` | **HOLDS** | mean_pool 0.98668 vs max_pool 0.99504 (margin 0.0084) and gru 0.99398 (margin 0.0073) — both inside the 0.02 bar | AgentDojo-only; **answered by the 2026-08-18 run**, see §7.1 |
 | `F3_sequence_beats_laststep` | **HOLDS** | best 0.9392 vs last_step 0.8427 (margin 0.0966) | holds as written — but read the caveat below |
 | `F4_streaming_clears_bars` | **FAILS** | esn_cusum 0.511, safetydrift 0.459 vs bar 0.9039 | the streaming half does not work |
 | `F5_lead_time_positive` | **HOLDS (hollow)** | median 11.0 over **3/132** detections | see §6 |
@@ -269,15 +269,54 @@ pooled, shared-classifier, causal method vs `last_step` — the margin is
 bar**. So the honest statement is: *a trained sequence encoder beats the last step; fixed
 pooling over the trajectory does not clearly beat it.*
 
-**What F1 + F2 could not have told you even if F2 had landed.** `types.py` and the run's console
-output claim that "F1 holds + F2 holds means the horizon is the cause". **That inference is not
-licensed by the design**, and this lesson's own fidelity audit says so
+### 7.1 The AgentDojo arm — F2 answered, and F3/F4 fail there
+
+Run 2026-08-18, `artifacts/results_agentdojo.json`: corpus `agentdojo`, embedder
+`embgemma`, 500/class (rule 1 **cleared**, no cap, 16 distinct groups), median **8** steps,
+5-fold, 10,000 bootstrap resamples, seed 0, `pool_fingerprint 4ec3d85c4b7e…`, 1,747 s wall
+clock. Labels are `gemini-3.1-pro-preview` judge output, **LLM-generated, not human**.
+
+| tag | verdict | number |
+|---|---|---|
+| `F0_shuffle_control` | **HOLDS** | shuffle AUC 0.5106, inside [0.45, 0.55] — the run is valid |
+| `F1_mean_pool_collapses_long` | **N/A** | SHADE-only claim by construction |
+| `F2_mean_pool_survives_short` | **HOLDS** | mean 0.98668 vs max 0.99504 (0.0084) and gru 0.99398 (0.0073), both under the 0.02 bar |
+| `F3_sequence_beats_laststep` | **FAILS** | best 0.99880 **equals** `last_step` 0.99880 — **margin exactly 0.0** |
+| `F4_streaming_clears_bars` | **FAILS** | esn_cusum 0.8150, safetydrift 0.6250 vs binding bar 0.9960 |
+| `F5_lead_time_positive` | **N/A** | `available_lead` is 0 on AgentDojo by construction |
+
+**F3 fails in the most pointed way available.** `best` and `last_step` are not merely close —
+they are *the same row*: `last_step` at 0.99880 **is** the best method on this corpus, so the
+max-over-the-ladder margin is 0.0 rather than small. On AgentDojo, "trajectory detection" is
+precisely "the final step alone gives it away," which is the exact failure the falsifier was
+written to catch. F4 fails too, consistent with the SHADE arm and with §8(a): the streaming
+half does not work on either corpus.
+
+**Read every AgentDojo number through the ceiling.** The whole main ladder sits between
+**0.825 and 0.999** against a `content` bar of **0.9960**, so almost nothing here clears its
+own bar and the differences between aggregators are compressed into the last thousandths.
+This arm carries the **F2 margin claim and nothing else** — it is not evidence that any
+aggregator works on AgentDojo.
+
+**The conclusion the pre-registration named in advance.** `config.py:FALSIFIERS` registered
+the disjunction on 2026-08-11, before either run: *"F1 holds AND F2 holds together implicate
+the HORIZON as the cause; F1 holds AND F2 fails implicates the corpus instead."* Both landed
+on the HOLDS side — **F1 HOLDS on SHADE (126 steps, mean 0.7397 vs max 0.8581) and F2 HOLDS on
+AgentDojo (8 steps, mean within 0.0084 of max)** — so the registered reading is that **mean-pool
+dilution tracks the HORIZON, not the corpus.** That is this lesson's headline, and it was
+callable before the data existed. Now read the next paragraph, which limits it.
+
+**What F1 + F2 still cannot tell you, even now that F2 has landed.** `types.py` and the run's
+console output claim that "F1 holds + F2 holds means the horizon is the cause". **That inference
+is not licensed by the design**, and this lesson's own fidelity audit says so
 ([`AUDIT_FIDELITY.md`](AUDIT_FIDELITY.md) §2.1). SHADE and AgentDojo hold only the label
 machinery constant; task suite, tool inventory, environment, generating agent, step prose style,
 base difficulty, and the *kind* of positive (a covert secondary objective vs an injected
-instruction) all vary together with the horizon. A joint F1/F2 pass would be equally consistent
-with "AgentDojo's prompt injections are blatant enough for any pooled representation" — nothing
-to do with horizon length. The within-corpus fix (a `Truncate(k, inner)` wrapper giving
+instruction) all vary together with the horizon. The joint F1/F2 pass **that actually happened**
+is equally consistent with "AgentDojo's prompt injections are blatant enough for any pooled
+representation" — nothing to do with horizon length — and the ceiling above (everything from
+0.825 to 0.999) is exactly what that alternative would look like. So the horizon reading is the
+**registered** reading, not a demonstrated one. The within-corpus fix (a `Truncate(k, inner)` wrapper giving
 `AUC[MaxPool@k] - AUC[MeanPool@k]` as a function of k, on SHADE alone) is specified in the audit
 and **is not built**.
 

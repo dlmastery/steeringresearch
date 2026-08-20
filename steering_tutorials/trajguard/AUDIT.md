@@ -191,14 +191,14 @@ pre-registration after the fact, and it is not repeated.
 | Rule 8 (pre-registered falsifier per claim) | **PASS** | six, registered before the run, printed by the runner |
 | Artifact regenerable from the code beside it | **PASS (with a stated boundary)** | fingerprint + text-free meta; the content bar needs the GPU re-run |
 | `results.json` records achieved, not requested | **PASS** | `sizes` block; gate raises on an unexplained shortfall |
-| **Results honesty** | **PENDING** | the re-based runs have **not** been executed; every result cell reads `[PENDING RUN]` and the superseded run is quarantined. This row cannot read PASS until the GPU runs land |
+| **Results honesty** | **HALF DONE — PASS (`disguised`) / PENDING (`overt`)** | the **`disguised`** run executed 2026-08-08 (`artifacts/results_disguised.json`, fingerprint `b34e4b2e85bb…`) and §§11.2–11.4 + §12.2 now carry measured numbers with CIs, including the two results that go against the lesson: **F1 FAILS** (the paper's own `threshold_freeform` at 0.7570 lands 0.153 *below* the 0.9103 `content` bar) and **F5 FAILS** (OOD best 0.8653 vs a 0.9873 prompt-content rival). **F2 HOLDS against our own registered prediction** that it would fail. The **`overt`** run has **not** been executed: §11.1 still reads `[PENDING RUN]`, and **F3** — the substrate contrast, the whole rationale for the re-basing — has no verdict on either arm because it needs both. This row cannot read a clean PASS until `TG_SUBSTRATE=overt` lands. The superseded 2026-07-27 run stays quarantined |
 | `AUDIT.md` current | **PASS (this revision)** | the 2026-07-20 version certified a run that no longer existed; recorded above |
 
 ---
 
 ## 4. Overall verdict
 
-**PASS on process and disclosure; PENDING on results.**
+**PASS on process and disclosure; HALF DONE on results (`disguised` measured, `overt` pending).**
 
 The lesson's cited papers are real and correctly characterised, its confound machinery
 is now the most complete in the course (the shared spine plus two geometry bars, run
@@ -207,9 +207,16 @@ rather than reported. Its **motivating premise was wrong and is retracted with t
 evidence**, and it has been re-based onto the substrate that makes the paper's actual
 claim testable.
 
-What it does **not** yet have is numbers on that substrate. Every result cell is
-`[PENDING RUN]`, the previous run is quarantined, and the registered prediction is that
-the paper's headline comparison **will not reproduce here**. That is the honest state
-of the lesson, and it is stated as the state rather than filled in.
+It now **has** numbers on the `disguised` half of that substrate (run 2026-08-08), and
+they cut both ways: three methods clear the 0.9103 `content` bar, while the paper's own
+`threshold_freeform` lands 0.153 **below** it (**F1 FAILS**) and nothing transfers OOD
+(**F5 FAILS**). The registered prediction was that the paper's headline comparison
+**would not reproduce here**; on `disguised` it **did** (**F2 HOLDS**, 0.9855 vs 0.9688),
+so the pre-registration was wrong in the direction that favours the paper — recorded,
+not quietly dropped.
+
+What it still does **not** have is the `overt` arm. §11.1 is `[PENDING RUN]` and **F3**,
+the substrate contrast that motivated the whole re-basing, therefore has no verdict at
+all. The previous run stays quarantined. That is the honest state of the lesson.
 
 *Internal QA pass — independent external review pending.*

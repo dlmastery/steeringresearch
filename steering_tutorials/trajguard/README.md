@@ -520,15 +520,71 @@ about what will happen.
 
 A pre-registration that only predicts wins is not a pre-registration.
 
+### 10.1 Outcome — the F2 prediction above was WRONG
+
+> **The four predictions above are reproduced verbatim and are NOT edited to match the
+> outcome.** A pre-registration that gets quietly corrected after the data lands is
+> worth nothing; the whole value is in leaving the wrong call on the page.
+
+**F2 was predicted to FAIL. It HELD.** From
+[`artifacts/results_disguised.json`](artifacts/results_disguised.json)
+(`falsifier_verdicts.F2_decoding_beats_prompt`):
+
+```
+best_method_auc    0.9855   (trajectory_mlp)
+prompt_content_auc 0.9688
+holds              true
+```
+
+So the decoding channel beat the prompt channel by **+0.0167**, and TrajGuard's headline
+comparative claim — that decoding-time hidden states carry signal the prompt does not —
+**reproduces on this substrate**. §10 said in advance that *"if it does hold we will have
+been wrong in the direction that favours the paper."* That is exactly what happened. We
+were wrong, in the direction that favours the paper, and the correct record of that is
+this paragraph rather than a rewritten bullet.
+
+**Three things keep this from being a win to celebrate.**
+
+1. **The margin is +0.0167 — smaller than the uncertainty on either side of it.**
+   `trajectory_mlp`'s own 95% CI is [0.9731, 0.9948], i.e. **0.0217 wide**, and the margin
+   does not clear that. On **181/class** at **one seed**. No paired CI on the margin
+   exists either (§12.3: the content bar is a CV-pooled centroid model exposing no
+   per-item score, so no resample pairing is possible). This is a screening-tier
+   reproduction, not a measured effect.
+2. **Two of the four methods do not clear the rival at all.** `trajectory_mlp` (+0.0167)
+   and `per_turn_max` (+0.0161) beat it; `seq_gru` is **−0.0145** and
+   `threshold_freeform` is **−0.2119**. F2 is defined on the *max* over methods, so it
+   passes on the strength of the single best row.
+3. **Do not conflate the two bars.** §11.2's binding **confound bar** is the
+   completion-channel `content` bar at **0.9103** — a trivial-baseline floor every method
+   must clear. F2's **0.9688** is the prompt-channel content **rival**: a competing
+   method, deliberately never folded into `worst_auc` (§12.1), because burying a rival
+   inside a confound bar would let the lesson "clear the bar" without facing the
+   comparison. A method can clear 0.9103 and still lose to 0.9688 — `seq_gru` does
+   exactly that (+0.0441 over the bar, −0.0145 against the rival).
+
+**F1 and F5 went the other way**, and the same no-editing rule applies to them: F1 was
+predicted to HOLD on `disguised` and **FAILED** (`threshold_freeform` 0.7570 vs the 0.9103
+bar); F5 was open and **FAILED** (OOD best 0.8653 vs a 0.9873 prompt-content rival). F3 is
+still open because the `overt` arm has not been run. Of the falsifiers with a verdict on
+this substrate, **two failed, two held, and one of the two that held did so against our
+own prediction.**
+
 ---
 
 ## 11. Results
 
-> **Status: NOT YET RUN on the re-based substrates.** Every cell below is
-> `[PENDING RUN]`. The runs are GPU work and are queued; the CPU-only prompt-channel
-> numbers in [§3](#3-retraction-and-the-re-basing-it-forced) and
-> [§12](#12-the-confound-audit--four-bars-and-one-rival) **are** measured and are
-> reproducible right now with `python -m steering_tutorials.trajguard.data`.
+> **Status: HALF RUN.** The **`disguised`** substrate ran on 2026-08-08
+> ([`artifacts/results_disguised.json`](artifacts/results_disguised.json), fingerprint
+> `b34e4b2e85bb…`, `models/google/gemma-3-1b-it`, layer 12, 40 new tokens, 5-fold,
+> 10,000 bootstrap resamples, seed 0) and §§11.2–11.4 and §12.2 below are **measured**.
+> The **`overt`** substrate has **not** been run — §11.1 is still `[PENDING RUN]`, and
+> with it **F3**, the substrate contrast that is the entire reason the lesson was
+> re-based (`substrate_comparison` in the artifact says so in as many words: *"F3 needs
+> BOTH arms; run the other substrate with TG_SUBSTRATE=overt"*). The CPU-only
+> prompt-channel numbers in [§3](#3-retraction-and-the-re-basing-it-forced) and
+> [§12.2](#122-measured-now-cpu-only-no-model) are reproducible right now with
+> `python -m steering_tutorials.trajguard.data`.
 
 ### 11.1 `overt` substrate — 500/class, rule-1 compliant
 
@@ -539,31 +595,74 @@ A pre-registration that only predicts wins is not a pre-registration.
 | `trajectory_mlp` | `[PENDING RUN]` | | | | | |
 | `seq_gru` | `[PENDING RUN]` | | | | | |
 
-### 11.2 `disguised` substrate — 181/class, **POOL-LIMITED, PROVISIONAL**
+### 11.2 `disguised` substrate — 181/class, **POOL-LIMITED, PROVISIONAL** — MEASURED
 
-| method | AUC | 95% CI | F1 | TPR@FPR=0.10 | margin vs confound bar | **margin vs prompt-only (0.9688)** |
+The binding confound bar on this substrate is `content` at **0.9103** (§12.2); the
+prompt-content **rival** is **0.9688** and is never folded into the bar (§12.1).
+
+| method | AUC | 95% CI | F1 | TPR@FPR=0.10 | margin vs confound bar (0.9103) | **margin vs prompt-only (0.9688)** |
 |---|---|---|---|---|---|---|
-| `threshold_freeform` | `[PENDING RUN]` | | | | | |
-| `per_turn_max` (stateless) | `[PENDING RUN]` | | | | | |
-| `trajectory_mlp` | `[PENDING RUN]` | | | | | |
-| `seq_gru` | `[PENDING RUN]` | | | | | |
+| `threshold_freeform` | 0.7570 | [0.7042, 0.8067] | 0.675 | 0.547 | **−0.1533 — BELOW the bar** | −0.2119 |
+| `per_turn_max` (stateless) | 0.9850 | [0.9732, 0.9941] | 0.856 | 0.978 | **+0.0747** | +0.0161 |
+| `trajectory_mlp` | **0.9855** | [0.9731, 0.9948] | 0.951 | 0.983 | **+0.0752** | +0.0167 |
+| `seq_gru` | 0.9544 | [0.9313, 0.9742] | 0.906 | 0.901 | **+0.0441** | −0.0145 |
 
-### 11.3 Early detection, each K against its own first-K bar
+**Read both halves of this table.** Three of the four methods clear the confound bar —
+`per_turn_max`, `trajectory_mlp` and `seq_gru` beat TF-IDF unigrams on the same
+completions by +0.075/+0.075/+0.044. But **the paper's own method, `threshold_freeform`,
+lands 0.153 BELOW the bar** — the drift detector this lesson is named after cannot beat
+unigram content on the substrate where it should be strongest. That is **F1 FAILING**
+(`falsifier_verdicts.F1_drift_clears_bar.holds = false`), exactly as a falsifier is
+supposed to work, and it is the more important half of the row.
+
+`vs_confound_paired_ci` is `null` on all four: the spine's `content` bar is a CV-pooled
+centroid model that exposes no per-item score, so no paired interval is fabricated
+(§12.3).
+
+**F2 HOLDS — against our own registered prediction**, by **+0.0167** over the
+prompt-content **rival** (0.9688), which is *not* the 0.9103 confound bar this table's
+margin column is priced against; the two are different quantities and §12.1 explains why
+they are kept apart. §10 predicted F2 would FAIL on both substrates. The full write-up —
+the verbatim prediction, why it was wrong, and why the margin does not support a strong
+claim — is in [§10.1](#101-outcome--the-f2-prediction-above-was-wrong).
+
+### 11.3 Early detection, each K against its own first-K bar — MEASURED
+
+Each K is scored against a bar recomputed on that same K-token prefix (there is no
+character or content bar at a prefix — the first-K tokens were never decoded to text —
+so the prefix bar is `count` + the two geometry bars).
 
 | | K=2 | K=4 | K=8 | K=16 | K=32 |
 |---|---|---|---|---|---|
-| `threshold_freeform` | `[PENDING RUN]` | | | | |
-| `seq_gru` | `[PENDING RUN]` | | | | |
-| **first-K confound bar** | `[PENDING RUN]` | | | | |
+| `threshold_freeform` | 0.7332 | 0.7380 | 0.7483 | 0.7496 | 0.7569 |
+| `seq_gru` | **0.9684** | 0.9595 | 0.9694 | 0.9680 | 0.9570 |
+| **first-K confound bar** | 0.6249 (`mean_norm`) | 0.5765 (`mean_norm`) | 0.5826 (`final_norm`) | 0.5742 (`final_norm`) | 0.5479 (`count`) |
 
-### 11.4 OOD — `jackhhao/jailbreak-classification`, 274/class
+**F4 HOLDS**, 10/10 cells clearing their own bar
+(`falsifier_verdicts.F4_streaming_clears_its_own_bar.holds = true`). Note what the row
+does *not* say: `seq_gru` is already at 0.968 by **K=2** and does not improve with more
+tokens, so what the early-K curve demonstrates is that two tokens suffice on this
+substrate — not that the method accumulates evidence over the trajectory.
+
+### 11.4 OOD — `jackhhao/jailbreak-classification`, 274/class — MEASURED
+
+Pool-limited (629 unique jailbreak rows → 274 after the 1,311-char length cap),
+`pool_limited: true`, 548 completions captured, 0 skipped.
 
 | method | AUC | 95% CI | degradation vs in-domain |
 |---|---|---|---|
-| all four | `[PENDING RUN]` | | |
+| `threshold_freeform` | 0.7832 | [0.7450, 0.8198] | **+0.0263** (better OOD than in-domain) |
+| `per_turn_max` | **0.8653** | [0.8344, 0.8938] | −0.1196 |
+| `trajectory_mlp` | 0.7854 | [0.7470, 0.8218] | **−0.2001** |
+| `seq_gru` | 0.8202 | [0.7839, 0.8547] | −0.1341 |
 
-Its prompt-content bar is **0.9873** (measured) — F5 is a high bar by construction, and
-that is reported as prominently as any win, per CLAUDE.md §17.
+**Every method fails OOD, and the failure is reported as prominently as the in-domain
+win.** The OOD completion-channel binding bar is `content` at **0.9341**, which *no*
+method reaches; the prompt-content rival is **0.9873**, so **F5 FAILS**
+(`ood_best_auc 0.8653` vs `0.9873`, `holds: false`). The in-domain result at §11.2 does
+not transfer: `trajectory_mlp`, the in-domain winner, loses 0.20 AUC and drops below
+`per_turn_max`. F5 is a high bar by construction and that is stated here, per
+CLAUDE.md §17.
 
 ### 11.5 The superseded run
 
@@ -639,8 +738,21 @@ The `disguised` shuffle control at **0.5702** is the highest of the three and si
 below the 0.60 invalidation threshold but not comfortably; at 181/class the shuffle
 statistic is itself noisy. Recorded, not smoothed.
 
-Completion-channel bars require the generated text and therefore the GPU run:
-`[PENDING RUN]`.
+The completion-channel bars require the generated text and therefore the GPU run. That
+run landed for `disguised` on 2026-08-08 and they are **measured**
+(`results_disguised.json:confound`, 181/class, 362 completions):
+
+| substrate | `length` | `count` | `content` | `shuffle` | `mean_norm` | `final_norm` | **binding bar** |
+|---|---|---|---|---|---|---|---|
+| `disguised` | 0.5064 | 0.5515 | **0.9103** | 0.5404 | 0.5463 | 0.5753 | **`content` 0.9103** |
+| `overt` | `[PENDING RUN]` | | | | | | |
+
+`content` binds by a wide margin — every scalar bar, including both geometry bars this
+lesson added, is within 0.08 of chance. So the classes are **not** separated by
+completion length, token count, or residual-stream magnitude; they are separated by what
+the model actually wrote, and that is the only bar a trajectory method has to beat.
+`shuffle` at 0.5404 is below the 0.60 invalidation threshold, so **F0 passes** and the
+run is valid.
 
 ### 12.3 What is still missing
 
