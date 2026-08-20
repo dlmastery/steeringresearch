@@ -1,0 +1,143 @@
+[config] corpus=shade n_per_class=500 seed=0 embedder=embgemma folds=5 bootstrap=10000
+[preregistered 2026-08-11] falsifiers:
+  F0_shuffle_control: Label-shuffle AUC (the content bar re-run with permuted labels) lands in [0.45, 0.55]. FAILS outside that band -- that is leakage, not signal, and invalidates every other falsifier below.
+  F1_mean_pool_collapses_long: THE lesson's central hypothesis. On SHADE (median 131 steps), MeanPool AUC is materially below both MaxPool and GRU (margin > 0.02 against each). This repo's own cross_trajectory data CONTRADICTS the literature's headline (mean_agg topped that ladder at 0.9358) -- so it is genuinely under test here, not assumed.
+  F2_mean_pool_survives_short: On AgentDojo (median 8 steps), MeanPool is NOT materially below MaxPool/GRU (margin <= 0.02 against each). F1 holds AND F2 holds together implicate the HORIZON as the cause; F1 holds AND F2 fails implicates the corpus instead.
+  F3_sequence_beats_laststep: The best sequence/pooling method beats the LastStep control by > 0.02 AUC. Without this, 'trajectory detection' is indistinguishable from 'the final step alone gives it away'.
+  F4_streaming_clears_bars: Both causal streaming monitors (ESNCusum, SafetyDriftMonitor) clear max(confound.worst_auc, first_step_rival.content.auc) on the offline-AUC reading of their peak score.
+  F5_lead_time_positive: On SHADE, the median lead (over DETECTED positives) is > 0 steps. NOT APPLICABLE on AgentDojo, where available_lead is 0 for every valid positive by construction (DATASETS_VERIFIED.md) -- reported N/A there, never FAILS.
+[cache] C:\Users\evija\steeringresearch\steering_tutorials\streaming_trajectory_aggregation\artifacts\corpora\shade_f0ffc9d46081bc37857145e9.json: HIT, 1000 trajectories, builder_version 2 verified
+[corpus] shade: pos=500 neg=500 groups=5 shortfall=False clears_rule_1=True
+[corpus] step_count_summary: {'n': 1000, 'min': 9, 'median': 126.0, 'mean': 125.569, 'max': 422}
+[embed] cache HIT: C:\Users\evija\steeringresearch\steering_tutorials\streaming_trajectory_aggregation\artifacts\embeddings\shade_embgemma_5606b758006c57f8fc675c28.npz (n=1000, dim=768, data + encoder-behaviour fingerprints verified)
+[embed] embedder=embgemma dim=768 n_trajectories=1000
+[confound] binding_bar=0.9039 (content)
+[evaluate:mean_pool] auc=0.7397 ci=[0.7090,0.7703] latency=2.264 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:max_pool] auc=0.8581 ci=[0.8344,0.8811] latency=2.231 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:mean_max_std_pool] auc=0.8532 ci=[0.8290,0.8770] latency=4.020 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:deviation_weighted] auc=0.7540 ci=[0.7241,0.7839] latency=6.095 us/step (is_causal=False n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:last_step] auc=0.8427 ci=[0.8180,0.8659] latency=1.814 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:first_4_steps] auc=0.6366 ci=[0.6022,0.6703] latency=1.999 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:gru] auc=0.9051 ci=[0.8859,0.9236] latency=51.645 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:query_token_compressor_k16] auc=0.9392 ci=[0.9253,0.9526] latency=10.571 us/step (is_causal=False n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:first_2_steps] auc=0.6315 ci=[0.5964,0.6662] latency=2.012 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:first_4_steps] auc=0.6366 ci=[0.6022,0.6703] latency=1.976 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:first_8_steps] auc=0.5604 ci=[0.5249,0.5959] latency=2.023 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:first_16_steps] auc=0.5996 ci=[0.5634,0.6337] latency=2.090 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:first_32_steps] auc=0.6039 ci=[0.5691,0.6375] latency=2.105 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:first_64_steps] auc=0.6996 ci=[0.6673,0.7314] latency=2.100 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:trunc_2_mean_pool] auc=0.6315 ci=[0.5964,0.6662] latency=2.030 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:trunc_2_max_pool] auc=0.6140 ci=[0.5796,0.6479] latency=1.953 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[horizon] k=2    mean_pool=0.6315 max_pool=0.6140 delta=-0.017552000000000012 ci=[-0.05703560111388508, 0.021710270819258474] bound=1000/1000
+[evaluate:trunc_4_mean_pool] auc=0.6366 ci=[0.6022,0.6703] latency=2.035 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:trunc_4_max_pool] auc=0.6481 ci=[0.6140,0.6818] latency=1.905 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[horizon] k=4    mean_pool=0.6366 max_pool=0.6481 delta=0.011483999999999939 ci=[-0.02602095568354293, 0.04876921255547331] bound=1000/1000
+[evaluate:trunc_8_mean_pool] auc=0.5604 ci=[0.5249,0.5959] latency=2.081 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:trunc_8_max_pool] auc=0.6555 ci=[0.6215,0.6888] latency=1.906 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[horizon] k=8    mean_pool=0.5604 max_pool=0.6555 delta=0.095136 ci=[0.04731310484641516, 0.14196978018239587] bound=1000/1000
+[evaluate:trunc_16_mean_pool] auc=0.5996 ci=[0.5634,0.6337] latency=2.154 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:trunc_16_max_pool] auc=0.6019 ci=[0.5672,0.6359] latency=2.002 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[horizon] k=16   mean_pool=0.5996 max_pool=0.6019 delta=0.0022400000000000198 ci=[-0.043689732746731796, 0.04808313400555189] bound=997/1000
+[evaluate:trunc_32_mean_pool] auc=0.6039 ci=[0.5691,0.6375] latency=2.086 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:trunc_32_max_pool] auc=0.6939 ci=[0.6611,0.7254] latency=2.047 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[horizon] k=32   mean_pool=0.6039 max_pool=0.6939 delta=0.09000799999999998 ci=[0.04606680989558275, 0.13458116267153922] bound=995/1000
+[evaluate:trunc_64_mean_pool] auc=0.6996 ci=[0.6673,0.7314] latency=2.258 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:trunc_64_max_pool] auc=0.7794 ci=[0.7506,0.8075] latency=2.163 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[horizon] k=64   mean_pool=0.6996 max_pool=0.7794 delta=0.07978399999999997 ci=[0.04142754482952152, 0.11853168445124627] bound=914/1000
+[evaluate:trunc_all_mean_pool] auc=0.7397 ci=[0.7090,0.7703] latency=2.829 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:trunc_all_max_pool] auc=0.8581 ci=[0.8344,0.8811] latency=2.348 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[horizon] k=all  mean_pool=0.7397 max_pool=0.8581 delta=0.11847600000000003 ci=[0.08299462813958795, 0.15367793900114093] bound=0/1000
+[evaluate:mean_pool] auc=0.8429 ci=[0.8060,0.8770] latency=3.289 us/step (is_causal=True n_scored=501/501 folds_used=5/5 skipped_folds=0)
+[evaluate:max_pool] auc=0.9706 ci=[0.9574,0.9822] latency=2.931 us/step (is_causal=True n_scored=501/501 folds_used=5/5 skipped_folds=0)
+[horizon:median_split] short n=501 (pos=219 neg=282) steps_med=88.0 delta=0.12767576670228953 ci=[0.09467586549514617, 0.16406301480988233]
+[evaluate:mean_pool] auc=0.4413 ci=[0.3898,0.4932] latency=1.776 us/step (is_causal=True n_scored=499/499 folds_used=5/5 skipped_folds=0)
+[evaluate:max_pool] auc=0.7446 ci=[0.6980,0.7883] latency=1.834 us/step (is_causal=True n_scored=499/499 folds_used=5/5 skipped_folds=0)
+[horizon:median_split] long  n=499 (pos=281 neg=218) steps_med=153.0 delta=0.30332364752358876 ci=[0.24070652146929214, 0.3670303063026615]
+[evaluate:esn_cusum] auc=0.5115 ci=[0.4754,0.5475] latency=656.552 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate:safetydrift] auc=0.4593 ci=[0.4239,0.4954] latency=166.558 us/step (is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0)
+[evaluate_lead_time:esn_cusum] n_eligible=132 n_detected=3 lead_p10/med/p90=3.0/11.0/16.6 false_alarm_rate=0.2941 unreliable_calibration=False
+======================================================================
+[evaluate:safetydrift] WARNING: UNRELIABLE CALIBRATION -- alarm threshold (0.610636) TIES the observed train-benign peak max (0.610636 over 313 trajectories, 4 distinct value(s)). Alarms may be rare BY CONSTRUCTION, not because the monitor genuinely separates classes. Reporting alarm_step=None honestly -- NOT treating a quiet monitor as a finding.
+======================================================================
+[evaluate_lead_time:safetydrift] n_eligible=132 n_detected=0 lead_p10/med/p90=0.0/0.0/0.0 false_alarm_rate=0.0000 unreliable_calibration=True
+[write] C:\Users\evija\steeringresearch\steering_tutorials\streaming_trajectory_aggregation\artifacts\results_shade.json
+
+------------------------------------------------------------------------------
+STREAMING TRAJECTORY AGGREGATION -- corpus=shade (SCREENING TIER, n=1000 trajectories, seed=0, 5-fold, one embedder)
+embedder=embgemma dim=768  pos=500 neg=500 groups=5  shortfall=False clears_rule_1=True
+steps: {'n': 1000, 'min': 9, 'median': 126.0, 'mean': 125.569, 'max': 422}
+CONFOUND binding_bar=0.9039 (content)
+------------------------------------------------------------------------------
+method                           AUC 95% CI             us/step notes
+mean_pool                      0.740 [0.709,0.770]       2.26 is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0
+max_pool                       0.858 [0.834,0.881]       2.23 is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0
+mean_max_std_pool              0.853 [0.829,0.877]       4.02 is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0
+deviation_weighted             0.754 [0.724,0.784]       6.09 is_causal=False n_scored=1000/1000 folds_used=5/5 skipped_folds=0
+last_step                      0.843 [0.818,0.866]       1.81 is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0
+first_4_steps                  0.637 [0.602,0.670]       2.00 is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0
+gru                            0.905 [0.886,0.924]      51.65 is_causal=True n_scored=1000/1000 folds_used=5/5 skipped_folds=0
+query_token_compressor_k16     0.939 [0.925,0.953]      10.57 is_causal=False n_scored=1000/1000 folds_used=5/5 skipped_folds=0
+------------------------------------------------------------------------------
+HORIZON-TRUNCATION CURVE (FirstKSteps(k) = Truncate(k, MeanPool)) -- a COVERAGE
+curve: it cannot separate 'an early prefix carries less' from 'a long window
+dilutes it'. The block below is the one that can.
+  first_2_steps        auc=0.632
+  first_4_steps        auc=0.637
+  first_8_steps        auc=0.560
+  first_16_steps       auc=0.600
+  first_32_steps       auc=0.604
+  first_64_steps       auc=0.700
+------------------------------------------------------------------------------
+WITHIN-CORPUS HORIZON CONTROL (registered 2026-08-20) -- delta(k) = AUC[max_pool] - AUC[mean_pool]
+on THIS corpus alone; both arms see the identical first-k window of the
+identical trajectories, so task/generator/tools/labels are held fixed.
+  k      mean_pool max_pool  delta     delta 95% CI         bound/total   flag
+  2      0.6315    0.6140    -0.0176   [ -0.0570,  0.0217]  1000/1000    
+  4      0.6366    0.6481    0.0115    [ -0.0260,  0.0488]  1000/1000    
+  8      0.5604    0.6555    0.0951    [  0.0473,  0.1420]  1000/1000    CI excludes 0
+  16     0.5996    0.6019    0.0022    [ -0.0437,  0.0481]   997/1000    
+  32     0.6039    0.6939    0.0900    [  0.0461,  0.1346]   995/1000    CI excludes 0
+  64     0.6996    0.7794    0.0798    [  0.0414,  0.1185]   914/1000    CI excludes 0
+  all    0.7397    0.8581    0.1185    [  0.0830,  0.1537]     0/1000    CI excludes 0
+  rank correlation rho(delta,k)=0.48571428571428577 p=0.32872303206997094 over 6 non-degenerate finite cells
+  growth delta(k=64)-delta(k=2)=0.0973 ci=[0.0406,0.1552] excludes_zero=True (PAIRED)
+  CRITERION (pre-registered, both parts required): NOT MET
+  anchors: k_all_matches_main_ladder=True fast_auc_agrees_with_sklearn=True
+  MEDIAN SPLIT (observational, WEAKER -- corroborates at best): median=126.0 steps, corpus length-only AUC=0.5431
+    short n=501   pos=219  neg=282  steps_med=88.0   len_auc=0.4852 cv=0.267  delta=0.1277   ci=[0.0947,0.1641]
+    long  n=499   pos=281  neg=218  steps_med=153.0  len_auc=0.4335 cv=0.235  delta=0.3033   ci=[0.2407,0.3670]
+    delta_long_minus_short=0.1756 -- UNPAIRED (disjoint strata); the halves
+    also differ in length SPREAD (cv above), which can flip this sign on
+    its own. See results.json horizon_within_corpus.median_split.caveat.
+------------------------------------------------------------------------------
+STREAMING MONITORS -- offline-AUC reading of peak score (F4):
+  esn_cusum            auc=0.511  vs binding_bar=0.904
+  safetydrift          auc=0.459  vs binding_bar=0.904
+STREAMING MONITORS -- lead time / false alarm (F5):
+  esn_cusum            n_eligible=132  n_detected=3    lead(p10/med/p90)=3.0/11.0/16.6 false_alarm=0.29411764705882354 unreliable_calibration=False
+  safetydrift          n_eligible=132  n_detected=0    lead(p10/med/p90)=0.0/0.0/0.0 false_alarm=0.0 unreliable_calibration=True
+------------------------------------------------------------------------------
+PRE-REGISTERED FALSIFIERS (registered 2026-08-11, evaluated on this run):
+  F0_shuffle_control                 HOLDS
+  F1_mean_pool_collapses_long        HOLDS
+  F2_mean_pool_survives_short        N/A (F2 is an AgentDojo-only claim; this run is corpus='shade')
+  F3_sequence_beats_laststep         HOLDS
+  F4_streaming_clears_bars           FAILS
+  F5_lead_time_positive              HOLDS
+  ADDENDUM to F2_mean_pool_survives_short (dated 2026-08-20):
+    CORRECTION to the registered READING (the verdict logic is unchanged; only what may be concluded from it is): F1 and F2 are a BETWEEN-corpus contrast. SHADE and AgentDojo hold only the label machinery constant -- task suite, generating agent, tool inventory, environment, step prose style, base difficulty and the kind of positive all vary together with the horizon. So 'F1 holds AND F2 holds' is CONSISTENT WITH a horizon explanation and does NOT establish one. The claim that separates horizon from corpus is the within-corpus control (HORIZON_CLAIM above, computed in horizon.py); F1/F2 are its external replication, not its evidence.
+------------------------------------------------------------------------------
+READ: F1 and F2 are a BETWEEN-CORPUS contrast and do NOT separate the horizon
+from the corpus. SHADE and AgentDojo differ in task suite, generating agent,
+tool inventory, prose style and the KIND of positive (a covert secondary
+objective vs an injected instruction) -- all of it varying together with the
+step count. So F1 holds + F2 holds is CONSISTENT WITH a horizon explanation
+and does not establish one; it is equally consistent with AgentDojo's injected
+attacks simply being blatant enough for any pooled representation to find.
+The claim that separates them is the WITHIN-CORPUS block above -- delta(k) on
+ONE corpus, with everything but the horizon held fixed. Read F1/F2 as the
+external replication of that, not as its evidence.
+Every method AUC above is a raw AUC; every claim about it must still be priced
+against confound.binding_bar before it is read as evidence of trajectory signal.
+Screening tier: one corpus, one embedder, one seed. wall_clock=5984.0s
+------------------------------------------------------------------------------
