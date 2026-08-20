@@ -49,6 +49,7 @@ __all__ = [
     "MeanMaxStdPool",
     "DeviationWeighted",
     "LastStep",
+    "Truncate",
     "FirstKSteps",
 ]
 
@@ -240,29 +241,137 @@ class LastStep(_PooledAggregator):
         return trajectory[-1]
 
 
-# --- 6. FirstKSteps -- the horizon-truncation curve -----------------------------------
-class FirstKSteps(_PooledAggregator):
-    """Prefix-only: mean-pool just the first `k` steps (or all of them, if the
-    trajectory is shorter than `k`). Sweeping `k` across a run of this class produces
-    the horizon-truncation curve -- how much AUC is recoverable from an early prefix
-    before the rest of a long trajectory (e.g. SHADE's median 131 steps) has even
-    happened. Uses the same TRUE-mean aggregation as `MeanPool` so a `FirstKSteps(k)`
-    vs `MeanPool` (= `FirstKSteps(inf)`) comparison isolates the horizon effect from
-    the pooling-function effect.
+# --- 6. Truncate -- the WITHIN-CORPUS horizon control ----------------------------------
+class Truncate:
+    """Restrict every trajectory to its first `k` steps, then delegate to `inner`.
+
+    WHY THIS IS A WRAPPER AND NOT A POOLING FUNCTION
+    ------------------------------------------------
+    The previous shape of this control (`FirstKSteps`, a `_PooledAggregator` whose
+    `_pool` was `prefix.mean(axis=0)`) was MeanPool-at-k and nothing else. Sweeping it
+    answers "how much signal sits in an early prefix" -- a curve that FALLS both when a
+    prefix carries less information AND when a longer window dilutes a signal that is
+    fully present in the prefix. Those two mechanisms are indistinguishable in it, and
+    only the second one is the dilution claim this lesson exists to test.
+
+    As a wrapper, the same truncation composes with ANY aggregator, so a single corpus
+    yields the statistic the claim actually needs:
+
+        delta(k) = AUC[Truncate(k, MaxPool)] - AUC[Truncate(k, MeanPool)]
+
+    Both arms see the IDENTICAL first-k window of the IDENTICAL trajectories, so the
+    information available is held fixed by construction and the only thing varying
+    within a k is the pooling function. If delta(k) grows with k on ONE corpus, task,
+    generator, tool inventory, prose style, kind-of-positive and label machinery are all
+    held perfectly fixed -- which is exactly what a between-corpus SHADE-vs-AgentDojo
+    contrast cannot do (see ../types.py). `horizon.py` computes that sweep.
+
+    CAUSAL SAFETY
+    -------------
+    `_cut` is `array[:k]` -- a prefix. It indexes no element at position >= k, so
+    truncation can never introduce lookahead, and `fit` truncates too (the classifier is
+    fit in the same k-step world it is scored in; fitting on full trajectories and
+    scoring on prefixes would be a train/test mismatch, not a horizon control).
+
+    Truncation cannot REPAIR an acausal inner, so `is_causal` is inherited from `inner`
+    rather than asserted True: `Truncate(k, QueryTokenCompressor)` is still acausal
+    (unmasked attention over the whole window), and this class does not pretend otherwise.
+
+    TRAJECTORIES SHORTER THAN k
+    ---------------------------
+    Policy: USE WHAT EXISTS. A trajectory with fewer than `k` steps is passed through
+    whole -- never zero-padded (padding invents steps and drags a pooled mean toward the
+    pad value) and never dropped (dropping makes the k-cells score different trajectory
+    sets, so delta(k) would confound horizon with sample composition). The consequence is
+    real and must be reported, not assumed away: at large k a corpus's short trajectories
+    are effectively untruncated, so Truncate(k) converges to `inner` itself. Call
+    `truncation_stats()` for the per-k counts; `horizon.py` writes them into results.json
+    beside every AUC so a reader can see how many trajectories a given k actually bound.
+
+    `k=None` means NO truncation (`array[:None]` is the whole array) -- the `k = all`
+    cell of the sweep, and an anchor: `Truncate(None, MeanPool)` must reproduce the main
+    ladder's `mean_pool` AUC exactly.
     """
 
-    is_causal = True  # a fixed-length prefix by construction never sees later steps
+    def __init__(self, k: int | None, inner, name: str | None = None):
+        if k is not None:
+            k = int(k)
+            if k < 1:
+                raise ValueError("k must be >= 1 or None (= no truncation), got %r" % (k,))
+        self.k = k
+        self.inner = inner
+        self.k_label = "all" if k is None else str(k)
+        self.name = name or ("trunc_%s_%s" % (self.k_label, getattr(inner, "name", "inner")))
+        # Inherited, never asserted: truncation adds no lookahead but removes none either.
+        self.is_causal = bool(getattr(inner, "is_causal", False))
+
+    def _cut(self, trajectory) -> np.ndarray:
+        a = np.asarray(trajectory, dtype=np.float32)
+        return a[: self.k]  # k=None -> the whole array; k>=1 -> a strict prefix
+
+    # -- Aggregator protocol (delegated; the wrapper holds no fitted state) --------
+    def fit(self, trajectories, labels) -> None:
+        self.inner.fit([self._cut(t) for t in trajectories], labels)
+
+    def score(self, trajectory) -> float:
+        return float(self.inner.score(self._cut(trajectory)))
+
+    def truncation_stats(self, trajectories, labels=None) -> dict:
+        """How many trajectories this k actually binds, and how many it leaves whole.
+
+        `n_bound` = trajectories with >= k steps (genuinely truncated to k).
+        `n_shorter_than_k` = trajectories with < k steps, passed through WHOLE under the
+        use-what-exists policy above. Reported per class when `labels` is given, because
+        a k that binds only the positives (or only the negatives) is a confound, not a
+        horizon knob.
+        """
+        counts = [int(np.asarray(t).shape[0]) for t in trajectories]
+        n = len(counts)
+        if self.k is None:
+            bound = [False] * n
+            used = counts
+        else:
+            bound = [c >= self.k for c in counts]
+            used = [min(c, self.k) for c in counts]
+        out = {
+            "k": self.k,
+            "k_label": self.k_label,
+            "short_policy": "use_available (no padding, no dropping)",
+            "n_total": n,
+            "n_bound": int(sum(bound)),
+            "n_shorter_than_k": int(n - sum(bound)),
+            "mean_steps_used": float(np.mean(used)) if n else 0.0,
+            "median_steps_used": float(np.median(used)) if n else 0.0,
+        }
+        if labels is not None:
+            lab = [int(y) for y in labels]
+            for cls in (0, 1):
+                idx = [i for i, y in enumerate(lab) if y == cls]
+                out["n_bound_class%d" % cls] = int(sum(bound[i] for i in idx))
+                out["n_shorter_than_k_class%d" % cls] = int(len(idx) - sum(bound[i] for i in idx))
+        return out
+
+
+class FirstKSteps(Truncate):
+    """`Truncate(k, MeanPool)` under its historical name -- prefix-only TRUE mean.
+
+    Kept as a named subclass so the existing `first_<k>_steps` rows in
+    `artifacts/results_*.json` (and the `_plot_horizon` parser that reads `k` out of that
+    name) stay valid across this refactor. It is now literally MeanPool-at-k rather than
+    a separate pooling function that happened to be a mean, so the "mean-pool arm" of the
+    within-corpus sweep and this curve are the SAME estimator by construction.
+
+    On its own this curve still cannot separate "an early prefix carries less
+    information" from "a long window dilutes it" -- that is what the MaxPool arm in
+    `horizon.py` is for. Read it as a coverage curve, not as dilution evidence.
+    """
 
     def __init__(self, k: int = 1, seed: int = 0):
-        super().__init__(seed=seed)
-        if k < 1:
-            raise ValueError("k must be >= 1, got %r" % (k,))
-        self.k = int(k)
-        self.name = "first_%d_steps" % self.k
-
-    def _pool(self, trajectory: np.ndarray) -> np.ndarray:
-        prefix = trajectory[: self.k]
-        return prefix.mean(axis=0)
+        if k is None:
+            raise ValueError("FirstKSteps requires an integer k; use Truncate(None, ...) "
+                             "for the untruncated cell")
+        super().__init__(k=k, inner=MeanPool(seed=seed), name="first_%d_steps" % int(k))
+        self.seed = seed
 
 
 # --- CPU smoke: python -m streaming_trajectory_aggregation.aggregators.pooling -------
@@ -286,22 +395,53 @@ if __name__ == "__main__":
         trajs.append(_make_traj(n, spike=None))
         labels.append(0)
 
-    for cls, kwargs in (
-        (MeanPool, {}),
-        (MaxPool, {}),
-        (MeanMaxStdPool, {}),
-        (DeviationWeighted, {}),
-        (LastStep, {}),
-        (FirstKSteps, {"k": 3}),
+    for agg in (
+        MeanPool(),
+        MaxPool(),
+        MeanMaxStdPool(),
+        DeviationWeighted(),
+        LastStep(),
+        FirstKSteps(k=3),
+        Truncate(3, MaxPool()),
+        Truncate(None, MeanPool()),
     ):
-        agg = cls(**kwargs)
         agg.fit(trajs, labels)
         scores = [agg.score(t) for t in trajs]
         # crude self-consistency check only -- NOT a claimed AUC, just plumbing proof
         pos = [s for s, y in zip(scores, labels) if y == 1]
         neg = [s for s, y in zip(scores, labels) if y == 0]
         print(
-            "%-20s is_causal=%-5s mean_score pos=%.3f neg=%.3f"
+            "%-24s is_causal=%-5s mean_score pos=%.3f neg=%.3f"
             % (agg.name, agg.is_causal, float(np.mean(pos)), float(np.mean(neg)))
         )
-    print("OK -- pooling.py aggregators fit/score end to end")
+
+    # Truncate(None, inner) must BE inner, not merely resemble it -- assert the anchor.
+    plain, wrapped = MeanPool(), Truncate(None, MeanPool())
+    plain.fit(trajs, labels)
+    wrapped.fit(trajs, labels)
+    assert np.allclose([plain.score(t) for t in trajs], [wrapped.score(t) for t in trajs]), \
+        "Truncate(None, MeanPool) diverged from MeanPool -- the k=all anchor is broken"
+
+    # FirstKSteps(k) must BE Truncate(k, MeanPool) after the refactor.
+    fk, tk = FirstKSteps(k=3), Truncate(3, MeanPool())
+    fk.fit(trajs, labels)
+    tk.fit(trajs, labels)
+    assert np.allclose([fk.score(t) for t in trajs], [tk.score(t) for t in trajs]), \
+        "FirstKSteps(k) diverged from Truncate(k, MeanPool)"
+
+    # Causality: the score of a prefix must not move when later steps are rewritten.
+    probe = Truncate(3, MaxPool())
+    probe.fit(trajs, labels)
+    t0 = trajs[0].copy()
+    mangled = t0.copy()
+    mangled[3:] += 50.0
+    assert abs(probe.score(t0) - probe.score(mangled)) < 1e-9, \
+        "Truncate leaked information from steps >= k"
+
+    # Short-trajectory accounting is COUNTED, not silent.
+    stats = Truncate(12, MeanPool()).truncation_stats(trajs, labels)
+    assert stats["n_bound"] + stats["n_shorter_than_k"] == stats["n_total"]
+    print("truncation_stats(k=12): n_bound=%d n_shorter=%d of %d (policy=%s)"
+          % (stats["n_bound"], stats["n_shorter_than_k"], stats["n_total"],
+             stats["short_policy"]))
+    print("OK -- pooling.py aggregators fit/score end to end; Truncate anchors hold")

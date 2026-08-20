@@ -25,10 +25,32 @@ Two corpora with the SAME per-step label machinery and OPPOSITE horizons:
     AgentDojo   median   8 steps, lead time == 0   -> mean pooling should be HARMLESS
     SHADE       median 131 steps, lead time  > 0   -> mean pooling should COLLAPSE
 
-Running one aggregator ladder across both turns an assertion into a measurement with a
-built-in control. If mean pooling degrades on SHADE but not AgentDojo, the HORIZON is
-the cause. If it degrades on both, the corpus is. If it degrades on neither, the claim
-does not replicate on Gemma embeddings and that is the finding.
+Running one aggregator ladder across both turns an assertion into a measurement. But be
+precise about what that measurement licenses, because an earlier version of this
+docstring was not: it said "if mean pooling degrades on SHADE but not AgentDojo, the
+HORIZON is the cause". **It does not follow.** The two corpora hold exactly one thing
+constant -- the label machinery (same ControlArena schema, same Gemini-3.1-Pro judge,
+same admission filter). Task suite, generating agent, tool inventory, environment, the
+prose style of a rendered step, base difficulty, and the KIND of positive (a covert
+secondary objective vs an injected instruction) all vary together with the step count. A
+joint F1-holds/F2-holds result is therefore CONSISTENT WITH a horizon explanation and
+equally consistent with "AgentDojo's prompt injections are blatant enough that any pooled
+representation finds them", which has nothing to do with horizon length.
+
+What DOES separate horizon from corpus is the WITHIN-corpus control in `horizon.py`:
+
+    delta(k) = AUC[Truncate(k, MaxPool)] - AUC[Truncate(k, MeanPool)]
+
+swept over the truncation horizon k on ONE corpus. Both arms see the identical first-k
+window of the identical trajectories, so within a k the only difference is the pooling
+function and across k the only difference is how much horizon each arm must survive. If
+delta(k) grows there, the dilution claim is established with task, generator, tools,
+prose and labels held perfectly fixed -- and the between-corpus contrast demotes to what
+it can actually support: an EXTERNAL REPLICATION on a second substrate. If delta(k) is
+flat, that is evidence against dilution on Gemma embeddings, and that is the finding.
+
+Read F1/F2 accordingly. They remain worth measuring and remain pre-registered; they are
+just not, by themselves, an identification of the cause.
 
 WHAT WE CANNOT DO, STATED UP FRONT
 ----------------------------------

@@ -128,6 +128,23 @@ LEAD_TIME_TEST_FRAC = float(os.environ.get("STA_LEAD_TEST_FRAC") or 0.30)
 # class): how much AUC is recoverable from an early prefix. Corpus-agnostic knob;
 # AgentDojo's own median (8) and SHADE's tail are both inside this range.
 EARLY_KS = [int(k) for k in _env_str("STA_EARLY_KS", "2,4,8,16,32,64").split(",") if k.strip()]
+
+# --- WITHIN-CORPUS horizon control (horizon.py) -----------------------------------
+# The k-grid for the truncation sweep. Defaults to EARLY_KS so the sweep and the
+# prefix-coverage curve are read on the same abscissa.
+HORIZON_KS = ([int(k) for k in _env_str("STA_HORIZON_KS", "").split(",") if k.strip()]
+              or list(EARLY_KS))
+# The two arms of the contrast. `Truncate` composes with any pooled aggregator, so these
+# are names into horizon.INNER_FACTORIES rather than hardcoded classes.
+HORIZON_INNER_LOW = _env_str("STA_HORIZON_INNER_LOW", "mean_pool")    # the claimed loser
+HORIZON_INNER_HIGH = _env_str("STA_HORIZON_INNER_HIGH", "max_pool")   # the claimed winner
+# Resamples for the PAIRED bootstrap on the delta (and on the delta-of-deltas). Separate
+# knob from BOOTSTRAP because the paired loop evaluates several AUCs per resample; lower
+# it to shrink a run into one foreground window, and label the result screening tier.
+HORIZON_BOOTSTRAP = _env_int("STA_HORIZON_BOOTSTRAP", 10000)
+# Run the (free, weaker, observational) median-split stratification as well.
+HORIZON_MEDIAN_SPLIT = _env_flag("STA_HORIZON_MEDIAN_SPLIT", True)
+HORIZON_RHO_FLOOR = float(os.environ.get("STA_HORIZON_RHO_FLOOR") or 0.7)
 # k for the single QueryTokenCompressor instance run in the main ladder. NOT confirmed
 # from TRACE's abstract (arXiv:2606.00611) -- sequence.py's own docstring: "K=16 is a
 # harness convenience, not an assertion that 16 is TRACE's own value."
@@ -150,6 +167,7 @@ EMBED_CACHE_DIR = ARTIFACTS / "embeddings"
 RESULTS_PATH = ARTIFACTS / ("results_%s.json" % CORPUS)
 ROC_PNG = ARTIFACTS / ("roc_by_method_%s.png" % CORPUS)
 HORIZON_PNG = ARTIFACTS / ("horizon_truncation_%s.png" % CORPUS)
+HORIZON_DELTA_PNG = ARTIFACTS / ("horizon_within_corpus_%s.png" % CORPUS)
 LEAD_TIME_PNG = ARTIFACTS / ("lead_time_%s.png" % CORPUS)
 
 ARTIFACTS.mkdir(exist_ok=True)
@@ -190,11 +208,54 @@ FALSIFIERS = [
      "by construction (DATASETS_VERIFIED.md) -- reported N/A there, never FAILS."),
 ]
 
+# ---------------------------------------------------------------------------
+# THE WITHIN-CORPUS HORIZON CLAIM -- registered SEPARATELY, and under its own later
+# date, because it was added after FALSIFIERS above. Back-dating it to 2026-08-11 would
+# make a post-hoc control look pre-registered, which is the exact defect the falsifier
+# block exists to prevent. F1/F2 are unchanged; this neither replaces nor rescues them.
+# ---------------------------------------------------------------------------
+HORIZON_PREREGISTERED = "2026-08-20"
+HORIZON_CLAIM = (
+    "H-WITHIN: on ONE corpus, the max-pool-minus-mean-pool AUC gap GROWS with the "
+    "truncation horizon k. Both arms see the identical first-k window of the identical "
+    "trajectories, so task, generating agent, tool inventory, prose style, kind-of-"
+    "positive and label machinery are held fixed by construction -- which the "
+    "between-corpus SHADE-vs-AgentDojo contrast (F1 + F2) cannot do."
+)
+HORIZON_CRITERION = (
+    "MET iff (a) Spearman rho of delta(k) against k over the non-degenerate finite "
+    "k-cells is >= %.2f, AND (b) the 95%% PAIRED bootstrap CI on "
+    "delta(k_max) - delta(k_min) excludes zero from above. Both parts required. A flat "
+    "or falling delta(k) is evidence AGAINST the dilution mechanism on this substrate, "
+    "and is to be reported as such rather than re-described as inconclusive."
+    % HORIZON_RHO_FLOOR
+)
+
+# F2's registered text ABOVE contains a clause that does not follow: "F1 holds AND F2
+# holds together implicate the HORIZON as the cause". It is left EXACTLY as registered --
+# silently rewriting a pre-registration to match what we later understood is a worse
+# defect than the original error, and would destroy the audit trail that caught it. The
+# correction is recorded here instead, dated, and carried into results.json.
+FALSIFIER_ADDENDA = [
+    ("F2_mean_pool_survives_short", HORIZON_PREREGISTERED,
+     "CORRECTION to the registered READING (the verdict logic is unchanged; only what may "
+     "be concluded from it is): F1 and F2 are a BETWEEN-corpus contrast. SHADE and "
+     "AgentDojo hold only the label machinery constant -- task suite, generating agent, "
+     "tool inventory, environment, step prose style, base difficulty and the kind of "
+     "positive all vary together with the horizon. So 'F1 holds AND F2 holds' is "
+     "CONSISTENT WITH a horizon explanation and does NOT establish one. The claim that "
+     "separates horizon from corpus is the within-corpus control (HORIZON_CLAIM above, "
+     "computed in horizon.py); F1/F2 are its external replication, not its evidence."),
+]
+
 if __name__ == "__main__":
     print("[config] corpus=%s n_per_class=%d seed=%d embedder=%s folds=%d bootstrap=%d"
           % (CORPUS, N_PER_CLASS, SEED, EMBEDDER, N_FOLDS, BOOTSTRAP))
     print("[config] max_steps=%d lead_time_test_frac=%.2f early_ks=%s query_token_k=%d"
           % (MAX_STEPS, LEAD_TIME_TEST_FRAC, EARLY_KS, QUERY_TOKEN_K))
+    print("[config] horizon: ks=%s low=%s high=%s bootstrap=%d median_split=%s rho_floor=%.2f"
+          % (HORIZON_KS, HORIZON_INNER_LOW, HORIZON_INNER_HIGH, HORIZON_BOOTSTRAP,
+             HORIZON_MEDIAN_SPLIT, HORIZON_RHO_FLOOR))
     print("[config] pool_measured[%s]=%s" % (CORPUS, POOL_MEASURED.get(CORPUS)))
     print("[config] results_path=%s" % RESULTS_PATH)
     print("OK -- config.py loads with no model, no network")

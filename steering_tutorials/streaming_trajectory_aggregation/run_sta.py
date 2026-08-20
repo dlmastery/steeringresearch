@@ -9,8 +9,16 @@ THE LADDER, IN ONE RUN
 -----------------------
 1. The MAIN 8-method offline ladder (`aggregators/pooling.py`'s six + `aggregators/
    sequence.py`'s two) -- group-aware CV, bootstrap CI, per-step latency.
-2. The HORIZON-TRUNCATION curve: `FirstKSteps(k)` swept over `config.EARLY_KS`, so
-   "does an early prefix already carry the signal" is a curve, not a guess.
+2. The HORIZON-TRUNCATION curve: `FirstKSteps(k)` (= `Truncate(k, MeanPool)`) swept over
+   `config.EARLY_KS`, so "does an early prefix already carry the signal" is a curve, not
+   a guess. Read it as a COVERAGE curve only -- on its own it cannot separate "an early
+   prefix carries less information" from "a long window dilutes it".
+2b. The WITHIN-CORPUS HORIZON CONTROL (`horizon.py`), which is what makes the dilution
+   claim decidable at all: `delta(k) = AUC[Truncate(k,MaxPool)] - AUC[Truncate(k,MeanPool)]`
+   swept over k on THIS corpus alone, both arms seeing the identical first-k window of the
+   identical trajectories -- plus the (weaker, observational) split of the corpus at its
+   own median step count. F1/F2 are a BETWEEN-corpus contrast and cannot separate horizon
+   from corpus; this block can.
 3. The confound audit (`evaluate.confound_bars`) -- full-trajectory 4-bar report PLUS
    the first-step-only rival.
 4. The two causal streaming monitors (`ESNCusum`, `SafetyDriftMonitor`), read TWO ways:
@@ -32,7 +40,7 @@ import time
 import numpy as np
 
 from steering_tutorials.streaming_trajectory_aggregation import config as C
-from steering_tutorials.streaming_trajectory_aggregation import embed, evaluate
+from steering_tutorials.streaming_trajectory_aggregation import embed, evaluate, horizon
 from steering_tutorials.streaming_trajectory_aggregation.types import (
     AggregatorResult, LeadTimeResult,
 )
@@ -251,6 +259,65 @@ def _plot_horizon(horizon_results, mean_pool_auc, confound, out_path):
     plt.close(fig)
 
 
+def _plot_horizon_delta(horizon_within, out_path):
+    """Two panels: both arms' AUC against k, and the PAIRED delta with its CI band.
+
+    The delta panel is the one that carries the claim -- a rising delta with a CI band
+    clear of zero is the within-corpus dilution result. Degenerate cells (a k that binds
+    no trajectory, so Truncate(k) is Truncate(all) in disguise) are drawn hollow so they
+    cannot be read as independent horizon points.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    cells = [c for c in horizon_within["cells"] if c["k"] is not None]
+    if len(cells) < 2:
+        return False
+    ks = [c["k"] for c in cells]
+    lo_name = horizon_within["inner_low"]
+    hi_name = horizon_within["inner_high"]
+    lo_auc = [c["per_inner"][lo_name]["auc"] for c in cells]
+    hi_auc = [c["per_inner"][hi_name]["auc"] for c in cells]
+    deltas = [c["delta"] for c in cells]
+    d_lo = [c["delta_ci"][0] for c in cells]
+    d_hi = [c["delta_ci"][1] for c in cells]
+    degen = [c["coverage"]["degenerate_equals_all"] for c in cells]
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7, 8), sharex=True)
+    ax1.plot(ks, lo_auc, marker="o", label="%s @ k" % lo_name)
+    ax1.plot(ks, hi_auc, marker="s", label="%s @ k" % hi_name)
+    ax1.axhline(0.5, color="k", linestyle=":", alpha=0.5, label="chance")
+    ax1.set_ylabel("out-of-fold AUC")
+    ax1.set_ylim(0.0, 1.02)
+    ax1.legend(loc="lower left", fontsize=8)
+    # Title from the RESULT's own corpus field, not C.CORPUS: the plot must be stamped
+    # with the corpus the numbers came from, not with whatever STA_CORPUS happens to say
+    # in the ambient environment.
+    ax1.set_title("Within-corpus horizon control -- corpus=%s"
+                  % horizon_within.get("corpus", "?"))
+
+    ax2.axhline(0.0, color="k", linestyle=":", alpha=0.6)
+    if all(x is not None for x in d_lo + d_hi):
+        ax2.fill_between(ks, d_lo, d_hi, alpha=0.25, label="95% paired bootstrap CI")
+    ax2.plot(ks, deltas, marker="o", color="C3", label="delta(k)")
+    for k, d, is_degen in zip(ks, deltas, degen):
+        if is_degen and d is not None:
+            ax2.plot([k], [d], marker="o", markerfacecolor="white", markeredgecolor="C3",
+                     markersize=9, linestyle="none")
+    ax2.set_xlabel("Truncation horizon k (steps seen); hollow = binds no trajectory (= k_all)")
+    ax2.set_ylabel("AUC[%s] - AUC[%s]" % (hi_name, lo_name))
+    rank = horizon_within.get("rank_correlation_delta_vs_k") or {}
+    ax2.legend(loc="upper left", fontsize=8,
+               title="rho(delta,k)=%s  criterion_met=%s"
+                     % (rank.get("rho"), horizon_within.get("criterion_met")))
+    ax1.set_xscale("log", base=2)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=120)
+    plt.close(fig)
+    return True
+
+
 def _plot_lead_time(lead_time_block, out_path):
     import matplotlib
     matplotlib.use("Agg")
@@ -351,6 +418,22 @@ def main():
     horizon_results = evaluate.evaluate_offline(
         corpus, capped, horizon_aggregators, seed=C.SEED, n_folds=C.N_FOLDS, bootstrap=C.BOOTSTRAP)
 
+    # --- 5b. WITHIN-CORPUS horizon control (the one F1+F2 cannot substitute for) -----
+    # Runs on whatever corpus this process was given: on SHADE it is the control the
+    # central claim needs; on AgentDojo it is the external replication of that same
+    # within-corpus statistic (and most of its k-cells will be flagged
+    # degenerate_equals_all, since AgentDojo's max is 40 steps -- which is itself the
+    # honest answer to "can this corpus speak to the horizon at all").
+    horizon_within = horizon.run_within_corpus_horizon(
+        corpus, capped, seed=C.SEED, n_folds=C.N_FOLDS, bootstrap=C.BOOTSTRAP,
+        main_ladder_aucs=_auc_by_method(main_results))
+    if C.HORIZON_MEDIAN_SPLIT:
+        horizon_within["median_split"] = horizon.run_median_split_horizon(
+            corpus, capped, seed=C.SEED, n_folds=C.N_FOLDS, bootstrap=C.BOOTSTRAP)
+    else:
+        horizon_within["median_split"] = {
+            "skipped": True, "reason": "config.HORIZON_MEDIAN_SPLIT is off"}
+
     # --- 6. streaming monitors: offline-AUC reading (F4) + lead-time (F5) -----------
     streaming_offline_monitors = [
         ESNCusum(reservoir_dim=C.ESN_RESERVOIR_DIM, alarm_percentile=C.ESN_ALARM_PERCENTILE, seed=C.SEED),
@@ -406,9 +489,17 @@ def main():
         "confound": confound,
         "main_ladder": [_agg_result_json(r) for r in main_results],
         "horizon_curve": [_agg_result_json(r) for r in horizon_results],
+        # THE within-corpus control. `horizon_curve` above is MeanPool-at-k only and is a
+        # coverage curve; this is the max-minus-mean gap as a function of k on ONE corpus,
+        # which is the form the dilution claim can actually be tested in.
+        "horizon_within_corpus": horizon_within,
         "streaming_offline_auc": [_agg_result_json(r) for r in streaming_offline],
         "lead_time": lead_time_block,
         "falsifiers": [{"tag": t, "statement": s} for t, s in C.FALSIFIERS],
+        # Registered text is never edited in place; corrections to how a falsifier may be
+        # READ are appended here, dated, so the audit trail survives.
+        "falsifier_addenda": [{"tag": t, "dated": d, "correction": c}
+                              for t, d, c in C.FALSIFIER_ADDENDA],
         "falsifier_verdicts": verdicts,
         "plots": [],
         "wall_clock_s": None,  # filled in just before write
@@ -427,6 +518,11 @@ def main():
     except Exception as exc:
         _eprint("[plot:horizon] FAILED: %s" % exc)
     try:
+        if _plot_horizon_delta(horizon_within, C.HORIZON_DELTA_PNG):
+            plots.append(str(C.HORIZON_DELTA_PNG))
+    except Exception as exc:
+        _eprint("[plot:horizon_delta] FAILED: %s" % exc)
+    try:
         if _plot_lead_time(lead_time_block, C.LEAD_TIME_PNG):
             plots.append(str(C.LEAD_TIME_PNG))
     except Exception as exc:
@@ -441,6 +537,83 @@ def main():
 
     _print_summary(results, main_results, horizon_results, streaming_offline)
     return results
+
+
+def _fmt(x, spec="%.4f", na="n/a"):
+    """Format a possibly-None number without pretending a missing value is a zero."""
+    return (spec % x) if isinstance(x, float) else na
+
+
+def _print_horizon_within(hw, line):
+    """ASCII-only summary of the within-corpus horizon control. No unicode: a Windows
+    cp1252 console kills the whole print on a single 'delta' glyph."""
+    if not hw:
+        print("WITHIN-CORPUS HORIZON CONTROL: absent from results (not run)")
+        return
+    lo, hi = hw.get("inner_low"), hw.get("inner_high")
+    print("WITHIN-CORPUS HORIZON CONTROL (registered %s) -- delta(k) = AUC[%s] - AUC[%s]"
+          % (hw.get("preregistered"), hi, lo))
+    print("on THIS corpus alone; both arms see the identical first-k window of the")
+    print("identical trajectories, so task/generator/tools/labels are held fixed.")
+    print("  %-6s %-9s %-9s %-9s %-20s %-13s %s"
+          % ("k", lo, hi, "delta", "delta 95% CI", "bound/total", "flag"))
+    for c in hw.get("cells", []):
+        cov = c.get("coverage", {})
+        ci = c.get("delta_ci") or [None, None]
+        flags = []
+        if cov.get("degenerate_equals_all"):
+            flags.append("DEGENERATE(=k_all)")
+        if c.get("delta_excludes_zero"):
+            flags.append("CI excludes 0")
+        print("  %-6s %-9s %-9s %-9s [%8s,%8s] %5d/%-7d %s"
+              % (c.get("k_label"),
+                 _fmt((c.get("per_inner", {}).get(lo) or {}).get("auc")),
+                 _fmt((c.get("per_inner", {}).get(hi) or {}).get("auc")),
+                 _fmt(c.get("delta")), _fmt(ci[0]), _fmt(ci[1]),
+                 cov.get("n_bound", 0), cov.get("n_total", 0), " ".join(flags)))
+    rank = hw.get("rank_correlation_delta_vs_k") or {}
+    g = hw.get("growth_k_big_minus_k_small") or {}
+    print("  rank correlation rho(delta,k)=%s p=%s over %s non-degenerate finite cells"
+          % (rank.get("rho"), rank.get("p"), rank.get("n")))
+    if g.get("applicable"):
+        gci = g.get("ci") or [None, None]
+        print("  growth delta(k=%s)-delta(k=%s)=%s ci=[%s,%s] excludes_zero=%s (PAIRED)"
+              % (g.get("k_big"), g.get("k_small"), _fmt(g.get("growth")),
+                 _fmt(gci[0]), _fmt(gci[1]), g.get("excludes_zero")))
+    else:
+        print("  growth: N/A (%s)" % g.get("reason"))
+    print("  CRITERION (pre-registered, both parts required): %s"
+          % ("MET" if hw.get("criterion_met") else "NOT MET"))
+    anchors = hw.get("anchors") or {}
+    ka = anchors.get("k_all_matches_main_ladder")
+    fa = anchors.get("fast_auc_agrees_with_sklearn")
+    print("  anchors: k_all_matches_main_ladder=%s fast_auc_agrees_with_sklearn=%s"
+          % ((ka or {}).get("matches"), (fa or {}).get("agrees")))
+
+    ms = hw.get("median_split") or {}
+    if ms.get("skipped"):
+        print("  MEDIAN SPLIT: skipped (%s)" % ms.get("reason"))
+    elif ms:
+        print("  MEDIAN SPLIT (observational, WEAKER -- corroborates at best):"
+              " median=%s steps, corpus length-only AUC=%s"
+              % (ms.get("median_steps"), _fmt(ms.get("corpus_length_only_auc"))))
+        for stratum in ("short", "long"):
+            b = ms.get("strata", {}).get(stratum) or {}
+            if b.get("skipped"):
+                print("    %-5s n=%-5d SKIPPED: %s" % (stratum, b.get("n", 0), b.get("reason")))
+                continue
+            ci = b.get("delta_ci") or [None, None]
+            disp = b.get("length_dispersion") or {}
+            print("    %-5s n=%-5d pos=%-4d neg=%-4d steps_med=%-6s len_auc=%-6s cv=%-6s "
+                  "delta=%-8s ci=[%s,%s]"
+                  % (stratum, b.get("n", 0), b.get("n_pos", 0), b.get("n_neg", 0),
+                     (b.get("steps") or {}).get("median"), _fmt(b.get("length_only_auc")),
+                     _fmt(disp.get("cv"), "%.3f"), _fmt(b.get("delta")),
+                     _fmt(ci[0]), _fmt(ci[1])))
+        print("    delta_long_minus_short=%s -- UNPAIRED (disjoint strata); the halves"
+              % _fmt(ms.get("delta_long_minus_short")))
+        print("    also differ in length SPREAD (cv above), which can flip this sign on")
+        print("    its own. See results.json horizon_within_corpus.median_split.caveat.")
 
 
 def _print_summary(results, main_results, horizon_results, streaming_offline):
@@ -470,10 +643,14 @@ def _print_summary(results, main_results, horizon_results, streaming_offline):
         lat = ("%.2f" % r.latency_us_per_step) if r.latency_us_per_step is not None else "n/a"
         print("%-28s %7.3f [%5.3f,%5.3f] %10s %s" % (r.method, auc, lo, hi, lat, r.notes))
     print(line)
-    print("HORIZON-TRUNCATION CURVE (FirstKSteps(k)):")
+    print("HORIZON-TRUNCATION CURVE (FirstKSteps(k) = Truncate(k, MeanPool)) -- a COVERAGE")
+    print("curve: it cannot separate 'an early prefix carries less' from 'a long window")
+    print("dilutes it'. The block below is the one that can.")
     for r in horizon_results:
         auc = r.auc if r.auc == r.auc else float("nan")
         print("  %-20s auc=%.3f" % (r.method, auc))
+    print(line)
+    _print_horizon_within(results.get("horizon_within_corpus") or {}, line)
     print(line)
     print("STREAMING MONITORS -- offline-AUC reading of peak score (F4):")
     for r in streaming_offline:
@@ -495,10 +672,20 @@ def _print_summary(results, main_results, horizon_results, streaming_offline):
             print("  %-34s N/A (%s)" % (key, v.get("reason")))
         else:
             print("  %-34s %s" % (key, {True: "HOLDS", False: "FAILS"}.get(v.get("holds"), "n/a")))
+    for a in results.get("falsifier_addenda", []):
+        print("  ADDENDUM to %s (dated %s):" % (a["tag"], a["dated"]))
+        print("    %s" % a["correction"])
     print(line)
-    print("READ: F1/F2 together separate the HORIZON hypothesis from the CORPUS hypothesis")
-    print("-- F1 holds + F2 holds means the horizon is the cause; F1 holds + F2 fails means")
-    print("the corpus (not the horizon) explains SHADE's degradation, if any is measured.")
+    print("READ: F1 and F2 are a BETWEEN-CORPUS contrast and do NOT separate the horizon")
+    print("from the corpus. SHADE and AgentDojo differ in task suite, generating agent,")
+    print("tool inventory, prose style and the KIND of positive (a covert secondary")
+    print("objective vs an injected instruction) -- all of it varying together with the")
+    print("step count. So F1 holds + F2 holds is CONSISTENT WITH a horizon explanation")
+    print("and does not establish one; it is equally consistent with AgentDojo's injected")
+    print("attacks simply being blatant enough for any pooled representation to find.")
+    print("The claim that separates them is the WITHIN-CORPUS block above -- delta(k) on")
+    print("ONE corpus, with everything but the horizon held fixed. Read F1/F2 as the")
+    print("external replication of that, not as its evidence.")
     print("Every method AUC above is a raw AUC; every claim about it must still be priced")
     print("against confound.binding_bar before it is read as evidence of trajectory signal.")
     print("Screening tier: one corpus, one embedder, one seed. wall_clock=%.1fs"

@@ -12,7 +12,13 @@ Eight `Aggregator`-Protocol implementations (`../types.py`), split by how they t
     4. DeviationWeighted   -- softmax-weighted mean by distance from the train benign
                               centroid.
     5. LastStep            -- THE CONTROL: final step alone.
-    6. FirstKSteps(k)      -- prefix-only mean, for the horizon-truncation curve.
+    6. Truncate(k, inner)  -- the WITHIN-CORPUS horizon control: restrict every
+                              trajectory to its first k steps and delegate to ANY
+                              aggregator, so `AUC[Truncate(k,MaxPool)] -
+                              AUC[Truncate(k,MeanPool)]` is measurable as a function of
+                              k on ONE corpus (see ../horizon.py).
+       FirstKSteps(k)      -- `Truncate(k, MeanPool)` under its historical name; the
+                              prefix-coverage curve, NOT dilution evidence on its own.
 
   sequence.py (learned end-to-end; own linear head as part of the network)
     7. GRUAggregator            -- Trajectory Guard family (arXiv:2601.00516).
@@ -32,6 +38,7 @@ from .pooling import (
     MaxPool,
     MeanMaxStdPool,
     MeanPool,
+    Truncate,
 )
 from .sequence import GRUAggregator, QueryTokenCompressor
 
@@ -41,6 +48,7 @@ __all__ = [
     "MeanMaxStdPool",
     "DeviationWeighted",
     "LastStep",
+    "Truncate",
     "FirstKSteps",
     "GRUAggregator",
     "QueryTokenCompressor",

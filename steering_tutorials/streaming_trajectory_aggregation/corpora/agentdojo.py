@@ -1,10 +1,26 @@
 """agentdojo.py -- the SHORT-HORIZON CONTROL: `control_arena_agentdojo` + monitor-labels.
 
-THIS CORPUS'S WHOLE JOB IS THE CONTRAST WITH `shade.py` (types.py's module
-docstring): AgentDojo trajectories have median **8** steps vs SHADE's median 131.
-Running the same aggregator ladder on both turns "does mean pooling collapse on long
-horizons" from an assertion into a measurement with a built-in control -- if mean
-pooling degrades on SHADE but not here, the HORIZON is the cause.
+THIS CORPUS'S JOB IS THE CONTRAST WITH `shade.py` (types.py's module docstring):
+AgentDojo trajectories have median **8** steps vs SHADE's median 131. Running the same
+aggregator ladder on both turns "does mean pooling collapse on long horizons" from an
+assertion into a measurement.
+
+BUT NOT INTO AN IDENTIFICATION, and this docstring used to overclaim that it did (it
+said "if mean pooling degrades on SHADE but not here, the HORIZON is the cause"). It
+does not follow. This corpus and SHADE hold exactly ONE thing constant -- the label
+machinery (same ControlArena schema, same Gemini-3.1-Pro judge, same admission filter).
+Task suite, generating agent, tool inventory, environment, step prose style, base
+difficulty and the KIND of positive (an injected instruction here vs a covert secondary
+objective on SHADE) all vary together with the step count. "Degrades there, not here" is
+therefore CONSISTENT WITH a horizon explanation and equally consistent with "AgentDojo's
+prompt injections are blatant enough that any pooled representation finds them".
+
+The control that DOES separate horizon from corpus is `../horizon.py`'s within-corpus
+sweep, run on a single corpus with everything but the truncation horizon held fixed.
+This corpus is the EXTERNAL REPLICATION of that result -- valuable, and not its evidence.
+Note also that AgentDojo's max is 40 steps, so most of the k-grid binds nothing here and
+those cells are flagged `degenerate_equals_all`: the honest answer to "what can this
+corpus say about the horizon on its own" is "very little", by construction.
 
 DATA -- IDENTICAL SCHEMA to `shade.py` (DATASETS_VERIFIED.md: "the SAME construction
 as the SHADE one"), so this loader is a thin wrapper around the shared
