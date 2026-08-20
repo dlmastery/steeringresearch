@@ -303,12 +303,16 @@ the disjunction on 2026-08-11, before either run: *"F1 holds AND F2 holds togeth
 the HORIZON as the cause; F1 holds AND F2 fails implicates the corpus instead."* Both landed
 on the HOLDS side — **F1 HOLDS on SHADE (126 steps, mean 0.7397 vs max 0.8581) and F2 HOLDS on
 AgentDojo (8 steps, mean within 0.0084 of max)** — so the registered reading is that **mean-pool
-dilution tracks the HORIZON, not the corpus.** That is this lesson's headline, and it was
-callable before the data existed. Now read the next paragraph, which limits it.
+dilution tracks the HORIZON, not the corpus.**
+
+**But the registered reading is not a demonstrated one, and this is NOT the lesson's
+headline.** Naming a disjunction in advance protects against HARKing; it does not make the
+design able to resolve it. Read the next paragraph before quoting anything above.
 
 **What F1 + F2 still cannot tell you, even now that F2 has landed.** `types.py` and the run's
-console output claim that "F1 holds + F2 holds means the horizon is the cause". **That inference
-is not licensed by the design**, and this lesson's own fidelity audit says so
+console output *used to* claim that "F1 holds + F2 holds means the horizon is the cause"; both
+were corrected on 2026-08-20 and no longer assert it. **That inference is not licensed by the
+design**, and this lesson's own fidelity audit said so before either run
 ([`AUDIT_FIDELITY.md`](AUDIT_FIDELITY.md) §2.1). SHADE and AgentDojo hold only the label
 machinery constant; task suite, tool inventory, environment, generating agent, step prose style,
 base difficulty, and the *kind* of positive (a covert secondary objective vs an injected
@@ -316,9 +320,26 @@ instruction) all vary together with the horizon. The joint F1/F2 pass **that act
 is equally consistent with "AgentDojo's prompt injections are blatant enough for any pooled
 representation" — nothing to do with horizon length — and the ceiling above (everything from
 0.825 to 0.999) is exactly what that alternative would look like. So the horizon reading is the
-**registered** reading, not a demonstrated one. The within-corpus fix (a `Truncate(k, inner)` wrapper giving
-`AUC[MaxPool@k] - AUC[MeanPool@k]` as a function of k, on SHADE alone) is specified in the audit
-and **is not built**.
+**registered** reading, not a demonstrated one.
+
+**The within-corpus fix is now BUILT** (`horizon.py`, 2026-08-20): `Truncate(k, inner)` wraps any
+pooled aggregator so both arms see the identical first-k window of the identical trajectories,
+and reports `delta(k) = AUC[Truncate(k,MaxPool)] - AUC[Truncate(k,MeanPool)]` on **one corpus
+alone**. If `delta(k)` rises within SHADE, dilution is established with task, generator, tools,
+prose and labels held perfectly fixed, and F1/F2 demote to an external replication on a second
+substrate. If it is flat, that is evidence *against* dilution on Gemma embeddings — and that is
+the finding. Pre-registered as `config.HORIZON_PREREGISTERED = "2026-08-20"`; the original F2
+text in `config.FALSIFIERS` was left **verbatim** and the correction carried as a dated
+`FALSIFIER_ADDENDA` entry, because editing a registered falsifier to match a later
+understanding is the thing pre-registration exists to prevent.
+
+*Caveat on the audit's proposed SECOND control.* `AUDIT_FIDELITY` offers a median split of SHADE
+at its own step count as a free corroborator. It is much weaker than that implies: on synthetic
+data with a **planted** dilution effect, the truncation sweep recovers it while the median split
+returns the **opposite sign**. The mechanism is structural, not noise — a median split leaves the
+lower half spanning min..median (wide length spread, measured cv 0.390) against a homogeneous
+upper half (cv 0.135), while a mean-pooled feature scales like signal/n. It is reported with its
+`length_dispersion` per stratum and asserted in **neither** direction.
 
 ---
 
