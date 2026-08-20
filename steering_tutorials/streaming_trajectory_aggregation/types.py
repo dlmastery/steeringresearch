@@ -140,7 +140,23 @@ class Corpus:
     requested_n_per_class: int
     pool_fingerprint: str           # sha256 over the sorted uids actually sampled
     licence: str                    # "unstated" is a legitimate, and important, value
-    label_provenance: str           # e.g. "gemini-3.1-pro-preview judge log"
+    # PROVENANCE IS TWO DIFFERENT THINGS AND CONFLATING THEM MISLEADS IN BOTH
+    # DIRECTIONS. A single `label_provenance` field sitting on Corpus reads as if
+    # it describes the labels the AUC ladder is scored against. On the
+    # ControlArena pairs it does not:
+    #
+    #   trajectory label (pos/neg)  <- the dataset's own `ground_truth` 0/1 field
+    #                                  (corpora/__init__.py), which is JUDGE-FREE
+    #   per-step labels             <- `ideal_flagging_step`,
+    #                                  `point_of_no_return_step`, which on SHADE /
+    #                                  AgentDojo are Gemini-3.1-Pro judge output
+    #
+    # Read the old single field literally and you would wrongly discredit the
+    # whole main ladder (F1/F3 are scored against ground_truth and are fine), and
+    # simultaneously over-trust lead time (F5 is measured against a judge ORACLE,
+    # never against truth). Both halves are now named separately.
+    label_provenance: str           # TRAJECTORY labels: what pos/neg comes from
+    step_label_provenance: str = "" # PER-STEP labels: oracle/PoNR timing source
 
     @property
     def achieved_n_pos(self) -> int:

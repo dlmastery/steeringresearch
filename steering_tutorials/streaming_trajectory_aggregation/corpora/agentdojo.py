@@ -68,7 +68,8 @@ class AgentDojoLoader:
             requested_n_per_class=n_per_class,
             pool_fingerprint=uids_fingerprint([t.uid for t in trajectories]),
             licence="unstated",
-            label_provenance="gemini-3.1-pro-preview judge log (LLM-generated, not human)",
+            label_provenance="ControlArena `ground_truth` 0/1 field -- the task's own attack/benign designation, JUDGE-FREE (this is what the AUC ladder is scored against)",
+            step_label_provenance="gemini-3.1-pro-preview judge log (LLM-generated, not human) -- oracle flagging step and point-of-no-return; lead time is measured against THIS, never against truth",
         )
 
 

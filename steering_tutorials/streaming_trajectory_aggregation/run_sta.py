@@ -397,7 +397,11 @@ def main():
         "sizes": sizes,
         "step_count_summary": steps,
         "licence": corpus.licence,
+        # Both halves, separately. A single field here read as if it covered the
+        # labels the ladder is scored against, which on the ControlArena pairs it
+        # did not -- see types.Corpus.
         "label_provenance": corpus.label_provenance,
+        "step_label_provenance": getattr(corpus, "step_label_provenance", ""),
         "pool_fingerprint": corpus.pool_fingerprint,
         "confound": confound,
         "main_ladder": [_agg_result_json(r) for r in main_results],
