@@ -152,6 +152,20 @@ N_FOLDS = _env_int("TG_FOLDS", 5)
 # CPU on 1,000 pooled predictions, so there is no reason to run below it.
 BOOTSTRAP = _env_int("TG_BOOTSTRAP", 10000)
 
+# --- The three confound CONTROLS (controls.py) -------------------------------
+# README section 12.3 named these three as missing; they were code gaps, not reporting
+# gaps. See `controls.py` for what each one asks.
+#
+# MATCHED_BINS: quantile bins of completion character length inside which each method's
+# AUC is recomputed and then pooled by pair count. 4 bins on 362 items gives ~90 per bin
+# (~45/class), which is enough for a within-bin AUC to mean something; raising it on a
+# pool this size trades the confound control for noise. The ACHIEVED bin count is
+# reported separately because ties in the stratifier can collapse edges.
+MATCHED_BINS = _env_int("TG_MATCHED_BINS", 4)
+# The within-bin bootstrap resamples inside bins and is evaluated once per method plus
+# once for the binding bar, so it gets its own knob; it defaults to the same 10k.
+MATCHED_BIN_BOOTSTRAP = _env_int("TG_MATCHED_BIN_BOOTSTRAP", BOOTSTRAP)
+
 # --- Paths -------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent
 ARTIFACTS = ROOT / "artifacts"

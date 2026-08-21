@@ -290,6 +290,32 @@ def _sidecar_path(cache_path) -> Path:
     return Path(cache_path).with_suffix(".json")
 
 
+def _meta_path_for(cache_path) -> Path:
+    """Which COMMITTED text-free sidecar belongs to this cache.
+
+    FIXED 2026-08-21. ``_save_cache`` used to write ``write_meta(C.META_PATH, ...)`` with
+    the path HARDCODED, so building the OOD arm -- which calls the same ``_save_cache``
+    with ``C.OOD_CACHE`` -- silently overwrote the IN-DOMAIN committed sidecar with the
+    OOD arm's 548 records. The shipped ``trajectory_meta_disguised.json`` was byte-for-byte
+    the OOD file: same 548 completions, same ``substrate: "ood:jackhhao/..."`` snapshot,
+    same fingerprint, and a ``cache_file`` naming the in-domain npz it did not describe.
+
+    Nothing crashed and nothing looked wrong, because both files are well-formed JSON of
+    plausible size -- the CLAUDE.md section 18.8 pattern exactly. The cost was the
+    lesson's central reproduction promise: "the numeric confound bars recompute from this
+    file alone with no GPU" was false for the in-domain arm, which is the arm the README
+    headlines. The path is now DERIVED from the cache it describes, and ``write_meta``
+    asserts the two agree.
+    """
+    cache_path = Path(cache_path)
+    if cache_path.name == Path(C.OOD_CACHE).name:
+        return Path(C.OOD_META_PATH)
+    if cache_path.name == Path(C.TRAJ_CACHE).name:
+        return Path(C.META_PATH)
+    return cache_path.with_name(cache_path.stem.replace("token_trajectories",
+                                                        "trajectory_meta") + ".json")
+
+
 # --------------------------------------------------------------------------- #
 # 3. Cache I/O
 # --------------------------------------------------------------------------- #
@@ -331,20 +357,23 @@ def _save_cache(cache_path, trajectories, labels, prompts, completions,
         encoding="utf-8",
     )
 
+    meta_path = _meta_path_for(cache_path)
     size = cache_path.stat().st_size if cache_path.exists() else 0
     if size > C.CACHE_SIZE_WARN_BYTES:
         print("[trajguard.data] NOTE: cache is %.1f MiB, above the %.0f MiB advisory "
               "(GitHub's hard per-file limit is 100 MiB). It is gitignored by design; "
               "the committed artifact is %s."
               % (size / 1048576.0, C.CACHE_SIZE_WARN_BYTES / 1048576.0,
-                 Path(C.META_PATH).name), file=sys.stderr)
+                 meta_path.name), file=sys.stderr)
 
-    write_meta(C.META_PATH, trajectories, labels, completions, group_ids,
-               snapshot, fingerprint, header, cache_bytes=size)
+    write_meta(meta_path, trajectories, labels, completions, group_ids,
+               snapshot, fingerprint, header, cache_bytes=size,
+               cache_file=cache_path.name)
 
 
 def write_meta(meta_path, trajectories, labels, completions, group_ids,
-               snapshot: dict, fingerprint: str, header: dict, cache_bytes: int = 0) -> None:
+               snapshot: dict, fingerprint: str, header: dict, cache_bytes: int = 0,
+               cache_file: str = None) -> None:
     """Write the committed, TEXT-FREE reproduction sidecar.
 
     The 100 MB hidden-state cache cannot live in git, but everything a reader needs to
@@ -355,7 +384,26 @@ def write_meta(meta_path, trajectories, labels, completions, group_ids,
     Deliberately carries NO raw text. The prompts are recoverable from the public
     dataset through :func:`select_prompts` (deterministic), and the completions are
     abliterated-model generations on harmful prompts, which should not be republished.
+
+    ``cache_file`` names the npz these records actually describe and MUST be passed by
+    any caller that is not writing the default in-domain cache; it used to be hardcoded
+    to ``C.TRAJ_CACHE``, so the OOD sidecar pointed at the in-domain blob. An artifact
+    that names the wrong input is not a reproduction aid, it is a false stamp.
     """
+    meta_path = Path(meta_path)
+    cache_file = str(cache_file or Path(C.TRAJ_CACHE).name)
+
+    # THE ANCHOR: an OOD snapshot must never land in the in-domain sidecar (or vice
+    # versa). This is the assertion whose absence let the two files become identical.
+    is_ood_snapshot = str((snapshot or {}).get("substrate", "")).startswith("ood:")
+    is_ood_path = meta_path.name == Path(C.OOD_META_PATH).name
+    if is_ood_snapshot != is_ood_path:
+        raise AssertionError(
+            "write_meta refuses to write a %s snapshot (substrate=%r) to %s. The meta "
+            "path must be derived from the cache being written -- see _meta_path_for."
+            % ("OOD" if is_ood_snapshot else "in-domain",
+               (snapshot or {}).get("substrate"), meta_path.name))
+
     trajs = [np.asarray(t, dtype=np.float32) for t in trajectories]
     recs = []
     for i, t in enumerate(trajs):
@@ -369,12 +417,12 @@ def write_meta(meta_path, trajectories, labels, completions, group_ids,
             "mean_norm": float(norms.mean()),
             "final_norm": float(np.linalg.norm(t2[-1])) if t2.size else 0.0,
         })
-    Path(meta_path).parent.mkdir(parents=True, exist_ok=True)
-    Path(meta_path).write_text(json.dumps({
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+    meta_path.write_text(json.dumps({
         "fingerprint": str(fingerprint),
         "config_snapshot": snapshot,
         "dataset_header": header,
-        "cache_file": Path(C.TRAJ_CACHE).name,
+        "cache_file": cache_file,
         "cache_bytes": int(cache_bytes),
         "note": "TEXT-FREE reproduction sidecar. Regenerate the hidden-state cache with "
                 "`python -m steering_tutorials.trajguard.run_trajguard` and verify the "
