@@ -729,8 +729,13 @@ All of these are BLOCKED ONLY BY HOST MEMORY on the old box, not by missing code
 3. Unrun alpha sweeps — **CORRECTED 2026-08-17, this entry was STALE in two ways**:
    - `fine_grained` — **its sweep HAS run.** `artifacts/results.json` carries a populated
      `sweep` key plus `dense` / `best_sparse` / `thresholds`. Remove it from this list.
-   - `non_identifiability` — **genuinely unrun.** No `sweep`/`alpha` key; only a single
-     `matched_alpha`. Still open.
+   - `non_identifiability` — **CORRECTED AGAIN 2026-08-21: the sweep is not merely
+     unrun, it is NOT WIRED.** `run_nonident.py` references only `C.MATCHED_ALPHA`
+     (lines 319, 353); `C.ALPHAS = [0.06, 0.08, 0.10]` appears NOWHERE in the runner
+     and is dead config. So this is a **NEEDS-CODE** item, not a NEEDS-GPU one —
+     running the lesson as it stands would never produce a sweep, however much GPU
+     it is given. Three passes were needed to get this entry right, and each time
+     the error was the same: the list recorded an INTENTION as though it were code.
    - `rogue_scalpel` — **its guard LADDER has run** at n=200 (baseline / attacked /
      +clamp / +lock / +dual). What is actually open is (a) the `negative_add` attack
      mode — the artifact records `attack_mode: "project_out"` — and (b) a *per-layer*
