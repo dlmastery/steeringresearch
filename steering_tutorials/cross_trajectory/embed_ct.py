@@ -104,13 +104,33 @@ def get_embedder(method: str):
 
 
 def _get_embeddinggemma_embedder():
-    """google/embeddinggemma-300m from the LOCAL path, mean-pooled over the mask.
+    """google/embeddinggemma-300m through the FULL sentence-transformers stack.
 
-    Loaded exactly the way ``minilm`` is (AutoModel + attention-mask mean pooling)
-    so the two arms differ ONLY in the backbone, not in the pooling recipe.
+    FIXED 2026-08-21. This used to load via ``AutoModel`` + attention-mask mean
+    pooling, with the stated rationale that it matched ``minilm`` so "the two arms
+    differ ONLY in the backbone, not in the pooling recipe". That rationale is
+    plausible and it was WRONG, because the parts it skipped are not a pooling
+    recipe -- they are part of the model.
+
+    EmbeddingGemma's ``modules.json`` declares FIVE modules::
+
+        0 Transformer -> 1 Pooling -> 2 Dense(768->3072) -> 3 Dense(3072->768) -> 4 Normalize
+
+    ``AutoModel`` + mean pooling executes modules 0 and 1 and stops. It silently
+    skips TWO TRAINED DENSE PROJECTION HEADS (``2_Dense/`` and ``3_Dense/``, ~9.4 MB
+    of weights each, both present on disk) and the final ``Normalize``. The output
+    still has 768 dims and raises no error -- it is simply a DIFFERENT VECTOR SPACE
+    from the one the model card describes. Right shape, no error, wrong space: the
+    same failure class as the causal-attention bug
+    (``audits/AUDIT_2026-08-17_embeddinggemma_causal.md``).
+
+    Every number produced by the old path is suspended in
+    ``artifacts/results_embeddinggemma_TRUNCATED_ENCODER_SUSPENDED.json``.
+
+    We assert the Dense modules are actually present rather than trusting the load,
+    because a silent truncation is exactly what this function shipped before.
     """
     import torch
-    from transformers import AutoModel, AutoTokenizer
 
     path = str(C.EMBEDDINGGEMMA_ID)
     if not os.path.exists(path):
@@ -118,21 +138,37 @@ def _get_embeddinggemma_embedder():
             "embeddinggemma weights not found at %r. The HF id is gated; this "
             "lesson loads the LOCAL copy. Set CT_EMBEDDINGGEMMA_ID." % path)
 
-    tok = AutoTokenizer.from_pretrained(path)
-    model = AutoModel.from_pretrained(path)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = model.to(device).eval()
+    try:
+        from sentence_transformers import SentenceTransformer
+    except ImportError as exc:  # never silently fall back to the truncated path
+        raise ImportError(
+            "EmbeddingGemma needs sentence-transformers: its trained Dense heads "
+            "live in 2_Dense/ and 3_Dense/ and are only executed by the full "
+            "module stack. Falling back to AutoModel would silently produce "
+            "768-dim vectors in the WRONG SPACE. pip install sentence-transformers"
+        ) from exc
+
+    st = SentenceTransformer(path, device="cuda" if torch.cuda.is_available() else "cpu")
+
+    # ANCHOR: the whole point of this fix is that the Dense heads run.
+    module_types = [type(m).__name__ for m in st._modules.values()]
+    n_dense = sum(1 for t in module_types if t == "Dense")
+    if n_dense < 2:
+        raise RuntimeError(
+            "EmbeddingGemma loaded with %d Dense module(s), expected 2. Module "
+            "stack is %r. Refusing to embed through a truncated model -- that is "
+            "the defect this loader was rewritten to prevent." % (n_dense, module_types))
+    st.eval()
 
     def embed_text(text: str) -> np.ndarray:
-        enc = tok(text, return_tensors="pt", truncation=True,
-                  max_length=C.EMBEDDINGGEMMA_MAXLEN, padding=True)
-        enc = {k: v.to(device) for k, v in enc.items()}
-        with torch.no_grad():
-            out = model(**enc)
-        hidden = out.last_hidden_state                              # [1, seq, hid]
-        mask = enc["attention_mask"].unsqueeze(-1).to(hidden.dtype)  # [1, seq, 1]
-        pooled = (hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1e-9)
-        return pooled.squeeze(0).detach().cpu().float().numpy().reshape(-1)
+        # Single consistent task prompt. Unlike biencoder_guard (a genuine
+        # asymmetric-retrieval setting with query/document roles), every trajectory
+        # here plays ONE role in one aggregation, so splitting prompts would scatter
+        # interchangeable objects across two sub-spaces.
+        vec = st.encode(text, prompt_name=C.EMBEDDINGGEMMA_PROMPT,
+                        convert_to_numpy=True, normalize_embeddings=False,
+                        show_progress_bar=False)
+        return np.asarray(vec, dtype=np.float32).reshape(-1)
 
     dim = int(embed_text("hello").shape[0])  # probe, never hard-code
     return embed_text, dim

@@ -75,6 +75,11 @@ if EMBEDDER not in EMBEDDER_CHOICES:
 GEMMA_MODEL_ID = _env_str("CT_GEMMA_ID", "models/google/gemma-3-1b-it")
 GEMMA_LAYER = _env_int("CT_GEMMA_LAYER", 12)
 EMBEDDINGGEMMA_ID = _env_str("CT_EMBEDDINGGEMMA_ID", "models/google/embeddinggemma-300m")
+# EmbeddingGemma is prompt-conditioned. Every trajectory here plays ONE role in one
+# aggregation (unlike biencoder_guard, which is genuine asymmetric retrieval), so a
+# single consistent task prompt is used for pool and OOD alike. "Clustering" is the
+# registered name whose prefix is "task: clustering | query: ".
+EMBEDDINGGEMMA_PROMPT = _env_str("CT_EMBGEMMA_PROMPT", "Clustering")
 EMBEDDINGGEMMA_MAXLEN = _env_int("CT_EMBEDDINGGEMMA_MAXLEN", 512)
 
 # --- Data --------------------------------------------------------------------

@@ -442,9 +442,12 @@ On Windows PowerShell set env vars first, e.g.
 Each arm writes its own embedding cache (`artifacts/trace_emb_<arm>.npz`), and each
 cache carries the **resolved** `embedder` + `embed_model` inside it. A cache whose
 stamp disagrees with the arm about to use it is **rejected loudly**, never silently
-reused — two encoders' vectors are not interchangeable. Note that `results.json` is
-overwritten per run, so copy it aside (e.g. `results_bge.json`) before running the
-next arm if you want to compare them.
+reused — two encoders' vectors are not interchangeable. Results are per-arm too
+(`artifacts/results_<arm>.json`), so the arms can be compared side by side.
+
+> **The PNGs are still shared** (`cluster_scatter.png`, `ap_vs_baserate.png`,
+> `silhouette_k.png`) and the last arm to run overwrites them. They belong to
+> whichever arm ran most recently; the JSON is the artifact to trust.
 
 **No judge.** This is a **detection** lesson: a localizer reads a signal off frozen
 trace embeddings, exactly as in lesson 1. There is no generation and no LLM judge —

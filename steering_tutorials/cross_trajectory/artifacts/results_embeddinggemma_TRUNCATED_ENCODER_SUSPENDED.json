@@ -1,4 +1,13 @@
 {
+  "SUSPENDED_TRUNCATED_ENCODER": {
+    "status": "SUSPENDED - do not cite. The encoder was TRUNCATED, not the one named.",
+    "why": "embed_ct.py loaded google/embeddinggemma-300m via transformers AutoModel + attention-mask mean pooling. EmbeddingGemma is a sentence-transformers model whose modules.json declares FIVE modules: Transformer -> Pooling -> 2_Dense(768->3072) -> 3_Dense(3072->768) -> 4_Normalize. AutoModel+meanpool executes modules 0 and 1 ONLY, silently skipping TWO TRAINED DENSE PROJECTION HEADS (2_Dense/ and 3_Dense/, 9.4MB of weights each, present on disk) and the final Normalize. Output has the right shape (768) and raises no error, so nothing looked wrong -- it is simply a different vector space from the one the model card describes.",
+    "what_this_invalidates": "Every number in this file: the HARD ladder (mean_agg 0.9671, attn_pool 0.9308, gnn_agg 0.9082, per_traj_max 0.8185), the binding bar content 0.9149, and therefore the headline that the margin COLLAPSED from +0.232 (MiniLM) to +0.052. That margin comparison may be an artifact of a truncated encoder rather than a real property of a stronger one.",
+    "not_affected": "streaming_trajectory_aggregation, biencoder_guard and multiturn_jailbreak all load EmbeddingGemma through sentence-transformers and execute the full stack. cross_trajectory results.json (minilm) is unaffected -- MiniLM has no Dense heads.",
+    "same_class_as": "audits/AUDIT_2026-08-17_embeddinggemma_causal.md -- right shape, no error, wrong space.",
+    "found_by": "a subagent adding EmbeddingGemma to meerkat, which flagged embed_ct.py as having the same gap",
+    "suspended_at": "2026-08-21"
+  },
   "embedder": "embeddinggemma",
   "embedder_compliance": "COMPLIANT: google/embeddinggemma-300m, the encoder CLAUDE.md 17 mandates",
   "gemma_layer": 12,
