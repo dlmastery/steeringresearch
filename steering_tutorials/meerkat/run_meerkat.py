@@ -188,30 +188,78 @@ def _campaign_max_cluster_recall(cluster_ids, labels):
 # ---------------------------------------------------------------------------
 # Embedding (embed the POOL once; look repo traces back up by their string)
 # ---------------------------------------------------------------------------
+def _embed_stamp():
+    """The encoder provenance recorded in every cache AND in results.json.
+
+    Both come from `C.model_id(C.EMBEDDER)`, the single source of truth, so the
+    `embedder` / `embed_model` pair cannot describe two different encoders.
+    """
+    return {"embedder": str(C.EMBEDDER), "embed_model": str(C.model_id(C.EMBEDDER))}
+
+
+def _load_cached_emb(cache, n_traces, want):
+    """Return the cached matrix, or None to rebuild. Raises on a STAMP conflict.
+
+    Three outcomes, deliberately distinct:
+      * stamp DISAGREES -> raise. Vectors from a different encoder are not
+        interchangeable, and a silent rebuild would erase the evidence that a
+        stale artifact was ever there.
+      * stamp ABSENT (a cache written before stamping) -> reuse, but say so: its
+        provenance rests on the filename alone.
+      * unreadable / wrong row count -> None (rebuild), reported.
+    """
+    try:
+        npz = np.load(cache, allow_pickle=False)
+        emb = npz["emb"]
+        got = {k: (str(npz[k]) if k in npz.files else None) for k in want}
+    except Exception as exc:
+        print("[embed] cache unreadable (%s); re-embedding" % exc)
+        return None
+
+    bad = ["%s: cache=%r expected=%r" % (k, got[k], want[k])
+           for k in sorted(want) if got[k] is not None and got[k] != want[k]]
+    if bad:
+        raise RuntimeError(
+            "embedding cache %s was written by a DIFFERENT ENCODER than the one "
+            "about to use it (%s). Refusing to reuse it -- two encoders' vectors "
+            "are not interchangeable, and reusing them would produce a confident, "
+            "well-formed, wrong result. Delete the file to rebuild."
+            % (cache, "; ".join(bad)))
+
+    if emb.shape[0] != n_traces:
+        print("[embed] cache size mismatch (%d != %d); re-embedding"
+              % (emb.shape[0], n_traces))
+        return None
+    if all(got[k] is None for k in want):
+        print("[embed] NOTE: %s predates encoder stamping; its provenance rests on "
+              "the filename alone." % cache.name)
+    print("[embed] loaded cache %s (%d x %d)"
+          % (cache.name, emb.shape[0], emb.shape[1]))
+    return emb.astype(np.float32)
+
+
 def _embed_pool(cluster, traces):
     """Embed the whole trace pool ONCE, cached to C.EMB_CACHE[C.EMBEDDER].
 
-    The cache is keyed on the embedder + the pool size; if the count changed (env
-    caps), it is rebuilt. Returns [n, dim] float32.
+    Each arm gets its OWN cache FILE (config.EMB_CACHE), and the resolved embedder
+    + model id are stamped INSIDE the .npz and checked on load, so neither a
+    filename collision nor a hand-copied file can feed one encoder's vectors to
+    another. If the row count changed (env caps), it is rebuilt. Returns
+    [n, dim] float32.
     """
     cache = C.EMB_CACHE[C.EMBEDDER]
+    want = _embed_stamp()
     if cache.exists():
-        try:
-            npz = np.load(cache)
-            emb = npz["emb"]
-            if emb.shape[0] == len(traces):
-                print("[embed] loaded cache %s (%d x %d)"
-                      % (cache.name, emb.shape[0], emb.shape[1]))
-                return emb.astype(np.float32)
-            print("[embed] cache size mismatch (%d != %d); re-embedding"
-                  % (emb.shape[0], len(traces)))
-        except Exception as exc:
-            print("[embed] cache unreadable (%s); re-embedding" % exc)
+        emb = _load_cached_emb(cache, len(traces), want)   # raises on stamp conflict
+        if emb is not None:
+            return emb
     embed_text, dim = cluster.get_embedder(C.EMBEDDER)
     emb = np.asarray(cluster.embed_traces(traces, embed_text), dtype=np.float32)
     try:
-        np.savez(cache, emb=emb)
-        print("[embed] built + cached %s (%d x %d)" % (cache.name, emb.shape[0], emb.shape[1]))
+        np.savez(cache, emb=emb, **want)
+        print("[embed] built + cached %s (%d x %d, embedder=%s model=%s)"
+              % (cache.name, emb.shape[0], emb.shape[1],
+                 want["embedder"], want["embed_model"]))
     except Exception as exc:
         print("[embed] cache save FAILED: %s" % exc)
     return emb
@@ -568,8 +616,19 @@ def main():
 
     # --- 5b. results.json (schema-verbatim), written BEFORE the summary -----
     results = {
-        "embed_model": str(C.EMBED_MODEL),
+        # `embed_model` is RESOLVED from `embedder` through C.model_id(), the same
+        # call cluster.get_embedder() uses to pick the checkpoint. It is no longer a
+        # config default that can echo a model the run never loaded -- which is
+        # exactly what the previous artifact did (embed_model bge + embedder minilm;
+        # README section 9.2). The two fields now cannot disagree.
+        "embed_model": str(C.model_id(C.EMBEDDER)),
         "embedder": str(C.EMBEDDER),
+        # Which task prompt prefixed every trace (EmbeddingGemma arm only; the bge
+        # and minilm checkpoints take no prompt). Recorded because the same encoder
+        # under a different prompt is, for these purposes, a different encoder.
+        "embed_prompt": (str(C.EG_PROMPT_NAME)
+                         if C.EMBEDDER == "embeddinggemma" else None),
+        "embed_dim": int(pool_emb.shape[1]),
         "n_attack": n_attack,
         "n_benign": n_benign,
         "seed": int(C.SEED),
@@ -605,9 +664,10 @@ def _print_summary(results):
     print("")
     print(line)
     print("MEERKAT SPARSE-VIOLATION LOCALIZATION  (SCREENING TIER, cluster-density)")
-    print("embed_model=%s embedder=%s seed=%d  pool: attack=%d benign=%d"
-          % (results["embed_model"], results["embedder"], results["seed"],
-             results["n_attack"], results["n_benign"]))
+    print("embedder=%s -> %s (dim=%s, prompt=%s) seed=%d  pool: attack=%d benign=%d"
+          % (results["embedder"], results["embed_model"],
+             results.get("embed_dim", "?"), results.get("embed_prompt") or "none",
+             results["seed"], results["n_attack"], results["n_benign"]))
     c = results.get("confound", {})
     print("confound: length_auc=%.3f  (~0.5 => raw trace length is NOT a trivial tell)"
           % c.get("length_auc", float("nan")))

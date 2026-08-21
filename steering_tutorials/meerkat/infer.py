@@ -24,7 +24,7 @@ and model-free.
 Env caps (shrink the demo into one foreground window -- host RAM is the wall):
     MK_INFER_REPO   traces in the demo repository        (default 200)
     MK_BASE_RATE    sparse attack fraction               (default 0.05, from config)
-    MK_EMBED        "bge" | "minilm"                      (default from config)
+    MK_EMBED        "bge" | "minilm" | "embeddinggemma"   (default from config)
     MK_TOPK         rows to print per localizer          (default 10)
 """
 from __future__ import annotations

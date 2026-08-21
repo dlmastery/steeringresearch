@@ -32,11 +32,14 @@ All three share the same tiny API so the runner can treat them uniformly:
     scores = m.score(emb)               # P(violation) in [0,1] for EVERY trace
 
 Everything here is CPU-only and model-free EXCEPT ``get_embedder``, which lazily
-loads bge/minilm exactly once. The ``__main__`` self-test never touches a model:
+loads one of the three encoder arms (``bge`` / ``minilm`` / ``embeddinggemma``)
+exactly once. The ``__main__`` self-test never touches a model:
 it runs on synthetic embeddings and asserts the clustering localizers beat the
 per-trace baseline at a 5% base rate — the whole thesis in a unit test.
 """
 from __future__ import annotations
+
+import os
 
 import numpy as np
 from sklearn.cluster import KMeans
@@ -52,22 +55,38 @@ from steering_tutorials.meerkat import config as C
 
 # --- Embedder (the ONLY place a model is loaded; lazy, once) -----------------
 def get_embedder(method: str = C.EMBEDDER):
-    """Return ``(embed_text, dim)`` for ``method`` in {"bge","minilm"}.
+    """Return ``(embed_text, dim)`` for ``method`` in ``C.EMBEDDER_CHOICES``.
 
-    ``embed_text(text:str) -> np.ndarray[dim]`` (float32, 1-D). Meerkat embeds
-    each trace with ``bge-base-en-v1.5``; we load it via plain ``transformers``
-    AutoModel + attention-mask mean pooling (NO sentence-transformers
-    dependency), matching the multiturn_jailbreak embedder idiom. "minilm" is a
-    faster substitute. The model is loaded ONCE here, lazily, and closed over by
-    ``embed_text`` — importing this module stays CPU-cheap and model-free.
+    ``embed_text(text:str) -> np.ndarray[dim]`` (float32, 1-D). Three arms:
+
+      ``bge``            the PAPER's encoder (``bge-base-en-v1.5``), loaded via plain
+                         ``transformers`` AutoModel + attention-mask mean pooling.
+      ``minilm``         the fast dry-run substitute, same loading recipe.
+      ``embeddinggemma`` the encoder CLAUDE.md section 17 / the standing user mandate
+                         actually name. This one is loaded through
+                         ``sentence-transformers`` and NOT through AutoModel; the
+                         reason is spelled out in ``_get_embeddinggemma_embedder``
+                         and it is not a stylistic preference.
+
+    The model is loaded ONCE here, lazily, and closed over by ``embed_text`` —
+    importing this module stays CPU-cheap and model-free.
     """
-    if method == "bge":
-        model_id = C.EMBED_MODEL
-    elif method == "minilm":
-        model_id = C.MINILM_ID
-    else:
-        raise ValueError("method must be 'bge' or 'minilm', got %r" % (method,))
+    if method == "embeddinggemma":
+        return _get_embeddinggemma_embedder()
+    if method in ("bge", "minilm"):
+        return _get_automodel_embedder(C.model_id(method))
+    raise ValueError("method must be one of %r, got %r"
+                     % (list(C.EMBEDDER_CHOICES), method))
 
+
+def _get_automodel_embedder(model_id: str):
+    """``transformers`` AutoModel + attention-mask mean pooling (bge / minilm).
+
+    The multiturn_jailbreak embedder idiom: no sentence-transformers, no prompts.
+    Correct for these two checkpoints because their published sentence-embedding
+    pipeline is backbone -> pooling and nothing else, so mean-pooling the backbone
+    reproduces it.
+    """
     # Heavy imports live INSIDE the fn so `import cluster` never pulls in torch.
     import torch
     from transformers import AutoModel, AutoTokenizer
@@ -97,6 +116,94 @@ def get_embedder(method: str = C.EMBEDDER):
 
     # Probe the true hidden dim from one cheap forward (bge=768, minilm=384).
     dim = int(embed_text("hello").shape[0])
+    return embed_text, dim
+
+
+def _get_embeddinggemma_embedder():
+    """``google/embeddinggemma-300m`` via sentence-transformers, Clustering prompt.
+
+    WHY THIS ONE ARM BREAKS THE MODULE'S "no sentence-transformers" RULE.
+    ---------------------------------------------------------------------
+    bge and MiniLM end at pooling, so AutoModel + mean pooling IS their published
+    embedding. EmbeddingGemma does not. Its ``modules.json`` is::
+
+        Transformer -> Pooling(mean, include_prompt=True)
+                    -> Dense(768 -> 3072) -> Dense(3072 -> 768) -> Normalize
+
+    The two Dense heads are TRAINED weights shipped in ``2_Dense/`` and ``3_Dense/``
+    (9.4 MB each). AutoModel + mean pooling stops after the pooling step and silently
+    skips them, returning a 768-d vector from the wrong space -- right shape, right
+    dtype, no error, different geometry. Since the Dense stack is a linear map with
+    Identity activations, it is exactly the kind of thing that would still cluster
+    into *something* plausible while not being EmbeddingGemma's embedding at all.
+    That is the CLAUDE.md 18.8 pattern (fails silently and plausibly), so this arm
+    uses the real pipeline and REFUSES to run without it rather than quietly
+    substituting a degenerate one.
+
+    (Noted for the record: ``cross_trajectory/embed_ct.py`` loads EmbeddingGemma via
+    AutoModel + mean pooling and therefore has this gap. Out of scope here.)
+
+    The task PROMPT is applied on every call (see ``C.EG_PROMPT_NAME``): one prompt,
+    "Clustering", for every trace, because meerkat has no query/document asymmetry.
+    """
+    try:
+        from sentence_transformers import SentenceTransformer  # lazy, heavy
+    except ImportError as exc:                                 # pragma: no cover
+        raise ImportError(
+            "the 'embeddinggemma' arm requires sentence-transformers, because "
+            "EmbeddingGemma's embedding includes two trained Dense projection heads "
+            "that a bare AutoModel + mean pooling would silently skip. Install it, "
+            "or run MK_EMBED=bge (the paper's encoder) / MK_EMBED=minilm.") from exc
+
+    path = C.model_id("embeddinggemma")
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            "embeddinggemma weights not found at %r. The HF id is gated and 401s "
+            "without a token on this host, so this arm loads the LOCAL snapshot. "
+            "Set MK_EG_ID to point at it." % path)
+
+    model = SentenceTransformer(path)
+    model.max_seq_length = int(C.EG_MAXLEN)
+
+    # ASSERT THE ANCHOR. If the snapshot has no Dense module the pipeline is not
+    # EmbeddingGemma's, and the whole point of this arm is that it IS. A replace /
+    # a load that matches nothing must fail, not pass (CLAUDE.md 18.8).
+    kinds = [type(m).__name__ for m in model]
+    if "Dense" not in kinds:
+        raise RuntimeError(
+            "the EmbeddingGemma snapshot at %r exposes no Dense projection module "
+            "(pipeline: %s). Its published embedding is pooled output PROJECTED "
+            "through 2_Dense/3_Dense; without them these vectors would be from a "
+            "different space while looking perfectly well-formed. Refusing to run."
+            % (path, " -> ".join(kinds)))
+
+    prompts = getattr(model, "prompts", None) or {}
+    if C.EG_PROMPT_NAME in prompts:
+        prompt_kw = {"prompt_name": C.EG_PROMPT_NAME}
+        prefix = prompts[C.EG_PROMPT_NAME]
+    else:
+        # Not a silent fallthrough to an UNPROMPTED encode -- that is the silent
+        # degradation this repo has been burned by. We use the documented prefix
+        # string verbatim and say so.
+        prompt_kw = {"prompt": C.EG_PROMPT_FALLBACK}
+        prefix = C.EG_PROMPT_FALLBACK
+        print("[embed] WARNING: %r registers no prompt named %r (has: %s); applying "
+              "the documented prefix %r verbatim instead."
+              % (path, C.EG_PROMPT_NAME, ", ".join(sorted(prompts)) or "none", prefix))
+    print("[embed] embeddinggemma pipeline: %s | prompt %r = %r | max_seq_length=%d"
+          % (" -> ".join(kinds), C.EG_PROMPT_NAME, prefix, model.max_seq_length))
+
+    def embed_text(text: str) -> np.ndarray:
+        vec = model.encode(
+            [str(text)],
+            convert_to_numpy=True,
+            normalize_embeddings=False,   # embed_traces L2-normalizes for all arms
+            show_progress_bar=False,
+            **prompt_kw,
+        )
+        return np.asarray(vec, dtype=np.float32).reshape(-1)
+
+    dim = int(embed_text("hello").shape[0])   # probe, never hard-code (expect 768)
     return embed_text, dim
 
 

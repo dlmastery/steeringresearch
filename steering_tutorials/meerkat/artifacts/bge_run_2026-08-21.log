@@ -1,0 +1,54 @@
+[data] pool: N=1000  attack=500  benign=500  (scanned 413 benign rows)
+[data] attack campaigns=34  mean sub-steps/campaign=14.7  (each sub-step is one trace)
+[data] mean trace char-len: attack=104  benign=107  (single events -> comparable, no join-length tell)
+[data] source dist: attack=500, ultrachat=500
+[pool] traces=1000 attack=500 benign=500
+C:\Users\evija\anaconda3\Lib\site-packages\huggingface_hub\file_download.py:141: UserWarning: `huggingface_hub` cache-system uses symlinks by default to efficiently store duplicated files but your machine does not support them in C:\Users\evija\.cache\huggingface\hub\models--BAAI--bge-base-en-v1.5. Caching files will still work but in a degraded version that might require more space on your disk. This warning can be disabled by setting the `HF_HUB_DISABLE_SYMLINKS_WARNING` environment variable. For more details, see https://huggingface.co/docs/huggingface_hub/how-to-cache#limitations.
+To support symlinks on Windows, you either need to activate Developer Mode or to run Python as an administrator. In order to activate developer mode, see this article: https://docs.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development
+  warnings.warn(message)
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 3084.47it/s]
+[embed] built + cached trace_emb_bge.npz (1000 x 768)
+[confound] pool_fingerprint=686cb79624a5641c
+[confound] length_auc=0.441 len_pos=104 len_neg=107  (~0.5 => no trivial length tell)
+[regime 0.05/per_trace] AP=0.697 CI=[0.593,0.791] AUC=0.901 (n_repos_scored=20)
+[regime 0.05/kmeans_enrich] AP=0.428 CI=[0.302,0.556] AUC=0.794 (n_repos_scored=20)
+[regime 0.05/knn_purity] AP=0.294 CI=[0.216,0.386] AUC=0.839 (n_repos_scored=20)
+[regime 0.50/per_trace] AP=0.970 CI=[0.965,0.974] AUC=0.970 (n_repos_scored=20)
+[regime 0.50/kmeans_enrich] AP=0.899 CI=[0.883,0.916] AUC=0.920 (n_repos_scored=20)
+[regime 0.50/knn_purity] AP=0.922 CI=[0.916,0.930] AUC=0.937 (n_repos_scored=20)
+[cluster] best_k=12 purity=0.950 campaign_max_cluster_recall=0.600
+[ood] CSTM-Bench: N=108  attack=52  benign=56
+[ood] CSTM-Bench traces=108 attack=52 benign=56
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  58%|█████▊    | 116/199 [00:00<00:00, 1150.98it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 1724.74it/s]
+[ood/per_trace] AP=0.522 AUC=0.510
+[ood/kmeans_enrich] AP=0.439 AUC=0.414
+[ood/knn_purity] AP=0.485 AUC=0.500
+[write] C:\Users\evija\steeringresearch\steering_tutorials\meerkat\artifacts\results.json
+
+------------------------------------------------------------------------------
+MEERKAT SPARSE-VIOLATION LOCALIZATION  (SCREENING TIER, cluster-density)
+embed_model=BAAI/bge-base-en-v1.5 embedder=bge seed=0  pool: attack=500 benign=500
+confound: length_auc=0.441  (~0.5 => raw trace length is NOT a trivial tell)
+------------------------------------------------------------------------------
+BASE RATE 0.05  SPARSE (Meerkat regime)   repo_size=400 n_repos=20
+method                AP 95% CI             ROC-AUC
+per_trace          0.697 [0.593,0.791]      0.901
+kmeans_enrich      0.428 [0.302,0.556]      0.794
+knn_purity         0.294 [0.216,0.386]      0.839
+------------------------------------------------------------------------------
+BASE RATE 0.5  BALANCED   repo_size=400 n_repos=20
+method                AP 95% CI             ROC-AUC
+per_trace          0.970 [0.965,0.974]      0.970
+kmeans_enrich      0.899 [0.883,0.916]      0.920
+knn_purity         0.922 [0.916,0.930]      0.937
+------------------------------------------------------------------------------
+CLUSTERING (sparse repo): best_k=12 purity=0.950 campaign_max_cluster_recall=0.600
+------------------------------------------------------------------------------
+OOD: intrinsec-ai/cstm-bench   attack=52 benign=56  (real cross-session benchmark)
+method                AP  ROC-AUC
+per_trace          0.522    0.510
+kmeans_enrich      0.439    0.414
+knn_purity         0.485    0.500
+------------------------------------------------------------------------------
+READ: per_trace is the diluted-campaign-DEFEATED baseline. FALSIFIER -- if kmeans_enrich AP <= per_trace AP at the sparse base rate, 'clustering surfaces the distributed campaign' is FALSE for this setup.
+------------------------------------------------------------------------------

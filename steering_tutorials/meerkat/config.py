@@ -42,13 +42,80 @@ def _env_str(name: str, default: str) -> str:
     return os.environ.get(name) or default
 
 
-# --- Embedder (the paper's exact model) --------------------------------------
-# Meerkat embeds each trace with bge-base-en-v1.5. Loaded via `transformers`
-# AutoModel + mean pooling (NO sentence-transformers dependency). "minilm" is a
-# faster substitute for a quick run.
-EMBED_MODEL = _env_str("MK_EMBED_MODEL", "BAAI/bge-base-en-v1.5")
-EMBEDDER = _env_str("MK_EMBED", "bge")     # "bge" | "minilm"
-MINILM_ID = "sentence-transformers/all-MiniLM-L6-v2"
+# --- Embedder: THREE arms, because two mandates genuinely conflict ------------
+# Meerkat embeds each trace with `bge-base-en-v1.5`, so "bge" is the PAPER-FIDELITY
+# arm and stays the default. But CLAUDE.md section 17 and a standing user mandate
+# name `google/embeddinggemma-300m` as this repo's encoder for embedding work, so
+# "embeddinggemma" is the COMPLIANCE arm. Those two pull in opposite directions and
+# neither is wrong; the resolution is to support BOTH and RUN both, which turns the
+# encoder from an unexamined constant into an ABLATION AXIS -- "does the Meerkat
+# ordering survive a change of encoder?" is a better question than either arm alone
+# answers. "minilm" is the fast dry-run substitute: neither faithful nor compliant,
+# so it is a smoke arm and never a headline.
+EMBEDDER_CHOICES = ("bge", "minilm", "embeddinggemma")
+EMBEDDER = _env_str("MK_EMBED", "bge")
+
+# Per-arm checkpoints. Each is overridable on its OWN env var, so an override can
+# never detach the id from the arm that loads it (see `model_id` below).
+BGE_ID = _env_str("MK_BGE_ID", "BAAI/bge-base-en-v1.5")
+MINILM_ID = _env_str("MK_MINILM_ID", "sentence-transformers/all-MiniLM-L6-v2")
+# The HF id `google/embeddinggemma-300m` is gated and 401s without a token on this
+# host, but the WEIGHTS ARE ON DISK (1.2 GB safetensors, verified 2026-08-08), so we
+# load the LOCAL path -- the same resolution `cross_trajectory.embed_ct` uses.
+EMBEDDINGGEMMA_ID = _env_str("MK_EG_ID", "models/google/embeddinggemma-300m")
+
+_MODEL_ID = {"bge": BGE_ID, "minilm": MINILM_ID, "embeddinggemma": EMBEDDINGGEMMA_ID}
+
+
+def model_id(embedder: str = None) -> str:
+    """The checkpoint an arm ACTUALLY loads -- the single source of truth.
+
+    WHY THIS IS A FUNCTION AND NOT A SECOND CONSTANT. `EMBED_MODEL` used to be an
+    independent env var (`MK_EMBED_MODEL`) that defaulted to the bge id no matter
+    which arm was selected, while `cluster.get_embedder` branched on `EMBEDDER` and
+    loaded MiniLM's id from somewhere else entirely. The two never had to agree, and
+    they didn't: `artifacts/results.json` says `embed_model = BAAI/bge-base-en-v1.5`
+    beside `embedder = minilm`, and every number in it came from MiniLM (README
+    section 9.2). The field was an inert echo of an unused default -- an artifact
+    naming a model it never loaded, which is the CLAUDE.md 18.8 "stamp your inputs"
+    failure in miniature.
+
+    Now the loader and the results writer BOTH resolve through this one function, so
+    the two fields cannot disagree without the run also loading a different model.
+    An unknown arm raises here rather than silently resolving to a default.
+    """
+    e = str(embedder or EMBEDDER)
+    if e not in _MODEL_ID:
+        raise ValueError("embedder must be one of %r, got %r"
+                         % (list(EMBEDDER_CHOICES), e))
+    return _MODEL_ID[e]
+
+
+# DERIVED from EMBEDDER -- deliberately NOT independently settable (see model_id).
+EMBED_MODEL = model_id(EMBEDDER)
+
+# --- EmbeddingGemma task prompts: why meerkat uses ONE, not two --------------
+# EmbeddingGemma is trained for ASYMMETRIC retrieval and ships NAMED task prompts;
+# a vector's meaning depends on which prompt prefixed the text, so omitting the
+# prompt silently degrades the embedding. `biencoder_guard` is a retrieval-shaped
+# task and therefore splits the asymmetry across its two towers (content -> "query",
+# policy -> "document").
+#
+# meerkat is NOT retrieval-shaped. Every trace plays the SAME role: they go into one
+# k-means over one homogeneous set, and into a kNN/logistic over those same vectors.
+# Splitting query/document here would scatter interchangeable objects across two
+# sub-spaces for no reason and corrupt the cluster geometry that IS the experiment.
+# The model registers a prompt for exactly this task -- "Clustering",
+# "task: clustering | query: " (model card / config_sentence_transformers.json) --
+# and that is what every meerkat trace gets, pool traces and OOD traces alike.
+EG_PROMPT_NAME = _env_str("MK_EG_PROMPT", "Clustering")
+# Used verbatim only if the snapshot registers no prompt under that name; the loader
+# says so loudly rather than falling through to an unprompted encode.
+EG_PROMPT_FALLBACK = _env_str("MK_EG_PROMPT_TEXT", "task: clustering | query: ")
+# EmbeddingGemma's own max_seq_length is 2048; we pin it to the bge/minilm window so
+# the three arms differ ONLY in the backbone, not in how much of a trace they see.
+# Traces here are single events (~100 chars), so nothing is truncated either way.
+EG_MAXLEN = _env_int("MK_EG_MAXLEN", 512)
 
 # --- Data (the trace pool; >=500/class per the rubric) -----------------------
 # A "trace" = one agent's event sequence rendered to text. POSITIVES: SafeMTData
@@ -94,8 +161,18 @@ KNN_K = _env_int("MK_KNN_K", 15)
 # --- Paths -------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent
 ARTIFACTS = ROOT / "artifacts"
-RESULTS_PATH = ARTIFACTS / "results.json"
-EMB_CACHE = {m: ARTIFACTS / f"trace_emb_{m}.npz" for m in ("bge", "minilm")}
+# PER-EMBEDDER, never a shared constant. This used to be the bare
+# `results.json` while EMB_CACHE was already per-embedder, so running a second
+# encoder SILENTLY OVERWROTE the first one's results -- which is exactly what
+# happened on 2026-08-21 when the bge arm destroyed the minilm numbers (they
+# were recovered from git as results_minilm.json). cross_trajectory hit the
+# identical defect and fixed it the same way; the fix did not propagate here.
+RESULTS_PATH = ARTIFACTS / ("results_%s.json" % EMBEDDER)
+# One cache file per ARM, so three encoders can never contend for one path. The
+# `bge`/`minilm` filenames are unchanged (existing artifacts stay reachable). The
+# filename is the FIRST guard; `run_meerkat._embed_pool` also stamps the resolved
+# embedder + model id INSIDE each .npz and refuses a file whose stamp disagrees.
+EMB_CACHE = {m: ARTIFACTS / f"trace_emb_{m}.npz" for m in EMBEDDER_CHOICES}
 CLUSTER_PNG = ARTIFACTS / "cluster_scatter.png"       # 2-D projection, attack cluster highlighted
 AP_PNG = ARTIFACTS / "ap_vs_baserate.png"             # AP: clustering vs per-trace across base rate
 SILHOUETTE_PNG = ARTIFACTS / "silhouette_k.png"

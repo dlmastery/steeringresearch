@@ -136,14 +136,29 @@ falsifier in [Section 9](#9-results--measured-vs-the-claim)). **Measured: they d
 not.** `kmeans_enrich` came back at sparse AP 0.199 against `per_trace`'s 0.731,
 so the claim below is the *hypothesis*, not the finding.
 
-The embedder is the paper's own: **`BAAI/bge-base-en-v1.5`** (`bge`), a general
-text embedder loaded via `transformers` + mean pooling (a faster `minilm`
-substitute is available for quick runs). **The shipped `results.json` is a
-`minilm` run** — `sentence-transformers/all-MiniLM-L6-v2`, not `bge`; the
-artifact's `embed_model` field says otherwise and is wrong about what was loaded
-(§9.2 explains exactly why). Unlike the other lessons, the signal here
-is read off a **general sentence embedder**, not Gemma's residual stream — the
-clustering, not the representation, is the object of study.
+**The encoder is an ablation axis, not a constant — because two mandates conflict.**
+The paper's own embedder is **`BAAI/bge-base-en-v1.5`** (`bge`), so that is the
+**fidelity** arm and the default. But [`CLAUDE.md` §17](../../CLAUDE.md) and a
+standing user mandate name **`google/embeddinggemma-300m`** as this repo's encoder
+for embedding work, so `embeddinggemma` is the **compliance** arm. Neither claim is
+wrong and picking one would silently discard the other, so the lesson runs **both**
+and reports the encoder as a variable: *does the Meerkat ordering survive a change of
+encoder?* is a sharper question than either arm answers alone. `minilm` is a third,
+**smoke-only** arm — neither faithful nor compliant, fine for a dry run, never a
+headline.
+
+| `MK_EMBED` | model | loaded via | role |
+|---|---|---|---|
+| `bge` (default) | `BAAI/bge-base-en-v1.5` | `transformers` AutoModel + mean pooling | the paper's encoder — **fidelity** |
+| `embeddinggemma` | `google/embeddinggemma-300m` (local snapshot) | `sentence-transformers` (see §5) | the repo's mandated encoder — **compliance** |
+| `minilm` | `sentence-transformers/all-MiniLM-L6-v2` | `transformers` AutoModel + mean pooling | fast dry run — **smoke only** |
+
+**The shipped `results.json` is a `minilm` run** — `all-MiniLM-L6-v2`, not `bge`;
+that artifact's `embed_model` field says otherwise and is wrong about what was
+loaded (§9.2 explains why, and why a future artifact cannot repeat it). Unlike the
+other lessons, the signal here is read off a **general sentence embedder**, not
+Gemma's residual stream — the clustering, not the representation, is the object of
+study.
 
 ---
 
@@ -161,7 +176,8 @@ clustering, not the representation, is the object of study.
              data.sample_repository(size, base_rate=0.05)
                     a SPARSE repository: ~5% attack, ~95% benign
                                 |
-             cluster.embed_traces(...)   bge-base-en-v1.5 mean-pool, L2-norm
+             cluster.embed_traces(...)   MK_EMBED arm (bge / embeddinggemma /
+                                |         minilm), then L2-norm
                                 |
                                 v
                     emb : [n, dim]   (one vector per trace)
@@ -194,7 +210,7 @@ benign) beside the k-means cluster the campaign concentrates in — is what
 |---|---|
 | `config.py` | every knob: embedder, data sources, pool size, base rate / repository sampling, k-grid, seed fraction, methods, paths |
 | `data.py` | build the ≥500/class **trace pool** (Attack_600 decompositions + UltraChat benign); `sample_repository` at a target base rate; load OOD CSTM-Bench; the trace-length confound audit |
-| `cluster.py` | the bge/minilm embedder, `choose_k` (silhouette), k-means, and the three localizers (`PerTraceMonitor`, `KMeansEnrich`, `KnnPurity`) + AP / ROC-AUC / cluster-purity metrics |
+| `cluster.py` | the three encoder arms (`bge` / `minilm` / `embeddinggemma`), `choose_k` (silhouette), k-means, and the three localizers (`PerTraceMonitor`, `KMeansEnrich`, `KnnPurity`) + AP / ROC-AUC / cluster-purity metrics |
 | `run_meerkat.py` | orchestrator: pool → embed → for each base rate build `N_REPOS` repositories → fit/score the 3 methods → cluster quality → OOD → `results.json` + plots |
 | `infer.py` | build ONE small sparse repository; print the per-trace monitor's top traces (misses it) vs. the k-means cluster the campaign concentrates in (surfaces it) |
 
@@ -204,8 +220,9 @@ benign) beside the k-means cluster the campaign concentrates in — is what
 
 ### `config.py` — every knob in one place
 
-The embedder (`EMBED_MODEL = BAAI/bge-base-en-v1.5`, `EMBEDDER`, the `minilm`
-fallback), the data sources (`SafeMTData/SafeMTData` `Attack_600`; `ultrachat_200k`
+The embedder (`EMBEDDER` picks one of `EMBEDDER_CHOICES`; **`EMBED_MODEL` is
+*derived* from it by `config.model_id()`, never set independently** — see §9.2 for
+the bug that rule exists to prevent), the data sources (`SafeMTData/SafeMTData` `Attack_600`; `ultrachat_200k`
 benign; the OOD `intrinsec-ai/cstm-bench`), the pool size (`N_ATTACK`/`N_BENIGN`,
 ≥500/class per the rubric), the **repository sampling** (`BASE_RATE = 0.05`,
 `REPO_SIZE`, `N_REPOS`), the clustering knobs (`K_GRID`, `SEED_FRAC` for the
@@ -229,8 +246,35 @@ embeddings mitigate a length tell, but we measure and report it regardless.
 
 ### `cluster.py` — the embedder, k-means, and the three localizers
 
-`get_embedder()` lazily loads bge (or minilm) **once** and returns
-`embed_text(str) -> vec`; `embed_traces()` embeds a list and **L2-normalizes**
+`get_embedder()` lazily loads the selected arm **once** and returns
+`embed_text(str) -> vec`.
+
+> **Why the `embeddinggemma` arm alone uses `sentence-transformers`.** bge and
+> MiniLM end at pooling, so `AutoModel` + mean pooling *is* their published
+> embedding. EmbeddingGemma's pipeline does not end there — `modules.json` is
+> `Transformer -> Pooling(mean) -> Dense(768->3072) -> Dense(3072->768) -> Normalize`,
+> and those two Dense heads are **trained weights** shipped in `2_Dense/` and
+> `3_Dense/` (9.4 MB each). An `AutoModel` + mean-pool load stops after pooling and
+> **silently skips them**: right shape, right dtype, no error, wrong space. Since the
+> Dense stack has Identity activations it is a linear map, so the result would still
+> cluster into *something* plausible while not being EmbeddingGemma's embedding at
+> all — the [§18.8](../../CLAUDE.md) "fails silently and plausibly" pattern exactly.
+> So this arm uses the real pipeline, **asserts** a `Dense` module is present, and
+> raises if `sentence-transformers` is missing rather than substituting a degenerate
+> loader.
+>
+> **The task prompt: one, not two.** EmbeddingGemma is asymmetric-retrieval trained
+> and its vectors depend on which named task prompt prefixed the text. Sibling lesson
+> `biencoder_guard` is retrieval-shaped and therefore splits `query` (content tower)
+> against `document` (policy tower). **meerkat is not**: every trace plays the same
+> role in one k-means over one homogeneous set, so splitting the prompts would
+> scatter interchangeable objects across two sub-spaces and corrupt the very
+> geometry under test. The model registers a prompt for this exact task —
+> `Clustering` = `"task: clustering | query: "` — and every trace gets it, pool and
+> OOD alike. There is no unprompted path: if the snapshot lacks that prompt name the
+> loader applies the documented prefix string verbatim and prints a warning.
+
+`embed_traces()` embeds a list and **L2-normalizes**
 rows (so k-means uses cosine geometry). `choose_k()` runs k-means for each k in
 `K_GRID` and picks the best **silhouette**; `kmeans_labels()` returns the cluster
 id per trace. The three localizers share the `fit(emb, seed_idx, seed_labels)` /
@@ -361,7 +405,7 @@ python -m steering_tutorials.meerkat.cluster   # 3 localizers on synthetic embed
 python -m steering_tutorials.meerkat.data       # small pool load + confound report
 
 # The full pool -> embed -> sparse/balanced repositories -> OOD run
-# (needs the bge-base-en-v1.5 embedder, ~0.4 GB):
+# (default arm: the bge-base-en-v1.5 embedder, ~0.4 GB):
 python -m steering_tutorials.meerkat.run_meerkat
 
 # Watch a sparse campaign hide from per-trace and get surfaced by clustering:
@@ -376,16 +420,31 @@ VRAM, is the wall):
 | `MK_N_ATTACK` | attack traces in the pool | 500 |
 | `MK_N_BENIGN` | benign traces in the pool | 500 |
 | `MK_BASE_RATE` | sparse attack fraction per repository | 0.05 |
-| `MK_EMBED` | embedder: `bge` or `minilm` | `bge` |
+| `MK_EMBED` | encoder arm: `bge`, `embeddinggemma`, or `minilm` | `bge` |
+| `MK_EG_ID` | local EmbeddingGemma snapshot | `models/google/embeddinggemma-300m` |
+| `MK_EG_PROMPT` | EmbeddingGemma task prompt name | `Clustering` |
 | `MK_INFER_REPO` | traces in `infer.py`'s demo repository | 200 |
 
 ```bash
+# the COMPLIANCE arm -- google/embeddinggemma-300m under the Clustering prompt.
+# Same pool, same repositories, same seeds as the bge arm: only the encoder moves,
+# so the two runs are a clean one-variable ablation.
+MK_EMBED=embeddinggemma python -m steering_tutorials.meerkat.run_meerkat
+
 # a fast smoke on the faster minilm embedder:
 MK_EMBED=minilm MK_N_ATTACK=120 MK_N_BENIGN=120 \
   python -m steering_tutorials.meerkat.run_meerkat
 ```
 
-On Windows PowerShell set env vars first, e.g. `$env:MK_EMBED = "minilm"`.
+On Windows PowerShell set env vars first, e.g.
+`$env:MK_EMBED = "embeddinggemma"`.
+
+Each arm writes its own embedding cache (`artifacts/trace_emb_<arm>.npz`), and each
+cache carries the **resolved** `embedder` + `embed_model` inside it. A cache whose
+stamp disagrees with the arm about to use it is **rejected loudly**, never silently
+reused — two encoders' vectors are not interchangeable. Note that `results.json` is
+overwritten per run, so copy it aside (e.g. `results_bge.json`) before running the
+next arm if you want to compare them.
 
 **No judge.** This is a **detection** lesson: a localizer reads a signal off frozen
 trace embeddings, exactly as in lesson 1. There is no generation and no LLM judge —
@@ -464,9 +523,17 @@ where per-trace can already do fine).
 > **never read** — it is an inert echo of an unused default. **Every number in this
 > section was produced by `sentence-transformers/all-MiniLM-L6-v2` (384-dim), not
 > by `bge-base-en-v1.5` (768-dim).** The artifact is left exactly as written; this
-> note says what it means. (A future run should stamp the *resolved* model id, not
-> the config default — an artifact that names a model it did not load is the §18.8
-> "stamp your inputs" failure in miniature.)
+> note says what it means.
+>
+> **This can no longer happen.** `EMBED_MODEL` was an independent env var
+> (`MK_EMBED_MODEL`) defaulting to the bge id regardless of which arm ran, so the two
+> fields never had to agree. It is now *derived*: `config.model_id(embedder)` is the
+> single source of truth, `cluster.get_embedder()` loads through it and
+> `run_meerkat` stamps `results.json` from it, so `embed_model` cannot name a
+> checkpoint the run did not load. `results.json` additionally records `embed_dim`
+> and `embed_prompt`, and every embedding cache carries the same stamp internally.
+> An artifact that names a model it did not load is the §18.8 "stamp your inputs"
+> failure in miniature, and the fix is structural rather than a habit to remember.
 >
 > **Second caveat:** the pool is **200 attack + 200 benign** — *below* the
 > ≥500/class floor ([`DATA_SUFFICIENCY.md`](../DATA_SUFFICIENCY.md)). Provisional
@@ -543,9 +610,11 @@ buried.
   cells flagged as missing in earlier revisions are now measured (§9.1): the
   length-only AP bar, and a re-run on the length-matched pool.
 - **Screening tier, not evaluation** — and below the data floor. One embedder
-  (`sentence-transformers/all-MiniLM-L6-v2`, the `minilm` fallback — **not** the
+  (`sentence-transformers/all-MiniLM-L6-v2`, the `minilm` **smoke** arm — **not** the
   `bge-base-en-v1.5` this README describes, despite the `embed_model` field in
-  `results.json` naming it; see the caveat in §9.2), one seed fraction,
+  `results.json` naming it; see the caveat in §9.2). The `bge` and `embeddinggemma`
+  arms are wired but their numbers are not in this artifact, so the encoder-ablation
+  question above is **posed, not answered**. One seed fraction,
   6 repositories of 400 traces drawn from a **200/class** pool, under the ≥500/class
   rubric. A directional demo, not the n ≥ 7 seeds + rigor contract CLAUDE.md
   reserves the word "winner" for. Do not over-read the ordering — including the
