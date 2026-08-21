@@ -149,7 +149,8 @@ def count_bar(units, labels) -> dict:
     }
 
 
-def content_bar(texts, labels, seed: int = 0, n_folds: int = 5, max_features: int = 20000) -> dict:
+def content_bar(texts, labels, seed: int = 0, n_folds: int = 5, max_features: int = 20000,
+                return_scores: bool = False) -> dict:
     """Can a BAG-OF-WORDS model separate the classes? THE bar no lesson had.
 
     A centroid-cosine unigram classifier under group-free K-fold CV. Deliberately the
@@ -213,7 +214,17 @@ def content_bar(texts, labels, seed: int = 0, n_folds: int = 5, max_features: in
             scores[i] = _dot(v, cpos) - _dot(v, cneg)
 
     raw = auc_raw(scores, labels)
-    return {"auc_raw": raw, "auc": directionless(raw), "n_folds": used}
+    out = {"auc_raw": raw, "auc": directionless(raw), "n_folds": used}
+    if return_scores:
+        # The per-item OUT-OF-FOLD score was always computed here and then thrown
+        # away. Discarding it made a PAIRED margin CI against the content bar look
+        # impossible: trajguard shipped `vs_confound_paired_ci: null` on every
+        # method with a `paired_ci_note` explaining that the centroid bar "exposes
+        # no per-item score". The note was right about the symptom and WRONG about
+        # the cause -- a plausible, unfalsified explanation that retired a live gap.
+        # Opt-in so every existing caller's return shape is unchanged.
+        out["scores"] = list(scores)
+    return out
 
 
 def shuffle_control(texts, labels, seed: int = 0, n_folds: int = 5) -> dict:
