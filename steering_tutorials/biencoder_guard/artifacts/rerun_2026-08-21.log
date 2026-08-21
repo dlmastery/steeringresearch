@@ -1,0 +1,291 @@
+[cfg] embedder=embeddinggemma emb_model=google/embeddinggemma-300m emb_dim=768 n_per_class=500 n_benign=3000 seed=0
+[data] BeaverTails: scanned=27186 benign=3000 per-core-col={'animal_abuse': 357, 'child_abuse': 185, 'controversial_topics': 518, 'discrimination_stereotype': 601, 'drug_weapon': 647, 'financial_crime': 607, 'hate_speech': 645, 'misinformation': 514, 'non_violent_unethical': 1136, 'privacy_violation': 512, 'self_harm': 205, 'sexually_explicit': 509, 'terrorism': 293, 'violence': 1870}
+Downloading readme: 0.00B [00:00, ?B/s]Downloading readme: 14.1kB [00:00, 2.82MB/s]
+Downloading data:   0%|          | 0.00/22.7M [00:00<?, ?B/s]Downloading data:  46%|████▌     | 10.5M/22.7M [00:01<00:01, 8.91MB/s]Downloading data:  92%|█████████▏| 21.0M/22.7M [00:01<00:00, 17.4MB/s]Downloading data: 100%|██████████| 22.7M/22.7M [00:01<00:00, 15.1MB/s]
+Downloading data:   0%|          | 0.00/2.76M [00:00<?, ?B/s]Downloading data: 100%|██████████| 2.76M/2.76M [00:00<00:00, 4.94MB/s]Downloading data: 100%|██████████| 2.76M/2.76M [00:00<00:00, 4.92MB/s]
+Downloading data:   0%|          | 0.00/1.14M [00:00<?, ?B/s]Downloading data: 100%|██████████| 1.14M/1.14M [00:00<00:00, 2.50MB/s]Downloading data: 100%|██████████| 1.14M/1.14M [00:00<00:00, 2.49MB/s]
+Downloading data:   0%|          | 0.00/109k [00:00<?, ?B/s]Downloading data: 100%|██████████| 109k/109k [00:00<00:00, 306kB/s]Downloading data: 100%|██████████| 109k/109k [00:00<00:00, 305kB/s]
+Downloading data:   0%|          | 0.00/1.73M [00:00<?, ?B/s]Downloading data: 100%|██████████| 1.73M/1.73M [00:00<00:00, 2.99MB/s]Downloading data: 100%|██████████| 1.73M/1.73M [00:00<00:00, 2.98MB/s]
+Generating train split: 0 examples [00:00, ? examples/s]Generating train split: 25007 examples [00:00, 66978.27 examples/s]Generating train split: 30007 examples [00:00, 68002.57 examples/s]
+Generating validation split: 0 examples [00:00, ? examples/s]Generating validation split: 1445 examples [00:00, 44429.23 examples/s]
+Generating test split: 0 examples [00:00, ? examples/s]Generating test split: 1964 examples [00:00, 73733.79 examples/s]
+[data] Aegis 2.0 (train): pos=4842 benign=0 dropped_unmapped=180 unmapped_category_strings=2
+[data]   UNMAPPED Aegis categories (rows dropped, not relabelled): Guns and Illegal Weapons=1133, Other=318
+[data]   Aegis per-col: {'child_abuse': 240, 'controversial_topics': 401, 'criminal_planning': 1638, 'discrimination_stereotype': 638, 'drug_weapon': 559, 'financial_crime': 378, 'hate_speech': 638, 'high_risk_gov_decisions': 75, 'intellectual_property': 76, 'malware': 149, 'misinformation': 401, 'non_violent_unethical': 578, 'privacy_violation': 537, 'self_harm': 500, 'sexually_explicit': 743, 'toxicity': 940, 'unauthorized_advice': 459, 'violence': 725}
+[data] toxic-chat: jailbreak=106 toxicity=371 benign(backfill)=0
+[data] wildguardmix SKIPPED (gated/unavailable: Couldn't reach https://huggingface.co/datasets/allenai/wildguardmix/resolve/d29c47f41c8b51348b5c8e8c81c039b3132b66d1/.huggingface.yaml (error 403))
+[data] corpus N=13065  policies=21  benign=3000  mean_chars=488.1
+[data]   col  0 animal_abuse             pos=357
+[data]   col  1 child_abuse              pos=425
+[data]   col  2 controversial_topics     pos=919
+[data]   col  3 discrimination_stereotype pos=1239
+[data]   col  4 drug_weapon              pos=1206
+[data]   col  5 financial_crime          pos=985
+[data]   col  6 hate_speech              pos=1283
+[data]   col  7 misinformation           pos=915
+[data]   col  8 non_violent_unethical    pos=1714
+[data]   col  9 privacy_violation        pos=1049
+[data]   col 10 self_harm                pos=705
+[data]   col 11 sexually_explicit        pos=1252
+[data]   col 12 terrorism                pos=293
+[data]   col 13 violence                 pos=2595
+[data]   col 14 jailbreak                pos=106
+[data]   col 15 toxicity                 pos=1311
+[data]   col 16 criminal_planning        pos=1638
+[data]   col 17 unauthorized_advice      pos=459
+[data]   col 18 malware                  pos=149
+[data]   col 19 intellectual_property    pos=76
+[data]   col 20 high_risk_gov_decisions  pos=75
+[data] source dist: aegis=4842, beavertails=4852, beavertails_benign=3000, toxicchat=371
+========================================================================
+!! DATA SHORTFALL -- requested != achieved (rubric rule 1) !!
+!!   animal_abuse               requested   500  achieved   357
+!!   child_abuse                requested   500  achieved   425
+!!   high_risk_gov_decisions    requested   500  achieved    75
+!!   intellectual_property      requested   500  achieved    76
+!!   jailbreak                  requested   500  achieved   106
+!!   malware                    requested   500  achieved   149
+!!   terrorism                  requested   500  achieved   293
+!!   unauthorized_advice        requested   500  achieved   459
+!! 8 of 21 policy columns are under the requested floor.
+!! results.json records the ACHIEVED counts under 'achieved'.
+========================================================================
+[data] class balance: harmful=10065 benign=3000 (harmful frac 0.770)
+[data] pool_fingerprint=62eb49f068e02463
+[data] corpus n=13065  n_policies=21  harmful=10065 benign=3000
+[data] held-out (zero-shot) policies: ['financial_crime', 'self_harm', 'toxicity', 'criminal_planning']  (pos=[985, 705, 1311, 1638])
+[data] seen_cols=17  heldout_cols=4 (Financial Crime, Self Harm, Toxicity, Criminal Planning)
+[data] group split: 9155 train rows / 3910 test rows (6294/2698 groups)
+[data] group split  train=9155  test=3910
+========================================================================
+!! DATA SHORTFALL -- requested != achieved (rubric rule 1) !!
+!!   animal_abuse               requested   500  achieved   357
+!!   child_abuse                requested   500  achieved   425
+!!   high_risk_gov_decisions    requested   500  achieved    75
+!!   intellectual_property      requested   500  achieved    76
+!!   jailbreak                  requested   500  achieved   106
+!!   malware                    requested   500  achieved   149
+!!   terrorism                  requested   500  achieved   293
+!!   unauthorized_advice        requested   500  achieved   459
+!! 8 of 21 policy columns are under the requested floor.
+!! results.json records the ACHIEVED counts under 'achieved'.
+========================================================================
+[data] class balance: harmful=10065 benign=3000 (harmful frac 0.770)
+[data] pool_fingerprint=62eb49f068e02463
+[confound:corpus]
+CONFOUND REPORT  n=13065 (pos=10065 neg=3000) seed=0
+  bar       raw       directionless detail
+  length    0.5048    0.5048    mean pos=514.8 neg=398.4
+  count     0.5102    0.5102    mean pos=91.0 neg=69.2
+  content   0.7910    0.7910    5 folds
+  shuffle   0.4963    0.5037    5 folds
+  BINDING BAR: content = 0.7910  (a method must beat THIS, not 0.5)
+[confound:test]
+CONFOUND REPORT  n=3910 (pos=2949 neg=961) seed=0
+  bar       raw       directionless detail
+  length    0.4981    0.5019    mean pos=513.6 neg=411.2
+  count     0.5026    0.5026    mean pos=90.9 neg=71.5
+  content   0.8040    0.8040    5 folds
+  shuffle   0.5142    0.5142    5 folds
+  BINDING BAR: content = 0.8040  (a method must beat THIS, not 0.5)
+Loading weights:   0%|          | 0/314 [00:00<?, ?it/s]Loading weights: 100%|██████████| 314/314 [00:00<00:00, 4567.93it/s]
+[behaviour] probe google/embeddinggemma-300m: prefix delta=3.984291e+00 over 10 shared tokens -> bucket '1e+0' (attn=sdpa, bidirectional_flag=True, 0.23s)
+[embed] encoded 13065 texts -> shape=(13065, 768) (split=train fp=4f3c44b7b2bc)
+[bank] built policy bank n_proto=4 -> shape=(21, 768)
+[fit] bi_encoder ready
+[fit] bi_encoder_trained ready (InfoNCE, final loss 0.8079)
+[fit] uni_encoder ready
+[fit] trained_head ready
+[EXP-A/bi_encoder] macro_ap=0.227 micro_ap=0.218 macro_f1=0.113 harm_auc=0.691
+[EXP-A/bi_encoder_trained] macro_ap=0.482 micro_ap=0.516 macro_f1=0.179 harm_auc=0.614
+[EXP-A/uni_encoder] macro_ap=0.156 micro_ap=0.116 macro_f1=0.182 harm_auc=0.586
+[EXP-A/trained_head] macro_ap=0.553 micro_ap=0.597 macro_f1=0.501 harm_auc=0.718
+[margin/bi_encoder] harm_auc=0.6905  bar(content)=0.8040  margin=-0.1135  clears=False
+[margin/bi_encoder_trained] harm_auc=0.6143  bar(content)=0.8040  margin=-0.1897  clears=False
+[margin/uni_encoder] harm_auc=0.5863  bar(content)=0.8040  margin=-0.2177  clears=False
+[margin/trained_head] harm_auc=0.7180  bar(content)=0.8040  margin=-0.0860  clears=False
+[EXP-B/bi_encoder] zero-shot macro_ap=0.385 macro_f1=0.165
+[EXP-B/bi_encoder_trained] zero-shot macro_ap=0.178 macro_f1=0.195
+[EXP-B/uni_encoder] zero-shot macro_ap=0.129 macro_f1=0.191
+[bank] built policy bank n_proto=1 -> shape=(21, 768)
+[EXP-C] proto ablation  1-proto AP=0.354  4-proto AP=0.385  delta=0.030
+[EXP-D] labels=[16, 64, 256, 1024] bi=['1.541', '1.542', '1.542', '1.543'] uni=['0.460', '1.569', '8.022', '36.105']
+[EXP-D] ratio at 1024 labels = 23.4x   CONTENDED=False (0 co-tenant python job(s), 8132 MiB in use) -- if contended, quote the RATIO, not the seconds
+[transfer/heldout_split] BeaverTails/30k_test: N=2787 harmful=1500 benign=1287
+Downloading readme: 0.00B [00:00, ?B/s]Downloading readme: 14.1kB [00:00, 14.1MB/s]
+[data] Aegis 2.0 (test): pos=1030 benign=873 dropped_unmapped=9 unmapped_category_strings=2
+[data]   UNMAPPED Aegis categories (rows dropped, not relabelled): Guns and Illegal Weapons=62, Other=14
+[data]   Aegis per-col: {'child_abuse': 11, 'controversial_topics': 21, 'criminal_planning': 511, 'discrimination_stereotype': 175, 'drug_weapon': 112, 'financial_crime': 14, 'hate_speech': 175, 'high_risk_gov_decisions': 3, 'intellectual_property': 4, 'malware': 8, 'misinformation': 21, 'non_violent_unethical': 28, 'privacy_violation': 99, 'self_harm': 38, 'sexually_explicit': 107, 'toxicity': 230, 'unauthorized_advice': 23, 'violence': 185}
+[transfer/cross_annotator] nvidia/Aegis-AI-Content-Safety-Dataset-2.0/test: N=1903
+[transfer/ood_benchmark] intrinsec-ai/cstm-bench: N=50 attack=28 benign=22
+[embed] encoded 2787 texts -> shape=(2787, 768) (split=heldout_split fp=5240e17d6456)
+[EXP-E/heldout_split] source=BeaverTails/30k_test n=2787 harmful=1500  (rows only -- same dataset, annotators, taxonomy and rendering)
+[EXP-E/heldout_split/bi_encoder] harm_auc=0.655 macro_ap=0.246
+[EXP-E/heldout_split/bi_encoder_trained] harm_auc=0.683 macro_ap=0.452
+[EXP-E/heldout_split/uni_encoder] harm_auc=0.675 macro_ap=0.204
+[EXP-E/heldout_split/trained_head] harm_auc=0.743 macro_ap=0.538
+[embed] encoded 1903 texts -> shape=(1903, 768) (split=cross_annotator fp=e4ea5bf5c6d9)
+[EXP-E/cross_annotator] source=nvidia/Aegis-AI-Content-Safety-Dataset-2.0/test n=1903 harmful=1030  (annotators + taxonomy -- same prompt+response rendering)
+[EXP-E/cross_annotator/bi_encoder] harm_auc=0.682 macro_ap=0.175
+[EXP-E/cross_annotator/bi_encoder_trained] harm_auc=0.694 macro_ap=0.351
+[EXP-E/cross_annotator/uni_encoder] harm_auc=0.439 macro_ap=0.089
+[EXP-E/cross_annotator/trained_head] harm_auc=0.657 macro_ap=0.445
+[embed] encoded 50 texts -> shape=(50, 768) (split=ood_benchmark fp=63e3ea89f4e5)
+[EXP-E/ood_benchmark] source=intrinsec-ai/cstm-bench n=50 harmful=28  (external benchmark -- different corpus, task shape and label source)
+[EXP-E/ood_benchmark/bi_encoder] harm_auc=0.284 macro_ap=0.494
+[EXP-E/ood_benchmark/bi_encoder_trained] harm_auc=0.510 macro_ap=0.541
+[EXP-E/ood_benchmark/uni_encoder] harm_auc=0.396 macro_ap=0.527
+[EXP-E/ood_benchmark/trained_head] harm_auc=0.450 macro_ap=0.507
+[hardneg] mined 340 dense hard negatives across 17 policies
+[hardneg] ECIsem eci=0.309 locality=0.347 target_consistency=-0.112
+[hardneg] built 20164 CausalNeg counterfactuals
+[hardneg] ARHN dropped 76 probable false negatives
+[hardneg] FPR@recall0.90  frozen=1.000  adapter=0.300  delta=0.700
+[EXP-G] dropped K < n_real=21 from the grid: [16]
+[distract] 1080/1080 candidates survived (harm-stem drop=0, jaccard drop=0); using 879  max_jaccard=0.125  fp=471d78f2b0b1
+[distract] embedded 879 distractor policies x 4 prototypes in 89.3s -> (879, 768)
+[EXP-G] distractor proximity: mean_max_cos=0.549 p95=0.617 max=0.679 (n>=0.90: 0, n>=0.95: 0)
+[EXP-G/bi_encoder] scored 3910 texts x 900 labels in 0.10s
+[EXP-G/bi_encoder] K=  21  macroAP=0.257  top3F1=0.310 (P=0.249 R=0.537 nreal/row=3.00)  meanRank=5.20 (chance 11.0, lift 0.473)  steal@1=0.000
+[EXP-G/bi_encoder] K=  64  macroAP=0.257  top3F1=0.324 (P=0.280 R=0.499 nreal/row=2.48)  meanRank=8.20 (chance 32.5, lift 0.252)  steal@1=0.085
+[EXP-G/bi_encoder] K= 256  macroAP=0.257  top3F1=0.322 (P=0.312 R=0.436 nreal/row=1.94)  meanRank=22.07 (chance 128.5, lift 0.172)  steal@1=0.215
+[EXP-G/bi_encoder] K= 900  macroAP=0.257  top3F1=0.319 (P=0.329 R=0.403 nreal/row=1.71)  meanRank=66.62 (chance 450.5, lift 0.148)  steal@1=0.266
+[EXP-G/bi_encoder_trained] scored 3910 texts x 900 labels in 0.11s
+[EXP-G/bi_encoder_trained] K=  21  macroAP=0.424  top3F1=0.399 (P=0.300 R=0.648 nreal/row=3.00)  meanRank=3.93 (chance 11.0, lift 0.357)  steal@1=0.000
+[EXP-G/bi_encoder_trained] K=  64  macroAP=0.424  top3F1=0.411 (P=0.314 R=0.636 nreal/row=2.81)  meanRank=6.73 (chance 32.5, lift 0.207)  steal@1=0.006
+[EXP-G/bi_encoder_trained] K= 256  macroAP=0.424  top3F1=0.417 (P=0.329 R=0.618 nreal/row=2.61)  meanRank=19.69 (chance 128.5, lift 0.153)  steal@1=0.017
+[EXP-G/bi_encoder_trained] K= 900  macroAP=0.424  top3F1=0.419 (P=0.340 R=0.601 nreal/row=2.46)  meanRank=61.56 (chance 450.5, lift 0.137)  steal@1=0.033
+[EXP-G] per-column invariance in K verified=True (max spread {'bi_encoder': '0.00e+00', 'bi_encoder_trained': '0.00e+00'})
+[EXP-H] OPIR SHAPE AUTOFIT: n_top=21 (paper: 16) -> mid=125 leaf=850, total=996 held at Opir's 996. The 126:854 RATIO is preserved; the exact 126/854 split is NOT the paper's.
+[taxo] 21 top + 125 mid + 850 leaf = 996 categories  fp=3653ac41c687  mids/parent 5-6  leaves/mid 6-7
+[taxo] lexical adjacency (DESIGN TARGET, never a filter): mean Jaccard to OWN parent 0.381 vs 0.073 to the nearest OTHER parent (ratio 5.19x)
+[taxo] embedded 975 taxonomy nodes x 4 prototypes in 95.7s -> (975, 768)
+[EXP-H] node proximity (report-only): cos to OWN parent 0.721 vs best OTHER 0.616 (98.8% closer to own); max cos to any real policy: mean 0.721 p95 0.803
+[EXP-H/bi_encoder] scored 3910 texts x 996 related labels in 0.10s
+[EXP-H/bi_encoder] K=996  meanRank=141.60 (chance 498.5, lift 0.284)  exclDescendants=131.97  steal@1=0.886 (excl desc 0.453)
+[EXP-H/bi_encoder] violations: descendant 0.068 (chance 0.047, 1.5x)  sibling 0.030 (chance 0.020, 1.5x)  other-branch 0.902 (chance 0.933, 1.0x)
+[EXP-H/bi_encoder_trained] scored 3910 texts x 996 related labels in 0.12s
+[EXP-H/bi_encoder_trained] K=996  meanRank=88.64 (chance 498.5, lift 0.178)  exclDescendants=84.65  steal@1=0.505 (excl desc 0.356)
+[EXP-H/bi_encoder_trained] violations: descendant 0.046 (chance 0.047, 1.0x)  sibling 0.033 (chance 0.020, 1.7x)  other-branch 0.921 (chance 0.933, 1.0x)
+[EXP-H/bi_encoder] vs EXP-G: meanRank 66.62 (K=900 unrelated) -> 141.60 (K=996 related, 131.72 at matched K=900)  competitor-steal@1 0.266 -> 0.805 (0.372 excl desc)
+[EXP-H/bi_encoder_trained] vs EXP-G: meanRank 61.56 (K=900 unrelated) -> 88.64 (K=996 related, 85.88 at matched K=900)  competitor-steal@1 0.033 -> 0.290 (0.142 excl desc)
+[EXP-H] cross-experiment anchors verified=True {'bi_encoder': 'AP d=0.0e+00 r16 d=0.0e+00', 'bi_encoder_trained': 'AP d=0.0e+00 r16 d=0.0e+00'}
+[write] C:\Users\evija\steeringresearch\steering_tutorials\biencoder_guard\artifacts\results.json
+
+------------------------------------------------------------------------------
+BI-ENCODER SAFETY GUARDRAIL  (SCREENING TIER, EmbeddingGemma dual-tower)
+embedder=embeddinggemma emb_dim=768  n_policies=21  seed=0
+held-out (zero-shot) policies: Financial Crime, Self Harm, Toxicity, Criminal Planning
+ACHIEVED: 13065 rows  harmful=10065 benign=3000 (harmful frac 0.770)  8/21 columns under the requested 500
+sources: {'aegis': 4842, 'beavertails': 4852, 'beavertails_benign': 3000, 'toxicchat': 371}
+pool_fingerprint=62eb49f068e02463
+confound (folded, directionless): length AUC=0.505  BINDING BAR content=0.804
+  margin bi_encoder         harmAUC 0.6905 - content 0.8040 = -0.1135  clears=False
+  margin bi_encoder_trained harmAUC 0.6143 - content 0.8040 = -0.1897  clears=False
+  margin trained_head       harmAUC 0.7180 - content 0.8040 = -0.0860  clears=False
+  margin uni_encoder        harmAUC 0.5863 - content 0.8040 = -0.2177  clears=False
+------------------------------------------------------------------------------
+EXP-A  SEEN-policy multilabel (test)
+method          macroAP  microAP  macroF1  microF1   harmAUC
+bi_encoder        0.227    0.218    0.113    0.117     0.691
+uni_encoder       0.156    0.116    0.182    0.175     0.586
+trained_head      0.553    0.597    0.501    0.527     0.718
+------------------------------------------------------------------------------
+EXP-B  HELD-OUT zero-shot (the headline -- add a policy from a description)
+method          macroAP  macroF1
+bi_encoder        0.385    0.165
+uni_encoder       0.129    0.191
+trained_head     N/A (cannot score an unseen policy)
+------------------------------------------------------------------------------
+EXP-C  multi-prototype ablation (held-out cols, bi_encoder)
+  1-proto macroAP=0.354   4-proto macroAP=0.385   delta=+0.030
+------------------------------------------------------------------------------
+EXP-D  latency vs #labels (bi should stay FLAT, uni should RISE)
+  labels : [16, 64, 256, 1024]
+  bi_sec : ['1.541', '1.542', '1.542', '1.543']
+  uni_sec: ['0.460', '1.569', '8.022', '36.105']
+------------------------------------------------------------------------------
+EXP-E  TRANSFER, scored over SEEN cols
+  [heldout_split] BeaverTails/30k_test  n=2787  -- shift: rows only -- same dataset, annotators, taxonomy and rendering
+      method           harmAUC  macroAP
+      bi_encoder         0.655    0.246
+      uni_encoder        0.675    0.204
+      trained_head       0.743    0.538
+  [cross_annotator] nvidia/Aegis-AI-Content-Safety-Dataset-2.0/test  n=1903  -- shift: annotators + taxonomy -- same prompt+response rendering
+      method           harmAUC  macroAP
+      bi_encoder         0.682    0.175
+      uni_encoder        0.439    0.089
+      trained_head       0.657    0.445
+  [ood_benchmark] intrinsec-ai/cstm-bench  n=50  -- shift: external benchmark -- different corpus, task shape and label source
+      method           harmAUC  macroAP
+      bi_encoder         0.284    0.494
+      uni_encoder        0.396    0.527
+      trained_head       0.450    0.507
+------------------------------------------------------------------------------
+EXP-F  hard-negative augmentation (frozen bi vs contrastive adapter)
+  mined=340  counterfactuals=20164  false_neg_dropped=76  ECIsem.eci=0.309
+  FPR@recall0.90  frozen=1.000  adapter=0.300  delta=+0.700 (positive => adapter helps)
+------------------------------------------------------------------------------
+EXP-G  ACCURACY vs #labels (16 real policies padded with synthetic distractors)
+  distractors: n=879 seed=12345 fp=471d78f2b0b1  max lexical Jaccard to a real policy=0.125
+  distractor-to-real cosine: mean_max=0.549 p95=0.617 max=0.679 (n>=0.95: 0)
+arm                      K  macroAP  macroF1   top3F1 nreal/row meanRank   chance  steal@1
+bi_encoder              21    0.257    0.123    0.310     3.00     5.20     11.0    0.000
+bi_encoder              64    0.257    0.123    0.324     2.48     8.20     32.5    0.085
+bi_encoder             256    0.257    0.123    0.322     1.94    22.07    128.5    0.215
+bi_encoder             900    0.257    0.123    0.319     1.71    66.62    450.5    0.266
+bi_encoder_trained      21    0.424    0.182    0.399     3.00     3.93     11.0    0.000
+bi_encoder_trained      64    0.424    0.182    0.411     2.81     6.73     32.5    0.006
+bi_encoder_trained     256    0.424    0.182    0.417     2.61    19.69    128.5    0.017
+bi_encoder_trained     900    0.424    0.182    0.419     2.46    61.56    450.5    0.033
+  per-column invariance in K verified: True
+  HOW TO READ -- two traps, both live in this table:
+   1. macroAP/macroF1 are per-column cosine metrics: EXACTLY invariant in K
+      by construction. Their flatness is arithmetic, not evidence.
+   2. top3F1 can RISE with K without accuracy improving: distractors take
+      slots in the top-3, so fewer REAL columns are predicted per row
+      (see nreal/row) and precision goes up for free. Not a scaling win.
+  The uncontaminated verdict is steal@1 (a distractor beating every real
+  policy on a genuinely harmful row) and meanRank read against chance.
+------------------------------------------------------------------------------
+EXP-H  the OPIR 3-LEVEL TAXONOMY (21 top + 125 mid + 850 leaf = 996 categories)
+  competitors are SIBLINGS/DESCENDANTS of the truth, not strangers:
+   lexical Jaccard to OWN parent 0.381 vs 0.073 to the nearest other parent
+   (EXP-G DROPPED any distractor above 0.20; here 96% of nodes are above it
+   embedding cos to own parent 0.721 vs 0.616 best other (99% closer to own)
+  taxonomy fp=3653ac41c687  n_test_rows=3910  bank precision=torch.float32 (held EQUAL to the EXP-G banks on purpose; a mismatch voids the head-to-head)
+arm                  meanRank    chance  exclDesc  cSteal@1 cSteal-xD   steal@1
+bi_encoder             141.60     498.5    131.97     0.805     0.372     0.886
+bi_encoder_trained      88.64     498.5     84.65     0.290     0.142     0.505
+  cSteal@1 = EXP-G's rule (an ADDED column wins the argmax) -- the only
+  steal figure comparable to EXP-G. cSteal-xD forgives a descendant win.
+  steal@1 is the stricter rule (ANY column that is not a true top-level
+  policy) and must NOT be read against EXP-G's number.
+  WHERE THE RANK VIOLATIONS COME FROM (share of all violations; chance in
+  brackets -- a policy has ~61 descendants but ~919 cousins, so the raw
+  shares are dominated by bucket SIZE and only the x-enrichment has content):
+arm                              descendant     sibling(top-level)   other-branch(cousin)
+bi_encoder             0.068 [0.047]   1.5x   0.030 [0.020]   1.5x   0.902 [0.933]   1.0x
+bi_encoder_trained     0.046 [0.047]   1.0x   0.033 [0.020]   1.7x   0.921 [0.933]   1.0x
+  TOP-1 on a genuinely harmful row -- what actually wins the argmax
+  (share [chance] enrichment; descendants are only ~6% of the 996 columns):
+arm                          true top-level             descendant                sibling           other-branch
+bi_encoder             0.114 [0.002]  61.4x   0.433 [0.086]   5.0x   0.081 [0.019]   4.2x   0.372 [0.893]   0.4x
+bi_encoder_trained     0.495 [0.002] 267.6x   0.149 [0.086]   1.7x   0.215 [0.019]  11.2x   0.142 [0.893]   0.2x
+  HEAD-TO-HEAD vs EXP-G (same arms, same rows, same 16 scored columns;
+  the ONLY change is whether the ~900 competitors are related):
+  (steal figures use EXP-G's own rule on both sides: an ADDED column
+  wins the argmax on a genuinely harmful row.)
+arm                  G rank(900) H rank(996)  H rank@900   G cSteal   H cSteal   H cSt-xD
+bi_encoder                 66.62      141.60      131.72      0.266      0.805      0.372
+bi_encoder_trained         61.56       88.64       85.88      0.033      0.290      0.142
+  cross-experiment anchors (macroAP and top-16 mean rank identical to
+  EXP-G, since both depend only on the 16 real columns) verified: True
+  HOW TO READ -- a DESCENDANT outranking its parent is arguably NOT an
+  error (the router picked a narrower rule under the SAME policy), so the
+  exclDesc / steal-xD columns price it as correct and the plain columns
+  price it as wrong. Report both; which one is right depends on whether
+  the downstream system acts on the top-level policy or on the leaf.
+------------------------------------------------------------------------------
+READ: bi_encoder caches the policy tower -> O(1) per request in #labels and scores UNSEEN policies zero-shot. FALSIFIERS -- (i) uni latency flat => scaling claim FALSE; (ii) bi held-out macroAP <= 0.5 => zero-shot claim FALSE; (iii) adapter does NOT lower FPR@recall0.90 => hard-negative sharpening does not help here; (iv) the top-1 distractor STEAL RATE rises materially from K=16 to K=900 => the 'accuracy is MAINTAINED at scale' half of arXiv:2602.18487 is FALSE under a competitive decision rule. Judge (iv) on steal@1 and on meanRank read against its chance line -- NOT on top-T F1, which distractors inflate for free.
+------------------------------------------------------------------------------
