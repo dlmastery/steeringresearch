@@ -14,11 +14,11 @@ CONFOUND REPORT  n=1000 (pos=500 neg=500) seed=0
   shuffle   0.4498    0.5502    5 folds
   BINDING BAR: content = 0.9998  (a method must beat THIS, not 0.5)
 [embed:easy] cache MISS -> building with 'embeddinggemma' (n=1000, loads the model)
-Loading weights:   0%|          | 0/314 [00:00<?, ?it/s]Loading weights:  21%|██        | 66/314 [00:00<00:00, 647.04it/s]Loading weights:  57%|█████▋    | 180/314 [00:00<00:00, 930.39it/s]Loading weights: 100%|██████████| 314/314 [00:00<00:00, 1372.45it/s]
-[easy/per_traj_max] auc=0.999 ci=[0.998,1.000] f1=0.938 tpr@fpr10=0.998
-[easy/mean_agg] auc=1.000 ci=[0.999,1.000] f1=0.992 tpr@fpr10=1.000
-[easy/attn_pool] auc=0.999 ci=[0.997,1.000] f1=0.989 tpr@fpr10=1.000
-[easy/gnn_agg] auc=1.000 ci=[0.999,1.000] f1=0.990 tpr@fpr10=1.000
+Loading weights:   0%|          | 0/314 [00:00<?, ?it/s]Loading weights:  46%|████▌     | 144/314 [00:00<00:00, 1417.96it/s]Loading weights: 100%|██████████| 314/314 [00:00<00:00, 2550.19it/s]
+[easy/per_traj_max] auc=0.998 ci=[0.996,0.999] f1=0.929 tpr@fpr10=0.996
+[easy/mean_agg] auc=0.999 ci=[0.998,1.000] f1=0.992 tpr@fpr10=0.998
+[easy/attn_pool] auc=0.998 ci=[0.994,1.000] f1=0.988 tpr@fpr10=0.998
+[easy/gnn_agg] auc=0.996 ci=[0.992,0.999] f1=0.986 tpr@fpr10=0.996
 [data] attacks: rows=2280 from {'Attack_600': 600, 'SafeMTData_1K': 1680} ; distinct groups=1026
 [data] NOTE: 2280 rows share only 1026 distinct query_id groups (SafeMTData_1K has multiple ACTORS per query_id). n != information.
 [data] condition=hard  N=1000  pos(decomp attack)=500  neg(benign)=500  K=5
@@ -34,11 +34,11 @@ CONFOUND REPORT  n=1000 (pos=500 neg=500) seed=0
   shuffle   0.4969    0.5031    5 folds
   BINDING BAR: content = 0.9149  (a method must beat THIS, not 0.5)
 [embed:hard] cache MISS -> building with 'embeddinggemma' (n=1000, loads the model)
-Loading weights:   0%|          | 0/314 [00:00<?, ?it/s]Loading weights: 100%|██████████| 314/314 [00:00<00:00, 3230.79it/s]
-[hard/per_traj_max] auc=0.819 ci=[0.790,0.844] f1=0.685 tpr@fpr10=0.596
-[hard/mean_agg] auc=0.967 ci=[0.956,0.977] f1=0.910 tpr@fpr10=0.912
-[hard/attn_pool] auc=0.931 ci=[0.915,0.947] f1=0.857 tpr@fpr10=0.830
-[hard/gnn_agg] auc=0.908 ci=[0.889,0.928] f1=0.833 tpr@fpr10=0.792
+Loading weights:   0%|          | 0/314 [00:00<?, ?it/s]Loading weights: 100%|██████████| 314/314 [00:00<00:00, 4196.46it/s]
+[hard/per_traj_max] auc=0.802 ci=[0.773,0.830] f1=0.683 tpr@fpr10=0.548
+[hard/mean_agg] auc=0.983 ci=[0.975,0.989] f1=0.937 tpr@fpr10=0.956
+[hard/attn_pool] auc=0.888 ci=[0.866,0.910] f1=0.835 tpr@fpr10=0.792
+[hard/gnn_agg] auc=0.896 ci=[0.875,0.916] f1=0.824 tpr@fpr10=0.774
 [data] attacks: rows=2280 from {'Attack_600': 600, 'SafeMTData_1K': 1680} ; distinct groups=1026
 [data] NOTE: 2280 rows share only 1026 distinct query_id groups (SafeMTData_1K has multiple ACTORS per query_id). n != information.
 [data] condition=hard  N=1000  pos(decomp attack)=500  neg(benign)=500  K=5
@@ -49,12 +49,11 @@ CONFOUND REPORT  n=1000 (pos=500 neg=500) seed=0
 [ood] CSTM-Bench: N=108 attack=52 benign=56 ; selection=uniform k=5 ; sessions available mean=20.6, kept mean=5.0, DISCARDED 76%
 [ood] scenarios=108  attack=52  benign=56  selection=uniform (discarded 76% of sessions)
 [embed:ood] cache MISS -> building with 'embeddinggemma' (n=108, loads the model)
-Loading weights:   0%|          | 0/314 [00:00<?, ?it/s]Loading weights: 100%|██████████| 314/314 [00:00<00:00, 4177.46it/s]
-[ood/per_traj_max] auc=0.436 ci=[0.325,0.553] f1=0.650 tpr@fpr10=0.077 distinct_scores=48 pred_pos_frac=1.00
-[ood/mean_agg] auc=0.500 ci=[0.500,0.500] f1=0.650 tpr@fpr10=0.000 distinct_scores=1 pred_pos_frac=1.00  clipped_features=0.001
-[ood/mean_agg] WARNING: prediction is CONSTANT -- report this as SATURATED/DEGENERATE under shift, not as 'near chance'.
-[ood/attn_pool] auc=0.508 ci=[0.403,0.619] f1=0.569 tpr@fpr10=0.154 distinct_scores=61 pred_pos_frac=0.66
-[ood/gnn_agg] auc=0.565 ci=[0.457,0.674] f1=0.658 tpr@fpr10=0.154 distinct_scores=49 pred_pos_frac=0.98
+Loading weights:   0%|          | 0/314 [00:00<?, ?it/s]Loading weights: 100%|██████████| 314/314 [00:00<00:00, 3925.06it/s]
+[ood/per_traj_max] auc=0.443 ci=[0.338,0.557] f1=0.650 tpr@fpr10=0.000 distinct_scores=22 pred_pos_frac=1.00
+[ood/mean_agg] auc=0.485 ci=[0.383,0.587] f1=0.650 tpr@fpr10=0.000 distinct_scores=20 pred_pos_frac=1.00  clipped_features=0.005
+[ood/attn_pool] auc=0.411 ci=[0.314,0.522] f1=0.650 tpr@fpr10=0.096 distinct_scores=43 pred_pos_frac=1.00
+[ood/gnn_agg] auc=0.426 ci=[0.315,0.537] f1=0.650 tpr@fpr10=0.077 distinct_scores=44 pred_pos_frac=1.00
 [write] C:\Users\evija\steeringresearch\steering_tutorials\cross_trajectory\artifacts\results_embeddinggemma.json
 
 ------------------------------------------------------------------------------
@@ -70,10 +69,10 @@ CONDITION: EASY (attack decomposition vs UltraChat benign)
   confound shuffle  raw=0.4498  DIRECTIONLESS=0.5502
   BINDING BAR: content = 0.9998  (a method must beat THIS, not 0.5)
 method             AUC 95% CI              F1    ACC   TPR@10    MARGIN over
-per_traj_max     0.999 [1.00,1.00]       0.94   0.93     1.00   -0.0009 content=1.000
-mean_agg         1.000 [1.00,1.00]       0.99   0.99     1.00   -0.0002 content=1.000
-attn_pool        0.999 [1.00,1.00]       0.99   0.99     1.00   -0.0009 content=1.000
-gnn_agg          1.000 [1.00,1.00]       0.99   0.99     1.00   -0.0003 content=1.000
+per_traj_max     0.998 [1.00,1.00]       0.93   0.92     1.00   -0.0022 content=1.000
+mean_agg         0.999 [1.00,1.00]       0.99   0.99     1.00   -0.0006 content=1.000
+attn_pool        0.998 [0.99,1.00]       0.99   0.99     1.00   -0.0018 content=1.000
+gnn_agg          0.996 [0.99,1.00]       0.99   0.99     1.00   -0.0038 content=1.000
 ------------------------------------------------------------------------------
 CONDITION: HARD (full decomposition vs INCOMPLETE same-style lead-up)
   n: pos=500 neg=500   DISTINCT GROUPS: 680 (pos=339 neg=341)   >=500/class: YES
@@ -83,27 +82,27 @@ CONDITION: HARD (full decomposition vs INCOMPLETE same-style lead-up)
   confound shuffle  raw=0.4969  DIRECTIONLESS=0.5031
   BINDING BAR: content = 0.9149  (a method must beat THIS, not 0.5)
 method             AUC 95% CI              F1    ACC   TPR@10    MARGIN over
-per_traj_max     0.819 [0.79,0.84]       0.68   0.56     0.60   -0.0964 content=0.915
-mean_agg         0.967 [0.96,0.98]       0.91   0.91     0.91   +0.0521 content=0.915
-attn_pool        0.931 [0.91,0.95]       0.86   0.86     0.83   +0.0159 content=0.915
-gnn_agg          0.908 [0.89,0.93]       0.83   0.84     0.79   -0.0067 content=0.915
+per_traj_max     0.802 [0.77,0.83]       0.68   0.57     0.55   -0.1128 content=0.915
+mean_agg         0.983 [0.98,0.99]       0.94   0.94     0.96   +0.0678 content=0.915
+attn_pool        0.888 [0.87,0.91]       0.83   0.84     0.79   -0.0270 content=0.915
+gnn_agg          0.896 [0.88,0.92]       0.82   0.84     0.77   -0.0191 content=0.915
 ------------------------------------------------------------------------------
 OOD: intrinsec-ai/cstm-bench   attack=52 benign=56  (real cross-session benchmark)
   session selection=uniform k=5 ; scenarios carry 20.6 sessions on average, 76% DISCARDED
 method             AUC 95% CI              F1    ACC   TPR@10  distinct
-per_traj_max     0.436 [0.32,0.55]       0.65   0.48     0.08        48
-mean_agg         0.500 [0.50,0.50]       0.65   0.48     0.00  CONSTANT
-attn_pool        0.508 [0.40,0.62]       0.57   0.51     0.15        61
-gnn_agg          0.565 [0.46,0.67]       0.66   0.50     0.15        49
+per_traj_max     0.443 [0.34,0.56]       0.65   0.48     0.00        22
+mean_agg         0.485 [0.38,0.59]       0.65   0.48     0.00        20
+attn_pool        0.411 [0.31,0.52]       0.65   0.48     0.10        43
+gnn_agg          0.426 [0.31,0.54]       0.65   0.48     0.08        44
 ------------------------------------------------------------------------------
 PRE-REGISTERED FALSIFIER (confound-bar form): for each aggregator, the claim
   'aggregation recovers the fractured intent' is FALSE if
       AUC(aggregator) <= max(confound bars, AUC(per_traj_max))
   on HARD. Raw AUC over 0.5 is NOT the test; the binding bar is.
   HARD binding bar this run: content = 0.9149
-    per_traj_max   AUC=0.8185  margin -0.0964 over content=0.9149  ->  FAILS THE BAR
-    mean_agg       AUC=0.9671  margin +0.0521 over content=0.9149  ->  CLEARS
-    attn_pool      AUC=0.9308  margin +0.0159 over content=0.9149  ->  CLEARS
-    gnn_agg        AUC=0.9082  margin -0.0067 over content=0.9149  ->  FAILS THE BAR
+    per_traj_max   AUC=0.8022  margin -0.1128 over content=0.9149  ->  FAILS THE BAR
+    mean_agg       AUC=0.9827  margin +0.0678 over content=0.9149  ->  CLEARS
+    attn_pool      AUC=0.8880  margin -0.0270 over content=0.9149  ->  FAILS THE BAR
+    gnn_agg        AUC=0.8959  margin -0.0191 over content=0.9149  ->  FAILS THE BAR
   No reclassification after the fact, no moving to the EASY condition.
 ------------------------------------------------------------------------------
