@@ -104,11 +104,36 @@ keeping the ordering, and adds this lesson's two geometry bars (`mean_norm`,
 `final_norm`). The prompt channel is reported **separately and never folded into the
 bar**, because a prompt-side classifier is a rival method, not a trivial confound.
 
-Remaining gaps, stated in README §12.3 rather than closed: no multivariate trivial
-baseline, no matched-bin control within `charlen` quantiles, and no paired CI when the
-`content` bar binds (the spine exposes no per-item score, so `paired_margin_ci` returns
-`None` and the runner records why instead of fabricating an interval). Scalar bars do
-get a paired bootstrap CI over the same resample indices.
+Three gaps were left open here and stated in README §12.3 rather than closed: no
+multivariate trivial baseline, no matched-bin control within `charlen` quantiles, and no
+paired CI when the `content` bar binds.
+
+**UPDATE 2026-08-21 — all three are now in code** (`trajguard/controls.py`, wired into
+the runner, `controls` block in `results_<substrate>.json`):
+
+- **Multivariate baseline: MEASURED.** Logistic regression on
+  `{charlen, tokencount, mean_norm, final_norm}`, same folds as the methods, scaler fit
+  on the training fold only, folded **into** `worst_auc`. On the disguised substrate it
+  scores **0.5940** [0.5345, 0.6525] out-of-fold — far under `content` at 0.9103, so the
+  binding bar and every §11.2 margin are **unchanged**. The control did not fire; it is
+  now priced instead of assumed.
+- **Matched-bin: CODE READY**, needs the runner (the per-method within-bin numbers
+  require per-item out-of-fold score vectors, which `results_*.json` does not store).
+  Its power is bounded by bin width and the self-test quantifies that honestly.
+- **Paired CI: the blocker was SOLVABLE and is solved.** The spine's `content_bar` does
+  compute a per-item out-of-fold score and merely discards it;
+  `controls.content_bar_scores` reproduces the loop through the spine's own primitives,
+  returns the vector, and **asserts** equality with the spine to `1e-9`. Paired CIs
+  against `content` and `multivariate` are now computable and every CI records
+  `against_bar`.
+
+A separate defect surfaced while measuring the above and is written up in README §12.4:
+`_save_cache` hardcoded the committed sidecar path, so building the OOD arm silently
+overwrote the **in-domain** `trajectory_meta_disguised.json` with the OOD arm's 548
+records. Fixed (path derived from the cache, `cache_file` threaded through, and an
+assertion that an `ood:` snapshot cannot land in the in-domain sidecar); both sidecars
+regenerated from the intact `.npz` caches and verified to reproduce the shipped bars
+exactly.
 
 ### F-7. Early-detection bar — **CLOSED**
 

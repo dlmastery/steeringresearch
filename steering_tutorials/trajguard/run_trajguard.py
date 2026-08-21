@@ -477,6 +477,11 @@ def main():
     print("[data] trajectories=%d harmful=%d benign=%d mean_len_h=%.1f mean_len_b=%.1f"
           % (n, n_harmful, n_benign, mean_len_h, mean_len_b))
 
+    # Folds are built BEFORE the confound audit because the multivariate bar is scored
+    # under the SAME folds as the methods -- a bar fitted on a different split is not a
+    # peer, it is a different experiment.
+    folds = kfold_indices(n, C.N_FOLDS, C.SEED, labels=labels)
+
     # --- confound audit: BEFORE the methods, so the bar exists first ---------
     from steering_tutorials.common.confound import format_report, margin_over_bar
     try:
@@ -491,6 +496,27 @@ def main():
         confound = {"error": str(exc)}
         print("[confound] FAILED: %s" % exc)
 
+    # --- CONTROL 1: the multivariate trivial baseline, folded INTO the bar ---
+    # Every bar above is a SINGLE feature and `worst_auc` is the worst of them one at a
+    # time. A method that beats each of them individually can still be beaten by their
+    # COMBINATION, so the combination is computed here, under the same folds, and
+    # `worst_auc` is re-elected over the enlarged set. If it binds, it binds.
+    from . import controls
+    try:
+        feat_names, feat_X = controls.trivial_features(trajs, completions)
+        multivariate = controls.multivariate_bar(
+            feat_X, labels, folds=folds, seed=C.SEED, n_folds=C.N_FOLDS,
+            bootstrap=C.BOOTSTRAP, feature_names=feat_names)
+        confound["multivariate"] = multivariate
+        data._rebind_worst(confound)
+        print(controls.format_multivariate(multivariate))
+        print("  BINDING BAR after the multivariate baseline: %s = %.4f"
+              % (confound.get("worst_name"), confound.get("worst_auc", float("nan"))))
+    except Exception as exc:
+        multivariate = {"error": str(exc)}
+        confound["multivariate"] = multivariate
+        print("[confound] multivariate baseline FAILED: %s" % exc)
+
     bar = confound.get("worst_auc")
     bar_name = confound.get("worst_name")
     shuffle_auc = ((confound.get("shuffle") or {}).get("auc")
@@ -498,8 +524,23 @@ def main():
     prompt_content = (((confound.get("prompt_channel") or {}).get("content") or {})
                       .get("auc"))
 
-    folds = kfold_indices(n, C.N_FOLDS, C.SEED, labels=labels)
-    bar_scores = _bar_feature(bar_name, trajs, completions) if bar_name else None
+    # --- CONTROL 3: per-item scores for the binding bar, whatever it is ------
+    # `_bar_feature` covers only the four scalar bars. `controls.bar_per_item_scores`
+    # adds `content` (reproduced from the spine and asserted equal to it) and
+    # `multivariate`, which is what unblocks the paired margin CI that shipped as
+    # `null` on all four methods.
+    bar_scores, bar_scores_provenance = (None, None)
+    try:
+        bar_scores, bar_scores_provenance = controls.bar_per_item_scores(
+            bar_name, trajs, completions, labels=labels, multivariate=multivariate,
+            seed=C.SEED, n_folds=C.N_FOLDS)
+    except Exception as exc:
+        print("[confound] per-item scores for bar %r FAILED: %s" % (bar_name, exc))
+    if bar_scores is not None:
+        print("  paired-CI bar: per-item scores available for %r (n=%d)"
+              % (bar_scores_provenance, len(bar_scores)))
+    charlens = np.asarray([float(len(str(c))) for c in completions], dtype=float)
+    fold_order = np.concatenate([te for _, te in folds])
 
     # --- per-method 5-fold pooled out-of-fold predictions --------------------
     methods_block = {}
@@ -512,14 +553,23 @@ def main():
             if bar_scores is not None:
                 # The pooled OOF order follows the fold test indices, so realign the
                 # bar feature to the same order before pairing.
-                order = np.concatenate([te for _, te in folds])
-                cell["vs_confound_paired_ci"] = paired_margin_ci(
-                    yt, ys, np.asarray(bar_scores)[order], seed=C.SEED)
+                pci = paired_margin_ci(yt, ys, np.asarray(bar_scores)[fold_order],
+                                       seed=C.SEED)
+                # A CI is only interpretable against a NAMED bar: one against
+                # `final_norm` and one against `content` are different claims.
+                if isinstance(pci, dict):
+                    pci["against_bar"] = bar_scores_provenance
+                    pci["is_binding_bar"] = bool(bar_scores_provenance == bar_name)
+                cell["vs_confound_paired_ci"] = pci
+                cell["paired_ci_against"] = bar_scores_provenance
             else:
                 cell["vs_confound_paired_ci"] = None
+                cell["paired_ci_against"] = None
                 cell["paired_ci_note"] = (
-                    "binding bar %r exposes no per-item score (the spine's content bar "
-                    "is a CV-pooled centroid model), so no paired CI is computed"
+                    "binding bar %r exposes no per-item score, so no paired CI is "
+                    "computed. NOTE: `content` and `multivariate` DO expose per-item "
+                    "scores via trajguard.controls -- reaching this branch now means a "
+                    "bar with no per-item construction at all, not the old blocker."
                     % bar_name)
             if isinstance(prompt_content, (int, float)):
                 cell["vs_prompt_content"] = float(cell["auc"]) - float(prompt_content)
@@ -531,6 +581,30 @@ def main():
         except Exception as exc:
             methods_block[name] = {"error": str(exc)}
             print("[method:%s] FAILED: %s" % (name, exc))
+
+    # --- CONTROL 2: the matched-bin control ----------------------------------
+    # Does the separation survive when completion LENGTH is held approximately fixed?
+    # The binding bar goes through the SAME control, because a within-bin method AUC
+    # beside an unstratified bar is not a margin. Every vector is realigned to the
+    # pooled out-of-fold order first.
+    matched_bin = {"error": "not computed"}
+    try:
+        strat = charlens[fold_order]
+        mb_methods = {nm: (yt, ys) for nm, (yt, ys) in roc_scores.items()}
+        mb_bar = None
+        if bar_scores is not None:
+            bs = np.asarray(bar_scores, dtype=float)[fold_order]
+            mb_bar = (bar_scores_provenance, labels[fold_order], bs)
+        matched_bin = controls.matched_bin_block(
+            mb_methods, mb_bar, strat, n_bins=C.MATCHED_BINS,
+            n_boot=C.MATCHED_BIN_BOOTSTRAP, seed=C.SEED, stratifier_name="charlen")
+        print(controls.format_matched_bin(matched_bin))
+        for nm, cell in (matched_bin.get("methods") or {}).items():
+            if nm in methods_block and isinstance(methods_block[nm], dict):
+                methods_block[nm]["matched_bin"] = cell
+    except Exception as exc:
+        matched_bin = {"error": str(exc)}
+        print("[matched-bin] FAILED: %s" % exc)
 
     # --- early-detection curve + ITS OWN per-K confound bar ------------------
     early = {"threshold_freeform": {}, "seq_gru": {}}
@@ -629,6 +703,16 @@ def main():
         "n_harmful": n_harmful,
         "n_benign": n_benign,
         "confound": confound,
+        "controls": {
+            "multivariate": multivariate,
+            "matched_bin": matched_bin,
+            "paired_ci_against": bar_scores_provenance,
+            "note": "the three confound CONTROLS from README section 12.3 -- the "
+                    "multivariate trivial baseline (folded into confound.worst_auc), "
+                    "the matched-bin control (AUC within charlen quantile bins), and "
+                    "the per-item scores that make a PAIRED margin CI computable "
+                    "against the binding bar. See trajguard/controls.py.",
+        },
         "methods": methods_block,
         "early_detection": early,
         "early_confound": early_bars,
@@ -681,6 +765,7 @@ def _run_ood(train_trajs, train_labels, trajectory, MJ, rebuild):
     prompts = list(ds["prompts"])
     completions = list(ds["completions"])
 
+    from . import controls
     from . import data as D
     conf = D.confound_report(trajs, labels, completions, prompts, seed=C.SEED)
     print("[ood] COMPLETION channel:")
@@ -690,6 +775,23 @@ def _run_ood(train_trajs, train_labels, trajectory, MJ, rebuild):
         print("[ood] PROMPT channel:")
         print(format_report(pc))
 
+    # The OOD arm gets the multivariate baseline too -- an OOD bar that is weaker than
+    # the in-domain bar for no reason other than being computed differently would make
+    # the transfer numbers look better than they are.
+    try:
+        ood_names, ood_X = controls.trivial_features(trajs, completions)
+        conf["multivariate"] = controls.multivariate_bar(
+            ood_X, labels, folds=None, seed=C.SEED, n_folds=C.N_FOLDS,
+            bootstrap=C.BOOTSTRAP, feature_names=ood_names)
+        D._rebind_worst(conf)
+        print(controls.format_multivariate(conf["multivariate"]))
+        print("  OOD BINDING BAR after the multivariate baseline: %s = %.4f"
+              % (conf.get("worst_name"), conf.get("worst_auc", float("nan"))))
+    except Exception as exc:
+        conf["multivariate"] = {"error": str(exc)}
+        print("[ood] multivariate baseline FAILED: %s" % exc)
+
+    ood_charlens = np.asarray([float(len(str(c))) for c in completions], dtype=float)
     methods = {}
     for name in C.METHODS:
         try:
@@ -697,9 +799,20 @@ def _run_ood(train_trajs, train_labels, trajectory, MJ, rebuild):
             mdl.fit(train_trajs, np.asarray(train_labels).astype(int))
             proba = np.asarray(mdl.predict_proba(trajs)).reshape(-1)
             cell = _metrics(labels, proba)
+            # No CV here (the OOD set IS the held-out corpus), so the scores are already
+            # in original item order -- no fold realignment.
+            try:
+                cell["matched_bin"] = controls.matched_bin_control(
+                    labels, proba, ood_charlens, n_bins=C.MATCHED_BINS,
+                    n_boot=C.MATCHED_BIN_BOOTSTRAP, seed=C.SEED,
+                    stratifier_name="charlen")
+            except Exception as exc:
+                cell["matched_bin"] = {"error": str(exc)}
             methods[name] = cell
-            print("[ood:%s] auc=%.3f ci=[%.3f,%.3f]"
-                  % (name, cell["auc"], cell["auc_ci"][0], cell["auc_ci"][1]))
+            print("[ood:%s] auc=%.3f ci=[%.3f,%.3f] within-bin=%s"
+                  % (name, cell["auc"], cell["auc_ci"][0], cell["auc_ci"][1],
+                     ("%.3f" % cell["matched_bin"]["auc_within_bin"])
+                     if "auc_within_bin" in cell["matched_bin"] else "n/a"))
         except Exception as exc:
             methods[name] = {"error": str(exc)}
             print("[ood:%s] FAILED: %s" % (name, exc))
@@ -808,6 +921,54 @@ def _print_summary(results):
         print("%-20s %7.3f %-15s %6.2f %6.2f %8.2f %s %s"
               % (name, cell["auc"], ci, cell["f1"], cell["acc"],
                  cell["tpr_at_fpr10"], margin, vsp))
+
+    # --- the three confound controls (README section 12.3, closed in code) ---
+    ctl = results.get("controls") or {}
+    mv = ctl.get("multivariate") or {}
+    if "auc" in mv:
+        print(line)
+        print("CONTROL 1 -- MULTIVARIATE TRIVIAL BASELINE (the COMBINATION of the")
+        print("scalar bars, not the worst of them one at a time):")
+        print("  logistic regression on {%s}: AUC %.4f [%.4f, %.4f]"
+              % (", ".join(mv.get("features", [])), mv["auc"],
+                 (mv.get("auc_ci") or [float('nan')] * 2)[0],
+                 (mv.get("auc_ci") or [float('nan')] * 2)[1]))
+        bu = mv.get("best_univariate") or {}
+        print("  best single trivial feature was %s at %.4f (in-sample) -> the "
+              "combination gains %+.4f out-of-fold, %+.4f like-for-like in-sample"
+              % (bu.get("name", "?"), bu.get("auc", float("nan")),
+                 mv.get("gain_over_best_univariate", float("nan")),
+                 mv.get("gain_over_best_univariate_in_sample", float("nan"))))
+        print("  (a NEGATIVE out-of-fold gain means the combination buys nothing beyond")
+        print("   one feature at this n, not that it is worse than its parts -- the")
+        print("   univariate column is in-sample and the joint column fits 5 numbers.)")
+        print("  it participates in the binding bar: %s = %.4f%s"
+              % (conf.get("worst_name"), bar if isinstance(bar, (int, float))
+                 else float("nan"),
+                 "  <-- THE MULTIVARIATE BASELINE BINDS"
+                 if conf.get("worst_name") == "multivariate" else ""))
+    mb = ctl.get("matched_bin") or {}
+    if mb.get("methods"):
+        print(line)
+        print("CONTROL 2 -- MATCHED-BIN (AUC recomputed WITHIN charlen quantile bins,")
+        print("pooled by pair count). A margin that evaporates here was riding length.")
+        from . import controls as _K
+        print(_K.format_matched_bin(mb))
+    prov = ctl.get("paired_ci_against")
+    if prov:
+        print(line)
+        print("CONTROL 3 -- PAIRED MARGIN CI, computed against the %r bar" % prov)
+        for name in C.METHODS:
+            cell = results["methods"].get(name) or {}
+            pci = cell.get("vs_confound_paired_ci")
+            if isinstance(pci, dict):
+                print("  %-20s margin %+.4f  95%% CI [%+.4f, %+.4f]  (n_boot=%d, "
+                      "vs %s%s)"
+                      % (name, pci["margin"], pci["ci"][0], pci["ci"][1],
+                         pci.get("n_boot", 0), pci.get("against_bar"),
+                         "" if pci.get("is_binding_bar") else " -- NOT the binding bar"))
+            elif "paired_ci_note" in cell:
+                print("  %-20s no paired CI: %s" % (name, cell["paired_ci_note"]))
     print(line)
     print("EARLY DETECTION -- out-of-fold AUC vs generated tokens seen (K), each against")
     print("the confound bar computed on the SAME first-K truncation:")

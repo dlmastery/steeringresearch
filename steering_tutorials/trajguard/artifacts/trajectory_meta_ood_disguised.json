@@ -36,8 +36,8 @@
     "n_skipped_empty_trajectory": 0,
     "n_captured": 548
   },
-  "cache_file": "token_trajectories_disguised.npz",
-  "cache_bytes": 0,
+  "cache_file": "token_trajectories_ood_disguised.npz",
+  "cache_bytes": 34005910,
   "note": "TEXT-FREE reproduction sidecar. Regenerate the hidden-state cache with `python -m steering_tutorials.trajguard.run_trajguard` and verify the fingerprint matches; the numeric confound bars recompute from this file alone with no GPU.",
   "completions": [
     {

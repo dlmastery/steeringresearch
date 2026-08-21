@@ -197,10 +197,13 @@ def build_ood_trajectories(n_per_class: int = C.OOD_N_PER_CLASS,
     header["n_skipped_empty_trajectory"] = int(n_skipped)
     header["n_captured"] = len(trajectories)
 
+    # `_save_cache` now DERIVES the committed sidecar path from the cache it is writing
+    # (`data._meta_path_for`), so this call writes `OOD_META_PATH` and no longer clobbers
+    # the in-domain `META_PATH` on its way past. The explicit second `write_meta` that
+    # used to sit here was the redundant half of that bug -- it wrote the correct file
+    # while `_save_cache` had already written the same records to the WRONG one.
     D._save_cache(cache_path, trajectories, labels, prompts, completions,
                   snapshot, fingerprint, gids, header)
-    D.write_meta(C.OOD_META_PATH, trajectories, labels, completions, gids,
-                 snapshot, fingerprint, header)
     return {"trajectories": trajectories, "labels": labels, "prompts": prompts,
             "completions": completions, "group_ids": gids, "fingerprint": fingerprint,
             "config_snapshot": snapshot, "header": header}

@@ -707,9 +707,12 @@ habits and gaining the missing bars:
 | `shuffle` | with labels permuted, does the pipeline still score above chance? Far from 0.5 means **leakage, not signal** | both |
 | `mean_norm` | mean over tokens of `‖h_t‖` at layer 12. If the classes sit at different residual-stream *magnitudes*, one scalar separates them and every sequence model's margin is illusory | completion (this lesson's addition) |
 | `final_norm` | `‖h_last‖` alone, the single cheapest such scalar | completion (this lesson's addition) |
+| `multivariate` | **the bar that makes the set complete.** Can the four scalars *combined* separate them, when no one of them can alone? Logistic regression under the same folds as the methods — see [§12.3](#123-the-three-controls-that-were-missing--now-in-code) | completion (this lesson's addition) |
 
 `worst_auc` over all of those **except `shuffle`** is the binding bar. The shuffle
-control is a leakage diagnostic and is never a bar to clear.
+control is a leakage diagnostic and is never a bar to clear. Every bar in that list is a
+single feature except `multivariate`, which is exactly why it had to be added: a method
+that beats each trivial feature individually can still be beaten by their combination.
 
 ### 12.1 The prompt channel is a RIVAL, not a bar
 
@@ -754,17 +757,129 @@ the model actually wrote, and that is the only bar a trajectory method has to be
 `shuffle` at 0.5404 is below the 0.60 invalidation threshold, so **F0 passes** and the
 run is valid.
 
-### 12.3 What is still missing
+### 12.3 The three controls that were missing — now in code
 
-- **A multivariate trivial baseline.** The rule as written (worst-of-univariate) is
-  satisfied; a logistic regression over `{charlen, tokencount, mean_norm, final_norm}`
-  would be the fair "all trivial features combined" bar and is not computed.
-- **A matched-bin control** inside `charlen` quantiles — the check that would settle
-  whether a margin survives at fixed completion length.
-- **A paired CI when `content` binds.** The spine's content bar is a CV-pooled centroid
-  model and exposes no per-item score, so `paired_margin_ci` returns `None` and the
-  runner records `paired_ci_note` instead of fabricating an interval. Scalar bars do
-  get a paired bootstrap CI over the same resample indices.
+The three gaps this section used to list were **code** gaps: the controls did not exist,
+so "worst of univariate" was standing in for "the strongest trivial baseline". All three
+are implemented in [`controls.py`](controls.py) and wired into the runner: the block
+lands in `results_<substrate>.json` under `controls`, and each method cell gains
+`matched_bin` and a labelled `vs_confound_paired_ci`.
+
+**The shipped `results_disguised.json` predates them.** It was written 2026-08-08 and
+still carries `vs_confound_paired_ci: null` on all four methods and no `controls` block;
+populating those cells needs a re-run of `run_trajguard`, which needs the GPU. Control 1
+is the exception — it is measurable today from the committed text-free sidecar with no
+model at all, and is measured in §12.3.2. Do not read the absence of a `controls` block
+in the current artifact as the controls being absent from the lesson.
+
+| control | what it asks | status |
+|---|---|---|
+| **1. multivariate trivial baseline** | can `{charlen, tokencount, mean_norm, final_norm}` *combined* separate the classes, when no one of them can alone? Logistic regression, **same folds** as the methods, scaler fit on the training fold only, pooled out-of-fold, folded directionless — and folded **into** `worst_auc`, so if it binds, it binds | **MEASURED** (below) |
+| **2. matched-bin** | does the separation survive at approximately fixed completion length? AUC recomputed within `charlen` quantile bins and pooled by pair count (the stratified Mann-Whitney statistic), CI resampled **within** bins | **CODE READY** — needs the runner |
+| **3. paired margin CI vs the binding bar** | the four `null`s in the shipped artifact | **SOLVED** (below) |
+
+#### 12.3.1 The paired-CI blocker was solvable
+
+The shipped `results_disguised.json` carries `vs_confound_paired_ci: null` on all four
+methods, with a note explaining that the spine's `content` bar "exposes no per-item
+score". The note was accurate about the symptom and wrong about the cause.
+`common.confound.content_bar` **does** compute a per-item out-of-fold score for every
+item — `scores[i] = <tfidf_i, centroid_pos> − <tfidf_i, centroid_neg>` — and then
+discards the vector, returning only the pooled AUC.
+
+`controls.content_bar_scores` reproduces that loop through the spine's **own**
+primitives and returns the vector, then **asserts** its pooled AUC equals the spine's to
+`1e-9`. If `common/confound.py` ever changes, the assertion raises rather than pairing
+the methods against a different model than the one that set the bar — the §18.8 rule
+("assert your anchors"). The clean long-term fix is a `return_scores=True` flag on the
+spine itself; `common/` is shared and this lesson does not edit it.
+
+Consequence: a paired bootstrap CI is now computable against `content` **and** against
+`multivariate`, not only against the four scalar bars, and every CI records
+`against_bar` — a CI against `final_norm` and one against `content` are different
+claims and must never print under one header.
+
+#### 12.3.2 Control 1, measured on the disguised substrate — CPU, no GPU
+
+Reproduce with `python -m steering_tutorials.trajguard.controls --from-meta` (reads the
+committed text-free sidecar; no model, no hidden-state blob):
+
+| feature | univariate (in-sample) | LR coefficient |
+|---|---|---|
+| `charlen` | 0.5064 | +0.384 |
+| `tokencount` | 0.5515 | −0.553 |
+| `mean_norm` | 0.5463 | +0.061 |
+| `final_norm` | 0.5752 | −0.237 |
+| **joint (out-of-fold)** | **0.5940** [0.5345, 0.6525] | — |
+| joint (in-sample, optimistic) | 0.6145 | — |
+
+**The multivariate baseline does not change the verdict here.** At 0.5940 it is far
+below `content` (0.9103), so `content` remains the binding bar and every margin in
+§11.2 stands unchanged. That is the honest outcome of computing it: the control was
+worth having and it did not fire. It is now priced rather than assumed.
+
+Two things the table is careful about. The univariate column is **in-sample** — a fixed
+feature has no parameters, so its AUC is unbiased — while the joint column fits five
+numbers and is therefore reported **out-of-fold**. The gain over the best univariate is
+`+0.0188` out-of-fold and `+0.0393` like-for-like in-sample; only the out-of-fold figure
+competes for the binding bar. And a *negative* out-of-fold gain, which is possible at
+small `n`, would mean the combination buys nothing beyond one feature — not that it is
+worse than its parts.
+
+#### 12.3.3 What control 2 can and cannot do
+
+The matched-bin control's power is **bounded by bin width**: stratifying a continuous
+confound into 4 bins leaves a residual inside each bin. On a planted length confound
+(`controls._selftest` case A, a "detector" whose score *is* length) the raw AUC is
+0.9647 and the within-bin AUC falls to 0.8711 / 0.7231 / 0.7086 / 0.5772 / 0.5357 at
+2 / 4 / 8 / 12 / 20 bins. So a within-bin AUC is uninterpretable without the bin count
+beside it, and `n_bins_achieved` is reported separately from `n_bins_requested` because
+ties in the stratifier can collapse edges. `MATCHED_BINS` defaults to 4: on 362 items
+that is ~90 per bin (~45/class), and refining further on this pool trades the control
+for noise.
+
+The same self-test checks the converse — case B plants a *real* signal alongside the
+same length gap and asserts the control leaves it intact (0.9936 → 0.9906). A
+stratification that flattens genuine signal is not a control, it is a bug.
+
+#### 12.3.4 Why control 1 exists at all
+
+`controls._selftest` case C constructs the failure that worst-of-univariate cannot see:
+two trivial features sharing a large-variance noise term with the class signal entering
+at opposite sign, so each is at chance marginally while their difference separates
+perfectly. Measured: `length` 0.6178, `count` 0.5000, `content` 0.5000, `mean_norm`
+0.5438, `final_norm` 0.5438 — **and the multivariate baseline at 1.0000**, which then
+correctly becomes the binding bar. A method beating every univariate bar on that data
+would be beating nothing.
+
+Run the controls' own CPU self-tests with
+`python -m steering_tutorials.trajguard.controls` (seconds, no model, no GPU).
+
+### 12.4 A defect found while measuring: the committed sidecar was the OOD arm's
+
+`data._save_cache` wrote `write_meta(C.META_PATH, ...)` with the path **hardcoded**. The
+OOD builder calls the same `_save_cache` with `C.OOD_CACHE`, so building the OOD arm
+silently overwrote the **in-domain** committed sidecar with the OOD arm's 548 records.
+The shipped `trajectory_meta_disguised.json` was byte-for-byte the OOD file: 548
+completions, a `substrate: "ood:jackhhao/..."` snapshot, the OOD fingerprint, and a
+`cache_file` field naming the in-domain npz it did not describe.
+
+Nothing crashed. Both files were well-formed JSON of plausible size — the CLAUDE.md
+§18.8 pattern exactly. The cost was §13's central reproduction promise: *"the numeric
+confound bars recompute from this file alone with no GPU"* was false for the arm this
+README headlines.
+
+Fixed three ways: `data._meta_path_for` derives the sidecar path from the cache being
+written; `write_meta` takes the `cache_file` name from its caller instead of hardcoding
+`C.TRAJ_CACHE`; and `write_meta` now **asserts** that an `ood:` snapshot only ever lands
+in `OOD_META_PATH` and vice versa, so the two can never merge again. The redundant
+second `write_meta` in `ood.py` — which wrote the *correct* file while `_save_cache` had
+already written the same records to the wrong one — is removed.
+
+Both sidecars were regenerated from the intact `.npz` caches (CPU only, no model). The
+in-domain sidecar now reproduces all four scalar bars in `results_disguised.json`
+**exactly**: `length` 0.506395, `count` 0.551540, `mean_norm` 0.546290, `final_norm`
+0.575227, with the class means matching to every printed digit.
 
 ---
 
