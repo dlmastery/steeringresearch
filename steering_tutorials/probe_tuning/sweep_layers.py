@@ -64,6 +64,7 @@ ASCII-only stdout (Windows cp1252).
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -612,7 +613,18 @@ def main() -> None:
     SM.K_FOLDS = int(args.folds)
     SM.CV_SEED = int(args.seed)
 
+    # The cache stem keys the DATA; these key the SWEEP. Without them a
+    # PT_WINDOWS=1 pass and a PT_WINDOWS=1,3 pass over the same cache write the
+    # same three files, and the narrower run silently replaces the wider one.
+    # Same cache + same knobs still resolves to the same path, so a re-run
+    # deliberately overwrites its own output, which is what you want.
     tag = cache["path"].stem.replace("layer_features_", "")
+    knobs = json.dumps({"layers": sorted(layers), "poolings": list(poolings),
+                        "windows": list(windows), "folds": int(args.folds),
+                        "seed": int(args.seed), "n": int(args.n),
+                        "shuffle": bool(ENV_SHUFFLE and not args.no_shuffle_control)},
+                       sort_keys=True)
+    tag = f"{tag}_{hashlib.sha256(knobs.encode('utf-8')).hexdigest()[:6]}"
     out_json = ARTIFACTS / f"sweep_layers_{tag}.json"
     out_md = ARTIFACTS / f"sweep_layers_{tag}.md"
     out_png = ARTIFACTS / f"sweep_layers_{tag}.png"

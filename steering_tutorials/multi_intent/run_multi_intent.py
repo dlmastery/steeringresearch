@@ -78,7 +78,9 @@ RESULTS SCHEMA (kept in sync with README)
 from __future__ import annotations
 
 import json
+import os
 import sys
+from pathlib import Path
 
 import numpy as np
 
@@ -90,6 +92,36 @@ from .multi_intent import (
     gram_schmidt,
     norm_budget,
 )
+
+
+# --------------------------------------------------------------------------- #
+# Run-size knob. The full ladder is 3 rungs x 2 arms x (active + cross-talk)
+# concept slices = ~480 generations at MAX_NEW_TOKENS, each followed by a judge
+# call -- more than one comfortable foreground window on a RAM-contended host.
+# MULTI_INTENT_N_EVAL takes a labelled slice of that. The default IS the
+# config, so an
+# unset var reproduces the pre-registered run exactly.
+#
+# Note that it cannot be used to make the run arbitrarily cheap:
+# ``assert_eval_floor`` still enforces MIN_EVAL_PER_CONCEPT (30), the sec.17
+# rubric floor, and raises before any GPU work. That is deliberate -- the knob
+# is for fitting a legitimate run into a window, not for shrinking it below the
+# reportable floor.
+# --------------------------------------------------------------------------- #
+N_EVAL_PER_CONCEPT = int(
+    os.environ.get("MULTI_INTENT_N_EVAL") or C.N_EVAL_PER_CONCEPT)
+
+# A CAPPED run must not land on the FULL run's path. artifacts/results.json is
+# the Jul-24 full-ladder artifact the README quotes; a 30-per-concept screening
+# pass agrees with it on every other key and would replace it in place, leaving
+# no way to tell which one is on disk. Keyed output, per CLAUDE.md 18.8.
+_CAPPED = N_EVAL_PER_CONCEPT != C.N_EVAL_PER_CONCEPT
+RESULTS_PATH: Path = (
+    C.ARTIFACTS / f"results_n{N_EVAL_PER_CONCEPT}.json" if _CAPPED
+    else C.RESULTS_PATH)
+LADDER_PNG: Path = (
+    C.ARTIFACTS / f"success_vs_k_n{N_EVAL_PER_CONCEPT}.png" if _CAPPED
+    else C.LADDER_PNG)
 
 
 # --------------------------------------------------------------------------- #
@@ -291,7 +323,7 @@ def main() -> None:
     data = load_multi_intent(
         C.CONCEPTS,
         n_per_concept=C.N_PER_CONCEPT,
-        n_eval_per_concept=C.N_EVAL_PER_CONCEPT,
+        n_eval_per_concept=N_EVAL_PER_CONCEPT,
         n_benign_baseline=C.N_BENIGN_BASELINE,
         seed=C.SEED,
     )
@@ -423,14 +455,14 @@ def main() -> None:
         "ladder": ladder,
         "examples": examples,
         "examples_cap": int(C.EXAMPLES_CAP),
-        "plots": {"success_vs_k": C.LADDER_PNG.name},
+        "plots": {"success_vs_k": LADDER_PNG.name},
     }
     # Publish gate IN the write path (CLAUDE.md sec.18.8).
     assert_publishable(results, "multi_intent")
-    C.RESULTS_PATH.write_text(json.dumps(results, indent=2), encoding="utf-8")
-    print(f"[run] wrote {C.RESULTS_PATH}", file=sys.stderr)
+    RESULTS_PATH.write_text(json.dumps(results, indent=2), encoding="utf-8")
+    print(f"[run] wrote {RESULTS_PATH}", file=sys.stderr)
 
-    _plot_ladder(ladder, C.LADDER_PNG)
+    _plot_ladder(ladder, LADDER_PNG)
     # ASCII only below this line -- the Windows cp1252 console kills a run on a
     # stray alpha/Delta/norm-bar, and this is the last thing main() does.
     print("\n" + summarize_ladder(ladder))
@@ -520,7 +552,7 @@ def _preflight() -> None:
     data = load_multi_intent(
         C.CONCEPTS,
         n_per_concept=C.N_PER_CONCEPT,
-        n_eval_per_concept=C.N_EVAL_PER_CONCEPT,
+        n_eval_per_concept=N_EVAL_PER_CONCEPT,
         n_benign_baseline=C.N_BENIGN_BASELINE,
         seed=C.SEED,
     )

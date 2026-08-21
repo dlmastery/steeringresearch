@@ -236,14 +236,47 @@ def assert_publishable(results: dict, lesson: str) -> dict:
             f"`**judge.stamp()` to the results dict."
         )
     if not all(stamps):
+        # HONOUR THE SAME OPT-OUT THE ENTRY GATE HONOURS. Added 2026-08-21 after a
+        # readiness audit found the two gates disagreed: require_off_family_judge
+        # lets <LESSON>_ALLOW_SELF_JUDGE through with a SMOKE-TIER warning, while
+        # this one refused unconditionally. So a DELIBERATE smoke run would
+        # generate for an hour and then be refused the write -- the escape hatch
+        # was a trap that destroyed the work it claimed to permit.
+        #
+        # The point of the rule is that a self-judged rate must never be read as a
+        # headline, not that it must never reach disk. So we WRITE and BRAND it,
+        # which is strictly more informative than refusing: the artifact then
+        # carries its own inadmissibility instead of not existing.
+        if _self_judge_allowed(lesson):
+            results["TIER"] = "SMOKE_SELF_JUDGED"
+            results["publishable"] = False
+            results["publishable_note"] = (
+                "SELF-JUDGED. The target model graded its own output, which "
+                "INFLATES refusal (CLAUDE.md sec.17 item 3). Written only because "
+                "an explicit <LESSON>_ALLOW_SELF_JUDGE opt-out was set. NOT "
+                "admissible as a headline; re-run with STEER_JUDGE_MODEL=%s."
+                % OFF_FAMILY_JUDGE)
+            return results
         raise SystemExit(
             f"REFUSING TO WRITE [{lesson}] results.json: it reports "
             f"judge-derived generation rates ({shown}) graded by the TARGET "
             f"MODEL ITSELF (off_family=False). Self-judged rates are "
             f"inadmissible under CLAUDE.md sec.17 item 3. Re-run with "
-            f"STEER_JUDGE_MODEL={OFF_FAMILY_JUDGE}."
+            f"STEER_JUDGE_MODEL={OFF_FAMILY_JUDGE}, or set an explicit "
+            f"<LESSON>_ALLOW_SELF_JUDGE to write a branded SMOKE_SELF_JUDGED "
+            f"artifact instead of losing the run."
         )
     return results
+
+
+def _self_judge_allowed(lesson: str) -> bool:
+    """Was an explicit self-judge opt-out set, per the entry gate's own rules?"""
+    import os
+    for name in _opt_out_names(lesson, None):
+        if os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on"):
+            return True
+    return bool(os.environ.get(GLOBAL_ALLOW_ENV, "").strip().lower()
+                in ("1", "true", "yes", "on"))
 
 
 def _find_rate_keys(node: Any) -> Iterable[str]:

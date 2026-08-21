@@ -48,11 +48,40 @@ RESULTS SCHEMA (kept in sync with README)
 from __future__ import annotations
 
 import json
+import os
 import sys
+from pathlib import Path
 
 import numpy as np
 
 from . import config as C
+
+
+# --------------------------------------------------------------------------- #
+# Run-size knob. This runner has NO checkpointing: it generates
+# (1 baseline + K directions) x N_EVAL completions plus a judge call each, and
+# writes nothing until the very end. At the config default that is 150 baseline
+# + 6 x 150 steered = 1050 generations at 48 tokens -- several hours, and a
+# reap costs ALL of it (CLAUDE.md 18.5). Until it is made resumable, the only
+# defence is to size the run to the window you actually have.
+#
+# NONIDENT_N_EVAL is that dial, and it already lives in config.py -- this module
+# only has to READ it. Unset reproduces the pre-registered size.
+# --------------------------------------------------------------------------- #
+N_EVAL = int(C.N_EVAL)
+
+# A capped run must not land on the full run's path. The artifact already on
+# disk was measured at n_eval=80 while the default is now 150, which is exactly
+# how an artifact that "cannot be regenerated from the code beside it" comes
+# about (CLAUDE.md 18.8) -- so the size goes IN the filename whenever it is not
+# the pre-registered one. The comparison is against N_EVAL_DEFAULT, not against
+# C.N_EVAL: the env override is applied inside config, so C.N_EVAL == N_EVAL
+# unconditionally and a test against it is always False.
+_CAPPED = N_EVAL != C.N_EVAL_DEFAULT
+RESULTS_PATH: Path = (
+    C.ARTIFACTS / f"results_n{N_EVAL}.json" if _CAPPED else C.RESULTS_PATH)
+PLOT_PATH: Path = (
+    C.ARTIFACTS / f"nonident_n{N_EVAL}.png" if _CAPPED else C.PLOT_PATH)
 
 
 # --------------------------------------------------------------------------- #
@@ -254,7 +283,7 @@ def main() -> dict:
     # Three disjoint roles: build / eval / (unused headroom).
     build_harmful = harmful[:C.N_EXTRACT]
     build_benign = benign[:C.N_EXTRACT]
-    eval_harmful = harmful[C.N_EXTRACT:C.N_EXTRACT + C.N_EVAL]
+    eval_harmful = harmful[C.N_EXTRACT:C.N_EXTRACT + N_EVAL]
     print(f"[split] build: {len(build_harmful)}h/{len(build_benign)}b   "
           f"eval: {len(eval_harmful)}h", file=sys.stderr)
 
@@ -334,15 +363,15 @@ def main() -> dict:
         "per_direction": per_direction,
         "nonident": nonident,
         "examples": examples[:12],
-        "plots": {"nonident": C.PLOT_PATH.name},
+        "plots": {"nonident": PLOT_PATH.name},
     }
 
     # Publish gate IN the write path (CLAUDE.md sec.18.8).
     assert_publishable(results, "non_identifiability")
-    C.RESULTS_PATH.write_text(json.dumps(results, indent=2), encoding="utf-8")
-    _plot(results, C.PLOT_PATH)
-    print(f"[save] {C.RESULTS_PATH}", file=sys.stderr)
-    print(f"[save] {C.PLOT_PATH}", file=sys.stderr)
+    RESULTS_PATH.write_text(json.dumps(results, indent=2), encoding="utf-8")
+    _plot(results, PLOT_PATH)
+    print(f"[save] {RESULTS_PATH}", file=sys.stderr)
+    print(f"[save] {PLOT_PATH}", file=sys.stderr)
     print(_summary_table(results))
     return results
 

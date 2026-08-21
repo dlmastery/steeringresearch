@@ -87,6 +87,7 @@ import hashlib
 import json
 import os
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
@@ -160,10 +161,30 @@ def parse_poolings(spec: str) -> list[str]:
     return out or ["mean"]
 
 
-def run_tag(dataset: str, n_per_class: int, model_id: str) -> str:
-    """Per-config artifact tag, e.g. 'common_n500_gemma-3-1b-it-heretic'."""
+def run_tag(dataset: str, n_per_class: int, model_id: str,
+            layers_spec: str = "all", poolings: Sequence[str] = ("mean",),
+            seed: int = 0, benign_arm: bool = True) -> str:
+    """Per-config artifact tag, e.g. 'common_n500_gemma-3-1b-it-heretic_a1c93d'.
+
+    Everything that changes the CONTENTS of the cache must change its NAME.
+    ``dataset``/``n_per_class``/``model_id`` alone do not: a
+    ``PT_LAYERS=0,6,12`` smoke pass and a full 26-layer pass agree on all three,
+    so the cheap one would land on the expensive one's path and silently
+    replace it. The fingerprint check on the resume checkpoint does not save
+    you -- it only refuses to APPEND to a stale partial; the final
+    ``np.savez_compressed`` to ``out_path`` is unconditional.
+
+    So the four remaining run-defining knobs are folded into a short hash
+    suffix. ``layers_spec`` is the raw spec string rather than the resolved
+    layer list on purpose: it is known before the model loads, which is what
+    lets the path be decided up front.
+    """
     short = model_id.rstrip("/").split("/")[-1][:32]
-    return f"{dataset}_n{n_per_class}_{short}"
+    knobs = json.dumps(
+        {"layers": layers_spec, "poolings": list(poolings), "seed": int(seed),
+         "benign_arm": bool(benign_arm)}, sort_keys=True)
+    suffix = hashlib.sha256(knobs.encode("utf-8")).hexdigest()[:6]
+    return f"{dataset}_n{n_per_class}_{short}_{suffix}"
 
 
 def fingerprint(meta: dict) -> str:
@@ -402,7 +423,9 @@ def main() -> None:
     }
     meta["fingerprint"] = fingerprint(meta)
 
-    tag = run_tag(args.dataset, meta["n_per_class"], args.model_id)
+    tag = run_tag(args.dataset, meta["n_per_class"], args.model_id,
+                  layers_spec=args.layers, poolings=poolings, seed=args.seed,
+                  benign_arm=benign_prov["status"] == "PRESENT")
     out_path = ARTIFACTS / f"layer_features_{tag}.npz"
     ckpt_path = ARTIFACTS / f"layer_features_{tag}.partial.npz"
 

@@ -478,8 +478,20 @@ def main() -> dict:
     )
     from steering_tutorials.hello_world_steering.judge import Judge, JudgeUnavailable
     from steering_tutorials.common.data import build_harmful_benign
+    from steering_tutorials.common.judge_gate import require_off_family_judge
 
     from .hillclimb import apply_config, measure_norm_budget
+
+    # JUDGE PROVENANCE FIRST -- before the data, before the model, before a
+    # token. Every rung decision here (coherence_tol, compete_tol,
+    # selectivity_tol) is read off a JUDGED refusal/gibberish rate, so a
+    # self-judged run does not produce a weaker ladder, it produces an
+    # inadmissible one -- and it would take hours to find that out at the end.
+    # The judge-free quantity is named so a blocked operator knows the cost.
+    require_off_family_judge(
+        "stacking_near_orthogonal",
+        judge_free_metrics=["norm_budget (N5 displacement at the injection site)",
+                            "directions.gram_ladder / cos_to_refusal"])
 
     t0 = time.time()
     random.seed(C.SEED)

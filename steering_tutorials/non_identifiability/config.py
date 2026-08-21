@@ -46,7 +46,11 @@ N_EXTRACT = 300         # per class, used only to BUILD the directions (was 150)
 # Held-out harmful prompts used only to SCORE the effect. On a RAM-constrained
 # host the eval is 6 recipes x len(ALPHAS) x N_EVAL generations, so NONIDENT_N_EVAL
 # lets a run be shrunk into one foreground window (screening-tier, labelled).
-N_EVAL = int(os.environ.get("NONIDENT_N_EVAL") or "150")  # was 60
+# The DEFAULT is named so a runner can tell "this is the pre-registered size"
+# from "this is a shrunken screening slice" -- comparing N_EVAL against itself
+# after the env has been applied can never make that distinction.
+N_EVAL_DEFAULT = 150                                      # was 60
+N_EVAL = int(os.environ.get("NONIDENT_N_EVAL") or N_EVAL_DEFAULT)
 SEED = 0
 
 # Number of top principal components whose span the RANDOM control direction is
