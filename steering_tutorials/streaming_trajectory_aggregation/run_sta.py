@@ -26,6 +26,15 @@ THE LADDER, IN ONE RUN
        their peak score, for F4), and (b) through `evaluate_lead_time` for the
        advance-warning / false-alarm numbers, with the degenerate-calibration check.
 
+5. The REPORTED CONTEXT beside each verdict (`verdict_context.py`), which closes three
+   defects the README's own section 8 names: (e) F1/F2/F3 never consulted
+   `confound.binding_bar`, so a falsifier could hold while its methods sat below the bar
+   that prices content shortcuts; (e) no shuffle control was ever run on the LADDER (F0
+   shuffles bag-of-words features inside `common.confound`); (f) the 10,000 bootstrap
+   resamples never entered a verdict, and F3's max-over-8 selection carried no
+   multiple-comparison correction. All of it is attached ALONGSIDE the registered
+   verdicts -- `verdict_context.attach_context` asserts no `holds` or `applicable` moved.
+
 Results are written to `config.RESULTS_PATH` (per-corpus, never a shared constant)
 BEFORE the ASCII summary is printed, so a late crash (or the cp1252 console) still
 leaves the data on disk. ASCII-only stdout. CPU-side orchestration; the only heavy
@@ -40,7 +49,9 @@ import time
 import numpy as np
 
 from steering_tutorials.streaming_trajectory_aggregation import config as C
-from steering_tutorials.streaming_trajectory_aggregation import embed, evaluate, horizon
+from steering_tutorials.streaming_trajectory_aggregation import (
+    embed, evaluate, horizon, verdict_context,
+)
 from steering_tutorials.streaming_trajectory_aggregation.types import (
     AggregatorResult, LeadTimeResult,
 )
@@ -460,9 +471,54 @@ def main():
             "diagnostics": diagnostics,
         }
 
+    # --- 6b. the shuffle control ON THE LADDER (F0 only ever shuffled the confound
+    # module's bag-of-words features -- see README section 8(e)) ----------------------
+    if C.LADDER_SHUFFLE:
+        factories = {
+            "mean_pool": lambda: MeanPool(seed=C.SEED),
+            "max_pool": lambda: MaxPool(seed=C.SEED),
+            "mean_max_std_pool": lambda: MeanMaxStdPool(seed=C.SEED),
+            "deviation_weighted": lambda: DeviationWeighted(seed=C.SEED),
+            "last_step": lambda: LastStep(seed=C.SEED),
+            "first_%d_steps" % representative_k: lambda: FirstKSteps(k=representative_k, seed=C.SEED),
+            "gru": lambda: GRUAggregator(seed=C.SEED),
+            "query_token_compressor_k%d" % C.QUERY_TOKEN_K:
+                lambda: QueryTokenCompressor(k=C.QUERY_TOKEN_K, seed=C.SEED),
+        }
+
+        def _fresh(name):
+            """A FRESH aggregator per shuffle fit -- never an instance already fitted on
+            the real labels, which would carry real-label state into the control."""
+            f = factories.get(name)
+            if f is None:
+                _eprint("[shuffle:ladder] unknown method %r -- skipped (known: %s)"
+                        % (name, sorted(factories)))
+                return None
+            return f()
+
+        ladder_shuffle = verdict_context.ladder_shuffle_control(
+            corpus, capped, _fresh, methods=C.LADDER_SHUFFLE_METHODS, seed=C.SEED,
+            n_folds=C.N_FOLDS, bootstrap=C.LADDER_SHUFFLE_BOOTSTRAP,
+            repeats=C.LADDER_SHUFFLE_REPEATS)
+    else:
+        ladder_shuffle = {"skipped": True,
+                          "reason": "config.LADDER_SHUFFLE is off (STA_LADDER_SHUFFLE)"}
+
     # --- 7. falsifier verdicts ------------------------------------------------------
+    # REGISTERED logic first, and untouched. The context block is computed separately and
+    # attached below by `verdict_context.attach_context`, which ASSERTS that no `holds`
+    # or `applicable` moved -- context can only ever be added beside a verdict, never
+    # fold into one (README section 8(e),(f); config.FALSIFIER_ADDENDA's discipline).
     verdicts = _falsifier_verdicts(C.CORPUS, main_results, horizon_results, confound,
                                    streaming_offline, lead_time_block)
+    ladder_scores = {r.method: np.asarray(r.scores, dtype=np.float64) for r in main_results}
+    ladder_cis = {r.method: r.auc_ci for r in main_results}
+    context = verdict_context.build_verdict_context(
+        C.CORPUS, _auc_by_method(main_results), ladder_cis, ladder_scores,
+        [t.label for t in corpus.trajectories], confound, seed=C.SEED,
+        n=C.VERDICT_BOOTSTRAP,
+        ladder_shuffle=(None if ladder_shuffle.get("skipped") else ladder_shuffle))
+    verdict_context.attach_context(verdicts, context)
 
     # --- 8. assemble + WRITE results.json BEFORE the summary print -------------------
     results = {
@@ -501,6 +557,21 @@ def main():
         "falsifier_addenda": [{"tag": t, "dated": d, "correction": c}
                               for t, d, c in C.FALSIFIER_ADDENDA],
         "falsifier_verdicts": verdicts,
+        # --- REPORTED CONTEXT, never a verdict (README section 8(e),(f)) -------------
+        # Also surfaced at top level, not only nested inside `falsifier_verdicts[*]
+        # .context`, because a reader looking for "was a shuffle run on the ladder" or
+        # "was the max-over-8 corrected" should not have to know which falsifier owns it.
+        "ladder_shuffle_control": ladder_shuffle,
+        "multiple_comparison_correction": (
+            (verdicts.get("F3_sequence_beats_laststep", {}).get("context") or {}).get("holm")),
+        "verdict_context_note": (
+            "Every `context` block under falsifier_verdicts, plus ladder_shuffle_control "
+            "and multiple_comparison_correction, is REPORTED CONTEXT computed by "
+            "verdict_context.py. The pre-registered holds/fails logic (config.FALSIFIERS "
+            "+ run_sta._falsifier_verdicts) is unchanged; attach_context asserts no "
+            "registered field moved. Read a HOLDS together with its context: on this "
+            "lesson's corpora the confound binding bar is high enough (0.9039 on SHADE, "
+            "0.9960 on AgentDojo) that a falsifier can hold while nothing clears it."),
         "plots": [],
         "wall_clock_s": None,  # filled in just before write
     }
@@ -616,6 +687,111 @@ def _print_horizon_within(hw, line):
         print("    its own. See results.json horizon_within_corpus.median_split.caveat.")
 
 
+def _print_verdict_context(results):
+    """ASCII-only rendering of the REPORTED CONTEXT (README section 8(e),(f)).
+
+    Printed directly under the HOLDS/FAILS block on purpose: a verdict line read on its
+    own is what defect (e) is about. No unicode -- a cp1252 console dies on a single
+    'delta' glyph and takes the whole summary with it.
+    """
+    print("REPORTED CONTEXT (NOT verdicts -- the registered holds/fails logic above is")
+    print("unchanged). Added because a bare HOLDS was being read as a claim the")
+    print("falsifier never made: see README section 8(e) (no bar) and 8(f) (no CI, no")
+    print("multiple-comparison correction).")
+
+    verdicts = results.get("falsifier_verdicts") or {}
+    for tag in ("F1_mean_pool_collapses_long", "F2_mean_pool_survives_short"):
+        ctx = (verdicts.get(tag) or {}).get("context")
+        if not ctx or not ctx.get("applicable_on_this_corpus"):
+            continue
+        bar = ctx["bar"]
+        print("  %s -- binding_bar=%s (%s)"
+              % (tag, _fmt(bar.get("binding_bar")), bar.get("binding_bar_name")))
+        for m, cell in bar.get("per_method", {}).items():
+            print("    %-12s auc=%-8s margin_vs_bar=%-9s clears_bar=%-5s ci_lo_clears=%s"
+                  % (m, _fmt(cell.get("auc")), _fmt(cell.get("margin")),
+                     cell.get("clears"), cell.get("ci_lo_clears_bar")))
+        print("    best_clears_bar=%s (%d/%d methods clear it)"
+              % (bar.get("best_clears_bar"), bar.get("n_methods_clearing_bar", 0),
+                 bar.get("n_methods_considered", 0)))
+        for name, pm in (ctx.get("paired_margins") or {}).items():
+            if not pm.get("applicable"):
+                print("    %-28s N/A (%s)" % (name, pm.get("reason")))
+                continue
+            ci = pm.get("ci") or [None, None]
+            print("    %-28s delta=%-9s ci=[%s,%s] excl_0=%-5s ci_lo>0.02=%-5s p=%-10s "
+                  "real_but_under_0.02=%s"
+                  % (name, _fmt(pm.get("delta")), _fmt(ci[0]), _fmt(ci[1]),
+                     pm.get("excludes_zero"), pm.get("ci_lo_above_registered_margin"),
+                     _fmt(pm.get("p_two_sided"), "%.4g"),
+                     pm.get("gap_excludes_zero_but_ci_entirely_under_registered_margin")))
+
+    f3 = (verdicts.get("F3_sequence_beats_laststep") or {}).get("context") or {}
+    if f3:
+        bar = f3.get("bar") or {}
+        print("  F3_sequence_beats_laststep -- binding_bar=%s (%s)"
+              % (_fmt(bar.get("binding_bar")), bar.get("binding_bar_name")))
+        print("    best=%s auc=%s best_clears_bar=%s (%d/%d ladder methods clear it)"
+              % (bar.get("best_method"), _fmt(bar.get("best_auc")),
+                 bar.get("best_clears_bar"), bar.get("n_methods_clearing_bar", 0),
+                 bar.get("n_methods_considered", 0)))
+        pm = f3.get("paired_best_minus_last_step") or {}
+        if pm.get("applicable"):
+            ci = pm.get("ci") or [None, None]
+            print("    paired best-minus-last_step delta=%s ci=[%s,%s] excl_0=%s "
+                  "ci_lo>0.02=%s p=%s"
+                  % (_fmt(pm.get("delta")), _fmt(ci[0]), _fmt(ci[1]),
+                     pm.get("excludes_zero"), pm.get("ci_lo_above_registered_margin"),
+                     _fmt(pm.get("p_two_sided"), "%.4g")))
+        else:
+            print("    paired best-minus-last_step: N/A (%s)" % pm.get("reason"))
+        h = f3.get("holm") or {}
+        if h.get("applicable"):
+            print("    HOLM over the max-over-%d selection (family m=%d vs %s, alpha/m=%s,"
+                  " impl=%s):"
+                  % (h.get("family_size", 0) + 1, h.get("family_size", 0),
+                     h.get("reference"), _fmt(h.get("holm_tightest_threshold"), "%.5f"),
+                     h.get("holm_impl")))
+            for r in h.get("family", []):
+                print("      %-28s delta=%-9s p=%-10s adj_p=%-10s raw_rej=%-5s holm_rej=%s"
+                      % (r.get("method"), _fmt(r.get("delta_vs_reference")),
+                         _fmt(r.get("p_two_sided"), "%.4g"),
+                         _fmt(r.get("holm_adjusted_p"), "%.4g"),
+                         r.get("uncorrected_reject"), r.get("holm_reject")))
+            print("      selected=%s survives_holm=%s | holm_changes_the_picture=%s "
+                  "(%d row(s) flipped) | resolution_floor_blocks_rejection=%s"
+                  % (h.get("selected_method"), h.get("selected_survives_holm"),
+                     h.get("holm_changes_the_picture"), h.get("n_rows_flipped_by_holm", 0),
+                     h.get("resolution_floor_blocks_rejection")))
+        else:
+            print("    HOLM: N/A (%s)" % h.get("reason"))
+
+    sh = results.get("ladder_shuffle_control") or {}
+    if sh.get("skipped"):
+        print("  LADDER SHUFFLE CONTROL: skipped (%s)" % sh.get("reason"))
+    elif sh:
+        print("  LADDER SHUFFLE CONTROL (F0 shuffles only the confound module's "
+              "bag-of-words features):")
+        for m, blk in (sh.get("per_method") or {}).items():
+            print("    %-28s aucs=%-24s mean=%-8s dev=%-8s (%s null SE) within_band=%s"
+                  % (m, [None if v is None else round(v, 4) for v in blk.get("aucs", [])],
+                     _fmt(blk.get("mean_auc")),
+                     _fmt(blk.get("max_abs_deviation_from_chance")),
+                     _fmt(blk.get("max_abs_deviation_in_null_se"), "%.2f"),
+                     blk.get("all_within_band")))
+        print("    all_methods_within_band=%s band=%s permutations=%d outside=%s "
+              "no_result=%s worst_dev=%s null SE"
+              % (sh.get("all_methods_within_band"), sh.get("band"),
+                 sh.get("n_permutations", 0), sh.get("methods_outside_band"),
+                 sh.get("methods_with_no_result"),
+                 _fmt(sh.get("worst_abs_deviation_in_null_se"), "%.2f")))
+        print("    null AUC SE (Hanley-McNeil)=%s -> half-band is %s null SE; "
+              "band_is_meaningful_at_this_n=%s"
+              % (_fmt(sh.get("null_auc_se_hanley_mcneil")),
+                 _fmt(sh.get("band_half_width_in_null_se"), "%.2f"),
+                 sh.get("band_is_meaningful_at_this_n")))
+
+
 def _print_summary(results, main_results, horizon_results, streaming_offline):
     line = "-" * 78
     print("")
@@ -675,6 +851,8 @@ def _print_summary(results, main_results, horizon_results, streaming_offline):
     for a in results.get("falsifier_addenda", []):
         print("  ADDENDUM to %s (dated %s):" % (a["tag"], a["dated"]))
         print("    %s" % a["correction"])
+    print(line)
+    _print_verdict_context(results)
     print(line)
     print("READ: F1 and F2 are a BETWEEN-CORPUS contrast and do NOT separate the horizon")
     print("from the corpus. SHADE and AgentDojo differ in task suite, generating agent,")

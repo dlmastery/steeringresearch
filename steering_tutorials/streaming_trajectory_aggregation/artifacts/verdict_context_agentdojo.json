@@ -1,0 +1,647 @@
+{
+  "generated_by": "verdict_context.backfill_from_results",
+  "source_results": "steering_tutorials\\streaming_trajectory_aggregation\\artifacts\\results_agentdojo.json",
+  "source_corpus": "agentdojo",
+  "source_pool_fingerprint": "4ec3d85c4b7e2ed0116e16026c86994a759c36f03e91f1df0e26261793e5462d",
+  "label_source": "steering_tutorials\\streaming_trajectory_aggregation\\artifacts\\corpora\\agentdojo_93efc7acfd763063e08575e7.json",
+  "seed": 0,
+  "bootstrap": 10000,
+  "label_alignment_anchor": {
+    "tolerance": 1e-09,
+    "per_method": [
+      {
+        "method": "mean_pool",
+        "stored_auc": 0.98668,
+        "recomputed_auc": 0.98668,
+        "abs_diff": 0.0,
+        "matches": true
+      },
+      {
+        "method": "max_pool",
+        "stored_auc": 0.9950359999999999,
+        "recomputed_auc": 0.995036,
+        "abs_diff": 1.1102230246251565e-16,
+        "matches": true
+      },
+      {
+        "method": "mean_max_std_pool",
+        "stored_auc": 0.994548,
+        "recomputed_auc": 0.994548,
+        "abs_diff": 0.0,
+        "matches": true
+      },
+      {
+        "method": "deviation_weighted",
+        "stored_auc": 0.986416,
+        "recomputed_auc": 0.986416,
+        "abs_diff": 0.0,
+        "matches": true
+      },
+      {
+        "method": "last_step",
+        "stored_auc": 0.9987999999999999,
+        "recomputed_auc": 0.9988,
+        "abs_diff": 1.1102230246251565e-16,
+        "matches": true
+      },
+      {
+        "method": "first_4_steps",
+        "stored_auc": 0.824808,
+        "recomputed_auc": 0.824808,
+        "abs_diff": 0.0,
+        "matches": true
+      },
+      {
+        "method": "gru",
+        "stored_auc": 0.99398,
+        "recomputed_auc": 0.99398,
+        "abs_diff": 0.0,
+        "matches": true
+      },
+      {
+        "method": "query_token_compressor_k16",
+        "stored_auc": 0.99664,
+        "recomputed_auc": 0.99664,
+        "abs_diff": 0.0,
+        "matches": true
+      }
+    ],
+    "all_match": true
+  },
+  "ladder_shuffle_control": {
+    "skipped": true,
+    "reason": "a shuffle control re-runs the LADDER on permuted labels and needs the step embeddings; stored scores cannot produce it. Run run_sta.py with STA_LADDER_SHUFFLE=1 (the default) to get it."
+  },
+  "context_by_falsifier": {
+    "F1_mean_pool_collapses_long": {
+      "applicable_on_this_corpus": false,
+      "binding_bar": 0.996004,
+      "binding_bar_name": "content",
+      "best_clears_bar": false,
+      "bar": {
+        "binding_bar": 0.996004,
+        "binding_bar_name": "content",
+        "per_method": {
+          "mean_pool": {
+            "method_auc": 0.98668,
+            "binding_bar": 0.996004,
+            "binding_bar_name": "content",
+            "margin": -0.009323999999999999,
+            "clears": false,
+            "method": "mean_pool",
+            "auc": 0.98668,
+            "auc_ci": [
+              0.9788457057501545,
+              0.9931520576184975
+            ],
+            "ci_lo_clears_bar": false,
+            "ci_straddles_bar": false
+          },
+          "max_pool": {
+            "method_auc": 0.9950359999999999,
+            "binding_bar": 0.996004,
+            "binding_bar_name": "content",
+            "margin": -0.0009680000000000799,
+            "clears": false,
+            "method": "max_pool",
+            "auc": 0.9950359999999999,
+            "auc_ci": [
+              0.9913612101275154,
+              0.9978715879389468
+            ],
+            "ci_lo_clears_bar": false,
+            "ci_straddles_bar": true
+          },
+          "gru": {
+            "method_auc": 0.99398,
+            "binding_bar": 0.996004,
+            "binding_bar_name": "content",
+            "margin": -0.0020240000000000258,
+            "clears": false,
+            "method": "gru",
+            "auc": 0.99398,
+            "auc_ci": [
+              0.9906022753674655,
+              0.996779999445395
+            ],
+            "ci_lo_clears_bar": false,
+            "ci_straddles_bar": true
+          }
+        },
+        "best_method": "max_pool",
+        "best_auc": 0.9950359999999999,
+        "best_clears_bar": false,
+        "n_methods_clearing_bar": 0,
+        "n_methods_considered": 3,
+        "note": "REPORTED CONTEXT, NOT A VERDICT. The pre-registered holds/fails logic in config.FALSIFIERS and run_sta._falsifier_verdicts is unchanged and unaffected by anything in this block. It is here because a bare HOLDS was being read as a claim the falsifier never made (README section 8(e),(f))."
+      },
+      "paired_margins": {
+        "max_pool_minus_mean_pool": {
+          "n_paired": 1000,
+          "n_resamples": 10000,
+          "delta": 0.00835600000000003,
+          "ci": [
+            0.003932874485672139,
+            0.013592587227257884
+          ],
+          "excludes_zero": true,
+          "p_two_sided": 0.00019998000199980003,
+          "p_resolution_floor": 0.00019998000199980003,
+          "p_method": "two-sided percentile bootstrap, 2*(tail+1)/(B+1) with B=10000 usable resamples; floors at 0.0002",
+          "applicable": true,
+          "hi": "max_pool",
+          "lo": "mean_pool",
+          "statistic": "AUC[max_pool] - AUC[mean_pool], paired percentile bootstrap",
+          "registered_margin": 0.02,
+          "ci_lo_above_registered_margin": false,
+          "ci_straddles_registered_margin": false,
+          "gap_excludes_zero_but_ci_entirely_under_registered_margin": true,
+          "note": "REPORTED CONTEXT, NOT A VERDICT. The pre-registered holds/fails logic in config.FALSIFIERS and run_sta._falsifier_verdicts is unchanged and unaffected by anything in this block. It is here because a bare HOLDS was being read as a claim the falsifier never made (README section 8(e),(f))."
+        },
+        "gru_minus_mean_pool": {
+          "n_paired": 1000,
+          "n_resamples": 10000,
+          "delta": 0.007299999999999973,
+          "ci": [
+            0.0027279583506892055,
+            0.012830212431402907
+          ],
+          "excludes_zero": true,
+          "p_two_sided": 0.00039996000399960006,
+          "p_resolution_floor": 0.00019998000199980003,
+          "p_method": "two-sided percentile bootstrap, 2*(tail+1)/(B+1) with B=10000 usable resamples; floors at 0.0002",
+          "applicable": true,
+          "hi": "gru",
+          "lo": "mean_pool",
+          "statistic": "AUC[gru] - AUC[mean_pool], paired percentile bootstrap",
+          "registered_margin": 0.02,
+          "ci_lo_above_registered_margin": false,
+          "ci_straddles_registered_margin": false,
+          "gap_excludes_zero_but_ci_entirely_under_registered_margin": true,
+          "note": "REPORTED CONTEXT, NOT A VERDICT. The pre-registered holds/fails logic in config.FALSIFIERS and run_sta._falsifier_verdicts is unchanged and unaffected by anything in this block. It is here because a bare HOLDS was being read as a claim the falsifier never made (README section 8(e),(f))."
+        }
+      },
+      "reading": "The registered verdict is a POINT-ESTIMATE margin against 0.02 and consults no bar. Both readings it omits are here: whether the arms clear confound.binding_bar at all, and whether the 10,000-resample PAIRED bootstrap CI on the margin clears the same 0.02 the point estimate was compared to.",
+      "note": "REPORTED CONTEXT, NOT A VERDICT. The pre-registered holds/fails logic in config.FALSIFIERS and run_sta._falsifier_verdicts is unchanged and unaffected by anything in this block. It is here because a bare HOLDS was being read as a claim the falsifier never made (README section 8(e),(f))."
+    },
+    "F2_mean_pool_survives_short": {
+      "applicable_on_this_corpus": true,
+      "binding_bar": 0.996004,
+      "binding_bar_name": "content",
+      "best_clears_bar": false,
+      "bar": {
+        "binding_bar": 0.996004,
+        "binding_bar_name": "content",
+        "per_method": {
+          "mean_pool": {
+            "method_auc": 0.98668,
+            "binding_bar": 0.996004,
+            "binding_bar_name": "content",
+            "margin": -0.009323999999999999,
+            "clears": false,
+            "method": "mean_pool",
+            "auc": 0.98668,
+            "auc_ci": [
+              0.9788457057501545,
+              0.9931520576184975
+            ],
+            "ci_lo_clears_bar": false,
+            "ci_straddles_bar": false
+          },
+          "max_pool": {
+            "method_auc": 0.9950359999999999,
+            "binding_bar": 0.996004,
+            "binding_bar_name": "content",
+            "margin": -0.0009680000000000799,
+            "clears": false,
+            "method": "max_pool",
+            "auc": 0.9950359999999999,
+            "auc_ci": [
+              0.9913612101275154,
+              0.9978715879389468
+            ],
+            "ci_lo_clears_bar": false,
+            "ci_straddles_bar": true
+          },
+          "gru": {
+            "method_auc": 0.99398,
+            "binding_bar": 0.996004,
+            "binding_bar_name": "content",
+            "margin": -0.0020240000000000258,
+            "clears": false,
+            "method": "gru",
+            "auc": 0.99398,
+            "auc_ci": [
+              0.9906022753674655,
+              0.996779999445395
+            ],
+            "ci_lo_clears_bar": false,
+            "ci_straddles_bar": true
+          }
+        },
+        "best_method": "max_pool",
+        "best_auc": 0.9950359999999999,
+        "best_clears_bar": false,
+        "n_methods_clearing_bar": 0,
+        "n_methods_considered": 3,
+        "note": "REPORTED CONTEXT, NOT A VERDICT. The pre-registered holds/fails logic in config.FALSIFIERS and run_sta._falsifier_verdicts is unchanged and unaffected by anything in this block. It is here because a bare HOLDS was being read as a claim the falsifier never made (README section 8(e),(f))."
+      },
+      "paired_margins": {
+        "max_pool_minus_mean_pool": {
+          "n_paired": 1000,
+          "n_resamples": 10000,
+          "delta": 0.00835600000000003,
+          "ci": [
+            0.003932874485672139,
+            0.013592587227257884
+          ],
+          "excludes_zero": true,
+          "p_two_sided": 0.00019998000199980003,
+          "p_resolution_floor": 0.00019998000199980003,
+          "p_method": "two-sided percentile bootstrap, 2*(tail+1)/(B+1) with B=10000 usable resamples; floors at 0.0002",
+          "applicable": true,
+          "hi": "max_pool",
+          "lo": "mean_pool",
+          "statistic": "AUC[max_pool] - AUC[mean_pool], paired percentile bootstrap",
+          "registered_margin": 0.02,
+          "ci_lo_above_registered_margin": false,
+          "ci_straddles_registered_margin": false,
+          "gap_excludes_zero_but_ci_entirely_under_registered_margin": true,
+          "note": "REPORTED CONTEXT, NOT A VERDICT. The pre-registered holds/fails logic in config.FALSIFIERS and run_sta._falsifier_verdicts is unchanged and unaffected by anything in this block. It is here because a bare HOLDS was being read as a claim the falsifier never made (README section 8(e),(f))."
+        },
+        "gru_minus_mean_pool": {
+          "n_paired": 1000,
+          "n_resamples": 10000,
+          "delta": 0.007299999999999973,
+          "ci": [
+            0.0027279583506892055,
+            0.012830212431402907
+          ],
+          "excludes_zero": true,
+          "p_two_sided": 0.00039996000399960006,
+          "p_resolution_floor": 0.00019998000199980003,
+          "p_method": "two-sided percentile bootstrap, 2*(tail+1)/(B+1) with B=10000 usable resamples; floors at 0.0002",
+          "applicable": true,
+          "hi": "gru",
+          "lo": "mean_pool",
+          "statistic": "AUC[gru] - AUC[mean_pool], paired percentile bootstrap",
+          "registered_margin": 0.02,
+          "ci_lo_above_registered_margin": false,
+          "ci_straddles_registered_margin": false,
+          "gap_excludes_zero_but_ci_entirely_under_registered_margin": true,
+          "note": "REPORTED CONTEXT, NOT A VERDICT. The pre-registered holds/fails logic in config.FALSIFIERS and run_sta._falsifier_verdicts is unchanged and unaffected by anything in this block. It is here because a bare HOLDS was being read as a claim the falsifier never made (README section 8(e),(f))."
+        }
+      },
+      "reading": "The registered verdict is a POINT-ESTIMATE margin against 0.02 and consults no bar. Both readings it omits are here: whether the arms clear confound.binding_bar at all, and whether the 10,000-resample PAIRED bootstrap CI on the margin clears the same 0.02 the point estimate was compared to.",
+      "note": "REPORTED CONTEXT, NOT A VERDICT. The pre-registered holds/fails logic in config.FALSIFIERS and run_sta._falsifier_verdicts is unchanged and unaffected by anything in this block. It is here because a bare HOLDS was being read as a claim the falsifier never made (README section 8(e),(f))."
+    },
+    "F3_sequence_beats_laststep": {
+      "binding_bar": 0.996004,
+      "binding_bar_name": "content",
+      "best_clears_bar": true,
+      "bar": {
+        "binding_bar": 0.996004,
+        "binding_bar_name": "content",
+        "per_method": {
+          "mean_pool": {
+            "method_auc": 0.98668,
+            "binding_bar": 0.996004,
+            "binding_bar_name": "content",
+            "margin": -0.009323999999999999,
+            "clears": false,
+            "method": "mean_pool",
+            "auc": 0.98668,
+            "auc_ci": [
+              0.9788457057501545,
+              0.9931520576184975
+            ],
+            "ci_lo_clears_bar": false,
+            "ci_straddles_bar": false
+          },
+          "max_pool": {
+            "method_auc": 0.9950359999999999,
+            "binding_bar": 0.996004,
+            "binding_bar_name": "content",
+            "margin": -0.0009680000000000799,
+            "clears": false,
+            "method": "max_pool",
+            "auc": 0.9950359999999999,
+            "auc_ci": [
+              0.9913612101275154,
+              0.9978715879389468
+            ],
+            "ci_lo_clears_bar": false,
+            "ci_straddles_bar": true
+          },
+          "mean_max_std_pool": {
+            "method_auc": 0.994548,
+            "binding_bar": 0.996004,
+            "binding_bar_name": "content",
+            "margin": -0.0014560000000000128,
+            "clears": false,
+            "method": "mean_max_std_pool",
+            "auc": 0.994548,
+            "auc_ci": [
+              0.9901953695538236,
+              0.9979600184380812
+            ],
+            "ci_lo_clears_bar": false,
+            "ci_straddles_bar": true
+          },
+          "deviation_weighted": {
+            "method_auc": 0.986416,
+            "binding_bar": 0.996004,
+            "binding_bar_name": "content",
+            "margin": -0.009588000000000041,
+            "clears": false,
+            "method": "deviation_weighted",
+            "auc": 0.986416,
+            "auc_ci": [
+              0.9785796582068382,
+              0.9929879966553335
+            ],
+            "ci_lo_clears_bar": false,
+            "ci_straddles_bar": false
+          },
+          "last_step": {
+            "method_auc": 0.9987999999999999,
+            "binding_bar": 0.996004,
+            "binding_bar_name": "content",
+            "margin": 0.0027959999999999097,
+            "clears": true,
+            "method": "last_step",
+            "auc": 0.9987999999999999,
+            "auc_ci": [
+              0.9968279121162228,
+              0.9999799971195853
+            ],
+            "ci_lo_clears_bar": true,
+            "ci_straddles_bar": false
+          },
+          "first_4_steps": {
+            "method_auc": 0.824808,
+            "binding_bar": 0.996004,
+            "binding_bar_name": "content",
+            "margin": -0.17119600000000001,
+            "clears": false,
+            "method": "first_4_steps",
+            "auc": 0.824808,
+            "auc_ci": [
+              0.7995187980751923,
+              0.8492969299271182
+            ],
+            "ci_lo_clears_bar": false,
+            "ci_straddles_bar": false
+          },
+          "gru": {
+            "method_auc": 0.99398,
+            "binding_bar": 0.996004,
+            "binding_bar_name": "content",
+            "margin": -0.0020240000000000258,
+            "clears": false,
+            "method": "gru",
+            "auc": 0.99398,
+            "auc_ci": [
+              0.9906022753674655,
+              0.996779999445395
+            ],
+            "ci_lo_clears_bar": false,
+            "ci_straddles_bar": true
+          },
+          "query_token_compressor_k16": {
+            "method_auc": 0.99664,
+            "binding_bar": 0.996004,
+            "binding_bar_name": "content",
+            "margin": 0.0006359999999999699,
+            "clears": true,
+            "method": "query_token_compressor_k16",
+            "auc": 0.99664,
+            "auc_ci": [
+              0.9936117047702784,
+              0.9987260043571154
+            ],
+            "ci_lo_clears_bar": false,
+            "ci_straddles_bar": true
+          }
+        },
+        "best_method": "last_step",
+        "best_auc": 0.9987999999999999,
+        "best_clears_bar": true,
+        "n_methods_clearing_bar": 2,
+        "n_methods_considered": 8,
+        "note": "REPORTED CONTEXT, NOT A VERDICT. The pre-registered holds/fails logic in config.FALSIFIERS and run_sta._falsifier_verdicts is unchanged and unaffected by anything in this block. It is here because a bare HOLDS was being read as a claim the falsifier never made (README section 8(e),(f))."
+      },
+      "paired_best_minus_last_step": {
+        "applicable": false,
+        "reason": "the best ladder method IS last_step, so the F3 margin is identically zero and no paired interval is defined"
+      },
+      "holm": {
+        "applicable": true,
+        "reference": "last_step",
+        "family_definition": "every ladder method vs 'last_step', one paired-bootstrap comparison each. The F3 selection ranges over 8 ladder rows, but the reference's own row has a margin of identically 0 and is excluded from the testable family, so m = 7.",
+        "family_size": 7,
+        "alpha": 0.05,
+        "holm_tightest_threshold": 0.0071428571428571435,
+        "holm_impl": "steering.stats.holm_bonferroni (src/ added to sys.path)",
+        "bootstrap_resamples": 10000,
+        "p_resolution_floor": 0.00019998000199980003,
+        "resolution_floor_blocks_rejection": false,
+        "family": [
+          {
+            "method": "mean_pool",
+            "delta_vs_reference": -0.01212000000000002,
+            "delta_ci": [
+              -0.019876631670471427,
+              -0.00558002838206231
+            ],
+            "ci_excludes_zero": true,
+            "p_two_sided": 0.00019998000199980003,
+            "p_method": "two-sided percentile bootstrap, 2*(tail+1)/(B+1) with B=10000 usable resamples; floors at 0.0002",
+            "n_paired": 1000,
+            "beats_registered_margin_pointwise": false,
+            "p_missing_treated_as_1": false,
+            "unevaluable_reason": null,
+            "holm_reject": true,
+            "holm_adjusted_p": 0.0013998600139986002,
+            "uncorrected_reject": true,
+            "holm_changes_this_row": false
+          },
+          {
+            "method": "max_pool",
+            "delta_vs_reference": -0.0037639999999999896,
+            "delta_ci": [
+              -0.007411889493392726,
+              -0.0007399607699355554
+            ],
+            "ci_excludes_zero": true,
+            "p_two_sided": 0.013798620137986202,
+            "p_method": "two-sided percentile bootstrap, 2*(tail+1)/(B+1) with B=10000 usable resamples; floors at 0.0002",
+            "n_paired": 1000,
+            "beats_registered_margin_pointwise": false,
+            "p_missing_treated_as_1": false,
+            "unevaluable_reason": null,
+            "holm_reject": true,
+            "holm_adjusted_p": 0.0413958604139586,
+            "uncorrected_reject": true,
+            "holm_changes_this_row": false
+          },
+          {
+            "method": "mean_max_std_pool",
+            "delta_vs_reference": -0.0042520000000000335,
+            "delta_ci": [
+              -0.008717422249514087,
+              -0.0006806806959881814
+            ],
+            "ci_excludes_zero": true,
+            "p_two_sided": 0.017198280171982803,
+            "p_method": "two-sided percentile bootstrap, 2*(tail+1)/(B+1) with B=10000 usable resamples; floors at 0.0002",
+            "n_paired": 1000,
+            "beats_registered_margin_pointwise": false,
+            "p_missing_treated_as_1": false,
+            "unevaluable_reason": null,
+            "holm_reject": true,
+            "holm_adjusted_p": 0.0413958604139586,
+            "uncorrected_reject": true,
+            "holm_changes_this_row": false
+          },
+          {
+            "method": "deviation_weighted",
+            "delta_vs_reference": -0.012384000000000062,
+            "delta_ci": [
+              -0.020269334432683583,
+              -0.00577775177898972
+            ],
+            "ci_excludes_zero": true,
+            "p_two_sided": 0.00019998000199980003,
+            "p_method": "two-sided percentile bootstrap, 2*(tail+1)/(B+1) with B=10000 usable resamples; floors at 0.0002",
+            "n_paired": 1000,
+            "beats_registered_margin_pointwise": false,
+            "p_missing_treated_as_1": false,
+            "unevaluable_reason": null,
+            "holm_reject": true,
+            "holm_adjusted_p": 0.0013998600139986002,
+            "uncorrected_reject": true,
+            "holm_changes_this_row": false
+          },
+          {
+            "method": "first_4_steps",
+            "delta_vs_reference": -0.17399200000000004,
+            "delta_ci": [
+              -0.1992044294753861,
+              -0.14935222125665326
+            ],
+            "ci_excludes_zero": true,
+            "p_two_sided": 0.00019998000199980003,
+            "p_method": "two-sided percentile bootstrap, 2*(tail+1)/(B+1) with B=10000 usable resamples; floors at 0.0002",
+            "n_paired": 1000,
+            "beats_registered_margin_pointwise": false,
+            "p_missing_treated_as_1": false,
+            "unevaluable_reason": null,
+            "holm_reject": true,
+            "holm_adjusted_p": 0.0013998600139986002,
+            "uncorrected_reject": true,
+            "holm_changes_this_row": false
+          },
+          {
+            "method": "gru",
+            "delta_vs_reference": -0.0048200000000000465,
+            "delta_ci": [
+              -0.00829177475916292,
+              -0.0017676646725648542
+            ],
+            "ci_excludes_zero": true,
+            "p_two_sided": 0.0017998200179982,
+            "p_method": "two-sided percentile bootstrap, 2*(tail+1)/(B+1) with B=10000 usable resamples; floors at 0.0002",
+            "n_paired": 1000,
+            "beats_registered_margin_pointwise": false,
+            "p_missing_treated_as_1": false,
+            "unevaluable_reason": null,
+            "holm_reject": true,
+            "holm_adjusted_p": 0.0071992800719928,
+            "uncorrected_reject": true,
+            "holm_changes_this_row": false
+          },
+          {
+            "method": "query_token_compressor_k16",
+            "delta_vs_reference": -0.0021600000000000508,
+            "delta_ci": [
+              -0.005417015756878329,
+              0.0006481710793388147
+            ],
+            "ci_excludes_zero": false,
+            "p_two_sided": 0.1337866213378662,
+            "p_method": "two-sided percentile bootstrap, 2*(tail+1)/(B+1) with B=10000 usable resamples; floors at 0.0002",
+            "n_paired": 1000,
+            "beats_registered_margin_pointwise": false,
+            "p_missing_treated_as_1": false,
+            "unevaluable_reason": null,
+            "holm_reject": false,
+            "holm_adjusted_p": 0.1337866213378662,
+            "uncorrected_reject": false,
+            "holm_changes_this_row": false
+          }
+        ],
+        "n_uncorrected_reject": 6,
+        "n_holm_reject": 6,
+        "n_rows_flipped_by_holm": 0,
+        "holm_changes_the_picture": false,
+        "selected_definition": "`selected_*` is the argmax of delta-vs-reference ACROSS THE FAMILY -- the row an uncorrected max-over-the-ladder would pick. It need not be the highest-AUC row: when the reference itself is the best method on the corpus, every family delta is negative and `selected_method` is merely the least-negative one. Compare it with `bar.best_method`, which is the plain AUC argmax over the whole ladder including the reference.",
+        "selected_method": "query_token_compressor_k16",
+        "selected_delta": -0.0021600000000000508,
+        "selected_p_two_sided": 0.1337866213378662,
+        "selected_holm_adjusted_p": 0.1337866213378662,
+        "selected_survives_holm": false,
+        "including_reference_self_comparison": {
+          "family_size": 8,
+          "note": "strictly more conservative; reported so the m=7 choice is auditable",
+          "rows": [
+            {
+              "method": "mean_pool",
+              "holm_reject": true,
+              "holm_adjusted_p": 0.0015998400159984002
+            },
+            {
+              "method": "max_pool",
+              "holm_reject": false,
+              "holm_adjusted_p": 0.055194480551944806
+            },
+            {
+              "method": "mean_max_std_pool",
+              "holm_reject": false,
+              "holm_adjusted_p": 0.055194480551944806
+            },
+            {
+              "method": "deviation_weighted",
+              "holm_reject": true,
+              "holm_adjusted_p": 0.0015998400159984002
+            },
+            {
+              "method": "first_4_steps",
+              "holm_reject": true,
+              "holm_adjusted_p": 0.0015998400159984002
+            },
+            {
+              "method": "gru",
+              "holm_reject": true,
+              "holm_adjusted_p": 0.008999100089991
+            },
+            {
+              "method": "query_token_compressor_k16",
+              "holm_reject": false,
+              "holm_adjusted_p": 0.2675732426757324
+            },
+            {
+              "method": "last_step",
+              "holm_reject": false,
+              "holm_adjusted_p": 1.0
+            }
+          ]
+        },
+        "note": "REPORTED CONTEXT, NOT A VERDICT. The pre-registered holds/fails logic in config.FALSIFIERS and run_sta._falsifier_verdicts is unchanged and unaffected by anything in this block. It is here because a bare HOLDS was being read as a claim the falsifier never made (README section 8(e),(f))."
+      },
+      "reading": "F3's `best` is a MAX OVER THE LADDER: a selection reported at the significance of a single comparison. The Holm block prices that selection. The bar block answers the separate question the verdict never asked -- whether the winning method beats a model that never looked at trajectory structure at all.",
+      "note": "REPORTED CONTEXT, NOT A VERDICT. The pre-registered holds/fails logic in config.FALSIFIERS and run_sta._falsifier_verdicts is unchanged and unaffected by anything in this block. It is here because a bare HOLDS was being read as a claim the falsifier never made (README section 8(e),(f))."
+    }
+  },
+  "note": "REPORTED CONTEXT for a run that already happened. It does NOT edit the run's own results.json and it does NOT change any verdict recorded there; REPORTED CONTEXT, NOT A VERDICT. The pre-registered holds/fails logic in config.FALSIFIERS and run_sta._falsifier_verdicts is unchanged and unaffected by anything in this block. It is here because a bare HOLDS was being read as a claim the falsifier never made (README section 8(e),(f))."
+}

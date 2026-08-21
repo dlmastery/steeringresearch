@@ -155,6 +155,13 @@ def paired_delta_ci(labels: np.ndarray, hi_scores: np.ndarray, lo_scores: np.nda
     Paired because both arrays are out-of-fold scores for the SAME trajectories in the
     SAME order: each resample draws one index set and scores both arms on it, so the
     shared per-trajectory difficulty cancels instead of inflating the interval.
+
+    Also returns `p_two_sided`, computed from the SAME bootstrap distribution the CI
+    comes from -- no extra resampling, so every CI in this file is bit-identical to what
+    it was before the p-value existed. It is here because `verdict_context.py` needs a
+    p per comparison to run Holm across the F3 family (README section 8(f)) and a second
+    paired bootstrap living in a second file is how two numbers under one name start
+    disagreeing. The pre-registered horizon criterion does NOT read it.
     """
     idx = _common_valid({"hi": hi_scores, "lo": lo_scores})
     y = np.asarray(labels)[idx].astype(int)
@@ -177,7 +184,7 @@ def paired_delta_ci(labels: np.ndarray, hi_scores: np.ndarray, lo_scores: np.nda
         boots.append(fast_auc(yy, hi[r]) - fast_auc(yy, lo[r]))
     if not boots:
         out.update({"delta": _num(point), "ci": [_num(point), _num(point)],
-                    "excludes_zero": False,
+                    "excludes_zero": False, "p_two_sided": None,
                     "reason": "every resample was single-class"})
         return out
     lo_ci = float(np.percentile(boots, 2.5))
@@ -187,7 +194,31 @@ def paired_delta_ci(labels: np.ndarray, hi_scores: np.ndarray, lo_scores: np.nda
         "ci": [_num(lo_ci), _num(hi_ci)],
         "excludes_zero": bool(lo_ci > 0.0 or hi_ci < 0.0),
     })
+    out.update(_bootstrap_p(boots))
     return out
+
+
+def _bootstrap_p(boots) -> dict:
+    """Two-sided bootstrap p for "the delta is zero", from an existing resample list.
+
+    Davison & Hinkley's (B_tail + 1) / (B + 1) form, doubled, clipped to 1. The +1 is not
+    cosmetic: the naive fraction can return exactly 0, which reads as infinite evidence
+    and would sail through any Holm threshold. This form floors at 2/(B+1), and that
+    floor is reported so a caller can see when the resample count -- not the effect --
+    is what decides a comparison.
+    """
+    b = np.asarray(boots, dtype=np.float64)
+    n_b = int(b.size)
+    if n_b == 0:
+        return {"p_two_sided": None, "p_method": "no usable resamples"}
+    tail = min(int((b <= 0.0).sum()), int((b >= 0.0).sum()))
+    p = min(1.0, 2.0 * (tail + 1.0) / (n_b + 1.0))
+    return {
+        "p_two_sided": float(p),
+        "p_resolution_floor": float(2.0 / (n_b + 1.0)),
+        "p_method": ("two-sided percentile bootstrap, 2*(tail+1)/(B+1) with B=%d usable "
+                     "resamples; floors at %.3g" % (n_b, 2.0 / (n_b + 1.0))),
+    }
 
 
 def _paired_growth_ci(labels, hi_big, lo_big, hi_small, lo_small, n=10000, seed=0) -> dict:
@@ -670,7 +701,10 @@ def _self_test() -> None:
     # behaviour of the estimator, not a defect, and asserting flatness to a hard
     # tolerance would be asserting something false. What the dilution mechanism actually
     # predicts -- and what is tested -- is that mean-pool decays substantially faster.
-    # Observed on this synthetic at the time of writing: mean_drop 0.286, max_drop 0.104.
+    # Observed on this synthetic, re-measured 2026-08-21 on the k-grid this test actually
+    # runs (2..128): mean_drop 0.3145, max_drop 0.1680. (The values previously quoted here,
+    # 0.286 / 0.104, are not what the code beside them prints -- a comment is an artifact
+    # too, and one that cannot be regenerated from its own code is not evidence.)
     mean_drop = mean_aucs[0] - mean_aucs[-1]
     max_drop = max_aucs[0] - max_aucs[-1]
     assert mean_drop > 0.05, \

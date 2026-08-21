@@ -145,6 +145,36 @@ HORIZON_BOOTSTRAP = _env_int("STA_HORIZON_BOOTSTRAP", 10000)
 # Run the (free, weaker, observational) median-split stratification as well.
 HORIZON_MEDIAN_SPLIT = _env_flag("STA_HORIZON_MEDIAN_SPLIT", True)
 HORIZON_RHO_FLOOR = float(os.environ.get("STA_HORIZON_RHO_FLOOR") or 0.7)
+# --- VERDICT CONTEXT (verdict_context.py) -----------------------------------------
+# Reported CONTEXT beside each pre-registered verdict -- never a criterion. The registered
+# holds/fails logic in FALSIFIERS + run_sta._falsifier_verdicts is unchanged; these knobs
+# only size the extra reporting that README section 8(e),(f) says is missing.
+#
+# Resamples for the PAIRED bootstrap on a falsifier's own margin (AUC_max - AUC_mean for
+# F1/F2, best - last_step for F3) and for the per-comparison p-values Holm runs over.
+# Keep it at evaluation grade: a bootstrap p floors at 2/(B+1), so a small B can make a
+# comparison unrejectable at alpha/m no matter how large the effect is (the harness flags
+# that as `resolution_floor_blocks_rejection` rather than letting it pass unremarked).
+VERDICT_BOOTSTRAP = _env_int("STA_VERDICT_BOOTSTRAP", 10000)
+
+# The shuffle control ON THE LADDER (F0's shuffle runs inside common.confound, on
+# bag-of-words features -- it certifies the confound module, not the embedding-to-
+# aggregator pipeline where the trained arms and the group-aware CV live).
+LADDER_SHUFFLE = _env_flag("STA_LADDER_SHUFFLE", True)
+# Which main-ladder methods to re-run on permuted labels. Default covers both fixed
+# pooling (mean/max/last_step -- the arms F1 and F3 are read off) and the trained causal
+# arm (gru), which is where a leak would most plausibly hide. `query_token_compressor` is
+# OFF by default purely for cost (a second end-to-end training pass); add it via the env
+# knob when the run has the budget -- and say which set ran, since results.json records
+# `methods_requested` per run.
+LADDER_SHUFFLE_METHODS = tuple(
+    m.strip() for m in _env_str("STA_LADDER_SHUFFLE_METHODS",
+                                "mean_pool,max_pool,last_step,gru").split(",") if m.strip())
+LADDER_SHUFFLE_REPEATS = _env_int("STA_LADDER_SHUFFLE_REPEATS", 1)
+# One permutation's AUC is itself a noisy estimate; the CI on it is not what the control
+# turns on (the band check is), so this is deliberately cheaper than BOOTSTRAP.
+LADDER_SHUFFLE_BOOTSTRAP = _env_int("STA_LADDER_SHUFFLE_BOOTSTRAP", 2000)
+
 # k for the single QueryTokenCompressor instance run in the main ladder. NOT confirmed
 # from TRACE's abstract (arXiv:2606.00611) -- sequence.py's own docstring: "K=16 is a
 # harness convenience, not an assertion that 16 is TRACE's own value."
@@ -256,6 +286,10 @@ if __name__ == "__main__":
     print("[config] horizon: ks=%s low=%s high=%s bootstrap=%d median_split=%s rho_floor=%.2f"
           % (HORIZON_KS, HORIZON_INNER_LOW, HORIZON_INNER_HIGH, HORIZON_BOOTSTRAP,
              HORIZON_MEDIAN_SPLIT, HORIZON_RHO_FLOOR))
+    print("[config] verdict context: bootstrap=%d ladder_shuffle=%s methods=%s repeats=%d "
+          "shuffle_bootstrap=%d"
+          % (VERDICT_BOOTSTRAP, LADDER_SHUFFLE, list(LADDER_SHUFFLE_METHODS),
+             LADDER_SHUFFLE_REPEATS, LADDER_SHUFFLE_BOOTSTRAP))
     print("[config] pool_measured[%s]=%s" % (CORPUS, POOL_MEASURED.get(CORPUS)))
     print("[config] results_path=%s" % RESULTS_PATH)
     print("OK -- config.py loads with no model, no network")
