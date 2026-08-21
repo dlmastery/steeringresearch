@@ -417,10 +417,31 @@ def _cv_method(name, trajs, labels, folds, trajectory, MJ):
     return np.concatenate(pooled_t), np.concatenate(pooled_s)
 
 
-def _substrate_comparison():
-    """F3: compare threshold_freeform's margin across substrates, if both arms exist."""
+def _substrate_comparison(this_arm: dict = None):
+    """F3: compare threshold_freeform's margin across substrates, if both arms exist.
+
+    FIXED 2026-08-21 -- CHICKEN AND EGG. This used to read BOTH arms from disk,
+    but it is called while assembling the CURRENT run's results dict, before that
+    run's own `results_<substrate>.json` has been written. So the arm that
+    COMPLETES the pair could never see itself: it found one file, fell through to
+    `len(out) != 2`, and emitted the "F3 needs BOTH arms" note -- which is exactly
+    what `results_overt.json` shipped even though the disguised arm had been on
+    disk since 2026-08-08.
+
+    F3 is the SUBSTRATE CONTRAST, i.e. the entire reason this lesson was re-based
+    onto two substrates. It was structurally unreachable.
+
+    ``this_arm`` supplies the in-flight run's own {auc, bar} so only the OTHER
+    arm is read from disk.
+    """
     out = {}
+    if isinstance(this_arm, dict) and this_arm.get("auc") is not None             and this_arm.get("bar") is not None:
+        out[C.SUBSTRATE] = {"auc": this_arm["auc"], "bar": this_arm["bar"],
+                            "margin": this_arm["auc"] - this_arm["bar"],
+                            "source": "this run (in memory)"}
     for sub in ("overt", "disguised"):
+        if sub in out:
+            continue
         p = C.ARTIFACTS / ("results_%s.json" % sub)
         if not p.exists():
             continue
@@ -433,8 +454,19 @@ def _substrate_comparison():
         if isinstance(cell.get("auc"), (int, float)) and isinstance(bar, (int, float)):
             out[sub] = {"auc": cell["auc"], "bar": bar, "margin": cell["auc"] - bar}
     if len(out) == 2:
-        out["F3_drift_larger_on_disguised"] = bool(
-            out["disguised"]["margin"] > out["overt"]["margin"])
+        md, mo = out["disguised"]["margin"], out["overt"]["margin"]
+        out["F3_drift_larger_on_disguised"] = bool(md > mo)
+        out["margin_delta_disguised_minus_overt"] = md - mo
+        # A pass here can be DEGENERATE: the criterion only compares two margins
+        # and both can be negative, i.e. threshold_freeform fails its own bar on
+        # BOTH substrates and merely fails LESS BADLY on disguised. Flag it so the
+        # verdict cannot be read as "the drift detector works on disguised".
+        out["both_margins_negative"] = bool(md < 0 and mo < 0)
+        out["reading"] = (
+            "F3 compares two MARGINS; it does not require either to be positive. "
+            "both_margins_negative=True means the paper's own training-free "
+            "detector loses to the confound bar on BOTH substrates and the "
+            "contrast is between two failures.")
     else:
         out["note"] = ("F3 needs BOTH arms; run the other substrate with "
                        "TG_SUBSTRATE=overt / TG_SUBSTRATE=disguised")
@@ -717,7 +749,11 @@ def main():
         "early_detection": early,
         "early_confound": early_bars,
         "ood": ood_block,
-        "substrate_comparison": _substrate_comparison(),
+        # Pass THIS run's own threshold_freeform cell so the arm completing the
+        # pair can see itself -- its results file does not exist yet.
+        "substrate_comparison": _substrate_comparison(
+            {"auc": (methods_block.get("threshold_freeform") or {}).get("auc"),
+             "bar": (confound or {}).get("worst_auc")}),
         "falsifiers": [{"tag": t, "statement": s} for t, s in FALSIFIERS],
         "falsifier_verdicts": verdicts,
         "mean_traj_len_harmful": mean_len_h,
