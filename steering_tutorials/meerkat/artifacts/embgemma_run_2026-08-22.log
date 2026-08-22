@@ -1,0 +1,53 @@
+[data] pool: N=1000  attack=500  benign=500  (scanned 413 benign rows)
+[data] attack campaigns=34  mean sub-steps/campaign=14.7  (each sub-step is one trace)
+[data] mean trace char-len: attack=104  benign=107  (single events -> comparable, no join-length tell)
+[data] source dist: attack=500, ultrachat=500
+[pool] traces=1000 attack=500 benign=500
+Loading weights:   0%|          | 0/314 [00:00<?, ?it/s]Loading weights:  20%|█▉        | 62/314 [00:00<00:00, 604.50it/s]Loading weights:  39%|███▉      | 123/314 [00:00<00:00, 550.96it/s]Loading weights: 100%|██████████| 314/314 [00:00<00:00, 1295.21it/s]
+[embed] embeddinggemma pipeline: Transformer -> Pooling -> Dense -> Dense -> Normalize | prompt 'Clustering' = 'task: clustering | query: ' | max_seq_length=512
+[embed] built + cached trace_emb_embeddinggemma.npz (1000 x 768, embedder=embeddinggemma model=models/google/embeddinggemma-300m)
+[confound] pool_fingerprint=686cb79624a5641c
+[confound] length_auc=0.441 len_pos=104 len_neg=107  (~0.5 => no trivial length tell)
+[regime 0.05/per_trace] AP=0.741 CI=[0.640,0.837] AUC=0.930 (n_repos_scored=20)
+[regime 0.05/kmeans_enrich] AP=0.463 CI=[0.352,0.573] AUC=0.840 (n_repos_scored=20)
+[regime 0.05/knn_purity] AP=0.222 CI=[0.160,0.282] AUC=0.817 (n_repos_scored=20)
+[regime 0.50/per_trace] AP=0.964 CI=[0.956,0.970] AUC=0.966 (n_repos_scored=20)
+[regime 0.50/kmeans_enrich] AP=0.868 CI=[0.848,0.886] AUC=0.897 (n_repos_scored=20)
+[regime 0.50/knn_purity] AP=0.909 CI=[0.899,0.918] AUC=0.929 (n_repos_scored=20)
+[cluster] best_k=16 purity=0.960 campaign_max_cluster_recall=0.400
+[ood] CSTM-Bench: N=108  attack=52  benign=56
+[ood] CSTM-Bench traces=108 attack=52 benign=56
+Loading weights:   0%|          | 0/314 [00:00<?, ?it/s]Loading weights: 100%|██████████| 314/314 [00:00<00:00, 4111.37it/s]
+[embed] embeddinggemma pipeline: Transformer -> Pooling -> Dense -> Dense -> Normalize | prompt 'Clustering' = 'task: clustering | query: ' | max_seq_length=512
+[ood/per_trace] AP=0.481 AUC=0.458
+[ood/kmeans_enrich] AP=0.434 AUC=0.401
+[ood/knn_purity] AP=0.485 AUC=0.500
+[write] C:\Users\evija\steeringresearch\steering_tutorials\meerkat\artifacts\results_embeddinggemma.json
+
+------------------------------------------------------------------------------
+MEERKAT SPARSE-VIOLATION LOCALIZATION  (SCREENING TIER, cluster-density)
+embedder=embeddinggemma -> models/google/embeddinggemma-300m (dim=768, prompt=Clustering) seed=0  pool: attack=500 benign=500
+confound: length_auc=0.441  (~0.5 => raw trace length is NOT a trivial tell)
+------------------------------------------------------------------------------
+BASE RATE 0.05  SPARSE (Meerkat regime)   repo_size=400 n_repos=20
+method                AP 95% CI             ROC-AUC
+per_trace          0.741 [0.640,0.837]      0.930
+kmeans_enrich      0.463 [0.352,0.573]      0.840
+knn_purity         0.222 [0.160,0.282]      0.817
+------------------------------------------------------------------------------
+BASE RATE 0.5  BALANCED   repo_size=400 n_repos=20
+method                AP 95% CI             ROC-AUC
+per_trace          0.964 [0.956,0.970]      0.966
+kmeans_enrich      0.868 [0.848,0.886]      0.897
+knn_purity         0.909 [0.899,0.918]      0.929
+------------------------------------------------------------------------------
+CLUSTERING (sparse repo): best_k=16 purity=0.960 campaign_max_cluster_recall=0.400
+------------------------------------------------------------------------------
+OOD: intrinsec-ai/cstm-bench   attack=52 benign=56  (real cross-session benchmark)
+method                AP  ROC-AUC
+per_trace          0.481    0.458
+kmeans_enrich      0.434    0.401
+knn_purity         0.485    0.500
+------------------------------------------------------------------------------
+READ: per_trace is the diluted-campaign-DEFEATED baseline. FALSIFIER -- if kmeans_enrich AP <= per_trace AP at the sparse base rate, 'clustering surfaces the distributed campaign' is FALSE for this setup.
+------------------------------------------------------------------------------
