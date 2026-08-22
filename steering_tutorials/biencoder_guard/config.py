@@ -265,7 +265,13 @@ OPIR_PAPER_TOP = 16       # the top-level count at which Opir's 16/126/854 is ex
 # --- Paths -------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent
 ARTIFACTS = ROOT / "artifacts"
-RESULTS_PATH = ARTIFACTS / "results.json"
+# PER-ENCODER. This was the BARE form while EMB_CACHE/POLICY_CACHE were already
+# keyed by encoder -- the exact combination that let meerkat's bge run destroy
+# its minilm results on 2026-08-21. Found by
+# common/artifact_paths.py::audit_lesson_paths, which flagged this lesson as the
+# only one still carrying the DANGEROUS variant (bare results + keyed caches).
+from steering_tutorials.common.artifact_paths import keyed_path as _keyed_path
+RESULTS_PATH = _keyed_path(ARTIFACTS, "results", ".json", EMBEDDER)
 # --- Cache filenames carry the ENCODER STACK ---------------------------------
 # Every cached .npz below is a matrix of vectors, and a vector is a function of the
 # encoder's BEHAVIOUR as much as of the text. On 2026-08-17 EmbeddingGemma was found
