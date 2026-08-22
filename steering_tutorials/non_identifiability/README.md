@@ -210,8 +210,13 @@ The payoff statistic (`summarize_nonidentifiability`):
               summarize_nonidentifiability: min-cosine among effective dirs
                                              |
                                              v
-                   results.json  +  nonident.png (heatmap | refusal bars)
+                   results_<key>.json  +  nonident_<key>.png
+                   (heatmap | refusal bars | dose sweep)
 ```
+
+Every cell of that grid — the baseline, and each (α, direction) pair — is
+checkpointed per prompt to `artifacts/ckpt_<key>/cell_*.jsonl`, so a reaped run
+resumes at the next generation rather than starting over.
 
 ---
 
@@ -219,8 +224,20 @@ The payoff statistic (`summarize_nonidentifiability`):
 
 ### `config.py` — every knob in one place
 Model (abliterated Gemma-3-1B), `LAYER = 12`, the data split
-(`N_PER_CLASS/N_EXTRACT/N_EVAL`), `MATCHED_ALPHA`, `N_PC` for the control's
-subspace, `EFFECTIVE_FRACTION`, and paths.
+(`N_PER_CLASS/N_EXTRACT/N_EVAL`), `MATCHED_ALPHA`, the sweep grid `ALPHAS`,
+`N_PC` for the control's subspace, `EFFECTIVE_FRACTION`, and paths.
+
+Two knobs vary between runs, and **both are keyed into every artifact filename**
+(`keyed_path`, `steering_tutorials/common/artifact_paths.py`) so a shrunken
+screening run can never overwrite the pre-registered one:
+
+| env var | default | effect |
+|---|---|---|
+| `NONIDENT_N_EVAL` | `150` | held-out harmful prompts per cell |
+| `NONIDENT_ALPHAS` | `0.06,0.08,0.10` | the dose sweep; `none` runs the matched α alone |
+
+`MATCHED_ALPHA` is always forced into the swept grid, so the headline cell is one
+member of the sweep — computed once, never able to disagree with itself.
 
 ### `vectors.py` — the K recipes (the heart)
 Pure linear algebra (`_diff_of_means`, `_pca_top1`, `_top_pcs`,
@@ -228,17 +245,55 @@ Pure linear algebra (`_diff_of_means`, `_pca_top1`, `_top_pcs`,
 collectors (`_collect_last_token`, `_collect_mean_pooled`, both delegating to
 lesson 2's `model_utils`). `build_candidate_directions` reads activations once
 and returns the six unit vectors + the cosine matrix; `save_directions` /
-`load_directions` round-trip them through `artifacts/directions.npz`. A CPU
+`load_directions` round-trip them through
+`artifacts/directions_L<layer>_x<n_extract>.npz`, stamped with a
+`directions_fingerprint` over the model, layer, seed and the exact extract
+prompts. A cache whose fingerprint disagrees — or which carries none at all — is
+rejected and rebuilt rather than silently reused against different data. A CPU
 self-test checks diff-of-means recovers a planted axis, the random control lands
-inside its span, sign-alignment flips correctly, and the cosine matrix is
-symmetric with a unit diagonal.
+inside its span, sign-alignment flips correctly, the cosine matrix is symmetric
+with a unit diagonal, and the cache round-trips and rejects a stale hit.
 
 ### `run_nonident.py` — the orchestrator (GPU)
-`main()` builds the directions, measures the unsteered baseline, steers each
-candidate at the matched alpha, judges every output, and writes `results.json` +
-`nonident.png`. The pure helpers (`_rates`, `summarize_nonidentifiability`,
-`_summary_table`) are unit-tested without a model. Everything model-touching is
-under `main()`.
+`main()` builds (or reuses) the directions, measures the unsteered baseline once,
+then sweeps every (α, direction) cell, judging every output, and writes
+`results_<key>.json` + `nonident_<key>.png`.
+
+**The headline is the `MATCHED_ALPHA` cell and only that cell.** The sweep lands
+in a separate `alpha_sweep` block; the top-level `per_direction` / `nonident`
+keys keep their exact pre-registered meaning. Reporting whichever dose scored
+best would be selecting the dose on the outcome, so the code makes that a
+deliberate act rather than a default.
+
+**Resumability.** Each cell is a JSONL file under `artifacts/ckpt_<key>/`, one
+line per judged prompt, flushed and `fsync`ed before the next generation starts.
+A reap therefore costs one generation. On restart the runner reads back only the
+contiguous `i = 0,1,2,…` prefix of each cell, so a torn final line or a gap is
+discarded instead of resuming at the wrong index and misaligning every later
+verdict against its prompt. A `manifest.json` pins the run fingerprint (model,
+layer, sizes, seed, α grid, the exact eval prompts, the judge id); resuming
+across a change in any of them **refuses** rather than splicing two experiments
+into one artifact. A partial `results_<key>.json` is written after every α.
+
+The pure helpers (`_rates`, `summarize_nonidentifiability`, `_summary_table`,
+`cell_id`, `_load_cell`, `_append_cell`, `check_manifest`) are unit-tested
+without a model. Everything model-touching is under `main()`.
+
+```bash
+# pre-registered run (off-family judge is REQUIRED and checked before load)
+STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
+  python -m steering_tutorials.non_identifiability.run_nonident
+
+# a screening slice sized to one foreground window
+STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
+NONIDENT_N_EVAL=40 NONIDENT_ALPHAS=0.06,0.08,0.10 \
+  python -m steering_tutorials.non_identifiability.run_nonident
+
+# CPU self-test only, no model, no GPU
+python -c "import steering_tutorials.non_identifiability.run_nonident as r; r._self_test()"
+```
+
+Re-running the same command after a reap resumes; it does not restart.
 
 ### `infer.py` — steer one prompt by hand
 Load `directions.npz`, pick a candidate by `--name`, and print the baseline vs.
@@ -251,7 +306,16 @@ shift.
 
 Run at the ≥500/class config: abliterated Gemma-3-1B, layer 12, matched α = 0.08,
 **extract 300/class**, n = 80 held-out harmful/direction, off-family Qwen-3B judge.
-Numbers from `artifacts/results.json`.
+Numbers from `artifacts/results_n80_legacy-unstamped.json`.
+
+> **This artifact predates the keyed paths, the α sweep and the judge stamp.** It
+> was renamed out of the bare `results.json` slot on 2026-08-22 so it stays
+> attributable — a bare file sitting beside keyed siblings is indistinguishable
+> from a current run, which is the exact state `meerkat` lost an arm to. It
+> carries **no `Judge.stamp()` provenance**: the off-family judge below is read
+> off the README, not off the artifact, and under today's `assert_publishable`
+> gate this file would not be writable. Treat the table as the last pre-sweep
+> reading, to be replaced by the first stamped `results_n150_a060-080-100.json`.
 
 | Claim (arXiv:2602.06801, Venkatesh & Kurapath) | What we measured (extract 300, n=80) | Verdict |
 |---|---|---|

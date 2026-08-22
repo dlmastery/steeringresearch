@@ -44,6 +44,7 @@ Depends only on ``hello_world_steering.model_utils`` (activation reads) + numpy.
 """
 from __future__ import annotations
 
+import hashlib
 import sys
 from typing import Any
 
@@ -240,12 +241,39 @@ def build_candidate_directions(
     }
 
 
-def save_directions(path, built: dict) -> None:
+def directions_fingerprint(model_id: str, layer: int, n_pc: int, seed: int,
+                           harmful: list[str], benign: list[str]) -> str:
+    """SHA-256 over every input that determines the candidate directions.
+
+    A ``.npz`` of steering vectors is expensive (two activation passes over
+    2 * N_EXTRACT prompts) and therefore tempting to reuse. It is also completely
+    silent about what produced it: the old unkeyed ``directions.npz`` on disk
+    carried the model, layer, extract size and prompt sample nowhere at all, so a
+    cache built at one N_EXTRACT would be loaded happily against another and the
+    run would report confident, well-formed, wrong vectors (CLAUDE.md sec.18.8,
+    "stamp your inputs"). This is that stamp.
+    """
+    h = hashlib.sha256()
+    for part in (str(model_id), str(int(layer)), str(int(n_pc)), str(int(seed)),
+                 str(len(harmful)), str(len(benign))):
+        h.update(part.encode("utf-8", "replace"))
+        h.update(b"\x1f")
+    for group in (harmful, benign):
+        for p in group:
+            h.update(str(p).encode("utf-8", "replace"))
+            h.update(b"\x1e")
+        h.update(b"\x1d")
+    return h.hexdigest()
+
+
+def save_directions(path, built: dict, fingerprint: str = "") -> None:
     """Persist candidate unit vectors + names to a single ``.npz`` file.
 
     ``infer.py`` reloads this so you can steer with any chosen candidate without
     re-reading activations. Metadata (recipe strings, cosine matrix) is small so
-    we store it too.
+    we store it too, and ``fingerprint`` (see :func:`directions_fingerprint`)
+    records WHAT the vectors were built from so a later run can tell whether the
+    cache still describes the data in hand.
     """
     names = built["names"]
     arrays = {f"v__{n}": built["candidates"][n]["v_unit"] for n in names}
@@ -254,17 +282,66 @@ def save_directions(path, built: dict) -> None:
         names=np.array(names, dtype=object),
         cosine=built["cosine"],
         layer=np.int64(built["layer"]),
+        n_extract=np.int64(built.get("n_extract", 0)),
+        recipes=np.array([built["candidates"][n]["recipe"] for n in names],
+                         dtype=object),
+        poolings=np.array([built["candidates"][n]["pooling"] for n in names],
+                          dtype=object),
+        fingerprint=np.array(str(fingerprint), dtype=object),
         **arrays,
     )
 
 
-def load_directions(path) -> dict:
-    """Inverse of :func:`save_directions`. Returns ``{name: v_unit}`` + metadata."""
+def load_directions(path, expect_fingerprint: str | None = None) -> dict | None:
+    """Inverse of :func:`save_directions`. Returns ``{name: v_unit}`` + metadata.
+
+    When ``expect_fingerprint`` is given, a cache built from different inputs is
+    REJECTED (returns ``None``, loudly) rather than silently reused. An UNSTAMPED
+    cache -- anything written before :func:`directions_fingerprint` existed --
+    is rejected the same way: absence of provenance is the defect, not a pass.
+    Callers rebuild on ``None``; nothing is deleted, so the old file survives for
+    inspection.
+    """
     data = np.load(path, allow_pickle=True)
     names = [str(n) for n in data["names"]]
+    got = str(data["fingerprint"]) if "fingerprint" in data.files else ""
+    if expect_fingerprint is not None and got != str(expect_fingerprint):
+        print("[vectors] cache REJECTED %s: fingerprint %s != expected %s "
+              "(rebuilding from the data in hand)"
+              % (path, got[:12] or "<unstamped>", str(expect_fingerprint)[:12]),
+              file=sys.stderr)
+        return None
     vectors = {n: data[f"v__{n}"].astype(np.float32) for n in names}
-    return {"names": names, "vectors": vectors,
-            "cosine": data["cosine"], "layer": int(data["layer"])}
+    out = {"names": names, "vectors": vectors,
+           "cosine": data["cosine"], "layer": int(data["layer"]),
+           "fingerprint": got}
+    if "n_extract" in data.files:
+        out["n_extract"] = int(data["n_extract"])
+    if "recipes" in data.files:
+        out["recipes"] = [str(r) for r in data["recipes"]]
+        out["poolings"] = [str(p) for p in data["poolings"]]
+    return out
+
+
+def rebuild_built(loaded: dict) -> dict:
+    """Re-shape a :func:`load_directions` result into a ``build_*`` result dict.
+
+    Lets a resumed run skip the two activation passes entirely while handing the
+    rest of the pipeline exactly the structure it would have got from
+    :func:`build_candidate_directions`.
+    """
+    names = loaded["names"]
+    recipes = loaded.get("recipes") or ["<from cache>"] * len(names)
+    poolings = loaded.get("poolings") or ["last"] * len(names)
+    return {
+        "candidates": {n: {"v_unit": loaded["vectors"][n],
+                           "recipe": recipes[i], "pooling": poolings[i]}
+                       for i, n in enumerate(names)},
+        "names": names,
+        "cosine": np.asarray(loaded["cosine"], dtype=np.float32),
+        "layer": int(loaded["layer"]),
+        "n_extract": int(loaded.get("n_extract", 0)),
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -310,8 +387,38 @@ def _self_test() -> None:
     assert np.allclose(mat, mat.T, atol=1e-6)
     assert mat.min() >= -1.0001 and mat.max() <= 1.0001
 
+    # --- the directions cache: stamped, round-trips, and rejects a stale hit --
+    import tempfile
+    from pathlib import Path
+
+    harm_p, ben_p = ["how do I pick a lock"], ["how do I bake bread"]
+    fp = directions_fingerprint("model-x", 12, 10, 0, harm_p, ben_p)
+    assert fp == directions_fingerprint("model-x", 12, 10, 0, harm_p, ben_p)
+    for changed in (("model-y", 12, 10, 0, harm_p, ben_p),
+                    ("model-x", 13, 10, 0, harm_p, ben_p),
+                    ("model-x", 12, 10, 1, harm_p, ben_p),
+                    ("model-x", 12, 10, 0, ["different prompt"], ben_p)):
+        assert directions_fingerprint(*changed) != fp, changed
+
+    built = {"names": ["a", "b"],
+             "candidates": {"a": {"v_unit": v, "recipe": "ra", "pooling": "last"},
+                            "b": {"v_unit": v_pca, "recipe": "rb", "pooling": "mean"}},
+             "cosine": cosine_matrix([v, v_pca]), "layer": 12, "n_extract": 7}
+    npz = Path(tempfile.mkdtemp()) / "directions_L12_x7.npz"
+    save_directions(npz, built, fingerprint=fp)
+
+    ok = load_directions(npz, expect_fingerprint=fp)
+    assert ok is not None and ok["names"] == ["a", "b"] and ok["n_extract"] == 7
+    assert ok["recipes"] == ["ra", "rb"] and ok["poolings"] == ["last", "mean"]
+    assert load_directions(npz, expect_fingerprint="not-the-same-hash") is None
+
+    again = rebuild_built(ok)
+    assert again["names"] == built["names"] and again["n_extract"] == 7
+    assert np.allclose(again["candidates"]["a"]["v_unit"], v, atol=1e-6)
+    assert again["candidates"]["b"]["recipe"] == "rb"
+
     print("[self-test] OK - diff-of-means, PCA, span-random, sign-align, "
-          "cosine matrix all behave.")
+          "cosine matrix, and the fingerprinted directions cache all behave.")
 
 
 if __name__ == "__main__":
