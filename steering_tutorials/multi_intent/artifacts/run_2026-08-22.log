@@ -1,0 +1,58 @@
+[run][POOL-CAPPED] the toxic-chat harm-concept pools are smaller than the 500/class rubric target, so this lesson reports the MAXIMUM the pool allows, not the standard: FIXTURE_big=pool 388/eval 116, FIXTURE_mid=pool 143/eval 43, FIXTURE_small=pool 111/eval 33. Every rate below is SCREENING tier and is labelled pool_capped=true in results.json.
+[self-test] OK - rate helpers, denominator block, floor gate and ladder summary behave as expected.
+[run] loading data ...
+[common.data] concept sexual       available= 388  exemplars=155 steer=116 eval=117
+[common.data] concept harassment   available= 143  exemplars=57 steer=43 eval=43
+[common.data] concept violence     available= 111  exemplars=44 steer=33 eval=34
+[common.data] DROPPED (< 100 available, insufficient to split): hate=24, self_harm=27
+[common.data] held_out(zero-shot)=harassment  baseline=500
+[data] sexual       pool= 388 extract=271 eval=117
+[data] harassment   pool= 143 extract=100 eval=43
+[data] violence     pool= 111 extract=77 eval=34
+[data] shared benign baseline = 40
+[run][POOL-CAPPED] the toxic-chat harm-concept pools are smaller than the 500/class rubric target, so this lesson reports the MAXIMUM the pool allows, not the standard: sexual=pool 388/eval 117, harassment=pool 143/eval 43, violence=pool 111/eval 34. Every rate below is SCREENING tier and is labelled pool_capped=true in results.json.
+[run] loading model ...
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/340 [00:00<?, ?it/s]Loading weights:  20%|██        | 68/340 [00:00<00:00, 678.87it/s]Loading weights:  40%|████      | 136/340 [00:00<00:00, 658.10it/s]Loading weights: 100%|██████████| 340/340 [00:00<00:00, 1265.29it/s]
+[model] loaded DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated on cuda (26 layers, hidden=1152)
+Loading weights:   0%|          | 0/434 [00:00<?, ?it/s]Loading weights:  13%|█▎        | 57/434 [00:00<00:00, 542.36it/s]Loading weights:  27%|██▋       | 119/434 [00:00<00:00, 585.23it/s]Loading weights:  41%|████      | 178/434 [00:00<00:00, 568.98it/s]Loading weights: 100%|██████████| 434/434 [00:00<00:00, 1321.69it/s]
+[model] loaded Qwen/Qwen2.5-3B-Instruct on cuda (36 layers, hidden=2048)
+[acts] 25/40
+[acts] 25/271
+[acts] 50/271
+[acts] 75/271
+[acts] 100/271
+[acts] 125/271
+[acts] 150/271
+[acts] 175/271
+[acts] 200/271
+[acts] 225/271
+[acts] 250/271
+[acts] 25/100
+[acts] 50/100
+[acts] 75/100
+[acts] 100/100
+[acts] 25/77
+[acts] 50/77
+[acts] 75/77
+[run] raw-direction cosine matrix:
+[[1.   0.94 0.93]
+ [0.94 1.   0.91]
+ [0.93 0.91 1.  ]]
+[run] K=1 (n=117 graded/arm)  raw.success=0.17 ortho.success=0.17 raw.gib=0.32 ortho.gib=0.32
+[run] K=2 (n=160 graded/arm)  raw.success=0.15 ortho.success=0.19 raw.gib=0.36 ortho.gib=0.30
+[run] K=3 (n=194 graded/arm)  raw.success=0.14 ortho.success=0.22 raw.gib=0.56 ortho.gib=0.19
+[run] wrote C:\Users\evija\steeringresearch\steering_tutorials\multi_intent\artifacts\results.json
+[plot] wrote C:\Users\evija\steeringresearch\steering_tutorials\multi_intent\artifacts\success_vs_k.png
+
+ K  arm     success     n  crosstalk  n_xt  gibber  budget
+ 1  raw        0.17   117       0.23    43    0.32   0.060
+ 1  ortho      0.17   117       0.23    43    0.32   0.060
+ 2  raw        0.15   160       0.29    34    0.36   0.085
+ 2  ortho      0.19   160       0.38    34    0.30   0.085
+ 3  raw        0.14   194        nan     -    0.56   0.104
+ 3  ortho      0.22   194        nan     -    0.19   0.104
+
+judge=Qwen/Qwen2.5-3B-Instruct (self_judge=False)  seed=0
+eval n per concept: sexual=117/pool 388, harassment=43/pool 143, violence=34/pool 111
+POOL-CAPPED: below the 500/class target; SCREENING tier only.
