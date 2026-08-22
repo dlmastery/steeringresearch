@@ -19,7 +19,14 @@ model plumbing (``hello_world_steering.model_utils`` / ``steer_vector`` /
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
+
+
+def _env_str(name: str, default: str) -> str:
+    """Env override, matching the helper every sibling lesson uses."""
+    v = os.environ.get(name)
+    return v.strip() if v and v.strip() else default
 
 # --- The model we attack and defend -----------------------------------------
 # An ALIGNED Gemma-3-1B that refuses harmful prompts by default. Refusal has to
@@ -42,7 +49,10 @@ LAYER = 12
 #                    the refusal direction entirely (Arditi et al.'s jailbreak).
 #   "negative_add" : add the NEGATIVE refusal direction, scaled to a fraction of
 #                    the local hidden norm (the mirror image of lesson 2's +v).
-ATTACK_MODE = "project_out"
+ATTACK_MODE = _env_str("RS_ATTACK_MODE", "project_out")
+if ATTACK_MODE not in ("project_out", "negative_add"):
+    raise ValueError("RS_ATTACK_MODE must be project_out|negative_add, got %r"
+                     % ATTACK_MODE)
 
 # Strength of "negative_add": fraction of the per-position hidden norm ||h|| we
 # push in the -refusal direction. Deliberately larger than the guard's clamp
@@ -87,7 +97,11 @@ MAX_NEW_TOKENS = 48
 ROOT = Path(__file__).resolve().parent
 ARTIFACTS = ROOT / "artifacts"
 VECTOR_PATH = ARTIFACTS / "refusal_direction.pt"
-RESULTS_PATH = ARTIFACTS / "results.json"
-ASR_PNG = ARTIFACTS / "asr_ladder.png"
+# PER-ATTACK-MODE, never a shared constant. meerkat lost its minilm results to
+# exactly this on 2026-08-21 (bare results.json while the caches were keyed),
+# and cross_trajectory had the same defect before it. Running negative_add
+# would otherwise destroy the project_out ladder that is already on disk.
+RESULTS_PATH = ARTIFACTS / ("results_%s.json" % ATTACK_MODE)
+ASR_PNG = ARTIFACTS / ("asr_ladder_%s.png" % ATTACK_MODE)
 
 ARTIFACTS.mkdir(exist_ok=True)
