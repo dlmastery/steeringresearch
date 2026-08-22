@@ -1,0 +1,130 @@
+==============================================================================
+PRE-REGISTRATION (config.PREREGISTRATION, registered 2026-08-08, condition=hard)
+==============================================================================
+CLAIM: A multi-turn jailbreak hides the attack in the escalation TRAJECTORY, so a model that reads the ordered turn sequence detects it while a model that reads only a single turn does not.
+FALSIFIER_1_BINDING_BAR:
+  FALSIFIED if AUC(best sequence model) <= the BINDING CONFOUND BAR (common.confound.confound_report -> worst_auc: max over the length, count and content/TF-IDF bars, each folded directionless). Beating per_turn_max alone is NOT sufficient.
+FALSIFIER_2_LAST_TURN:
+  FALSIFIED if AUC(best sequence model) <= AUC(last_turn_only) + 0.02. If a logreg on the FINAL turn embedding alone matches the sequence models, the signal is the payload turn, not the trajectory.
+FALSIFIER_3_SHUFFLE:
+  The TRAJECTORY reading specifically (not merely the aggregation reading) is FALSIFIED if AUC(seq_gru, turn order permuted) >= AUC(seq_gru, true order) - 0.02. An order-insensitive result licenses only 'aggregating across turns beats a single turn', never 'only a stateful model can see it'.
+TIER: SCREENING unless n >= 500/class AND >= 7 seeds (CLAUDE.md section 7).
+NOTE: Registered BEFORE the 2026-08 re-run. The pre-2026-08 README stated only 'AUC(sequence model) > AUC(per_turn_max)', which was neither in git before that run nor priced against a confound bar.
+==============================================================================
+
+[data] EASY: N=1200 pos=600 neg=600 distinct_groups=1088 (requested 600/600)
+[data] turn-count dist (pos): 3->40, 4->62, 5->228, 6->269, 7->1
+[data] turn-count dist (neg): 3->40, 4->62, 5->228, 6->269, 7->1
+[data] category dist (pos): chemical_biological=28, cybercrime_intrusion=35, general=423, harassment_bullying=20, harmful=15, illegal=48, misinformation_disinformation=31
+[data] category dist (neg): chemical_biological=12, cybercrime_intrusion=19, general=494, harassment_bullying=14, harmful=27, illegal=14, misinformation_disinformation=20
+[data] fingerprint sha256=b2bb1c6b100b8b3b
+[easy] conversations=1200 pos=600 neg=600 distinct_groups=1088
+CONFOUND REPORT  n=1200 (pos=600 neg=600) seed=0
+  bar       raw       directionless detail
+  length    0.2671    0.7329    mean pos=612.1 neg=837.4
+  count     0.5000    0.5000    mean pos=5.2 neg=5.2
+  content   0.9998    0.9998    5 folds
+  shuffle   0.5034    0.5034    5 folds
+  BINDING BAR: content = 0.9998  (a method must beat THIS, not 0.5)
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/340 [00:00<?, ?it/s]Loading weights:  46%|████▌     | 157/340 [00:00<00:00, 1559.95it/s]Loading weights: 100%|██████████| 340/340 [00:00<00:00, 2486.36it/s]
+[model] loaded models/google/gemma-3-1b-it on cuda (26 layers, hidden=1152)
+[easy/gemma/per_turn_max] auc=1.000 ci=[0.999,1.000] fold_mean=1.000 f1=0.942 tpr@fpr10=1.000 margin_over_content=-0.000
+[easy/gemma/last_turn_only] auc=1.000 ci=[0.999,1.000] fold_mean=1.000 f1=0.988 tpr@fpr10=1.000 margin_over_content=-0.000
+[easy/gemma/trajectory_mlp] auc=1.000 ci=[1.000,1.000] fold_mean=1.000 f1=0.999 tpr@fpr10=1.000 margin_over_content=+0.000
+[easy/gemma/seq_gru] auc=0.992 ci=[0.987,0.997] fold_mean=0.991 f1=0.981 tpr@fpr10=0.982 margin_over_content=-0.008
+[easy/gemma/hier_attn] auc=0.668 ci=[0.639,0.696] fold_mean=0.600 f1=0.473 tpr@fpr10=0.185 margin_over_content=-0.332
+[easy/gemma/per_turn_max/SHUFFLED] auc=1.000 (delta vs true order +0.000)
+[easy/gemma/last_turn_only/SHUFFLED] auc=0.994 (delta vs true order -0.006)
+[easy/gemma/trajectory_mlp/SHUFFLED] auc=1.000 (delta vs true order -0.000)
+[easy/gemma/seq_gru/SHUFFLED] auc=0.871 (delta vs true order -0.121)
+[easy/gemma/hier_attn/SHUFFLED] auc=0.664 (delta vs true order -0.004)
+[easy/falsifiers:gemma] {"best_sequence_model": "trajectory_mlp", "best_sequence_auc": 1.0, "last_turn_only_auc": 0.9996138888888889, "per_turn_max_auc": 0.9997, "binding_bar": 0.999775, "falsifier_1_binding_bar": "survives", "margin_over_bar": 0.00022500000000003073, "falsifier_2_last_turn": "FALSIFIED", "margin_over_last_turn": 0.0003861111111110871, "shuffled_seq_gru_auc": 0.8713319444444444, "order_cost": 0.12066388888888901, "falsifier_3_shuffle": "survives"}
+[data] HARD: N=1200 pos=600 neg=600 distinct_groups=751 (requested 600/600)
+[data] turn-count dist (pos): 4->600
+[data] turn-count dist (neg): 4->600
+[data] category dist (pos): chemical_biological=26, cybercrime_intrusion=33, general=421, harassment_bullying=8, harmful=26, illegal=60, misinformation_disinformation=26
+[data] category dist (neg): chemical_biological=29, cybercrime_intrusion=53, general=382, harassment_bullying=30, harmful=18, illegal=51, misinformation_disinformation=37
+[data] fingerprint sha256=4b649ce97ce78b65
+[hard] conversations=1200 pos=600 neg=600 distinct_groups=751
+CONFOUND REPORT  n=1200 (pos=600 neg=600) seed=0
+  bar       raw       directionless detail
+  length    0.6184    0.6184    mean pos=484.5 neg=445.3
+  count     0.5000    0.5000    mean pos=4.0 neg=4.0
+  content   0.8832    0.8832    5 folds
+  shuffle   0.4863    0.5137    5 folds
+  BINDING BAR: content = 0.8832  (a method must beat THIS, not 0.5)
+Loading weights:   0%|          | 0/340 [00:00<?, ?it/s]Loading weights: 100%|██████████| 340/340 [00:00<00:00, 4301.23it/s]
+[model] loaded models/google/gemma-3-1b-it on cuda (26 layers, hidden=1152)
+[hard/gemma/per_turn_max] auc=0.810 ci=[0.787,0.833] fold_mean=0.811 f1=0.692 tpr@fpr10=0.593 margin_over_content=-0.073
+[hard/gemma/last_turn_only] auc=0.854 ci=[0.832,0.876] fold_mean=0.854 f1=0.774 tpr@fpr10=0.693 margin_over_content=-0.029
+[hard/gemma/trajectory_mlp] auc=0.941 ci=[0.928,0.954] fold_mean=0.941 f1=0.877 tpr@fpr10=0.855 margin_over_content=+0.058
+[hard/gemma/seq_gru] auc=0.785 ci=[0.761,0.811] fold_mean=0.716 f1=0.725 tpr@fpr10=0.490 margin_over_content=-0.098
+[hard/gemma/hier_attn] auc=0.463 ci=[0.433,0.495] fold_mean=0.500 f1=0.503 tpr@fpr10=0.000 margin_over_content=-0.420
+[hard/gemma/per_turn_max/SHUFFLED] auc=0.810 (delta vs true order +0.000)
+[hard/gemma/last_turn_only/SHUFFLED] auc=0.699 (delta vs true order -0.155)
+[hard/gemma/trajectory_mlp/SHUFFLED] auc=0.916 (delta vs true order -0.025)
+[hard/gemma/seq_gru/SHUFFLED] auc=0.829 (delta vs true order +0.044)
+[hard/gemma/hier_attn/SHUFFLED] auc=0.463 (delta vs true order +0.000)
+[hard/falsifiers:gemma] {"best_sequence_model": "trajectory_mlp", "best_sequence_auc": 0.9408986111111113, "last_turn_only_auc": 0.8541291666666667, "per_turn_max_auc": 0.8104041666666666, "binding_bar": 0.8831694444444445, "falsifier_1_binding_bar": "survives", "margin_over_bar": 0.05772916666666683, "falsifier_2_last_turn": "survives", "margin_over_last_turn": 0.08676944444444457, "shuffled_seq_gru_auc": 0.8293, "order_cost": -0.04388750000000008, "falsifier_3_shuffle": "FALSIFIED"}
+[data] OOD cstm-bench: N=108 pos=52 neg=56 scenarios=54 window=4
+CONFOUND REPORT  n=108 (pos=52 neg=56) seed=0
+  bar       raw       directionless detail
+  length    0.6848    0.6848    mean pos=36235.6 neg=23060.2
+  count     0.5000    0.5000    mean pos=4.0 neg=4.0
+  content   0.8578    0.8578    5 folds
+  shuffle   0.5381    0.5381    5 folds
+  BINDING BAR: content = 0.8578  (a method must beat THIS, not 0.5)
+[data] HARD: N=1200 pos=600 neg=600 distinct_groups=751 (requested 600/600)
+[data] turn-count dist (pos): 4->600
+[data] turn-count dist (neg): 4->600
+[data] category dist (pos): chemical_biological=26, cybercrime_intrusion=33, general=421, harassment_bullying=8, harmful=26, illegal=60, misinformation_disinformation=26
+[data] category dist (neg): chemical_biological=29, cybercrime_intrusion=53, general=382, harassment_bullying=30, harmful=18, illegal=51, misinformation_disinformation=37
+[data] fingerprint sha256=4b649ce97ce78b65
+Loading weights:   0%|          | 0/340 [00:00<?, ?it/s]Loading weights: 100%|██████████| 340/340 [00:00<00:00, 3615.51it/s]
+[model] loaded models/google/gemma-3-1b-it on cuda (26 layers, hidden=1152)
+[ood/embed:gemma] FAILED: CUDA out of memory. Tried to allocate 12.12 GiB. GPU 0 has a total capacity of 15.99 GiB of which 0 bytes is free. Of the allocated memory 18.77 GiB is allocated by PyTorch, and 262.18 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+[write] C:\Users\evija\steeringresearch\steering_tutorials\multiturn_jailbreak\artifacts\results.json
+
+------------------------------------------------------------------------------
+MULTI-TURN JAILBREAK DETECTION  (SCREENING TIER, group-aware CV)
+folds=5 seed=0 turns=3-8 hard_window=4 embedders=gemma headline=embgemma
+------------------------------------------------------------------------------
+CONDITION: EASY (attack vs ultrachat benign)
+  n=1200 pos=600 neg=600 distinct_groups=1088  rule1(>=500/class): MET
+  BINDING CONFOUND BAR: content = 0.9998  (methods must beat THIS, not 0.5)
+embedder  method              AUC 95% CI          fold_mean     F1   TPR@10    vs bar
+gemma     per_turn_max      1.000 [1.00,1.00]        1.000   0.94     1.00    -0.000
+gemma     last_turn_only    1.000 [1.00,1.00]        1.000   0.99     1.00    -0.000
+gemma     trajectory_mlp    1.000 [1.00,1.00]        1.000   1.00     1.00    +0.000
+gemma     seq_gru           0.992 [0.99,1.00]        0.991   0.98     0.98    -0.008
+gemma     hier_attn         0.668 [0.64,0.70]        0.600   0.47     0.18    -0.332
+  PRE-REGISTERED FALSIFIERS (headline embedder gemma):
+    falsifier_1_binding_bar    survives
+    falsifier_2_last_turn      FALSIFIED
+    falsifier_3_shuffle        survives
+------------------------------------------------------------------------------
+CONDITION: HARD (attack window vs benign PREFIX of a DISJOINT group half)
+  n=1200 pos=600 neg=600 distinct_groups=751  rule1(>=500/class): MET
+  POOL CEILING: pos~1007 neg~899 over 1011 distinct goals (rows>=W 2014, rows>W 1798, W=4)
+  BINDING CONFOUND BAR: content = 0.8832  (methods must beat THIS, not 0.5)
+embedder  method              AUC 95% CI          fold_mean     F1   TPR@10    vs bar
+gemma     per_turn_max      0.810 [0.79,0.83]        0.811   0.69     0.59    -0.073
+gemma     last_turn_only    0.854 [0.83,0.88]        0.854   0.77     0.69    -0.029
+gemma     trajectory_mlp    0.941 [0.93,0.95]        0.941   0.88     0.85    +0.058
+gemma     seq_gru           0.785 [0.76,0.81]        0.716   0.72     0.49    -0.098
+gemma     hier_attn         0.463 [0.43,0.50]        0.500   0.50     0.00    -0.420
+  PRE-REGISTERED FALSIFIERS (headline embedder gemma):
+    falsifier_1_binding_bar    survives
+    falsifier_2_last_turn      survives
+    falsifier_3_shuffle        FALSIFIED
+------------------------------------------------------------------------------
+OOD (intrinsec-ai/cstm-bench splits=cross_session,dilution): n=108 pos=52 neg=56 scenarios=54  bar content=0.8578
+  ScaleAI/mhj -- named by CLAUDE.md rule 5 -- is GATED; this host has no HF token (local hub dir holds only a 40-byte refs/main), so it is unusable and cstm-bench is the substitute.
+  gemma     [FAILED]
+------------------------------------------------------------------------------
+READ: `per_turn_max` is the stateless baseline and `last_turn_only` is the
+control that separates 'the trajectory escalates' from 'the final turn is the
+ask'. A sequence model only supports the lesson's thesis if it beats BOTH the
+binding confound bar AND `last_turn_only`, and loses AUC under SHUFFLED turns.
+------------------------------------------------------------------------------
