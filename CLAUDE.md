@@ -573,6 +573,74 @@ three ways. The scoop is TWO papers, not seven, and both were already known here
   negative — at T=0.02 coherence is intact yet refusal already falls 0.32→0.26.
 - **Voice F1.** On SVD, **age alone → ROC-AUC 0.871**; 200/1853 speakers have >1 session.
 
+## 18.10 SESSION CHECKPOINT — 2026-08-22 (NEWEST — read before 18.9)
+
+### The tutorial course was swept end-to-end. 20 GPU runs. Read the shape, not the list.
+
+**Nine of the completed lessons got WEAKER or were overturned under controls that
+did not exist a day earlier. Three got stronger. That asymmetry is the result.**
+
+| lesson | outcome |
+|---|---|
+| `gavel` | judges disagree on **51.7%** of items; harmful-leak 0.21 → **0.35** |
+| `cross_trajectory` | a verdict **FLIPPED** once the encoder was fixed |
+| `meerkat` | falsifier fires under **all three** encoders; deficit plateaus |
+| STA | horizon criterion **NOT MET** on both corpora; both arms lose to unigrams |
+| `probe_tuning` | probe **insensitive** to layer/pooling — falsified my own prediction |
+| `stacking` | **no stacking regime at any cosine** |
+| `multiturn_jailbreak` | survives by **+0.010**; OOD **below chance**; arms disagree on order-sensitivity |
+| `realignment` | dead — benign and harmful collapse **identically** |
+| `biencoder_guard` | conclusion holds; my "near-useless" reading **withdrawn** |
+| `flas` | **void → valid** negative |
+| **`trajguard`** | **survives 3 new controls**, CIs exclude zero |
+| **`multi_intent`** | **orthogonalisation works**, clean dose-response |
+| **`reft_r1`** | **only positive selectivity in the course** (+0.110) — abliterated base |
+| `rogue_scalpel` | first **working** attack — and every guard fails against it |
+
+### Four instrument bugs, all the same shape: right shape, no error, wrong thing
+
+1. **EmbeddingGemma ran CAUSAL** — transformers 4.55 silently dropped
+   `use_bidirectional_attention`. Fixed by upgrade to 5.15.0.
+2. **`AutoModel` + meanpool SKIPPED two trained Dense heads** — EmbeddingGemma has
+   five modules; that path runs two. 768-dim output, no error, wrong space.
+   Flipped `attn_pool` from CLEARS to FAILS.
+3. **SigLIP vision tower is 1152-d** — identical to Gemma-3-1B's text residual. A
+   width check cannot catch it; artifacts are now tagged by MODEL.
+4. **`apply_chat_template` returns `BatchEncoding` in transformers 5.x** — broke
+   every model-running lesson. Normalised BY KEY, not by `return_dict=False`.
+
+### The mis-labelled-artifact family — FOUR instances, one now impossible
+
+`trajguard`'s committed in-domain sidecar was **byte-for-byte the OOD file**;
+`meerkat`'s bge run **destroyed** its minilm results; `rogue_scalpel` would have
+destroyed its `project_out` ladder; `cross_trajectory` had fixed it locally and
+**the fix never propagated**. Now `common/artifact_paths.py`: `keyed_path()`
+REFUSES an empty variant, `assert_no_bare_sibling()` catches the residue, and
+`audit_lesson_paths()` swept all 23 lessons and found `biencoder_guard` still
+carrying the live form.
+
+### What I got wrong, and the shape of it
+
+Four retractions, each from **verifying against evidence structurally incapable of
+falsifying the claim**: a substring match on `"gemma"`; synthetic tensors for a
+library upgrade; citing `AUDIT_FIDELITY.md` without reading its findings; and my
+own path-audit repeating the substring bug it existed to catch.
+
+**The horizon retraction is the one to remember.** F1+F2 both holding was reported
+as "the horizon is the cause". It is not licensed — the corpora differ in task,
+generator, tools and labels, not only step count. Pre-registration protects
+against HARKing, **not against a confounded control**.
+
+### Open
+
+`reft_r1` aligned base (running); `non_identifiability` sweep (wired 2026-08-22,
+never run); `hello_world_steering` 4B (host-blocked — reaped twice during 4-bit
+quantisation); `multiturn_jailbreak`'s **data selection is coupled to the embedder
+setting**, so its two arms are not a strictly controlled ablation.
+
+**Every probe in `hello_world/artifacts` was validated on `n_test=40`.** ROC-AUC
+0.99 on 40 items gates every conditional arm in the course.
+
 ## 18.9 SESSION CHECKPOINT — 2026-08-17 (NEWEST — read before 18.6)
 
 ### Two instrument bugs, each of which silently manufactured a "finding"
