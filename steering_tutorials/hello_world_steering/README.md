@@ -812,3 +812,38 @@ Source and full artifacts:
 <https://github.com/dlmastery/steeringresearch/tree/master/steering_tutorials/hello_world_steering>
 
 See also [lesson 1 — the probe (READ side)](../hello_world/README.md).
+
+---
+
+## The 4B conditional arm: code fixed, run BLOCKED on this host (2026-08-22)
+
+The crash is fixed and the arm still has no numbers. Both halves are true and the
+distinction matters.
+
+**Fixed.** `gate.py` hardcoded `hello_world/artifacts/probe.pt` — the 1B, 1152-d
+probe — so a 4B run fed it 2560-d activations and died inside `predict_proba`.
+The matching `probe_4b.pt` (2560-d, ROC-AUC 0.9975) had been on disk the whole
+time; nothing routed to it. It now resolves via
+`hello_world.config.probe_path_for(model_id)`, and `model_utils` additionally
+refuses to hook Gemma-3-4B's **SigLIP vision tower** — which is 1152-d, the *same
+width as 1B's text residual*, so a dimension check alone could never have caught
+that substitution.
+
+**Blocked.** Two attempts, both reaped by the harness during 4-bit quantization
+of the 4B weights — at 37% and 52% of 883 shards, roughly 8–11 seconds in, with
+12 GB physical free and the GPU empty. It is not a duration reap and not a
+sustained shortage; the most likely cause is a transient allocation spike while
+bitsandbytes quantizes. Capping the eval to 60 did not help, because the reap
+happens during **load**, before any eval work begins.
+
+**Not retried further, deliberately.** This cell is low value even when it
+succeeds: capped it is screening-tier by construction, and the 4B probe behind it
+was validated on **n_test = 40** — far below this course's own ≥500/class floor.
+It would close a *crash*, not produce a cross-scale *result*. Spending the GPU
+queue on it ahead of `reft_r1`, the `meerkat`/`multiturn_jailbreak` ablation arms
+and the shared results-path fix would be the wrong trade.
+
+**To close it properly** a host that can hold the 4-bit load without being reaped
+is needed, *and* the 4B probe needs re-validating at the data floor. Recorded as
+a host limitation with a named cause, not as a pending run whose absence looks
+like an oversight.
