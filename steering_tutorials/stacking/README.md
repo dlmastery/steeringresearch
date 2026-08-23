@@ -388,8 +388,10 @@ the lesson; the numbers measure rather than certify it.
 
 `run_stacking.py` tests two of the three clauses of the CLAUDE.md §9 decision
 rule (different site; same site + same direction + different operation). It
-never tests the third (**near-orthogonal direction**), never runs the two
-**meta-layers** §9 says stack on almost anything (norm clamp, CAST gate), and
+did not test the third (**near-orthogonal direction**) — that arm now exists as
+`run_near_orthogonal.py` and RAN on 2026-08-22, keeping **0 of 4** candidates and finding
+**no stacking regime at any cosine** (-0.00 / 0.25 / 0.50 / 0.75 / 0.95). It still never
+runs the two **meta-layers** §9 says stack on almost anything (norm clamp, CAST gate), and
 has no unsteered baseline — so a "marginal" can never be compared to a prior's
 standalone effect, and competition is undetectable.
 

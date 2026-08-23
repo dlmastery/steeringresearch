@@ -26,24 +26,36 @@ nothing at all — and this lesson has one condition built to demonstrate exactl
 
 ## Status — read this before the numbers
 
-**The results table in §9 is `[PENDING RUN]`.** The 2026-08 audit
-(`AUDIT_2026-08.md`) found six rubric failures, all of which have now been fixed in
-code, and the fixes **change the dataset**, so the previously published numbers no
-longer describe this lesson. They are preserved, clearly marked, in
+**§9 is MEASURED as of 2026-08-22 — the first real run under the current
+configuration.** The 2026-08 audit (`AUDIT_2026-08.md`) found six rubric failures, all
+fixed in code, and the fixes **changed the dataset**, so the previously published numbers
+do not describe this lesson. They are preserved, clearly marked, in
 [§10 Superseded results](#10-superseded-results-the-2026-07-run) — not deleted.
+
+**The three things to know before reading §9:**
+
+1. **All three pre-registered falsifiers SURVIVE under the headline `embgemma` embedder**
+   — but F1 clears the binding TF-IDF content bar by **+0.010** (0.893 vs 0.8826). It is
+   a survival, not a comfortable one.
+2. **F3 is FALSIFIED under the `gemma` embedder.** That arm is the *stronger* detector
+   (`trajectory_mlp` 0.941, +0.058 over its bar) and is **order-blind**: shuffling turns
+   makes `seq_gru` *better*. Under gemma the licensed claim is only "aggregating across
+   turns beats reading one turn".
+3. **Nothing transfers OOD.** On `cstm-bench`, four of five methods score **below chance**
+   (0.399–0.486) and the best reaches 0.606 against a 0.858 bar.
 
 What changed, and why it invalidates the old table:
 
 | # | fix | effect on the numbers |
 |---|---|---|
-| A | The confound audit moved to the shared spine `common/confound.py`, which adds a **content (TF-IDF) bar** and a **label-shuffle control** | The binding bar on HARD is **0.8584 (content)**, not the 0.75 character bar the old README priced against. Measured — see §7. |
-| B | Added `last_turn_only`, a logreg on the **final turn embedding alone** | New control. Without it "trajectory detection" is indistinguishable from "the final turn is just harmful". |
-| C | Pool now spans **both** SafeMTData configs; n raised to 600/600 | Different data. HARD went from 200/200 (rule-1 FAIL) to **600/600 over 770 distinct goals** (rule-1 MET). |
-| D | Added an **OOD arm** (`intrinsec-ai/cstm-bench`) | New; there was none. |
+| A | The confound audit moved to the shared spine `common/confound.py`, which adds a **content (TF-IDF) bar** and a **label-shuffle control** | The binding bar on HARD measured **0.8826 / 0.8832** on the real draws (content), not the 0.75 character bar the old README priced against. *(The pre-run CPU estimate in this table read 0.8584; the executed runs came in higher, which makes F1 harder, not easier.)* |
+| B | Added `last_turn_only`, a logreg on the **final turn embedding alone** | New control. Without it "trajectory detection" is indistinguishable from "the final turn is just harmful". **It bites**: it is the second-best method under gemma (0.854) and F2's margin is only +0.062 / +0.087. |
+| C | Pool now spans **both** SafeMTData configs; n raised to 600/600 | Different data. HARD went from 200/200 (rule-1 FAIL) to **600/600 over 751–754 distinct goals** (rule-1 MET). |
+| D | Added an **OOD arm** (`intrinsec-ai/cstm-bench`) | New; there was none. **It is the arm that changed the lesson's conclusion** — four of five methods score below chance on it. |
 | E | Embedding caches are **tracked**, not gitignored | Every number becomes re-derivable on CPU by a cloner. |
 | F | The cache is validated by a **content fingerprint**, not row count | The old check silently reused vectors against new labels on a seed change. |
 | G | `embgemma` (`google/embeddinggemma-300m`) added and made the headline embedder | Different embedding space; MiniLM demoted to a legacy arm. |
-| H | The falsifier moved into `config.PREREGISTRATION` and is printed at launch | It was previously only in the README that also reported the result. |
+| H | The falsifier moved into `config.PREREGISTRATION` and is printed at launch | It was previously only in the README that also reported the result. **F3 fired under gemma**, which is what a pre-registration is for. |
 
 Everything above is **code, measured, or verified**. Nothing in §9 is filled in from
 a previous run.
@@ -335,8 +347,16 @@ old lesson neither hit (it used 200) nor stated.
 
 `n` and `n_distinct_groups` are reported **separately**. `SafeMTData_1K` carries
 several attack paths per goal, so raising `n` without raising the group count inflates
-rows, not information — the COUGHVID mistake. At the default the HARD condition is
-**n = 1,200 over 770 distinct goals**.
+rows, not information — the COUGHVID mistake. At the default the HARD condition measured
+**n = 1,200 over 754 distinct goals** (embgemma run) / **751** (gemma run), against a
+pool ceiling of ~1,007 positive and ~899 negative over 1,011 distinct goals.
+
+> **Those two group counts should be equal and are not, and that is a real defect.** The
+> seed is 0 in both runs and the data build is nominally independent of the embedder, yet
+> HARD drew 754 groups for embgemma and 751 for gemma. **The data selection is coupled to
+> the embedder setting**, so the two arms are not a controlled ablation — see the
+> provenance box in §9. The EASY condition drew 1,088 groups in both, which localises the
+> coupling to HARD's group-disjoint attack-prefix split.
 
 ### The two conditions
 
@@ -363,24 +383,31 @@ shuffle, so the proportions differ somewhat by chance and that is now visible.
 folded directionless (`max(auc, 1−auc)`), because a feature that predicts the negative
 class perfectly is exactly as damning as one that predicts the positive class.
 
-Measured on 2026-08-08, CPU only, on the **new** 600/600 HARD pool, by the shipped code
-against the cached arrows — **no model, no GPU, nothing generated**:
+Measured on the 600/600 HARD pool by the shipped code — **no model, no GPU, nothing
+generated**. The 2026-08-08 column is the CPU pre-run estimate; the 2026-08-22 column is
+what the executed run recorded in `results.json` (`conditions.hard.confound`):
 
-| bar | raw | directionless | detail |
+| bar | pre-run (2026-08-08) | **executed run (gemma, 2026-08-22)** | detail |
 |---|---|---|---|
-| length (total chars) | 0.6225 | **0.6225** | mean pos 488.6 vs neg 447.8 chars |
+| length (total chars) | 0.6225 | **0.6184** | mean pos 484.5 vs neg 445.3 chars |
 | count (turns) | 0.5000 | **0.5000** | 4.0 vs 4.0 — designed out, and it holds |
-| **content (TF-IDF)** | 0.8584 | **0.8584** | 5 folds, fit train-only |
-| shuffle (labels permuted) | 0.5038 | 0.5038 | ~0.5 → no leakage |
-| **BINDING BAR** | | **content = 0.8584** | |
+| **content (TF-IDF)** | 0.8584 | **0.8832** | 5 folds, fit train-only |
+| shuffle (labels permuted) | 0.5038 | **0.5137** | ~0.5 → no leakage |
+| **BINDING BAR** | content = 0.8584 | **content = 0.8832** | |
+
+*(The embgemma run's own draw put the binding bar at **0.8826**. Each run prices its
+methods against the bar computed on its own rows, which is the only correct pairing — a
+bar and a method measured on different draws are not comparable.)*
 
 This is the single most consequential correction in the rewrite. The old README priced
 the headline against `totalchar_auc = 0.75` and claimed the margin over that. **The
-binding bar is the content bar, and on the new pool it is 0.8584** — a plain unigram
-model gets 0.86 on the hard condition. Any method that does not clear 0.8584 is
-reading vocabulary, not escalation. (The old 200/200 pool's content bar was never
-computed, so the two are not directly comparable; what is certain is that 0.75 was not
-the binding bar then either, because nobody had measured the bar that binds.)
+binding bar is the content bar, and it is 0.88 on the executed pools** — a plain unigram
+model gets 0.88 on the hard condition, *higher* than the 0.8584 pre-run estimate, which
+makes the falsifier harder rather than easier. Any method that does not clear it is
+reading vocabulary, not escalation. **`trajectory_mlp` clears it by 0.010 (embgemma) and
+0.058 (gemma); every other method fails it.** (The old 200/200 pool's content bar was
+never computed, so the two are not directly comparable; what is certain is that 0.75 was
+not the binding bar then either, because nobody had measured the bar that binds.)
 
 ### The three controls
 
@@ -483,48 +510,155 @@ text, so rule 3's off-family-judge requirement does not apply. `results.json` re
 
 ## 9. Results
 
-**`[PENDING RUN]` — every method-vs-method number below is unmeasured under the current
-configuration.** The fixes in [Status](#status--read-this-before-the-numbers) changed
-the dataset, the bar and the embedder, so the 2026-07 numbers are not carried forward;
-they are in §10, marked superseded. Reporting them here would be the `meerkat` defect
-(an artifact that cannot be regenerated from the code beside it).
+**MEASURED — the first real run under the current configuration.** The `embgemma`
+(headline) arm ran 2026-08-21; the `gemma` arm ran 2026-08-22. The 2026-07 numbers are
+**not** carried forward; they are in §10, marked superseded.
 
-What **is** measured, on CPU, with no model — and will not change when the GPU run
-happens, because it is a property of the text:
+> ### PROVENANCE — read this before either table
+>
+> **`artifacts/results.json` currently holds the `gemma` arm ONLY** (`run_config.embedders:
+> ["gemma"]`). The 2026-08-22 gemma run **overwrote** the 2026-08-21 embgemma results file,
+> so the headline arm's numbers survive only in
+> `artifacts/embgemma_run_2026-08-21.log`, and every embgemma figure below is transcribed
+> from that log. This is a real provenance weakness of exactly the §18.8 kind — the
+> headline arm cannot currently be regenerated from the artifact beside it — and it is
+> stated here rather than papered over. Re-running with `MJ_EMBEDDERS=embgemma,gemma` in
+> one process would merge both arms into one file and fix it.
 
-| quantity | measured value |
-|---|---|
-| HARD pool: usable rows / distinct goals | 2,189 / 1,011 |
-| HARD achieved n at defaults | 1,200 (600 pos / 600 neg) over 770 goals |
-| HARD **binding bar** | **content (TF-IDF) = 0.8584** |
-| HARD length bar / turn-count bar / shuffle | 0.6225 / 0.5000 / 0.5038 |
-| OOD (cstm-bench) n | 108 (52 attack / 56 benign) |
-| OOD **binding bar** | **content = 0.8578** |
+**Measured on CPU, a property of the text** — but note the bar moved once the real
+data draw happened:
 
-To be filled by the run (`artifacts/results.json`, `conditions.hard.embedders.embgemma`):
+| quantity | pre-run CPU estimate | **embgemma run** | **gemma run** |
+|---|---|---|---|
+| HARD achieved n | 1,200 (600/600) over 770 goals | 1,200 over **754** goals | 1,200 over **751** goals |
+| HARD **binding bar** (content, TF-IDF) | 0.8584 | **0.8826** | **0.8832** |
+| HARD length / turn-count / shuffle bars | 0.6225 / 0.5000 / 0.5038 | — | **0.6184 / 0.5000 / 0.5137** |
+| OOD (cstm-bench) n | 108 (52 / 56) | 108 over 54 scenarios | *(not embedded — see below)* |
+| OOD **binding bar** | 0.8578 | **0.8578** | — |
 
-| method | HARD AUC (95% CI) | per-fold mean | margin over 0.8584 | TPR@FPR=0.10 | shuffled-turn AUC |
+*(The turn-count bar is exactly 0.5000 by construction: `hard_window=4` fixes every
+conversation on both sides to 4 turns, so turn count carries no information at all. The
+label-shuffle control lands at 0.5137, i.e. no leakage.)*
+
+### The `embgemma` arm (headline) — HARD, bar = 0.8826
+
+| method | HARD AUC (95% CI) | per-fold mean | margin over 0.8826 | TPR@FPR=0.10 | shuffled-turn AUC |
 |---|---|---|---|---|---|
-| `per_turn_max` | _pending_ | _pending_ | _pending_ | _pending_ | _pending_ |
-| `last_turn_only` | _pending_ | _pending_ | _pending_ | _pending_ | n/a (no order) |
-| `trajectory_mlp` | _pending_ | _pending_ | _pending_ | _pending_ | _pending_ |
-| `seq_gru` | _pending_ | _pending_ | _pending_ | _pending_ | _pending_ |
-| `hier_attn` | _pending_ | _pending_ | _pending_ | _pending_ | _pending_ |
+| **`trajectory_mlp`** | **0.893** [0.874, 0.911] | 0.894 | **+0.010 — CLEARS** | 0.747 | 0.842 *(−0.051)* |
+| `hier_attn` | 0.880 [0.860, 0.899] | 0.881 | −0.003 | 0.700 | 0.880 *(+0.000)* |
+| `seq_gru` | 0.832 [0.807, 0.856] | 0.836 | −0.051 | 0.602 | 0.798 *(−0.034)* |
+| `last_turn_only` | 0.830 [0.807, 0.853] | 0.834 | −0.052 | 0.633 | n/a (no order) |
+| `per_turn_max` | 0.784 [0.757, 0.810] | 0.788 | −0.098 | 0.570 | 0.784 *(−0.000)* |
 
-**How to read it when it lands** (this is pre-registered — see `PREREGISTRATION.md`
-and `config.PREREGISTRATION`; `run_multiturn` prints it before any number exists and
-evaluates all three automatically into `conditions.hard.falsifiers`):
+**All three pre-registered falsifiers SURVIVE**, and none by much:
 
-- **F1** — falsified if the best sequence model ≤ **0.8584**. Beating `per_turn_max` is
-  not sufficient.
+| falsifier | outcome | margin |
+|---|---|---|
+| **F1** — best sequence model must beat the binding content bar | **survives** | **+0.0101** |
+| **F2** — must beat `last_turn_only` + 0.02 | **survives** | +0.0624 |
+| **F3** — `seq_gru` must lose ≥ 0.02 AUC under shuffled turn order | **survives** | order cost **0.0344** |
+
+**F1's margin is one hundredth of an AUC point.** A TF-IDF bag of words on the raw
+conversation text reaches 0.8826; the best sequence model reaches 0.8927. The claim
+survives its own falsifier and it survives it *narrowly* — that is the honest headline,
+and it should not be rounded up into "sequence models detect multi-turn jailbreaks."
+
+Note also that **`hier_attn` is completely order-blind here** (0.880 shuffled vs 0.880
+true, delta +0.000) while sitting second on the leaderboard. A method can score well on
+this task without reading order at all, which is precisely why F3 exists.
+
+### The `gemma` arm — HARD, bar = 0.8832
+
+| method | HARD AUC (95% CI) | per-fold mean | margin over 0.8832 | TPR@FPR=0.10 | shuffled-turn AUC |
+|---|---|---|---|---|---|
+| **`trajectory_mlp`** | **0.941** [0.928, 0.954] | 0.941 | **+0.058 — CLEARS** | 0.855 | 0.916 *(−0.025)* |
+| `last_turn_only` | 0.854 [0.832, 0.876] | 0.854 | −0.029 | 0.693 | n/a (no order) |
+| `per_turn_max` | 0.810 [0.787, 0.833] | 0.811 | −0.073 | 0.593 | 0.810 *(+0.000)* |
+| `seq_gru` | 0.785 [0.761, 0.811] | **0.716** | −0.098 | 0.490 | **0.829** *(+0.044)* |
+| `hier_attn` | 0.463 [0.433, 0.495] | **0.500** | −0.420 | 0.000 | 0.463 *(+0.000)* |
+
+| falsifier | outcome | margin |
+|---|---|---|
+| **F1** | **survives** | +0.0577 |
+| **F2** | **survives** | +0.0868 |
+| **F3** | ❌ **FALSIFIED** | shuffled `seq_gru` **0.8293** vs true-order 0.7854 — shuffling made it **better** by 0.044 |
+
+**The gemma arm is the stronger detector and the ORDER-BLIND one, and both halves matter.**
+`trajectory_mlp` clears the bar by 0.058 rather than 0.010 — six times the headline arm's
+margin — while F3 fires: permuting the turns does not cost `seq_gru` anything, it *helps*.
+By the pre-registration's own wording, the licensed claim under this embedder is only
+**"aggregating across turns beats reading one turn"**, never "only a stateful model can
+see it". The trajectory reading is unavailable here.
+
+**Two of the five methods partially or wholly collapsed under gemma embeddings**, and the
+per-fold column is where it shows: `hier_attn`'s five folds are **0.500 / 0.500 / 0.500 /
+0.500 / 0.500** — a degenerate constant predictor, not a weak one — and `seq_gru` has two
+folds pinned at exactly 0.500 (0.500, 0.500, 0.930, 0.762, 0.886), which is what drags its
+fold mean (0.716) far below its pooled AUC (0.785). Neither number should be read as "this
+architecture is worse at the task"; they are training failures on 1152-dim inputs.
+
+> **The two arms are NOT a strictly controlled ablation, and the artifact proves it.**
+> At the *identical* seed, the HARD condition drew **754** distinct groups for embgemma and
+> **751** for gemma. The data selection is **coupled to the embedder setting**, so the
+> embgemma-vs-gemma comparison changes the embedder *and* the row sample together. It is
+> reported as two runs, never as an embedder ablation. *(The EASY condition drew 1,088
+> groups in both arms, so the coupling is specific to HARD's group-disjoint attack-prefix
+> split.)*
+
+### OOD — `intrinsec-ai/cstm-bench` (embgemma only), bar = 0.8578
+
+| method | OOD AUC | margin over bar | drop vs HARD |
+|---|---|---|---|
+| `trajectory_mlp` | **0.606** | −0.252 | +0.287 |
+| `per_turn_max` | 0.486 | −0.372 | +0.299 |
+| `last_turn_only` | 0.453 | −0.405 | +0.377 |
+| `seq_gru` | 0.409 | −0.449 | +0.423 |
+| `hier_attn` | 0.399 | −0.459 | +0.480 |
+
+**Nothing transfers. FOUR of the five methods land BELOW chance** — 0.486, 0.453, 0.409
+and 0.399 — and the one that stays above it, `trajectory_mlp` at 0.606, is 0.25 short of
+the OOD content bar. An AUC of 0.399 is not noise around 0.5; it is a ranker pointed the
+wrong way on this corpus. **The in-distribution result does not generalise**, and that is
+the single most important line in §9.
+
+Two limits on the OOD arm, both recorded in the artifact:
+
+- **n = 108** (52 attack / 56 benign over 54 scenarios), far under this course's
+  ≥500/class floor. It is admitted under CLAUDE.md §17 rule 5 as a released benchmark used
+  for OOD, with `rule1_exempt_reason` stamped, and the ≥500/class MAIN set is built from
+  SafeMTData + UltraChat instead.
+- **`ScaleAI/mhj` — which rule 5 names as this family's benchmark — is GATED on this
+  host** and unusable (its local hub dir holds only a 40-byte `refs/main`). `cstm-bench` is
+  a **substitute**, not the pre-registered benchmark, and at 108 rows it is a small one.
+
+**The `gemma` arm has no OOD row at all**: `[ood/embed:gemma] FAILED: CUDA out of memory`
+— 12.12 GiB requested against a full 16 GiB card. The failure is recorded verbatim in
+`results.json` under `ood.embedders.gemma.error` rather than being silently omitted, which
+is the right disposition, but it means the OOD null above rests on **one** embedder.
+
+**The pre-registration** (see `PREREGISTRATION.md` and `config.PREREGISTRATION`;
+`run_multiturn` prints it before any number exists and evaluates all three automatically
+into `conditions.<cond>.falsifiers`):
+
+- **F1** — falsified if the best sequence model ≤ the binding content bar. Beating
+  `per_turn_max` is not sufficient.
 - **F2** — falsified if the best sequence model ≤ `last_turn_only` + 0.02. Then the
   finding is "the payload turn is recognisable", not "escalation is detectable".
 - **F3** — the *trajectory* reading is falsified if shuffling turn order costs
   `seq_gru` less than 0.02 AUC. Then the licensed claim is only "aggregating across
   turns beats reading one turn".
 
-If F1 and F2 both fire, §9 gets rewritten around the payload-turn explanation. That is
-the point of registering them.
+**What the run licenses, stated at the narrowest defensible width:** on this corpus, a
+trajectory model beats every single-turn control and beats a TF-IDF content bar — by
+**0.010** under the headline embedder and 0.058 under gemma. Whether *order* is what it
+reads is **embedder-dependent**: F3 survives under embgemma and is **falsified** under
+gemma. And none of it survives contact with an external benchmark.
+
+*(The EASY condition is a deliberately easy negative set and its numbers are near-ceiling
+for every method — embgemma 0.988–1.000, gemma 0.668–1.000. **F2 is FALSIFIED on EASY
+under both embedders**, which is the intended demonstration: when the negatives are
+badly chosen, `last_turn_only` matches the sequence models and "trajectory detection"
+means nothing. That condition exists to be beaten by a control, not to be reported.)*
 
 ---
 
