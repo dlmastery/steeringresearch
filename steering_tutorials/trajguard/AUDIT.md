@@ -216,14 +216,15 @@ pre-registration after the fact, and it is not repeated.
 | Rule 8 (pre-registered falsifier per claim) | **PASS** | six, registered before the run, printed by the runner |
 | Artifact regenerable from the code beside it | **PASS (with a stated boundary)** | fingerprint + text-free meta; the content bar needs the GPU re-run |
 | `results.json` records achieved, not requested | **PASS** | `sizes` block; gate raises on an unexplained shortfall |
-| **Results honesty** | **HALF DONE — PASS (`disguised`) / PENDING (`overt`)** | the **`disguised`** run executed 2026-08-08 (`artifacts/results_disguised.json`, fingerprint `b34e4b2e85bb…`) and §§11.2–11.4 + §12.2 now carry measured numbers with CIs, including the two results that go against the lesson: **F1 FAILS** (the paper's own `threshold_freeform` at 0.7570 lands 0.153 *below* the 0.9103 `content` bar) and **F5 FAILS** (OOD best 0.8653 vs a 0.9873 prompt-content rival). **F2 HOLDS against our own registered prediction** that it would fail. The **`overt`** run has **not** been executed: §11.1 still reads `[PENDING RUN]`, and **F3** — the substrate contrast, the whole rationale for the re-basing — has no verdict on either arm because it needs both. This row cannot read a clean PASS until `TG_SUBSTRATE=overt` lands. The superseded 2026-07-27 run stays quarantined |
+| **Results honesty** | **PASS — both arms measured (2026-08-21)** | the **`disguised`** run executed 2026-08-08 (`artifacts/results_disguised.json`, fingerprint `b34e4b2e85bb…`) and the **`overt`** run 2026-08-21 (`artifacts/results_overt.json`, fingerprint `de4291e620f9…`), so §§11.1–11.5 + §12.2 carry measured numbers with CIs on both. The results that go against the lesson are reported as prominently as the ones that favour it: **F1 FAILS on both arms** (the paper's own `threshold_freeform` at 0.7570 / 0.7424 lands 0.153 / 0.166 *below* the 0.9103 / 0.9083 `content` bar) and **F5 FAILS on both** (OOD best 0.8653 / 0.6772 vs a 0.9873 prompt-content rival). **F2 HOLDS on both, against our own registered prediction** that it would fail. **F3 HOLDS but the artifact refuses to let it read as a win**: `both_margins_negative: true` and a `reading` field record that the contrast is between two failures, +0.0126 of a 15-point deficit. **The one live gap is the `overt` arm's missing controls** — that run predates the wiring of the three confound controls, so it has no `multivariate` bar, no matched-bin check and `null` paired CIs, on the arm whose `length` bar is 0.8155 rather than near chance. Disclosed in §11 status, §12.2, §12.3 and §14. The superseded 2026-07-27 run stays quarantined |
 | `AUDIT.md` current | **PASS (this revision)** | the 2026-07-20 version certified a run that no longer existed; recorded above |
 
 ---
 
 ## 4. Overall verdict
 
-**PASS on process and disclosure; HALF DONE on results (`disguised` measured, `overt` pending).**
+**PASS on process and disclosure; PASS on results — both arms measured as of 2026-08-21,
+with one disclosed gap (the `overt` arm's confound controls).**
 
 The lesson's cited papers are real and correctly characterised, its confound machinery
 is now the most complete in the course (the shared spine plus two geometry bars, run
@@ -232,16 +233,30 @@ rather than reported. Its **motivating premise was wrong and is retracted with t
 evidence**, and it has been re-based onto the substrate that makes the paper's actual
 claim testable.
 
-It now **has** numbers on the `disguised` half of that substrate (run 2026-08-08), and
-they cut both ways: three methods clear the 0.9103 `content` bar, while the paper's own
-`threshold_freeform` lands 0.153 **below** it (**F1 FAILS**) and nothing transfers OOD
-(**F5 FAILS**). The registered prediction was that the paper's headline comparison
-**would not reproduce here**; on `disguised` it **did** (**F2 HOLDS**, 0.9855 vs 0.9688),
-so the pre-registration was wrong in the direction that favours the paper — recorded,
-not quietly dropped.
+It now has numbers on **both** substrates — `disguised` 2026-08-08, `overt` 2026-08-21 —
+and they cut both ways on each. On both arms three methods clear the `content` bar
+(+0.044…+0.075 disguised, +0.061…+0.065 overt) while the paper's own `threshold_freeform`
+lands 0.153 / 0.166 **below** it (**F1 FAILS twice**) and nothing transfers OOD (**F5
+FAILS twice**, and the rule-1-compliant `overt` arm transfers *worse*: 0.6772 best vs
+`disguised`'s 0.8653). The registered prediction was that the paper's headline comparison
+**would not reproduce here**; it **did**, on both arms (**F2 HOLDS**, 0.9855 vs 0.9688 and
+0.9734 vs 0.8779), so the pre-registration was wrong in the direction that favours the
+paper — recorded, not quietly dropped.
 
-What it still does **not** have is the `overt` arm. §11.1 is `[PENDING RUN]` and **F3**,
-the substrate contrast that motivated the whole re-basing, therefore has no verdict at
-all. The previous run stays quarantined. That is the honest state of the lesson.
+**F3 now has a verdict, and the artifact's own framing is the reason it is not oversold.**
+The substrate contrast HOLDS by **+0.0126**, but `substrate_comparison` carries
+`both_margins_negative: true` and a `reading` field stating that the comparison is between
+two failures. §10.2 of the README leads with that framing rather than with the verdict.
+This is the right shape for a falsifier that technically passes while the mechanism it
+tests is absent, and it is the strongest process item in this revision.
+
+**The remaining gap is narrower but real: the `overt` arm has no confound controls.** That
+run predates the wiring of `controls.py` into the runner, so it carries no `multivariate`
+bar, no matched-bin control and `null` paired CIs — on the arm whose completion `length`
+bar is **0.8155**, not the near-chance 0.5064 the `disguised` arm has. On `disguised` the
+matched-bin control was run and showed nothing was riding length (the *bar* moved most,
+−0.0142); there is no equivalent assurance for `overt`. Re-running
+`TG_SUBSTRATE=overt` under the current runner is the one thing that would close it. The
+previous run stays quarantined. That is the honest state of the lesson.
 
 *Internal QA pass — independent external review pending.*

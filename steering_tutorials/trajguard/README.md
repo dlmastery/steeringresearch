@@ -154,6 +154,21 @@ run: best **0.945**.
 > *stronger* risk signals than input prompts — is **not supported on this dataset**,
 > and this lesson never tested it, because it built no prompt-side classifier at all.
 
+> **UPDATE 2026-08-21 — the second half of that statement has itself been overtaken by
+> measurement, and is corrected here rather than rewritten above.** The clause *"the
+> paper's comparative claim is not supported on this dataset"* was written from the
+> superseded run's 0.945, before either new substrate had been generated. Both have now
+> run, and **F2 holds on both**: `trajectory_mlp` reaches **0.9855** vs the 0.9688
+> prompt-content rival on `disguised` and **0.9734** vs **0.8779** on `overt`
+> ([§11.1](#111-overt-substrate--500class-rule-1-compliant--measured),
+> [§11.2](#112-disguised-substrate--181class-pool-limited-provisional--measured)). The
+> part of the retraction that stands unchanged is the part that mattered — that the old
+> "you cannot call this from the prompt alone" rested on a control the loader applies by
+> construction, and that the lesson had built no prompt-side rival to test the
+> comparison with. The prediction made *on top of* that retraction was wrong, in the
+> direction that favours the paper; see [§10.1](#101-outcome--the-f2-prediction-above-was-wrong).
+> Both sentences are left standing so the sequence is auditable.
+
 ### 3.2 There is no trajectory signal on this substrate, only a per-token one
 
 This is not speculation either — the superseded run's own numbers say it:
@@ -565,35 +580,93 @@ this paragraph rather than a rewritten bullet.
 
 **F1 and F5 went the other way**, and the same no-editing rule applies to them: F1 was
 predicted to HOLD on `disguised` and **FAILED** (`threshold_freeform` 0.7570 vs the 0.9103
-bar); F5 was open and **FAILED** (OOD best 0.8653 vs a 0.9873 prompt-content rival). F3 is
-still open because the `overt` arm has not been run. Of the falsifiers with a verdict on
-this substrate, **two failed, two held, and one of the two that held did so against our
-own prediction.**
+bar); F5 was open and **FAILED** (OOD best 0.8653 vs a 0.9873 prompt-content rival). Of
+the falsifiers with a verdict on this substrate, **two failed, two held, and one of the
+two that held did so against our own prediction.**
+
+### 10.2 The `overt` arm landed 2026-08-21, and F3 finally has a verdict
+
+`TG_SUBSTRATE=overt` ran on 2026-08-21 at the rule-1-compliant 500/class
+([`artifacts/results_overt.json`](artifacts/results_overt.json), fingerprint
+`de4291e620f9…`). Both arms now exist, so the falsifier the entire re-basing was built
+to test is decidable. **Every verdict below is read from
+`falsifier_verdicts` / `substrate_comparison` in the artifacts, not recomputed here.**
+
+| tag | `overt` (500/class) | `disguised` (181/class) | our registered prediction |
+|---|---|---|---|
+| **F0** leakage control | **PASSES** — shuffle 0.5144 | **PASSES** — shuffle 0.5404 | — |
+| **F1** drift clears its bar | **FAILS** — 0.7424 vs 0.9083 | **FAILS** — 0.7570 vs 0.9103 | HOLD on `disguised`, FAIL on `overt`. **Half right**: the `overt` call was correct, the `disguised` call was not |
+| **F2** decoding beats the prompt | **HOLDS** — 0.9734 vs 0.8779 | **HOLDS** — 0.9855 vs 0.9688 | FAIL on both. **Wrong on both**, in the direction that favours the paper |
+| **F3** the substrate contrast | **HOLDS** (needs both arms) — see below | | genuinely open |
+| **F4** streaming earns its keep | **HOLDS** — 10/10 cells | **HOLDS** — 10/10 cells | open |
+| **F5** OOD transfers | **FAILS** — 0.6772 vs 0.9873 | **FAILS** — 0.8653 vs 0.9873 | open |
+
+**F3 HOLDS, and the way it holds is the finding — not the verdict.** F3 asks only whether
+`threshold_freeform`'s margin over its bar is *larger* on `disguised` than on `overt`. It
+is, by **+0.0126** (`−0.1533` vs `−0.1659`,
+`substrate_comparison.margin_delta_disguised_minus_overt`). But **both margins are
+negative**, and the artifact says so in a field of its own
+(`both_margins_negative: true`, plus a `reading` field). So:
+
+> **F3 is a contrast between two failures.** The paper's own training-free drift detector
+> loses to a TF-IDF unigram model on the completions **on both substrates**. Moving to the
+> substrate where drift is supposed to exist recovers **1.3 percentage points of a 15-point
+> deficit**. "F3 HOLDS" must never be read as "the drift detector works" — it does not
+> work on either arm, and the re-basing bought a rounding error's worth of the gap back.
+
+The direction is what §3.3 predicted mechanically (disguised prompts leave room for the
+completion to drift; overt ones do not), and the *magnitude* is the honest news: on this
+corpus the mechanism is real and negligible. A pre-registration that can only be read as a
+win is not a pre-registration, and this one is being read as what it measured.
 
 ---
 
 ## 11. Results
 
-> **Status: HALF RUN.** The **`disguised`** substrate ran on 2026-08-08
+> **Status: BOTH ARMS RUN.** The **`disguised`** substrate ran 2026-08-08
 > ([`artifacts/results_disguised.json`](artifacts/results_disguised.json), fingerprint
-> `b34e4b2e85bb…`, `models/google/gemma-3-1b-it`, layer 12, 40 new tokens, 5-fold,
-> 10,000 bootstrap resamples, seed 0) and §§11.2–11.4 and §12.2 below are **measured**.
-> The **`overt`** substrate has **not** been run — §11.1 is still `[PENDING RUN]`, and
-> with it **F3**, the substrate contrast that is the entire reason the lesson was
-> re-based (`substrate_comparison` in the artifact says so in as many words: *"F3 needs
-> BOTH arms; run the other substrate with TG_SUBSTRATE=overt"*). The CPU-only
-> prompt-channel numbers in [§3](#3-retraction-and-the-re-basing-it-forced) and
-> [§12.2](#122-measured-now-cpu-only-no-model) are reproducible right now with
+> `b34e4b2e85bb…`) and the **`overt`** substrate ran 2026-08-21
+> ([`artifacts/results_overt.json`](artifacts/results_overt.json), fingerprint
+> `de4291e620f9…`). Both: `models/google/gemma-3-1b-it`, layer 12, 40 new tokens, 5-fold,
+> 10,000 bootstrap resamples, seed 0. §§11.1–11.5 and §12.2 are **measured**, and **F3 —
+> the substrate contrast that is the entire reason the lesson was re-based — now has a
+> verdict** ([§10.2](#102-the-overt-arm-landed-2026-08-21-and-f3-finally-has-a-verdict)).
+> One asymmetry to carry into §12.3: the **three confound controls ran on `disguised`
+> only**. `results_overt.json` carries no `controls` block and no `multivariate` bar,
+> because the `overt` arm was generated before the controls were wired into the runner.
+> The CPU-only prompt-channel numbers in [§3](#3-retraction-and-the-re-basing-it-forced)
+> and [§12.2](#122-measured-now-cpu-only-no-model) remain reproducible with no GPU via
 > `python -m steering_tutorials.trajguard.data`.
 
-### 11.1 `overt` substrate — 500/class, rule-1 compliant
+### 11.1 `overt` substrate — 500/class, rule-1 compliant — MEASURED
 
-| method | AUC | 95% CI | F1 | TPR@FPR=0.10 | margin vs confound bar | **margin vs prompt-only (0.8779)** |
+500 harmful / 500 benign from a 512-row harmful pool (`pool_limited: false`,
+`rule1_compliant: true`), 1,000 completions captured, 0 skipped. The binding confound bar
+is `content` at **0.9083** (§12.2); the prompt-content **rival** is **0.8779**.
+
+| method | AUC | 95% CI | F1 | TPR@FPR=0.10 | margin vs confound bar (0.9083) | **margin vs prompt-only (0.8779)** |
 |---|---|---|---|---|---|---|
-| `threshold_freeform` | `[PENDING RUN]` | | | | | |
-| `per_turn_max` (stateless) | `[PENDING RUN]` | | | | | |
-| `trajectory_mlp` | `[PENDING RUN]` | | | | | |
-| `seq_gru` | `[PENDING RUN]` | | | | | |
+| `threshold_freeform` | 0.7424 | [0.7112, 0.7733] | 0.365 | 0.244 | **−0.1659 — BELOW the bar** | −0.1355 |
+| `per_turn_max` (stateless) | 0.9692 | [0.9586, 0.9787] | 0.819 | 0.950 | **+0.0609** | +0.0913 |
+| `trajectory_mlp` | **0.9734** | [0.9635, 0.9826] | 0.926 | 0.952 | **+0.0652** | +0.0955 |
+| `seq_gru` | 0.9705 | [0.9598, 0.9802] | 0.919 | 0.948 | **+0.0623** | +0.0926 |
+
+**The two arms agree on everything that matters, which is itself the result.** Three
+methods clear the bar by +0.06; the paper's own `threshold_freeform` lands **0.166 below**
+it (**F1 FAILS** here too, as §10 predicted for this arm); and `per_turn_max` — the
+**stateless** control that sees one token at a time with no ordering — is within **0.004**
+of `seq_gru` and **0.004** of `trajectory_mlp`. That is §3.2's finding reproduced at
+500/class on the rule-1-compliant arm: **the classes are separable token by token, and
+modelling the sequence adds essentially nothing.**
+
+`vs_confound_paired_ci` is `null` on all four here as well, for the §12.3 reason — and on
+this arm the controls that would have supplied it were not yet in the runner.
+
+The `overt` completion-channel `length` bar is **0.8155**, far above the disguised arm's
+0.5064: overtly toxic prompts get systematically longer completions from the abliterated
+model. It still does not bind (`content` 0.9083 does), but it is the one bar on this arm
+that is not near chance, and it is the reason the matched-bin control matters more here
+than on `disguised` — and has not been run here (§12.3).
 
 ### 11.2 `disguised` substrate — 181/class, **POOL-LIMITED, PROVISIONAL** — MEASURED
 
@@ -615,9 +688,13 @@ unigram content on the substrate where it should be strongest. That is **F1 FAIL
 (`falsifier_verdicts.F1_drift_clears_bar.holds = false`), exactly as a falsifier is
 supposed to work, and it is the more important half of the row.
 
-`vs_confound_paired_ci` is `null` on all four: the spine's `content` bar is a CV-pooled
-centroid model that exposes no per-item score, so no paired interval is fabricated
-(§12.3).
+**Paired CIs now exist on this arm** (re-run 2026-08-21, `controls` block present):
+`trajectory_mlp` **+0.0752 [+0.0503, +0.1036]**, `per_turn_max` **+0.0747 [+0.0477,
++0.1051]**, `seq_gru` **+0.0441 [+0.0179, +0.0717]** — all three exclude zero — and
+`threshold_freeform` **−0.1533 [−0.2079, −0.1003]**, whose interval excludes zero on the
+losing side. So the three clearing methods clear the bar by an interval, not by a point
+estimate, and the paper's own detector loses by one. Full block, with the matched-bin
+control, in [§12.3.5](#1235-controls-2-and-3-measured-on-the-disguised-substrate).
 
 **F2 HOLDS — against our own registered prediction**, by **+0.0167** over the
 prompt-content **rival** (0.9688), which is *not* the 0.9103 confound bar this table's
@@ -632,22 +709,46 @@ Each K is scored against a bar recomputed on that same K-token prefix (there is 
 character or content bar at a prefix — the first-K tokens were never decoded to text —
 so the prefix bar is `count` + the two geometry bars).
 
+**`disguised`, 181/class:**
+
 | | K=2 | K=4 | K=8 | K=16 | K=32 |
 |---|---|---|---|---|---|
 | `threshold_freeform` | 0.7332 | 0.7380 | 0.7483 | 0.7496 | 0.7569 |
 | `seq_gru` | **0.9684** | 0.9595 | 0.9694 | 0.9680 | 0.9570 |
 | **first-K confound bar** | 0.6249 (`mean_norm`) | 0.5765 (`mean_norm`) | 0.5826 (`final_norm`) | 0.5742 (`final_norm`) | 0.5479 (`count`) |
 
-**F4 HOLDS**, 10/10 cells clearing their own bar
-(`falsifier_verdicts.F4_streaming_clears_its_own_bar.holds = true`). Note what the row
-does *not* say: `seq_gru` is already at 0.968 by **K=2** and does not improve with more
-tokens, so what the early-K curve demonstrates is that two tokens suffice on this
-substrate — not that the method accumulates evidence over the trajectory.
+**`overt`, 500/class — MEASURED 2026-08-21:**
+
+| | K=2 | K=4 | K=8 | K=16 | K=32 |
+|---|---|---|---|---|---|
+| `threshold_freeform` | 0.8150 | 0.8064 | 0.7246 | 0.7232 | 0.7319 |
+| `seq_gru` | 0.9642 | **0.9686** | **0.9708** | 0.9693 | 0.9702 |
+| **first-K confound bar** | 0.7174 (`mean_norm`) | 0.7131 (`mean_norm`) | 0.6421 (`mean_norm`) | 0.5994 (`mean_norm`) | 0.5938 (`mean_norm`) |
+
+**F4 HOLDS on both arms**, 10/10 cells each clearing their own bar
+(`falsifier_verdicts.F4_streaming_clears_its_own_bar.holds = true` in both artifacts).
+Note what the rows do *not* say: `seq_gru` is already at 0.964–0.968 by **K=2** on both
+substrates and does not improve with more tokens, so what the early-K curve demonstrates
+is that two tokens suffice — not that the method accumulates evidence over the trajectory.
+
+Two things are specific to the `overt` arm. Its first-K bar is **`mean_norm` at every K**
+and starts much higher (0.7174 vs 0.6249), so early-K margins are correspondingly thinner
+— residual-stream magnitude carries more of the early signal when the prompt is overtly
+toxic. And `threshold_freeform` runs *backwards* here: 0.8150 at K=2 falling to 0.7319 at
+K=32, its best reading from the fewest tokens. A drift detector whose score degrades as
+the trajectory it reads gets longer is not reading drift, and that is the same conclusion
+§3.3 reached from the mechanism.
 
 ### 11.4 OOD — `jackhhao/jailbreak-classification`, 274/class — MEASURED
 
 Pool-limited (629 unique jailbreak rows → 274 after the 1,311-char length cap),
 `pool_limited: true`, 548 completions captured, 0 skipped.
+
+Both arms train on all their in-domain data and evaluate on this same held-out corpus, so
+the OOD bars are identical between them (`content` **0.9341**, prompt-content rival
+**0.9873**) and only the trained detector differs.
+
+**Trained on `disguised` (181/class):**
 
 | method | AUC | 95% CI | degradation vs in-domain |
 |---|---|---|---|
@@ -656,13 +757,30 @@ Pool-limited (629 unique jailbreak rows → 274 after the 1,311-char length cap)
 | `trajectory_mlp` | 0.7854 | [0.7470, 0.8218] | **−0.2001** |
 | `seq_gru` | 0.8202 | [0.7839, 0.8547] | −0.1341 |
 
-**Every method fails OOD, and the failure is reported as prominently as the in-domain
-win.** The OOD completion-channel binding bar is `content` at **0.9341**, which *no*
-method reaches; the prompt-content rival is **0.9873**, so **F5 FAILS**
-(`ood_best_auc 0.8653` vs `0.9873`, `holds: false`). The in-domain result at §11.2 does
-not transfer: `trajectory_mlp`, the in-domain winner, loses 0.20 AUC and drops below
-`per_turn_max`. F5 is a high bar by construction and that is stated here, per
-CLAUDE.md §17.
+**Trained on `overt` (500/class) — MEASURED 2026-08-21:**
+
+| method | AUC | 95% CI | degradation vs in-domain |
+|---|---|---|---|
+| `threshold_freeform` | 0.5672 | [0.5200, 0.6161] | −0.1752 |
+| `per_turn_max` | 0.6450 | [0.5993, 0.6906] | −0.3242 |
+| `trajectory_mlp` | 0.5551 | [0.5066, 0.6033] | **−0.4183** |
+| `seq_gru` | **0.6772** | [0.6310, 0.7201] | −0.2933 |
+
+**Every method fails OOD on both arms, and the failure is reported as prominently as the
+in-domain win.** No method on either arm reaches the 0.9341 `content` bar, let alone the
+0.9873 rival, so **F5 FAILS on both** (`ood_best_auc` 0.8653 vs 0.9873 on `disguised`;
+0.6772 vs 0.9873 on `overt`; `holds: false` in both artifacts). The in-domain result does
+not transfer: `trajectory_mlp`, the in-domain winner on both arms, is the **worst**
+transferrer on both, losing 0.20 AUC from `disguised` and **0.42** from `overt`.
+
+**The `overt` arm transfers far worse, and the direction is informative.** Trained on
+overtly-toxic prompts, every detector lands in 0.555–0.677 against jailbreak wrappers it
+has never seen — `trajectory_mlp` at 0.5551 has a CI whose lower bound is 0.5066, barely
+off chance. Trained on `disguised` — 181 examples, a third of the data — the same
+detectors reach 0.783–0.865 on the same corpus. What generalises to jailbreaks is having
+been trained on *disguised* attacks, not on more data. The rule-1-compliant arm carries
+the better in-domain headline and the worse transfer, and both halves belong in the
+record. F5 is a high bar by construction and that is stated here, per CLAUDE.md §17.
 
 ### 11.5 The superseded run
 
@@ -741,21 +859,31 @@ The `disguised` shuffle control at **0.5702** is the highest of the three and si
 below the 0.60 invalidation threshold but not comfortably; at 181/class the shuffle
 statistic is itself noisy. Recorded, not smoothed.
 
-The completion-channel bars require the generated text and therefore the GPU run. That
-run landed for `disguised` on 2026-08-08 and they are **measured**
-(`results_disguised.json:confound`, 181/class, 362 completions):
+The completion-channel bars require the generated text and therefore the GPU run. Both
+runs have landed — `disguised` 2026-08-08, `overt` 2026-08-21 — and both rows are
+**measured** (`results_<substrate>.json:confound`):
 
-| substrate | `length` | `count` | `content` | `shuffle` | `mean_norm` | `final_norm` | **binding bar** |
-|---|---|---|---|---|---|---|---|
-| `disguised` | 0.5064 | 0.5515 | **0.9103** | 0.5404 | 0.5463 | 0.5753 | **`content` 0.9103** |
-| `overt` | `[PENDING RUN]` | | | | | | |
+| substrate | n/class | `length` | `count` | `content` | `shuffle` | `mean_norm` | `final_norm` | `multivariate` | **binding bar** |
+|---|---|---|---|---|---|---|---|---|---|
+| `disguised` | 181 (362 completions) | 0.5064 | 0.5515 | **0.9103** | 0.5404 | 0.5463 | 0.5753 | 0.5940 | **`content` 0.9103** |
+| `overt` | 500 (1,000 completions) | 0.8155 | 0.5290 | **0.9083** | 0.5144 | 0.6091 | 0.6019 | not computed | **`content` 0.9083** |
 
-`content` binds by a wide margin — every scalar bar, including both geometry bars this
-lesson added, is within 0.08 of chance. So the classes are **not** separated by
-completion length, token count, or residual-stream magnitude; they are separated by what
-the model actually wrote, and that is the only bar a trajectory method has to beat.
-`shuffle` at 0.5404 is below the 0.60 invalidation threshold, so **F0 passes** and the
-run is valid.
+`content` binds on both arms, and `shuffle` is below the 0.60 invalidation threshold on
+both (0.5404 / 0.5144), so **F0 passes on both** and both runs are valid.
+
+**The two arms differ in a way the disguised-only version of this table could not show.**
+On `disguised` every scalar bar is within 0.08 of chance, so the classes are separated
+only by what the model wrote. On `overt` the completion **`length`** bar is **0.8155** —
+the abliterated model writes systematically longer completions for overtly toxic prompts.
+That does not change the binding bar (`content` 0.9083 still binds, and every §11.1 margin
+is priced against it), but it does mean the `overt` margins have a live length confound
+sitting 0.09 underneath them, which is exactly what the matched-bin control exists to
+strip out — and that control has been run on `disguised` only (§12.3).
+
+The `multivariate` cell is empty for `overt` because that arm was generated before the
+controls were wired into the runner, not because it was skipped as uninformative. It is
+the single most useful cell to fill on a re-run, since it is the bar that combines the
+0.8155 `length` tell with the two geometry bars.
 
 ### 12.3 The three controls that were missing — now in code
 
@@ -765,24 +893,27 @@ are implemented in [`controls.py`](controls.py) and wired into the runner: the b
 lands in `results_<substrate>.json` under `controls`, and each method cell gains
 `matched_bin` and a labelled `vs_confound_paired_ci`.
 
-**The shipped `results_disguised.json` predates them.** It was written 2026-08-08 and
-still carries `vs_confound_paired_ci: null` on all four methods and no `controls` block;
-populating those cells needs a re-run of `run_trajguard`, which needs the GPU. Control 1
-is the exception — it is measurable today from the committed text-free sidecar with no
-model at all, and is measured in §12.3.2. Do not read the absence of a `controls` block
-in the current artifact as the controls being absent from the lesson.
+**All three now exist in `results_disguised.json`, re-run 2026-08-21.** The version of
+this section that said the artifact "predates them" was written on 2026-08-08, before the
+re-run; the shipped `results_disguised.json` now carries a full `controls` block and a
+populated `vs_confound_paired_ci` on all four methods. **`results_overt.json` does not** —
+that arm was generated before the controls were wired in, so §11.1's margins are priced
+against the binding bar with no matched-bin check and no paired interval. The asymmetry
+matters more than it would otherwise, because `overt` is the arm with the 0.8155 length
+bar (§12.2).
 
-| control | what it asks | status |
-|---|---|---|
-| **1. multivariate trivial baseline** | can `{charlen, tokencount, mean_norm, final_norm}` *combined* separate the classes, when no one of them can alone? Logistic regression, **same folds** as the methods, scaler fit on the training fold only, pooled out-of-fold, folded directionless — and folded **into** `worst_auc`, so if it binds, it binds | **MEASURED** (below) |
-| **2. matched-bin** | does the separation survive at approximately fixed completion length? AUC recomputed within `charlen` quantile bins and pooled by pair count (the stratified Mann-Whitney statistic), CI resampled **within** bins | **CODE READY** — needs the runner |
-| **3. paired margin CI vs the binding bar** | the four `null`s in the shipped artifact | **SOLVED** (below) |
+| control | what it asks | `disguised` | `overt` |
+|---|---|---|---|
+| **1. multivariate trivial baseline** | can `{charlen, tokencount, mean_norm, final_norm}` *combined* separate the classes, when no one of them can alone? Logistic regression, **same folds** as the methods, scaler fit on the training fold only, pooled out-of-fold, folded directionless — and folded **into** `worst_auc`, so if it binds, it binds | **MEASURED** (§12.3.2) | **NOT RUN** — no `controls` block in the artifact |
+| **2. matched-bin** | does the separation survive at approximately fixed completion length? AUC recomputed within `charlen` quantile bins and pooled by pair count (the stratified Mann-Whitney statistic), CI resampled **within** bins | **MEASURED** (§12.3.5) | **NOT RUN** |
+| **3. paired margin CI vs the binding bar** | the four `null`s the shipped artifact used to carry | **MEASURED** (§12.3.5) | **NOT RUN** — still `null` on all four |
 
 #### 12.3.1 The paired-CI blocker was solvable
 
-The shipped `results_disguised.json` carries `vs_confound_paired_ci: null` on all four
+The 2026-08-08 `results_disguised.json` carried `vs_confound_paired_ci: null` on all four
 methods, with a note explaining that the spine's `content` bar "exposes no per-item
-score". The note was accurate about the symptom and wrong about the cause.
+score". `results_overt.json` still carries exactly that `null` and that note. The note was
+accurate about the symptom and wrong about the cause.
 `common.confound.content_bar` **does** compute a per-item out-of-fold score for every
 item — `scores[i] = <tfidf_i, centroid_pos> − <tfidf_i, centroid_neg>` — and then
 discards the vector, returning only the pooled AUC.
@@ -854,6 +985,50 @@ would be beating nothing.
 
 Run the controls' own CPU self-tests with
 `python -m steering_tutorials.trajguard.controls` (seconds, no model, no GPU).
+
+#### 12.3.5 Controls 2 and 3, measured on the `disguised` substrate
+
+Both landed in `results_disguised.json → controls` on 2026-08-21. Neither exists for
+`overt`.
+
+**Control 2 — matched-bin, stratified on `charlen`, 4 bins achieved of 4 requested**
+(bin edges 3 / 134 / 167.5 / 198 / 256; 89–92 items per bin):
+
+| | unstratified AUC | within-bin AUC | 95% CI (resampled within bins) | Δ |
+|---|---|---|---|---|
+| `threshold_freeform` | 0.7570 | 0.7728 | [0.7213, 0.8216] | **+0.0158** |
+| `per_turn_max` | 0.9850 | 0.9842 | [0.9707, 0.9942] | −0.0008 |
+| `trajectory_mlp` | 0.9855 | 0.9835 | [0.9670, 0.9948] | −0.0020 |
+| `seq_gru` | 0.9544 | 0.9484 | [0.9201, 0.9719] | −0.0059 |
+| **the `content` bar itself** | 0.9103 | 0.8961 | [0.8611, 0.9273] | **−0.0142** |
+
+**Nothing was riding `charlen`.** The three learned detectors move by at most 0.006 when
+length is held approximately fixed, and `threshold_freeform` moves *up*. The row that
+moves most is **the bar** (−0.0142): TF-IDF unigrams were drawing slightly more on length
+than any detector was, so stratifying widens the margins rather than eroding them. Read
+this with §12.3.3's bound — 4 bins leave a residual inside each bin, and `n_bins_achieved`
+is reported beside `n_bins_requested` for that reason. On the 0.5064 `length` bar this arm
+carries, there was little for the control to remove; the arm where it would bite is
+`overt` (`length` 0.8155), and there it has not been run.
+
+**Control 3 — paired bootstrap margin CIs against the binding `content` bar**
+(10,000 resamples, `against_bar: "content"`, `is_binding_bar: true` on every row):
+
+| method | margin | 95% paired CI | excludes zero? |
+|---|---|---|---|
+| `trajectory_mlp` | +0.0752 | [+0.0503, +0.1036] | **yes — clears** |
+| `per_turn_max` | +0.0747 | [+0.0477, +0.1051] | **yes — clears** |
+| `seq_gru` | +0.0441 | [+0.0179, +0.0717] | **yes — clears** |
+| `threshold_freeform` | −0.1533 | [−0.2079, −0.1003] | **yes — loses** |
+
+All four intervals exclude zero. This upgrades §11.2 from four point estimates to four
+interval statements, and it upgrades **F1's failure** as well: the paper's own detector
+does not merely land below the bar, its whole 95% interval does. Note that the *widest*
+part of the story is unaffected — this is still 181/class at one seed, so these are
+screening-tier intervals on a pool-limited arm, not an evaluation-tier claim (CLAUDE.md
+§7). And the `per_turn_max` row is the load-bearing one: the **stateless** control's
+interval [+0.0477, +0.1051] overlaps `trajectory_mlp`'s almost entirely, so the sequence
+models' advantage over seeing one token at a time is not resolved at this `n`.
 
 ### 12.4 A defect found while measuring: the committed sidecar was the OOD arm's
 
@@ -943,10 +1118,13 @@ is the same set. The completion **content** bar needs the generated text and the
 the re-run; that is stated rather than implied away.
 
 **Regeneration cost** (single RTX 4090 Laptop, abliterated Gemma-3-1B, greedy, 40 new
-tokens): 1,000 completions for the `overt` arm, 362 for `disguised`, 548 for the OOD
-arm. Wall-clock is `[PENDING RUN]` — the honest number is the one the run reports, and
-CLAUDE.md §18.6 is explicit that latency figures formed across two machine states are
-meaningless.
+tokens): 1,000 completions for the `overt` arm, 362 for `disguised`, 548 for the OOD arm.
+**All three have now been generated, and no wall-clock is quoted anyway** — the runner
+carries no timing instrumentation, so `artifacts/overt_run_2026-08-21.log` records
+`1000/1000 captured` and no elapsed figure. Deriving one from file mtimes would be a
+number formed from machine state rather than measured, which is the thing CLAUDE.md §18.6
+says is meaningless. The honest entry is that the cost was not measured, not a
+reconstruction of it.
 
 ```bash
 TG_SUBSTRATE=overt TG_REBUILD=1 python -m steering_tutorials.trajguard.run_trajguard
@@ -959,11 +1137,22 @@ TG_SUBSTRATE=overt TG_REBUILD=1 python -m steering_tutorials.trajguard.run_trajg
 - **The headline inference was retracted, not softened** ([§3](#3-retraction-and-the-re-basing-it-forced)).
   "You cannot call this from the prompt alone" was false, and the number it rested on
   was a control the shared loader applies by construction.
-- **The paper's headline comparison was out of scope and is now in scope, untested.**
-  TrajGuard's claim is that decoding-time hidden states beat input prompts. The
-  superseded lesson built no prompt-side classifier, so it could neither support nor
-  refute that. It now does — and the measured prompt bars (0.878 / 0.969) say the
-  comparison is likely to go **against** the paper on this substrate.
+- **The paper's headline comparison was out of scope, is now in scope, and REPRODUCES —
+  against our own prediction.** TrajGuard's claim is that decoding-time hidden states beat
+  input prompts. The superseded lesson built no prompt-side classifier, so it could
+  neither support nor refute that. It now does, on both substrates, and **F2 holds on
+  both**: 0.9734 vs 0.8779 (`overt`), 0.9855 vs 0.9688 (`disguised`). We registered the
+  opposite prediction from the measured prompt bars and were wrong. The margins are
+  +0.0955 and +0.0167 at one seed with no paired interval against the rival, so this is a
+  screening-tier reproduction, not a measured effect (§10.1).
+- **F3 holds and means less than its verdict suggests.** The substrate contrast — the
+  entire rationale for the re-basing — comes in at **+0.0126**, and *both* margins are
+  negative (−0.1533 disguised, −0.1659 overt). The drift detector loses to unigrams on
+  both arms; re-basing recovered 1.3 points of a 15-point deficit (§10.2).
+- **The `overt` arm has no confound controls.** It was generated 2026-08-21, before the
+  three controls were wired into the runner, so it has no `multivariate` bar, no
+  matched-bin check and `null` paired CIs — on the one arm whose completion `length` bar
+  is 0.8155 rather than near chance. That is the largest open gap in the lesson (§12.3).
 - **`disguised` is pool-limited at 181/class** against a 500/class floor. Genuinely
   pool-limited (204 annotations exist in all of toxic-chat), stated everywhere,
   PROVISIONAL everywhere. The `overt` arm carries the rule-1-compliant headline.

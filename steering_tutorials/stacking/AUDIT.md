@@ -68,6 +68,8 @@ Kept as a record. "Absent" means the value is not in `artifacts/results.json`;
 | 6 | **Methodology — does the lesson obey CLAUDE.md §1/§9?** | **VIOLATION, self-reported and correctly recorded** | `FINDING_hillclimb.md` §"METHODOLOGY VIOLATION" states it: **no prior clears rung 1** (all four score below the unsteered 0.275), so the revert rule terminates the climb at R0 and no ladder legitimately exists; the run instead stacked on every failing rung until **R5 had all five priors live — the "everything on" hybrid §9 forbids**. The two violations are the same mistake seen twice (nothing reverted ⇒ hybrid reached). This audit **confirms** the violation from the artifact and endorses the disposition: the R0–R5 table is a **record of what was run, not a ladder**, and its marginals are not stacking evidence. Note the lesson's *original* `rung3 = [A,B,B′]` all-on hybrid is a different case — the pre-registration declares it a deliberate demonstration of the forbidden configuration, which is legitimate as long as it is never read as a result. |
 | 7 | **Pre-registration integrity** (P1–P6 vs measured) | **PASS with one unrecorded failure (new)** | Registered before the run and left unrevised. **P1 HELD** (R2 marginal refusal −0.075 ≤ 0, gibberish 0.800 → 0.950). **P2 FAILED — and this failure is not in `FINDING_hillclimb.md`'s contradiction list**: P2 predicted an orthogonal direction is "behaviourally near-inert", falsifier *C standalone refusal shift > 0.15*; measured `S_C` refusal **0.100** vs R0 **0.275** = a **−0.175** shift, and gibberish +0.200 against a predicted < 0.15. **The falsifier fired.** It points the same way as the recorded direction-specificity finding, so nothing downstream changes — but a fired falsifier belongs in the record. **P3 HELD but is uninformative** (gibberish R3−R2 = 0.025 < R2−R1 = 0.150 only because R2 is already at 0.950, i.e. against a ceiling). **P4 FAILED** (clamp moved gibberish −0.050 against a required ≥ −0.10). **P5: numeric falsifier did not fire but the premise did** — harmful refusal moved exactly 0.050 (< the 0.10 falsifier) and benign gibberish fell 0.900 → 0.000, yet the prediction assumed "the probe fires on nearly all harmful prompts" and it fires on **52.5%** (0% benign), so R5 is a 53/47 mixture of steered and unsteered and the clean-meta-layer reading is unavailable. `FINDING_hillclimb.md` reports this correctly. **P6 HELD** — the control `[A,B′]` scores **0.000**, below both constituents (each 0.175): the one unconditional COMPETE prediction is the one that held. |
 | 8 | **Instrument validity** | **PASS (disclosed), and it is the binding limit** | Both the README and the pre-registration state up front that the judge family measured **ROC-AUC 0.665–0.751**, below this course's 0.85 bar (`../JUDGE_VALIDITY.md`), so differences at or below the judge's noise floor are not effects. Combined with check 5, the honest position is: **no rate on this page is instrument-grade**, and the ladder artifact cannot even name its instrument. |
+| 9 | **§8c near-orthogonal arm — data floor and stamping** *(added 2026-08-22)* | **PASS on both, and it closes the lesson's hard violation** | `artifacts/near_ortho_results.json` **meets the ≥500/class rubric floor**: `data_floor.meets_floor: true`, 500 harmful / 500 benign achieved, `pool_capped: false`, `env_capped: false`, extract trimmed 300 → 292 from a 792/class pool with the reason recorded in `split_plan.note`. It is also **fully stamped** — `meta.judge_id: Qwen/Qwen2.5-3B-Instruct`, `is_self_judge: false`, `off_family: true`, `seed: 0`, plus a `directions_stamp` string that pins model, layer, n, seed, K, cosine and grid. This is the check-5 defect fixed, in the arm that landed last. **The 20-prompt benign arm the README §8d calls a hard violation no longer exists in this arm.** |
+| 10 | **§8c result honesty** *(added 2026-08-22)* | **PASS — the null is reported as a null** | 0 of 4 ladder candidates kept (L1, L2 both DROP on COHERENCE+COMPETE; stop on `CONSECUTIVE_DROPS`), 0 of 5 cosine cells beat their best constituent. The README reports this without softening and, crucially, **prints the confound that dominates it**: `notes` records `SUBSTRATE CAVEAT: the UNSTEERED gibberish rate is 0.462`, so every coherence-driven DROP is partly a measurement of the abliterated base. The artifact also declines to claim the §9 clause is false — `NO CELL STACKED AT ANY COSINE … so the clause's boundary cannot be located here`. One self-correction is recorded rather than buried: the README predicted a measured/predicted N5 ratio **above** 1 from O(α²) compounding; the measured ratio is **0.96–0.97**, i.e. below, and the note says so. |
 
 ## Overall verdict: **PASS on framing and fidelity; FAIL on artifact stamping**
 
@@ -85,6 +87,10 @@ Two items stand open, one of them new:
    fingerprint) and disagrees 2× with the Qwen-judged hill-climb on identical
    configs. Until a re-run stamps its judge, every rate in it should be quoted as
    *judge-unattributed*. Copy `hillclimb_results.json`'s `meta` block.
+   *(Scope note added 2026-08-22: this applies to `results.json` **only**. Both other
+   artifacts on this lesson — `hillclimb_results.json` and the new
+   `near_ortho_results.json` — carry full `meta` blocks with `judge_id`,
+   `is_self_judge: false` and `off_family: true`.)*
 2. **Tag the Han/Wehner secondary cites `[UNVERIFIED]`** in `stacking.py:16-19`
    (carried forward from the previous audit; still open).
 
@@ -94,6 +100,14 @@ effect is **not direction-specific** (an exactly-orthogonal control scores what
 the refusal direction scores), so **the stack-vs-compete question cannot be
 answered by this lesson's artifacts at all** until a prior is found that beats its
 own orthogonal control. That is the pre-registered next step, and no number in
-either JSON should be cited as stacking evidence before it lands.
+any of the three JSONs should be cited as stacking evidence before it lands.
+
+**The 2026-08-22 near-orthogonal arm strengthens that caveat rather than resolving it.**
+It was the one arm built to test §9's third clause with a real stopping condition, it ran
+at the full rubric floor with a stamped off-family judge, and it returned a flat negative
+across the entire cosine dial (−0.094 to −0.114 vs best constituent at cos
+−0.00/0.25/0.50/0.75/0.95). With an unsteered gibberish rate of **0.462**, that is a null
+**about this substrate**, not a falsification of the clause. The α sweep down to where a
+single prior is coherent remains the unblocking experiment for the whole lesson.
 
 Internal QA pass — independent external review pending (auditor shares a model family with the author).

@@ -68,8 +68,10 @@ difference is the entire lesson. Full file-by-file walkthrough below.
 7. [The trajectory-detection trilogy](#7-the-trajectory-detection-trilogy)
 8. [Running](#8-running)
 9. [Results — measured vs. the claim](#9-results--measured-vs-the-claim)
-   ([9.1 main set + the confound bars](#91-the-constructed-main-set) ·
-   [9.2 OOD, and why the null is not yet a finding](#92-ood-transfer-minilm--the-only-measured-ood-arm) ·
+   ([**9.0 EmbeddingGemma — the mandated encoder, the compliant headline**](#90-embeddinggemma--the-mandated-encoder-measured-2026-08-21) ·
+   [9.0.1 what the truncated encoder would have told us](#901-what-the-truncated-encoder-would-have-told-us) ·
+   [9.1 main set + the confound bars (MiniLM)](#91-the-constructed-main-set) ·
+   [9.2 OOD, and why the null is not yet a finding](#92-ood-transfer-minilm-historical-arm) ·
    [9.3 embedder ablation — hand-transcribed](#93-embedder-ablation--the-ordering-reproduces-on-gemma-hand-transcribed-not-regenerable) ·
    [9.4 the falsifier, corrected](#94-the-pre-registered-falsifier--corrected-to-the-confound-bar-form))
 10. [Honest caveats](#10-honest-caveats)
@@ -154,16 +156,31 @@ recovers the fractured intent" is false (see the falsifier in
 
 ### Which embedder produced which number — read this before §9
 
-**Every headline number in this lesson is MiniLM.** `artifacts/results.json`
-records `"embedder": "minilm"` — `sentence-transformers/all-MiniLM-L6-v2`, 384-dim.
-The Gemma arm is an *ablation only* (§9.3), and the mandated encoder has **never
-been run here at all**. Three embedders are selectable via `CT_EMBED`:
+**The mandated encoder has now been run** (2026-08-21,
+[`artifacts/results_embeddinggemma.json`](artifacts/results_embeddinggemma.json)) and
+carries the compliant headline in [§9.0](#90-embeddinggemma--the-mandated-encoder-measured-2026-08-21).
+The MiniLM numbers in §9.1/§9.2 are kept as the historical arm, not as the headline.
+Three embedders are selectable via `CT_EMBED`:
 
 | `CT_EMBED` | what it is | dim | status |
 |---|---|---|---|
-| `embeddinggemma` | `google/embeddinggemma-300m`, loaded from the local path, attention-mask mean pooling | 768 | **the mandated encoder — wired but `[PENDING RUN]`, no number exists** |
-| `minilm` | `sentence-transformers/all-MiniLM-L6-v2` | 384 | **non-compliant substitute** — produced every headline in §9.1/§9.2 |
-| `gemma` | abliterated Gemma-3-1B **decoder**, layer-12 mean-pooled residual stream (lesson 1/2's plumbing, reused from `multiturn_jailbreak.embed`) | 1152 | **non-compliant substitute** — the §9.3 ablation |
+| `embeddinggemma` | `google/embeddinggemma-300m` from the local path, through the **full sentence-transformers module stack** (Transformer → Pooling → Dense 768→3072 → Dense 3072→768 → Normalize) | 768 | **the mandated encoder — MEASURED 2026-08-21**, §9.0. `embedder_compliance` in the artifact reads `COMPLIANT` |
+| `minilm` | `sentence-transformers/all-MiniLM-L6-v2` | 384 | **non-compliant substitute** — produced §9.1/§9.2 |
+| `gemma` | abliterated Gemma-3-1B **decoder**, layer-12 mean-pooled residual stream (lesson 1/2's plumbing, reused from `multiturn_jailbreak.embed`) | 1152 | **non-compliant substitute** — the §9.3 ablation, still hand-transcribed |
+
+> **The first EmbeddingGemma run was wrong and is SUSPENDED, not deleted.** An earlier
+> attempt on 2026-08-21 loaded the model via `transformers` `AutoModel` + attention-mask
+> mean pooling — the same recipe `minilm` uses — on the stated rationale that this made
+> the two arms differ only in the backbone. That rationale was plausible and wrong.
+> EmbeddingGemma's `modules.json` declares **five** modules, and `AutoModel` + mean pooling
+> executes the first two, silently skipping **two trained Dense projection heads** (~9.4 MB
+> of weights each, both on disk) and the final `Normalize`. The output is 768-dim and
+> raises no error; it is simply a different vector space from the one the model card
+> describes. Right shape, no error, wrong space — the CLAUDE.md §18.8 pattern. Those
+> numbers are quarantined at
+> [`artifacts/results_embeddinggemma_TRUNCATED_ENCODER_SUSPENDED.json`](artifacts/results_embeddinggemma_TRUNCATED_ENCODER_SUSPENDED.json)
+> with a block recording what they invalidate. **A verdict flipped between the two**: see
+> [§9.0.1](#901-what-the-truncated-encoder-would-have-told-us).
 
 **The mandate, and why the old excuse is stale.** CLAUDE.md §17 (and the standing
 user instruction) mandate `google/embeddinggemma-300m` **everywhere**, not MiniLM
@@ -394,10 +411,19 @@ second config, **`SafeMTData_1K` (1,680 rows)**, which the loader never touched.
 > group count is what the CV folds and the CIs actually rest on. **Read the group
 > count, not just `n`.**
 
-`[PENDING RUN]` — the enlarged pool is code-complete and import-checked, but no run
-has been executed against it. Every number in §9 is still the old
-`Attack_600`-only, 298/class MiniLM run. The realised group counts will only be
-known once the loader runs.
+**RUN 2026-08-21, and the warning above was right.** The EmbeddingGemma arm (§9.0)
+loaded both configs and reached **500/class on both conditions** (`meets_500_floor:
+true`) — but the group counts came in exactly where the caveat said they would:
+
+| condition | n_pos / n_neg | distinct groups (pos / neg) | pos/neg group overlap |
+|---|---|---|---|
+| `easy` | 500 / 500 | 404 / 500 (904 total) | 0 |
+| `hard` | 500 / 500 | **339 / 341** (680 total) | 0 |
+
+So `hard` doubled its rows from 298/class to 500/class while its **independent** positive
+groups rose only to 339. Rule 1's ≥500/class floor is met on rows; the CV folds and the
+CIs still rest on ~339 groups. **Read the group count, not just `n`.** §9.1's MiniLM
+numbers are still the old `Attack_600`-only, 298/class run and are labelled as such.
 
 **Optional: real hard negatives.** `tom-gibbs/multi-turn_jailbreak_attack_datasets`
 (Gibbs et al. 2024, arXiv:2409.00137) is ungated and ships **1,200 purpose-built
@@ -428,7 +454,7 @@ arXiv:2604.21131 — verified ungated and public): genuine multi-session scenari
 train on our constructed hard set and report AUC on CSTM-Bench with **no** further
 fitting — an honest out-of-distribution transfer number, not an in-distribution CV
 score. **Each scenario carries ~26 sessions and we keep only `CT_OOD_K`** — see the
-selection caveat in [§9.2](#92-ood-transfer-minilm--the-only-measured-ood-arm),
+selection caveat in [§9.2](#92-ood-transfer-minilm-historical-arm),
 which materially limits how the measured OOD null may be read.
 
 **The confound audit — four bars, and the fold that was missing.** Structural
@@ -483,7 +509,10 @@ python -m steering_tutorials.cross_trajectory.embed_ct  # cache guard fires on s
 python -m steering_tutorials.cross_trajectory.data      # small load + 4-bar confound report
 
 # The full load -> embed -> CV -> OOD run. CT_EMBED picks the backbone; the MANDATED
-# encoder is embeddinggemma (local weights, ~1.2 GB) and it has NOT been run yet.
+# encoder is embeddinggemma (local weights, ~1.2 GB, loaded through the FULL
+# sentence-transformers stack). This is the arm that produced section 9.0.
+# Needs `pip install sentence-transformers` -- the loader raises rather than
+# falling back to AutoModel, which would silently truncate the model.
 CT_EMBED=embeddinggemma python -m steering_tutorials.cross_trajectory.run_cross_trajectory
 
 # Watch per-agent vs. aggregate risk on a demo attack + benign multi-agent sample:
@@ -538,16 +567,20 @@ apply here (`results.json` records `"judge": null`).
 
 ## 9. Results — measured vs. the claim
 
-**MEASURED (screening tier).** Numbers below are from `artifacts/results.json`
-for the **MiniLM** turn-embedder run — **easy at 500/class, hard at 298/class**,
-`Attack_600` only. The 298 is **not** a pool limit (see §6): it is `Attack_600`'s
-~596 usable rows cut in half, and `SafeMTData_1K` in the same ungated repo was
-never loaded. The enlarged pool is now wired but **`[PENDING RUN]`** — nothing
-below reflects it. The **Gemma-3-1B layer-12 embedder ablation** is reported in
-[§9.3](#93-embedder-ablation--the-ordering-reproduces-on-gemma-hand-transcribed-not-regenerable).
-The falsifier and reading were pre-registered **before** the run; the falsifier's
-**form** was corrected afterwards (see below) and the correction moves *against*
-the lesson, not for it.
+**MEASURED (screening tier).** Three arms now exist and they are reported in the order
+they should be read:
+
+| § | arm | n/class | pool | status |
+|---|---|---|---|---|
+| [9.0](#90-embeddinggemma--the-mandated-encoder-measured-2026-08-21) | **EmbeddingGemma-300M, full stack** | 500 / 500 | `Attack_600` + `SafeMTData_1K` | **the compliant headline**, run 2026-08-21 |
+| [9.1](#91-the-constructed-main-set) / [9.2](#92-ood-transfer-minilm-historical-arm) | MiniLM-L6-v2 | easy 500, hard 298 | `Attack_600` only | historical; non-compliant encoder, smaller pool |
+| [9.3](#93-embedder-ablation--the-ordering-reproduces-on-gemma-hand-transcribed-not-regenerable) | Gemma-3-1B L12 decoder residual | 298 | `Attack_600` only | hand-transcribed, **not regenerable**, still inadmissible |
+
+§9.1's 298/class is **not** a pool limit (see §6): it is `Attack_600`'s ~596 usable rows
+cut in half, and `SafeMTData_1K` in the same ungated repo was never loaded by that run.
+§9.0 loads both. The falsifier and reading were pre-registered **before** any run; the
+falsifier's **form** was corrected afterwards (§9.4) and the correction moves *against*
+the lesson, not for it — §9.0 is scored under the corrected, stricter form.
 
 > **What changed in this section on 2026-08.** Nothing was re-run. What changed is
 > that the **easy** condition is now priced against its own confound bar, which it
@@ -563,7 +596,100 @@ over the K trajectory latents detects the decomposed attack while a
 Decomposition, arXiv:2606.09084; GroupGuard, arXiv:2603.13940; pooling from Set
 Transformer, arXiv:1810.00825).
 
+### 9.0 EmbeddingGemma — the mandated encoder, MEASURED 2026-08-21
+
+`google/embeddinggemma-300m` through the full sentence-transformers stack, K=5,
+group-aware 5-fold CV, seed 0, `Attack_600` + `SafeMTData_1K`, 500/class on both
+conditions (group counts in §6 — `hard` has 339/341 distinct groups behind those 500s).
+Source: [`artifacts/results_embeddinggemma.json`](artifacts/results_embeddinggemma.json),
+`embedder_compliance: "COMPLIANT"`.
+
+**HARD — the condition the claim lives on.** Binding bar is `content` (TF-IDF) at
+**0.9149**; `count` is 0.5000 by construction and `length` is 0.6086 directionless, so
+content binds:
+
+| method | AUC | 95% CI | **margin vs 0.9149** | verdict |
+|---|---|---|---|---|
+| `mean_agg` | **0.9827** | [0.9753, 0.9891] | **+0.0678** | **CLEARS** |
+| `gnn_agg` (GroupGuard-inspired) | 0.8959 | [0.8751, 0.9161] | **−0.0191** | **FAILS THE BAR** |
+| `attn_pool` (Set-Transformer PMA) | 0.8880 | [0.8659, 0.9096] | **−0.0270** | **FAILS THE BAR** |
+| `per_traj_max` (decomposition-defeated baseline) | 0.8022 | [0.7733, 0.8296] | **−0.1128** | **FAILS THE BAR** |
+
+**Under the mandated encoder, only ONE of the three set-aggregators survives the binding
+falsifier.** On MiniLM all three cleared (+0.108 to +0.232, §9.1); here `attn_pool` and
+`gnn_agg` both land below a TF-IDF unigram model on the same texts. The lesson's thesis —
+"a set-aggregator over the trajectories recovers the fractured intent" — is supported by
+`mean_agg` and **falsified for `attn_pool` and `gnn_agg`** under §9.4's binding form,
+which is the form that was pre-registered as the stricter one precisely so this outcome
+could not be talked around. `per_traj_max` fails on this encoder too, as it did on both
+previous ones — the one result that has now reproduced three times.
+
+Two things temper how far the failure can be pushed. The bar itself is higher here
+(0.9149 vs MiniLM's 0.7037 `totalchar` bar) because this run has a **content** bar that
+the MiniLM run's older two-bar audit did not compute at all, so §9.0 and §9.1 are not
+priced against the same object; and the pool changed at the same time as the encoder, so
+this is not a clean one-variable ablation of MiniLM → EmbeddingGemma.
+
+**EASY — every method now fails, and that is the cautionary condition working.** Binding
+bar is `content` at **0.9998**:
+
+| method | AUC | 95% CI | **margin vs 0.9998** | verdict |
+|---|---|---|---|---|
+| `mean_agg` | 0.9992 | [0.9980, 0.9999] | −0.0006 | **FAILS THE BAR** |
+| `attn_pool` | 0.9980 | [0.9945, 0.9998] | −0.0018 | **FAILS THE BAR** |
+| `per_traj_max` | 0.9975 | [0.9957, 0.9990] | −0.0022 | **FAILS THE BAR** |
+| `gnn_agg` | 0.9960 | [0.9915, 0.9991] | −0.0038 | **FAILS THE BAR** |
+
+TF-IDF unigrams separate the easy condition at **0.9998** — essentially perfectly. Four
+methods at 0.996–0.999 all land *below* it. §6 calls easy "the cautionary condition where
+a strong AUC on a badly-chosen benchmark certifies nothing"; this is that statement
+reduced to arithmetic. §9.1 priced easy against a 0.890 *length* bar and read a +0.10
+margin; against a content bar there is no margin at all.
+
+**OOD — CSTM-Bench, 108 rows (52 attack / 56 benign), `uniform` session selection:**
+
+| method | AUC | 95% CI | degenerate? |
+|---|---|---|---|
+| `mean_agg` | 0.4849 | [0.3829, 0.5870] | no — 20 distinct scores |
+| `per_traj_max` | 0.4429 | [0.3381, 0.5573] | no — 22 distinct, but sd 0.00018 |
+| `gnn_agg` | 0.4262 | [0.3149, 0.5373] | no — 44 distinct |
+| `attn_pool` | 0.4114 | [0.3135, 0.5215] | no — 43 distinct |
+
+**Nothing transfers**, and every method now sits *below* chance with a CI that straddles
+0.5 — so the honest reading is "no signal at 108 rows", not "anti-signal". All four still
+report the all-positive `f1 = 0.65 / acc = 0.4815` at the 0.5 threshold, so the ranking is
+informative while the operating point is not.
+
+### 9.0.1 What the truncated encoder would have told us
+
+The suspended `AutoModel`+meanpool run (see the box in §2) is worth one table, because it
+is a worked example of a silent defect producing a *different scientific conclusion*
+rather than an error:
+
+| HARD, margin vs the same 0.9149 bar | truncated encoder (SUSPENDED) | **full stack (shipped)** |
+|---|---|---|
+| `mean_agg` | +0.0521 CLEARS | **+0.0678 CLEARS** |
+| `attn_pool` | **+0.0159 CLEARS** | **−0.0270 FAILS** |
+| `gnn_agg` | −0.0067 FAILS | −0.0191 FAILS |
+| `per_traj_max` | −0.0964 FAILS | −0.1128 FAILS |
+
+**A verdict flipped.** `attn_pool` — the Set-Transformer PMA, the method §2 calls the
+headline architecture — cleared the binding bar under the truncated encoder and fails
+under the real one. Had the truncation not been caught, this lesson would have shipped
+"two of three aggregators clear" instead of "one of three".
+
+**And a claim about the OOD degeneracy is WITHDRAWN.** Under the truncated encoder
+`mean_agg` returned AUC exactly **0.5000 with CI [0.5000, 0.5000]** and
+`is_constant: true` — reproducing the MiniLM degeneracy of §9.2 — and that agreement was
+briefly read as the degeneracy being confirmed on a second encoder. It was not: it was
+the same defect in a different place. On the full stack `mean_agg` returns 0.4849 with 20
+distinct scores and `is_constant: false`. **The MiniLM constant-output degeneracy of §9.2
+therefore stands as a single-arm observation, corroborated by nothing.**
+
 ### 9.1 The constructed main set
+
+> **Historical arm.** Everything in §9.1 and §9.2 is the **MiniLM** run at 298/class hard
+> on `Attack_600` only. The compliant headline is [§9.0](#90-embeddinggemma--the-mandated-encoder-measured-2026-08-21).
 
 Constructed main set — MiniLM turn-embedder, K=5, group-aware 5-fold CV,
 bootstrap 95% CIs, `Attack_600` only. The **HARD** column is the one that matters
@@ -599,7 +725,7 @@ the 0.704 length bar: the session-bound monitor is beaten by counting characters
 All three set-aggregators clear the bar, by +0.108 to +0.232. That margin — not the
 0.329 gap over `per_traj_max` — is the claim.
 
-### 9.2 OOD transfer (MiniLM — the only measured OOD arm)
+### 9.2 OOD transfer (MiniLM historical arm)
 
 OOD transfer — trained on the constructed hard set, evaluated on the **real**
 CSTM-Bench (52 attack / 56 benign) with no further fitting:
@@ -623,8 +749,17 @@ inverts the construct the split exists to test. **The near-chance transfer is
 confounded with that truncation**, so "the constructed decompositions do not teach a
 detector that generalizes" is *not* supported by the measurement as run. The default
 is now `CT_OOD_SELECT=uniform` and the discarded fraction is logged in
-`results_<embedder>.json`, but **the OOD arm has not been re-run** — the table above
-is still the `longest`-5 run. `[PENDING RUN]`
+`results_<embedder>.json`. **The MiniLM table above is still the `longest`-5 run and will
+not be re-run** — the arm was superseded by the mandated encoder rather than repaired.
+`uniform` selection has been run, on **EmbeddingGemma** ([§9.0](#90-embeddinggemma--the-mandated-encoder-measured-2026-08-21)):
+`selection_meta` records `selection: "uniform"`, `ood_k: 5`, a mean of **20.6** sessions
+available per scenario (min 14, max 29) and **75.7%** discarded. So the truncation itself
+is not fixed — 5 of ~21 sessions are still kept — only the *selection rule* is, and the
+`dilution` split's premise is still only partly served. Under `uniform` on the compliant
+encoder the transfer is **0.411–0.485**, i.e. no better than the `longest`-5 MiniLM run
+it was supposed to be confounded with. The selection caveat is therefore **weaker than
+stated here but not retired**: it was a live alternative explanation, and it has been
+tested once, on a different encoder, and did not account for the null.
 
 **(2) The predictions are DEGENERATE, not near chance.** All four methods report the
 **identical** `f1 = 0.65` and `acc = 0.4815`. That is exactly the **all-positive
@@ -655,10 +790,15 @@ as prominently as the in-distribution win, and it is now stated accurately.
 > It does not. `config.py:70` defines `EMBEDDER_CHOICES = ("embeddinggemma", "gemma",
 > "minilm")` as **three distinct options**: `"gemma"` is a Gemma-3-1B **decoder**
 > layer-12 residual (`hidden: 1152`), which is causal *by design* and cannot be affected
-> by a dropped bidirectional flag; `"embeddinggemma"` is the 768-dim EmbeddingGemma-300M
-> and is separately `[PENDING RUN]` with **no number in existence**. The file is back at
-> `artifacts/results_gemma_ablation.json` and carries a `SUSPENSION_WITHDRAWN_2026-08-17`
-> block recording the error.
+> by a dropped bidirectional flag; `"embeddinggemma"` is the 768-dim EmbeddingGemma-300M.
+> The file is back at `artifacts/results_gemma_ablation.json` and carries a
+> `SUSPENSION_WITHDRAWN_2026-08-17` block recording the error.
+>
+> **One line inside that block is now stale.** It closes with *"cross_trajectory
+> embeddinggemma arm is separately [PENDING RUN] with no number in existence."* That was
+> true on 2026-08-17 and is not true now — the EmbeddingGemma arm ran on 2026-08-21 and is
+> [§9.0](#90-embeddinggemma--the-mandated-encoder-measured-2026-08-21). The JSON is left
+> byte-unchanged because it is an artifact, not a document; the correction lives here.
 >
 > **The original caveat below is unaffected by any of that and remains the live reason to
 > distrust this table.**
@@ -678,7 +818,12 @@ as prominently as the in-distribution win, and it is now stated accurately.
 > **Fixed going forward:** `RESULTS_PATH` is now `artifacts/results_<embedder>.json`,
 > so each arm has its own file and the comparison is producible. Re-running the
 > gemma arm under the new path is the only thing that can promote this table from
-> hand-transcribed to evidence. `[PENDING RUN]`
+> hand-transcribed to evidence. **Still `[PENDING RUN]` as of 2026-08-21, and
+> deliberately deprioritised:** the GPU time went to the *mandated* encoder (§9.0)
+> instead, on the reasoning that a compliant headline is worth more than promoting a
+> non-compliant ablation. So this table stays inadmissible, and the representation-
+> robustness question it was built to answer is now answered better by §9.0 anyway —
+> on a third representation, and one whose artifact is regenerable.
 
 The headline above is a **MiniLM sentence encoder** (384-dim). The obvious worry
 is that the whole effect is a property of that one representation. The ablation
@@ -706,13 +851,18 @@ ordering `mean_agg > gnn_agg > attn_pool > per_traj_max` is preserved; only the
 that drops (−0.026). On **easy**, all four methods hit AUC **1.000** under Gemma
 (the cautionary condition is trivially separable on either representation).
 
-**Not everything transferred: the Gemma OOD arm is `NOT RUN`.** The artifact
-records `ood.status = "NOT RUN -- run reaped during CSTM-Bench load"` — the job
-was killed by the host before CSTM-Bench finished loading, so there is **no**
-Gemma OOD number and none is guessed here. **The MiniLM OOD result in §9.2
-(0.48–0.57, near chance) therefore remains the only measured OOD evidence for
-this lesson**, and the near-chance transfer is not known to be embedder-specific
-either way.
+**Not everything transferred: the Gemma OOD arm is `NOT RUN`, and still is.** The
+artifact records `ood.status = "NOT RUN -- run reaped during CSTM-Bench load"` — the job
+was killed by the host before CSTM-Bench finished loading, so there is **no** Gemma OOD
+number and none is guessed here. That has not changed; the arm was not retried, for the
+reason in the banner above.
+
+**What has changed is that this is no longer the only OOD evidence.** §9.0's
+EmbeddingGemma arm ran the OOD block end to end (0.411–0.485 under `uniform` selection),
+so there are now **two** measured OOD arms on different encoders and both are at or below
+chance. The near-chance transfer is therefore **not** encoder-specific — which is a real
+strengthening of the OOD null relative to what this paragraph could claim before, and it
+is the only claim in this lesson that got *stronger* from the new run.
 
 ### 9.4 The pre-registered falsifier — corrected to the confound-bar form
 
@@ -733,11 +883,25 @@ falsifier is therefore restated against the **binding bar**:
 > reclassification after the fact; no moving to the EASY condition to rescue it.
 
 **This correction costs the lesson a claim, and that is the point.** Under the
-binding form, `per_traj_max` (0.607 MiniLM / 0.628 Gemma) is **already below** the
-0.704 length bar — it fails, under both embedders. The three aggregators still
-clear it (+0.108 to +0.232 on MiniLM). The runner now prints this table itself, per
-method, with `CLEARS` / `FAILS THE BAR`, so the outcome cannot be dropped from a
-future README by omission.
+binding form, `per_traj_max` (0.607 MiniLM / 0.628 Gemma / 0.802 EmbeddingGemma) is
+**already below** its bar on all three encoders — it fails everywhere.
+
+**And on the mandated encoder the correction costs two more.** Where the three
+aggregators all cleared on MiniLM (+0.108 to +0.232 against a 0.704 length bar), only
+`mean_agg` clears on EmbeddingGemma (+0.0678 against a 0.9149 **content** bar), while
+`attn_pool` (−0.0270) and `gnn_agg` (−0.0191) **fail the binding falsifier** (§9.0). The
+compliant arm's verdict is therefore:
+
+> **"Aggregation recovers the fractured intent" is supported for `mean_agg` and FALSE
+> for `attn_pool` and `gnn_agg`** on the HARD condition under the mandated encoder, at
+> 500 rows / 339 groups per class, one seed.
+
+The runner prints this table itself, per method, with `CLEARS` / `FAILS THE BAR`, so the
+outcome cannot be dropped from a future README by omission — and the reason the falsifier
+was restated in the stricter form is that the stricter form is the one that can return
+this answer. Note the comparison is not clean: §9.0's bar is a **content** bar and
+§9.1's was a **length** bar, so "three cleared, then one" mixes an encoder change with a
+harder bar. The verdict on the compliant arm stands on its own terms regardless.
 
 Restating a falsifier after a run is normally HARKing. It is admissible here only
 because the change is **strictly more demanding** and was made by an audit, not by
@@ -749,34 +913,50 @@ change is auditable.
 
 ## 10. Honest caveats
 
-- **Screening tier, not evaluation.** Two embedders (MiniLM headline + the Gemma
-  ablation, §9.3), one layer each, group-aware CV on a few hundred samples
-  (hard = 298/class, below the ≥500/class floor), one seed — a directional demo,
-  not the n ≥ 7 seeds + rigor contract CLAUDE.md reserves the word "winner" for.
-  Do not over-read the ordering. The ablation makes the ordering *representation-
-  robust*, which is stronger than a single run, but it is still one seed each —
-  and §9.3's ablation artifact is hand-transcribed, so read it as a claim, not a
-  measurement.
-- **The 298/class was self-imposed, and the README used to call it a pool limit.**
-  It was `Attack_600`'s ~596 usable rows halved. `SafeMTData_1K` (1,680 rows, same
-  ungated repo) sat unused. The loader now takes both configs, but **no run has
-  used the enlarged pool** — every number in §9 is still 298/class. And when it is
-  run, `n` will rise faster than `n_distinct_groups`, because the 1K config has
-  several actors per `query_id`: read the group count.
-- **The mandated encoder has never been run here.** CLAUDE.md §17 mandates
-  `google/embeddinggemma-300m`; MiniLM and the Gemma-3-1B decoder residual are
-  **non-compliant substitutes**, and the "it's gated, no HF token" justification is
-  stale — the weights are on disk. `CT_EMBED=embeddinggemma` is wired and
-  `[PENDING RUN]`.
-- **The easy condition's headline was unpriced for its whole shipped life.** Its
-  directionless length bar is **0.890**; §9.1 printed 0.991–0.998 against no bar.
-  The real easy margin is **+0.10**. The number existed in `results.json` the whole
-  time — the failure was reporting, not measurement, which is exactly the failure
-  `CONFOUND_DISCIPLINE.md` convicts two sibling lessons of while listing this
-  lesson as fully compliant.
-- **No Gemma OOD number exists.** The Gemma run was reaped during CSTM-Bench
-  loading, so its OOD arm is recorded as `NOT RUN` rather than estimated. Every
-  OOD statement in this lesson rests on the MiniLM arm alone.
+- **Screening tier, not evaluation.** Three embedders (EmbeddingGemma headline §9.0,
+  MiniLM §9.1, the Gemma ablation §9.3), one layer each, group-aware CV, **one seed
+  each** — a directional demo, not the n ≥ 7 seeds + rigor contract CLAUDE.md reserves
+  the word "winner" for. Do not over-read the ordering. Three representations agreeing
+  that `per_traj_max` fails its bar is stronger than one run; three representations
+  disagreeing about `attn_pool` and `gnn_agg` is exactly why one seed is not enough.
+  §9.3's ablation artifact is additionally hand-transcribed, so read it as a claim, not
+  a measurement.
+- **The mandated encoder now carries the headline, and it cost the lesson two claims.**
+  CLAUDE.md §17 mandates `google/embeddinggemma-300m`; it ran on 2026-08-21 (§9.0) and
+  under it only `mean_agg` clears the binding bar on HARD — `attn_pool` and `gnn_agg`
+  **fail**. MiniLM and the Gemma decoder residual remain **non-compliant substitutes**
+  and their sections are labelled as historical. The result moved *against* the lesson
+  when it became compliant, which is the direction that makes it worth reporting.
+- **The first EmbeddingGemma run was silently truncated and is suspended.**
+  `AutoModel` + mean pooling skipped two trained Dense heads and the final `Normalize` —
+  right shape, no error, wrong vector space. Under it `attn_pool` **cleared** the bar;
+  on the full stack it fails. A verdict flipped on a defect that raised nothing
+  (§9.0.1). The suspended numbers are kept at
+  `artifacts/results_embeddinggemma_TRUNCATED_ENCODER_SUSPENDED.json` rather than
+  deleted.
+- **The OOD degeneracy is a single-arm observation, and an apparent corroboration is
+  WITHDRAWN.** MiniLM's `mean_agg` returned a constant AUC 0.5000 [0.5000, 0.5000]; the
+  truncated EmbeddingGemma run reproduced that and it was briefly read as confirmation on
+  a second encoder. It was the same defect twice. On the full stack `mean_agg` is 0.4849
+  with 20 distinct scores and `is_constant: false`. Nothing corroborates the degeneracy.
+- **`n` rose to 500/class; independent groups did not.** The 298/class was self-imposed
+  (`Attack_600`'s ~596 rows halved) and §9.0 now loads `SafeMTData_1K` too, reaching
+  500/class with `meets_500_floor: true`. But `hard` has only **339 / 341** distinct
+  `query_id` groups behind those 500s, because the 1K config has several actors per
+  `query_id`. The CV folds and the CIs rest on the group count. Rule 1 is met on rows;
+  read the group count.
+- **The easy condition's headline was unpriced for its whole shipped life, and pricing
+  it properly ended it.** §9.1 printed 0.991–0.998 against no bar; against MiniLM's
+  0.890 directionless length bar the real margin was +0.10. Under §9.0's **content** bar
+  (0.9998) **all four methods fail**, with margins of −0.0006 to −0.0038. The easy
+  condition now demonstrates its own cautionary lesson exactly, and carries no claim.
+- **The OOD selection caveat was tested once and did not explain the null.** The MiniLM
+  arm kept the 5 *longest* of ~26 sessions, which inverts the `dilution` split's premise;
+  §9.0 ran `uniform` selection and transfer came in at **0.411–0.485**, no better. The
+  truncation itself is unfixed — 75.7% of sessions are still discarded at `CT_OOD_K=5`.
+- **No Gemma OOD number exists.** The Gemma run was reaped during CSTM-Bench loading, so
+  its OOD arm is recorded as `NOT RUN` rather than estimated, and it was not retried.
+  OOD evidence now rests on **two** arms (MiniLM, EmbeddingGemma), not one.
 - **Constructed decompositions are NOT live multi-agent traces.** Positives reuse
   an ActorAttack attack's sub-queries *as if* each ran in a separate agent; we do
   **not** have real logs of K cooperating agents executing a fractured plan. The
@@ -792,11 +972,13 @@ change is auditable.
   man — it is exactly lesson-1's probe, the strongest *session-bound* monitor, and
   the decomposition is *designed* to beat it. Reporting its collapse on hard is the
   point, not a bug.
-- **CSTM-Bench is small and OOD, and we truncated it badly.** ~52 attack + ~56
-  benign scenarios, a different distribution from our constructed set — a transfer
-  probe with wide CIs, not a precise evaluation. The measured run kept the **5
-  longest of ~26 sessions** per scenario and produced **degenerate, near-constant**
-  predictors. See §9.2 before reading the OOD null as a finding.
+- **CSTM-Bench is small and OOD, and we still truncate it.** ~52 attack + ~56 benign
+  scenarios, a different distribution from our constructed set — a transfer probe with
+  wide CIs (every §9.0 CI is ~0.20 wide and straddles 0.5), not a precise evaluation. The
+  MiniLM run kept the **5 longest of ~26** sessions per scenario and produced
+  **degenerate, near-constant** predictors; the EmbeddingGemma run kept **5 uniformly
+  sampled of ~21**, discarding **75.7%**, and its predictors are non-degenerate but
+  below chance. See §9.2 and §9.0 before reading the OOD null as a finding.
 - **Inspired-by, not a paper reproduction — and two of the citations were
   overstated.** The architecture (per-trajectory embedding + permutation-invariant
   set pooling) operationalizes the *idea* shared by the cited

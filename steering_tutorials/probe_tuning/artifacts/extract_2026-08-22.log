@@ -1,0 +1,73 @@
+[ood] XSTest balanced: 150 harmful + 150 safe = 300 prompts (from 450 total)
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/340 [00:00<?, ?it/s]Loading weights:  14%|█▍        | 48/340 [00:00<00:00, 455.57it/s]Loading weights:  29%|██▉       | 100/340 [00:00<00:00, 487.51it/s]Loading weights: 100%|██████████| 340/340 [00:00<00:00, 1258.67it/s]
+[model] loaded DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated on cuda (26 layers, hidden=1152)
+[extract] H shape (1300, 26, 3, 1152) = 234 MB fp16 -> layer_features_common_n500_gemma-3-1b-it-heretic-extreme-un_9022fb.npz
+[extract] 25/1300 prompts
+[extract] 50/1300 prompts
+[extract] 75/1300 prompts
+[extract] 100/1300 prompts
+[extract] 125/1300 prompts
+[extract] 150/1300 prompts
+[extract] 175/1300 prompts
+[extract] 200/1300 prompts
+[extract] 225/1300 prompts
+[extract] 250/1300 prompts
+[extract] checkpoint 250/1300
+[extract] 275/1300 prompts
+[extract] 300/1300 prompts
+[extract] 325/1300 prompts
+[extract] 350/1300 prompts
+[extract] 375/1300 prompts
+[extract] 400/1300 prompts
+[extract] 425/1300 prompts
+[extract] 450/1300 prompts
+[extract] 475/1300 prompts
+[extract] 500/1300 prompts
+[extract] checkpoint 500/1300
+[extract] 525/1300 prompts
+[extract] 550/1300 prompts
+[extract] 575/1300 prompts
+[extract] 600/1300 prompts
+[extract] 625/1300 prompts
+[extract] 650/1300 prompts
+[extract] 675/1300 prompts
+[extract] 700/1300 prompts
+[extract] 725/1300 prompts
+[extract] 750/1300 prompts
+[extract] checkpoint 750/1300
+[extract] 775/1300 prompts
+[extract] 800/1300 prompts
+[extract] 825/1300 prompts
+[extract] 850/1300 prompts
+[extract] 875/1300 prompts
+[extract] 900/1300 prompts
+[extract] 925/1300 prompts
+[extract] 950/1300 prompts
+[extract] 975/1300 prompts
+[extract] 1000/1300 prompts
+[extract] checkpoint 1000/1300
+[extract] 1025/1300 prompts
+[extract] 1050/1300 prompts
+[extract] 1075/1300 prompts
+[extract] 1100/1300 prompts
+[extract] 1125/1300 prompts
+[extract] 1150/1300 prompts
+[extract] 1175/1300 prompts
+[extract] 1200/1300 prompts
+[extract] 1225/1300 prompts
+[extract] 1250/1300 prompts
+[extract] checkpoint 1250/1300
+[extract] 1275/1300 prompts
+[extract] 1300/1300 prompts
+
+=== LAYER-FEATURE CACHE WRITTEN ================================
+  path        C:\Users\evija\steeringresearch\steering_tutorials\probe_tuning\artifacts\layer_features_common_n500_gemma-3-1b-it-heretic-extreme-un_9022fb.npz
+  model       DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated
+  main arm    common  n=1000 (500/class)  balance=[500, 500]
+  benign arm  XSTest n=300 balance=[150, 150] (reported-only, never used to select)
+  layers      26 of 26: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+  poolings    ['max', 'mean', 'last']  (max = the paper's sparsity-aware default)
+  hidden      1152   fingerprint a21fc7cf31801df0
+  NEXT        python -m steering_tutorials.probe_tuning.sweep_layers
+================================================================

@@ -2,23 +2,35 @@
 
 > **Reference:** [The Million-Label NER: Breaking Scale Barriers with GLiNER bi-encoder (arXiv:2602.18487)](https://arxiv.org/abs/2602.18487) — Stepanov, Shtopko, Vodianytskyi, Lukashov (Feb 2026); [GLiNER Guard: Unified Encoder Family for Production LLM Safety and Privacy (arXiv:2605.05277)](https://arxiv.org/abs/2605.05277) — Minko, Sadiekh, Kokuykin (May 2026); [Opir: Efficient Multi-Task Safety Classification for Toxicity, Jailbreaks, Hate Speech, and Harmful Content (arXiv:2605.29659)](https://arxiv.org/abs/2605.29659) — Stepanov, Smechov (May 2026); [GLiGuard: Schema-Conditioned Classification for LLM Safeguard (arXiv:2605.07982)](https://arxiv.org/abs/2605.07982) — Zaratiana, Newhauser, Hurn-Maloney, Lewis (May 2026); the shared backbone [EmbeddingGemma-300M (model card)](https://huggingface.co/google/embeddinggemma-300m). Hard-negative data-synthesis line: [ECIsem: Semantic Residual Effective Contrastive Information for Evaluating Hard Negatives (arXiv:2603.20990)](https://arxiv.org/abs/2603.20990) — Sinha, Seetharaman, Bansal (Mar 2026); [ARHN: Answer-Centric Relabeling of Hard Negatives with Open-Source LLMs for Dense Retrieval (arXiv:2604.11092)](https://arxiv.org/abs/2604.11092) — Choi et al. (SIGIR 2026); [When Hard Negatives Hurt: Bridging the Generative-Discriminative Gap in Hard Negative Synthesis for Retrieval (arXiv:2606.01304)](https://arxiv.org/abs/2606.01304) — Zhang et al. (KDD 2026); method name **CausalNeg**.
 
-> ## SUSPENDED 2026-08-17 — every ACCURACY number in this lesson
+> ## RE-MEASURED 2026-08-21 on the FIXED bidirectional encoder — the suspension is lifted
 >
-> `google/embeddinggemma-300m` is a **bidirectional** encoder, but transformers 4.55.0
-> contains zero references to `use_bidirectional_attention`, so the flag was silently
-> dropped and **both towers ran causal**. Proved behaviourally: bit-identical hidden
-> states (`0.000000e+00`) over a 9-token shared prefix. Full write-up:
+> **What was wrong (2026-08-17).** `google/embeddinggemma-300m` is a **bidirectional**
+> encoder, but transformers 4.55.0 contains zero references to
+> `use_bidirectional_attention`, so the flag was silently dropped and **both towers ran
+> causal**. Proved behaviourally: bit-identical hidden states (`0.000000e+00`) over a
+> 9-token shared prefix. Full write-up:
 > [`audits/AUDIT_2026-08-17_embeddinggemma_causal.md`](../../audits/AUDIT_2026-08-17_embeddinggemma_causal.md).
 >
-> - **The artifact has been renamed** to `artifacts/results_CAUSAL_ENCODER_SUSPENDED.json`.
->   Every reference to `artifacts/results.json` below points at that file.
-> - **SUSPENDED — do not cite:** all macro-AP / AUC / AP / FPR figures in §10, and every
->   verdict resting on them. They were produced by an instrument that is not the
->   instrument claimed, so they cannot be cited **in either direction** until re-measured.
-> - **SURVIVES — still citable:** the **latency/scaling** result (bi-encoder flat at
->   ~0.97 s while the uni-encoder reaches 42.9 s at 1024 labels, **43.9×**) and the
->   **structural** fact that a trained head has no column for a held-out policy and so
->   cannot score it at all. Neither depends on the attention mode.
+> - **The suspended artifact is retained** at
+>   `artifacts/results_CAUSAL_ENCODER_SUSPENDED.json`. It is **not deleted and not
+>   reversed** — it is the record of what a crippled encoder produced.
+> - **The current artifact is `artifacts/results_embeddinggemma.json`**, written by the
+>   2026-08-21 re-run on the fixed bidirectional encoder at `N_PER_CLASS=500`,
+>   `N_BENIGN=3000`, 21 policy columns, corpus **N = 13,065**. Every number in §10 below
+>   is read from it.
+> - **The seen-label ORDERING reproduces**, so the causal-encoder run's central
+>   conclusion was **not** an artifact of the bug:
+>   `trained_head` **0.553** > `bi_encoder_trained` **0.482** > `bi_encoder` **0.227**
+>   > `uni_encoder` **0.156** (macro-AP, seen labels). The suspended run had the same
+>   order. What the fix changed is magnitudes and the transfer picture, not the ranking.
+> - **Held-out zero-shot flips the order**, as it did before: `bi_encoder` **0.385**
+>   beats `bi_encoder_trained` **0.178**, and `trained_head` is **N/A** — it has no
+>   column for a policy it never trained on and cannot score it at all. That structural
+>   fact never depended on the attention mode.
+> - **One thing got WORSE and it is the load-bearing caveat:** on the *test split* the
+>   binding confound bar is the **TF-IDF content bar at 0.804**, and **no method clears
+>   it** (best is `trained_head` at 0.718, margin **−0.086**). Pre-registered falsifier
+>   **(iv) FIRES** — see §10.4. Read every accuracy number in this lesson against that.
 
 > Earlier safety lessons catch an attack **inside one trajectory** — across
 > conversation turns (`multiturn_jailbreak`), generated tokens (`trajguard`),
@@ -639,38 +651,33 @@ so the off-family-judge discipline of the steering lessons does not apply here
 
 ## 10. Results — measured vs. the claim
 
-> ### ACCURACY NUMBERS IN THIS SECTION ARE SUSPENDED (2026-08-17)
->
-> The EmbeddingGemma backbone ran **causal**, not bidirectional — see the banner at the
-> top of this README and
-> [`audits/AUDIT_2026-08-17_embeddinggemma_causal.md`](../../audits/AUDIT_2026-08-17_embeddinggemma_causal.md).
-> Every macro-AP / AUC / AP / FPR figure below is therefore **not a current finding** and
-> must not be quoted as one, in either direction: a crippled sentence encoder is a
-> sufficient explanation for the weak accuracy, so these numbers do not license a claim
-> about bi-encoders. **EXP-D (latency vs label count) is unaffected and stands.** The
-> artifact these tables were read from is now
-> `artifacts/results_CAUSAL_ENCODER_SUSPENDED.json`.
-
 > ### PROVENANCE OF EVERY NUMBER IN §10 (read before the tables)
 >
-> All figures below come from the **2026-07-31 run**: EmbeddingGemma-300M, **16**
-> policy columns, `N_PER_CLASS=500`, `N_BENIGN=500`, corpus **N=5,726** at
-> **93.5% BeaverTails**, and a single transfer arm that was mislabelled OOD. They
-> are the numbers this lesson actually measured and they are not edited.
+> **UPDATED 2026-08-21.** Every figure below is read from
+> `artifacts/results_embeddinggemma.json`, written by the re-run on the **fixed
+> bidirectional** EmbeddingGemma-300M. The previous version of this block described a
+> 2026-07-31 run at 16 policy columns / `N_BENIGN=500` / N=5,726 and listed four axes on
+> which the data layer had since moved. **All four of those moves are now executed**, so
+> the block is rewritten to describe the corpus that was actually measured rather than
+> the one that was pending:
 >
-> Since then the data layer changed on four axes, so **these tables do not describe
-> the corpus the code now builds** and must be re-measured:
->
-> | axis | the run below | now |
+> | axis | the superseded 2026-07-31 run | **the run below (2026-08-21)** |
 > |---|---|---|
-> | benign pool | 500 (mining drew 69% of it) | `BG_N_BENIGN=3000` |
-> | sources | BeaverTails 93.5% / toxic-chat 6.5% / wildguard 0% | + Aegis 2.0 (33,416 rows, ungated) |
-> | policy columns | 16 | 21 (5 appended for unmappable Aegis categories, §6.1) |
-> | transfer | one arm, called "OOD" | three named arms, one genuinely OOD (§6.2) |
+> | encoder attention | **causal** (the bug) | **bidirectional** (fixed) |
+> | benign pool | 500 (mining drew 69% of it) | **3,000** |
+> | sources | BeaverTails 93.5% / toxic-chat 6.5% / wildguard 0% | BeaverTails 4,852 + Aegis 2.0 **4,842** + toxic-chat 371 + 3,000 benign |
+> | corpus size | N = 5,726 | **N = 13,065** (10,065 harmful / 3,000 benign; test split 3,910) |
+> | policy columns | 16 | **21** (5 appended for unmappable Aegis categories, §6.1) |
+> | transfer | one arm, called "OOD" | **three named arms, all executed** (§6.2) |
 > | confound | one bar, unfolded | four bars, folded, corpus **and** test split (§6.3) |
 >
-> Anything marked **[PENDING RUN]** is wired and import-checked but has not been
-> executed. No number below has been invented, adjusted, or projected forward.
+> `allenai/wildguardmix` is still **GATED** on this host (HTTP 403 without a token) and
+> contributes **0 rows**; the artifact records that under `datasets.wildguardmix`.
+> **8 of the 21 policy columns fall short of the 500 requested** — `animal_abuse` 357,
+> `child_abuse` 425, `terrorism` 293, `jailbreak` 106, `unauthorized_advice` 459,
+> `malware` 149, `intellectual_property` 76, `high_risk_gov_decisions` 75 — which is a
+> pool ceiling, recorded per column in `achieved.requested_vs_achieved`, not a sampling
+> choice. No number below has been invented, adjusted, or projected forward.
 
 > ### 10.0 The bi-encoder arm was measuring the wrong thing, and this is the fix
 >
@@ -710,35 +717,50 @@ so the off-family-judge discipline of the steering lessons does not apply here
 >
 > | arm | EXP-A seen | EXP-B **unseen policy** | EXP-E `heldout_split` *(not OOD, see 6.2)* |
 > |---|---|---|---|
-> | `bi_encoder` (frozen cosine) | 0.240 | **0.382** | 0.184 |
-> | `bi_encoder_trained` (InfoNCE) | **0.575** *(+140%)* | **0.182** *(−52%)* | **0.415** *(+126%)* |
-> | `uni_encoder` | 0.169 | 0.115 | 0.146 |
-> | `trained_head` | 0.658 | *abstains* | 0.496 |
+> | `bi_encoder` (frozen cosine) | 0.227 | **0.385** | 0.246 |
+> | `bi_encoder_trained` (InfoNCE) | **0.482** *(+113%)* | **0.178** *(−54%)* | **0.452** *(+83%)* |
+> | `uni_encoder` | 0.156 | 0.129 | 0.204 |
+> | `trained_head` | 0.553 | **N/A — no column exists** | 0.538 |
 >
-> *(macro-AP; EmbeddingGemma-300M, 500/class, 12 seen + 4 held-out policies.)*
+> *(macro-AP; **fixed bidirectional** EmbeddingGemma-300M, 500/class requested,
+> 17 seen + 4 held-out policies. Held out: Financial Crime, Self Harm, Toxicity,
+> Criminal Planning.)*
 >
-> ### The result splits in a way worth pausing on
+> ### The result splits in a way worth pausing on — and it survived the encoder fix
 >
-> Contrastive training **more than doubles** seen-policy AP (0.240 → 0.575) — reproducing
-> the papers' central "trained ≫ frozen" claim. It also **more than doubles** AP under
-> *content* shift (BeaverTails OOD, 0.184 → 0.415). But on *unseen policies* it does not
-> merely degrade: it lands at **0.182 against frozen cosine's 0.382 — less than half**.
-> Training does not fail to help there; it actively destroys most of the zero-shot ability
-> the frozen backbone already had.
+> Contrastive training **more than doubles** seen-policy AP (0.227 → 0.482) — reproducing
+> the papers' central "trained ≫ frozen" claim. It nearly doubles AP under *row* shift
+> (`heldout_split`, 0.246 → 0.452). But on *unseen policies* it does not merely degrade:
+> it lands at **0.178 against frozen cosine's 0.385 — less than half**. Training does not
+> fail to help there; it actively destroys most of the zero-shot ability the frozen
+> backbone already had.
+>
+> **This split is the one result that reproduced across the causal-encoder bug.** The
+> suspended run measured 0.240 / 0.575 / 0.182 / 0.382; the fixed run measures
+> 0.227 / 0.482 / 0.178 / 0.385. The magnitudes moved — trained seen-AP fell ~0.09 — but
+> the *shape* is unchanged: trained ≫ frozen on seen labels, frozen ≫ trained on unseen
+> ones. A bug that plausibly explained the weak numbers turns out not to have produced
+> the ordering, which is worth stating precisely because the suspension was written on
+> the assumption that it might have.
 >
 > Those two shifts are different, and the split is the lesson:
 >
 > - **EXP-E `heldout_split` holds the policies fixed and changes only the ROWS.** Training
 >   transfers across them. ✔ *(This was written as "changes the content"; the content
 >   barely changes -- same dataset, annotators and rendering. The `cross_annotator` and
->   `ood_benchmark` arms are the ones that test the stronger reading, and they are
->   **[PENDING RUN]**.)*
+>   `ood_benchmark` arms test the stronger reading and have now **both run** — see EXP-E
+>   below. Training still transfers under an annotator+taxonomy change, 0.175 → 0.351;
+>   on the genuinely external `cstm-bench` every arm collapses to near chance.)*
 > - **EXP-B holds the content distribution and changes the policies.** Training does not
 >   transfer, and is *less than half* as good as frozen cosine. X
 >
-> **Why.** The projection is trained on **12 policies**. A 768→256 map fitted to twelve
-> policy vectors learns *those twelve directions*, not a general notion of
-> "text-matches-policy". The papers get zero-shot policy generalisation by training at
+> **Why.** The projection is trained on **17 policies** (12 in the superseded run; the
+> Aegis merge added five columns and the seen set grew with it). A 768→256 map fitted to
+> seventeen policy vectors learns *those seventeen directions*, not a general notion of
+> "text-matches-policy" — and note that going 12 → 17 did **not** rescue zero-shot
+> transfer (0.182 → 0.178), which is the shape you would expect if the missing ingredient
+> is label *scale* rather than a few more columns. The papers get zero-shot policy
+> generalisation by training at
 > **million-label scale** — that scale, not the architecture, is what buys the zero-shot
 > property. On this host we can demonstrate the trained-vs-frozen gap honestly; we cannot
 > manufacture the label diversity that makes it generalise.
@@ -756,55 +778,63 @@ so the off-family-judge discipline of the steering lessons does not apply here
 >
 > The paper's scaling experiment runs to **~1000 labels** and makes **two** claims:
 > latency stays flat (already tested here by `scaling_latency`), and **accuracy is
-> maintained**. EXP-G tests the second: pad the 16 real policies with **884 synthetic
-> distractor policies** and re-score at K = 16 / 64 / 256 / **900**, computing metrics
-> over the 16 real columns only.
+> maintained**. EXP-G tests the second: pad the 21 real policies with **879 synthetic
+> distractor policies** and re-score at K = 21 / 64 / 256 / **900**, computing metrics
+> over the 21 real columns only.
 >
 > **First, a warning that changes how you read the table.** `macro_AP` and `macro_F1` are
 > **exactly** flat across K — spread `0.00e+00`, asserted in code. That is not a
 > measurement, it is **arithmetic**: a bi-encoder's score for column *j* is
-> `cos(content, bank[j])`, which does not depend on any other column. Adding 884
+> `cos(content, bank[j])`, which does not depend on any other column. Adding 879
 > competitors cannot move a per-column average by construction. **Anyone reporting that
 > flatness as "accuracy is maintained at scale" would be reporting a tautology.**
 >
 > The question only has content under a **competitive** rule — where distractors can
 > outrank the true policy:
 >
-> | arm | K=16 | K=64 | K=256 | **K=900** | degradation |
+> | arm | K=21 | K=64 | K=256 | **K=900** | degradation |
 > |---|---|---|---|---|---|
-> | `bi_encoder` mean rank of true policy | 4.46 | 7.59 | 19.80 | **62.55** | **14×** |
-> | `bi_encoder_trained` mean rank | 4.36 | 12.98 | 47.19 | **162.49** | **37×** |
-> | *(chance)* | 8.5 | 32.5 | 128.5 | 450.5 | 53× |
-> | `bi_encoder` **rank / chance** | 0.525 | 0.234 | 0.154 | **0.139** | improves |
-> | `bi_encoder_trained` **rank / chance** | 0.513 | 0.399 | 0.367 | **0.361** | improves |
+> | `bi_encoder` mean rank of true policy | 5.20 | 8.20 | 22.07 | **66.62** | **12.8×** |
+> | `bi_encoder_trained` mean rank | **3.93** | **6.73** | **19.69** | **61.56** | 15.7× |
+> | *(chance)* | 11.0 | 32.5 | 128.5 | 450.5 | 41× |
+> | `bi_encoder` **rank / chance** | 0.473 | 0.252 | 0.172 | **0.148** | improves |
+> | `bi_encoder_trained` **rank / chance** | **0.357** | **0.207** | **0.153** | **0.137** | improves |
+> | `bi_encoder` **distractor steal@1** | 0.000 | 0.086 | 0.215 | **0.266** | worsens |
+> | `bi_encoder_trained` **steal@1** | 0.000 | **0.006** | **0.017** | **0.033** | worsens |
 >
-> **The trained arm starts (barely) better and ends much worse.** At K=16 it ranks the
-> true policy 4.36 vs 4.46 — a margin of a tenth of a rank. At K=900 it ranks it
-> **162.5 vs 62.5**, **2.6× as deep**. Relative to chance the ordering flips too: frozen
-> ends at 0.139, trained at 0.361.
+> > **REVERSAL — this table's conclusion is the OPPOSITE of the suspended run's, and the
+> > encoder fix is what moved it.** The causal-encoder version of this section read *"the
+> > trained arm starts (barely) better and ends much worse"* (162.49 vs 62.55 at K=900,
+> > rank/chance 0.361 vs 0.139) and explained it as the projection over-fitting to its
+> > seen policies. **On the fixed bidirectional encoder the trained arm is better at every
+> > single K**, and its distractor steal rate at K=900 is **0.033 against frozen cosine's
+> > 0.266 — 8× more robust**. The old explanation was reasoning from an artifact. This is
+> > the one place in the lesson where the bug did not merely shrink an effect, it inverted
+> > one, which is why the suspension had to be a suspension rather than a footnote.
 >
-> **This is the same weakness EXP-B found, seen from another angle.** The projection is
-> fitted to 12 policies; 884 policies it has never seen are exactly what it has no
-> machinery to reject. Frozen cosine has no such bias — it was never told which twelve
-> mattered — so it degrades more gracefully among strangers. Trained wins where it was
-> trained and loses where it was not, in both experiments.
+> **What survives from the old reading:** both arms still degrade in *absolute* rank
+> (12.8× and 15.7× over a 43× increase in bank size) while *improving* relative to
+> chance. So the paper's claim (2) is reproduced only in the weak relative sense, and the
+> competitive picture at K=900 is a mean true-policy rank in the sixties out of 900.
 >
 > **Two further honesty notes recorded in the artifact:**
 > - `top-3 F1` *rises* with K, which is an artifact: distractors consume top-3 slots, so
->   real predictions per row fall 3.00 → 2.20 and precision improves for free. It is
->   excluded from the plot and flagged as `notes.top_t_f1_confound`.
+>   real predictions per row fall 3.00 → 1.71 (frozen) / 3.00 → 2.46 (trained) and
+>   precision improves for free. It is excluded from the plot and flagged as
+>   `notes.top_t_f1_confound`.
 > - Distractors are screened **lexically** (disjoint domain grid, harm-stem blocklist,
 >   Jaccard ≤ 0.20 vs every real description *and* paraphrase; max observed 0.125), with
 >   the embedding audit **report-only**. Filtering by cosine under the encoder being
 >   tested would delete precisely the hard competitors and rig the result. Bank is
->   seed-12345 deterministic, fingerprint `8c3fc96b2b05`, prefix-nested so each smaller
->   K is a strict prefix of the larger.
+>   seed-12345 deterministic, fingerprint `471d78f2b0b1`, 879 of 1,080 candidates used,
+>   prefix-nested so each smaller K is a strict prefix of the larger.
 >
-> **Verdict on the paper's claim (2):** *not reproduced at this label diversity.* Both
-> arms stay well above chance, so accuracy is "maintained" only in the weak relative
-> sense; in absolute ranking both degrade, and the trained arm degrades more. The paper
-> trains at million-label scale — again, that scale is the thing we cannot replicate,
-> and again it is the thing that would matter.
+> **Verdict on the paper's claim (2):** *partially reproduced.* Both arms stay well above
+> chance and both **improve** relative to chance as the bank grows, so accuracy is
+> "maintained" in the relative sense; in absolute ranking both degrade, and the frozen arm
+> now degrades *less* in rank while being far *worse* on top-1 steal. The paper trains at
+> million-label scale — that scale is the thing we cannot replicate, and it remains the
+> thing that would matter.
 
 > ### 10.2 The Opir taxonomy test (EXP-H) — the same scale, but the competitors are *relatives*
 >
@@ -817,36 +847,39 @@ so the off-family-judge discipline of the steering lessons does not apply here
 > less forgiving: *"a three-level taxonomy containing 996 categories across 16 top-level
 > labels, 126 mid-level labels, and 854 leaf labels."* In a taxonomy like that, a label's
 > competitors are its own **siblings and descendants** — plausible near-misses, not strangers.
-> `taxonomy.py` builds exactly that shape below our 16 real policies (7–8 mids per policy,
-> 6–7 leaves per mid, **16 + 126 + 854 = 996**), and EXP-H re-runs EXP-G's protocol against
-> it. Everything else is held fixed — same test rows, same two arms, same 16 scored columns,
-> same prototype count, same fp32 backbone — so the manipulated variable is the
-> **relatedness of the competitors**.
+> `taxonomy.py` builds exactly that shape below our **21** real policies (the total is held
+> at Opir's 996 and mid/leaf are re-derived at the new `n_top` by the paper's 126:854 ratio,
+> giving **21 + 125 + 850 = 996**; `opir_shape.matches_paper` is therefore `false` and says
+> so in the artifact). EXP-H re-runs EXP-G's protocol against it. Everything else is held
+> fixed — same test rows, same two arms, same 21 scored columns, same prototype count, same
+> fp32 backbone — so the manipulated variable is the **relatedness of the competitors**.
 >
 > **The construction is measured, not asserted.** Where `distractors.py` *drops* anything
 > above Jaccard 0.20, `taxonomy.py` targets the opposite and reports what it got:
 >
 > | adjacency of the ~900 competitors | EXP-G (unrelated) | **EXP-H (related)** |
 > |---|---|---|
-> | mean lexical Jaccard to the true policy's own text | ≤ 0.20 *(hard gate; max observed 0.125)* | **0.381** *(min 0.150)* |
-> | …vs. to the nearest **other** top-level policy | — | 0.067 → **5.7× closer to its own parent** |
-> | share of competitors **above EXP-G's drop gate** | 0 *(by definition)* | **94.9 %** |
-> | mean embedding cosine to a real policy | 0.765 *(max over the 16)* | **0.865** *(to its own parent; 0.805 to the best other parent)* |
-> | share lexically closest to its own parent | — | **100 %** (99.9 % in embedding space) |
+> | mean lexical Jaccard to the true policy's own text | ≤ 0.20 *(hard gate; max observed 0.125)* | **0.381** *(min 0.158)* |
+> | …vs. to the nearest **other** top-level policy | — | 0.073 → **5.19× closer to its own parent** |
+> | share of competitors **above EXP-G's drop gate** | 0 *(by definition)* | **95.7 %** |
+> | mean embedding cosine to a real policy | — | **0.721** *(to its own parent; 0.616 to the best other parent)* |
+> | share lexically closest to its own parent | — | **100 %** (98.8 % in embedding space) |
 >
-> **One row of that table deserves more attention than it first gets.** The *lexical*
-> contrast between the two experiments is enormous — a 0.125 ceiling versus a 0.381 mean —
-> but the *embedding* contrast is not: EmbeddingGemma already places EXP-G's deliberately
-> unrelated content-operations distractors at **0.765** mean cosine to a real safety policy,
-> against **0.865** for EXP-H's actual relatives. In this backbone's geometry, cosines are
-> compressed into a narrow high band, and "obviously off-topic" is only ~0.1 further away
-> than "sibling of the truth". So EXP-H is a large manipulation of *semantics* and a modest
-> one of *cosine* — which is worth knowing before reading any of the degradations below as
-> proportional to distance.
+> > **CORRECTED 2026-08-21 — the cosine-compression paragraph that used to sit here was an
+> > artifact of the causal encoder and is withdrawn.** It read that EmbeddingGemma places
+> > EXP-G's unrelated distractors at **0.765** mean cosine against **0.865** for EXP-H's
+> > relatives, and concluded that "in this backbone's geometry cosines are compressed into a
+> > narrow high band" so EXP-H was a large manipulation of semantics and a small one of
+> > cosine. On the **fixed bidirectional** encoder the taxonomy bank sits at **0.721** to its
+> > own parent versus **0.616** to the best other parent, `p95_max_cos_to_real` is 0.803, and
+> > **nothing in the bank exceeds 0.90**. The band is not compressed; the causal encoder was
+> > compressing it. Reading a *geometry* claim off a broken attention mask is exactly the
+> > failure the suspension existed to catch, so the paragraph is deleted rather than patched.
 >
 > As in EXP-G, the embedding audit is **report-only**. Filtering by cosine under the encoder
 > being tested would delete precisely the confusable relatives — which is the entire
-> phenomenon EXP-H exists to measure. Bank fingerprint `8611952dba23`, fully deterministic.
+> phenomenon EXP-H exists to measure. Bank fingerprint `3653ac41c687`, seed 20265, fully
+> deterministic.
 >
 > #### Lead with the breakdown, not a steal rate
 >
@@ -862,39 +895,43 @@ so the off-family-judge discipline of the steering lessons does not apply here
 >   and the closest analogue of an EXP-G distractor stealing rank.
 >
 > Every share below is printed against the share a **uniformly random** competitor would
-> produce, because the buckets differ ~15× in size (a policy has ~61 descendants but ~919
+> produce, because the buckets differ ~15× in size (a policy has ~46 descendants but ~929
 > cousins). Raw shares would be a picture of bucket sizes; only the enrichment has content.
 >
-> **What wins the argmax on a genuinely harmful row** (K = 996, n = 1,553 harmful rows;
+> **What wins the argmax on a genuinely harmful row** (K = 996, n = **2,949** harmful rows;
 > *share [chance] enrichment*):
 >
 > | arm | true top-level | **descendant** | sibling | other-branch |
 > |---|---|---|---|---|
-> | `bi_encoder` (frozen) | 0.074 [0.002] **43×** | **0.509** [0.104] **4.9×** | 0.069 [0.014] 4.8× | 0.348 [0.880] 0.40× |
-> | `bi_encoder_trained` | **0.492** [0.002] **287×** | 0.070 [0.104] 0.67× | **0.308** [0.014] **21.4×** | 0.130 [0.880] 0.15× |
+> | `bi_encoder` (frozen) | 0.114 [0.002] **61×** | **0.433** [0.086] **5.0×** | 0.081 [0.019] 4.2× | 0.372 [0.893] 0.42× |
+> | `bi_encoder_trained` | **0.495** [0.002] **268×** | 0.149 [0.086] 1.72× | **0.215** [0.019] **11.2×** | 0.142 [0.893] 0.16× |
 >
 > **The two arms behave in completely different ways, and only the breakdown shows it.**
-> The frozen arm hits the true top-level policy just 0.074 of the time, and its dominant
-> outcome is **over-specification**: half its top-1 picks are the true policy's *own
-> descendants*, enriched 4.9× over chance. The trained arm's dominant outcome is simply
-> **correct** — 0.492 on the true top-level policy, 287× chance — and when it does miss, it
-> misses by **mis-routing to a sibling top-level policy**, enriched **21.4×**, while being
-> *depleted* on descendants (0.67×, i.e. below chance). Collapsed into one "steal rate"
-> these look like the same kind of error. They are not: the first is a router being too
-> specific about the right policy, the second is a router choosing the wrong policy.
+> The frozen arm hits the true top-level policy just 0.114 of the time, and its dominant
+> outcome is **over-specification**: 43 % of its top-1 picks are the true policy's *own
+> descendants*, enriched 5.0× over chance. The trained arm's dominant outcome is simply
+> **correct** — 0.495 on the true top-level policy, 268× chance — and when it does miss, it
+> misses by **mis-routing to a sibling top-level policy**, enriched **11.2×**. Collapsed
+> into one "steal rate" these look like the same kind of error. They are not: the first is a
+> router being too specific about the right policy, the second is a router choosing the
+> wrong policy.
+>
+> *(One sub-claim did move with the encoder fix and is corrected rather than left standing:
+> the trained arm used to be **depleted** on descendants at top-1, 0.67× chance. It is now
+> **enriched** at 1.72×. The qualitative contrast — frozen over-specifies, trained
+> mis-routes to siblings — survives; the "below chance on descendants" detail does not.)*
 >
 > Across the *whole* violation pool the same effect is present but diluted — descendants are
-> enriched 1.56× (frozen) and **0.74×** (trained, i.e. depleted) — because ~92 % of the bank
-> is cousins.
-> Kinship concentrates **at the very top of the ranking**, which is exactly where a router
-> reads.
+> enriched 1.46× (frozen) and **0.97×** (trained, i.e. at chance) — because ~93 % of the bank
+> is cousins. Kinship concentrates **at the very top of the ranking**, which is exactly where
+> a router reads.
 >
 > #### The ranking table
 >
 > | arm | mean rank of true policy | median | **excl. own descendants** | rank-1 rate | rank-1 excl. desc. |
 > |---|---|---|---|---|---|
-> | `bi_encoder` | 208.56 | 98 | **188.81** | 0.043 | **0.195** |
-> | `bi_encoder_trained` | **169.08** | **30** | **161.46** | **0.288** | **0.318** |
+> | `bi_encoder` | 141.60 | 58 | **131.97** | 0.062 | **0.167** |
+> | `bi_encoder_trained` | **88.64** | **8** | **84.65** | **0.269** | **0.319** |
 > | *(chance)* | 498.5 | — | — | 0.001 | — |
 >
 > #### Head-to-head against EXP-G — and EXP-G's headline does not survive it
@@ -905,29 +942,29 @@ so the off-family-judge discipline of the steering lessons does not apply here
 >
 > | arm | EXP-G rank (K=900, unrelated) | EXP-H rank (K=996, related) | EXP-H at **matched K=900** | ratio | EXP-G steal | EXP-H steal | EXP-H steal, descendants forgiven |
 > |---|---|---|---|---|---|---|---|
-> | `bi_encoder` | 62.55 | 208.56 | 185.68 | **2.97×** | 0.133 | 0.857 | **0.348** |
-> | `bi_encoder_trained` | 162.49 | 169.08 | 154.31 | **0.95×** | 0.026 | 0.200 | **0.130** |
+> | `bi_encoder` | 66.62 | 141.60 | 131.72 | **1.98×** | 0.266 | 0.805 | **0.372** |
+> | `bi_encoder_trained` | 61.56 | 88.64 | 85.88 | **1.40×** | 0.033 | 0.290 | **0.142** |
 >
-> **The ordering flips, and that is the finding.** EXP-G concluded that the trained arm
-> "starts better and ends worse" — 162.49 vs 62.55 at K=900 — and read that as the same
-> weakness EXP-B found. Against *related* competitors the conclusion reverses: the frozen
-> arm degrades **2.97×** while the trained arm does not degrade at all (**0.95×** — it
-> actually ranks the truth *slightly better* among relatives than among strangers, 154.31 vs
-> 162.49 at matched K=900), and the trained arm ends up ahead, **169.08 vs 208.56**. So
-> EXP-G's headline was a property of its distractors being **strangers**, not a general
-> property of contrastive training.
+> > **REWRITTEN 2026-08-21 — this subsection previously turned on an ordering flip that no
+> > longer exists.** It read *"the ordering flips, and that is the finding"*: on the causal
+> > encoder the trained arm lost EXP-G (162.49 vs 62.55) and won EXP-H (169.08 vs 208.56),
+> > and the whole argument was that EXP-G's headline had been a property of its distractors
+> > being strangers. **On the fixed encoder the trained arm wins both**, so there is no flip
+> > to explain. The claim is deleted, not softened.
 >
-> **The margin is narrower than an earlier draft of this section reported.** With the
-> orthonormal-init run the trained arm leads by **39.5 ranks (1.23×)** at K=996, and by
-> **31.4 ranks (1.20×)** at matched K=900 — not the ~74-rank, 1.5× gap quoted when the
-> projection was truncation-initialised. The *direction* of the flip is unchanged and so is
-> the argument; only its size is smaller, and the smaller size is the one on record.
+> **What the fixed run shows instead is a clean relatedness cost that hits the two arms
+> unequally.** Both degrade when strangers become relatives, but the frozen arm degrades
+> **1.98×** at matched K against the trained arm's **1.40×**, and the gap in steal rate is
+> the sharper statement: a related competitor takes the top-1 slot from frozen cosine
+> **80.5 %** of the time versus **29.0 %** for the trained arm (**37.2 %** vs **14.2 %** if
+> a descendant win is forgiven). Contrastive training buys robustness to *adjacency*
+> specifically.
 >
-> That reversal is also mechanistically the expected one, which is why it is worth trusting
-> more than the EXP-G ordering: InfoNCE with hard negatives is *training to separate
-> semantically adjacent things*. Strangers are not what it was fitted to reject, and
-> relatives are. The arm that looked worse on the easy test is the one that holds up on the
-> hard one.
+> That is mechanistically the expected direction, which is why it is worth more than the
+> ordering the causal run produced: InfoNCE with hard negatives is *training to separate
+> semantically adjacent things*. Relatives are exactly what it was fitted to reject. The
+> old text reached a compatible conclusion by a route the data did not support; the
+> conclusion is re-derived here from numbers that do.
 >
 > #### Two variables move here, not one — and the breakdown separates them
 >
@@ -936,11 +973,14 @@ so the off-family-judge discipline of the steering lessons does not apply here
 > ordinary content-operations policies). The bucket breakdown is what lets the two be told
 > apart:
 >
-> - **Domain effect.** The frozen arm's other-branch (cousin) top-1 rate alone is **0.348** —
->   already **2.6×** EXP-G's *entire* competitor steal rate of 0.133. Much of the added
+> - **Domain effect.** The frozen arm's other-branch (cousin) top-1 rate alone is **0.372** —
+>   already **1.4×** EXP-G's *entire* competitor steal rate of 0.266. Much of the added
 >   difficulty is simply that the competitors are harm-flavoured, independent of kinship.
-> - **Kinship effect.** On top of that, descendants are enriched **4.9×** and siblings
->   **4.8×** (frozen) / **21.4×** (trained) over chance at rank 1. That part *is* kinship.
+>   *(This multiple was 2.6× on the causal encoder, where EXP-G's steal rate was only 0.133;
+>   the fixed encoder raises the EXP-G baseline, so the domain effect is a smaller share of
+>   the total than the suspended run implied.)*
+> - **Kinship effect.** On top of that, descendants are enriched **5.0×** and siblings
+>   **4.2×** (frozen) / **11.2×** (trained) over chance at rank 1. That part *is* kinship.
 >
 > Reporting only the aggregate would have attributed all of it to relatedness. It is the
 > same one-change-at-a-time discipline §10.3 applies to the MiniLM-vs-EmbeddingGemma
@@ -949,51 +989,54 @@ so the off-family-judge discipline of the steering lessons does not apply here
 > #### Metrics that cannot answer the question (the EXP-G trap, twice over)
 >
 > As in EXP-G, `macro_AP` / `macro_F1` are **exactly** the EXP-A and EXP-G values
-> (0.2755 frozen, 0.4767 trained; asserted in code, delta `0.0e+00`) — a bi-encoder's
-> column-*j* score is `cos(content, bank[j])` and cannot notice the other 980 columns.
-> EXP-H adds a **second** such pair: `mean_rank_true_top16` (4.461 / 4.358) and
-> `top1_acc_top16` reproduce EXP-G's K=16 row bit-for-bit, because restricting to the 16
-> real columns deletes every competitor *either* experiment added. All four are reported
-> **only as cross-experiment anchors** proving the two experiments score the same thing —
-> the runner asserts them and records the verdict — and none is evidence about relatedness.
+> (0.2569 frozen, 0.4243 trained; asserted in code, delta `0.0e+00`) — a bi-encoder's
+> column-*j* score is `cos(content, bank[j])` and cannot notice the other 975 columns.
+> EXP-H adds a **second** such pair: `mean_rank_true_top16` (5.198 / 3.931) and
+> `top1_acc_top16` (0.576 / 0.660) reproduce EXP-G's K=21 row bit-for-bit, because
+> restricting to the real columns deletes every competitor *either* experiment added. All
+> four are reported **only as cross-experiment anchors** proving the two experiments score
+> the same thing — the runner asserts them (`notes.cross_experiment_anchor_verified: true`)
+> — and none is evidence about relatedness.
 >
 > `macro_f1_top_t` inherits EXP-G's confound and here it runs to its limit: the top-3 of 996
-> columns contains a real policy only **0.27** times per row (frozen), so the metric collapses
-> to 0.124 while telling you nothing about the encoder. Excluded from the plot.
+> columns contains a real policy only **0.35** times per row (frozen), so the metric collapses
+> to 0.166 while telling you nothing about the encoder. Excluded from the plot.
 >
 > #### Verdict
 >
 > A **996-category taxonomy of relatives is a materially harder bank than a 900-label bank of
-> strangers** — but only for the frozen arm, and only if you count a descendant win as an
-> error. Three statements, each carrying its own qualifier:
+> strangers**, for both arms, and how much harder depends on whether you count a descendant
+> win as an error. Three statements, each carrying its own qualifier:
 >
-> 1. **Frozen cosine degrades ~3× at matched K** when competitors become relatives. Its top-1
->    behaviour is dominated by its own descendants (0.509), so **whether this is a failure at
+> 1. **Frozen cosine degrades ~2× at matched K** when competitors become relatives. Its top-1
+>    behaviour is dominated by its own descendants (0.433), so **whether this is a failure at
 >    all depends on the deployment**: a router that acts on the *top-level* policy has been
->    mis-routed 0.857 of the time; one that acts on the matched *leaf* has been mis-routed
->    0.348 of the time. This experiment cannot settle which — that is a question about the
+>    mis-routed 0.805 of the time; one that acts on the matched *leaf* has been mis-routed
+>    0.372 of the time. This experiment cannot settle which — that is a question about the
 >    downstream system, not about the encoder — so both numbers are reported and neither is
 >    promoted to *the* answer.
-> 2. **Contrastive training is immune to the change** (0.95× at matched K — no degradation at
->    all) and overtakes the frozen arm, though by a narrower margin than an earlier draft
->    claimed: 169.08 vs 208.56, a 1.23× lead. EXP-G's contrary ordering does not generalise
->    past unrelated distractors.
+> 2. **Contrastive training degrades too, but less** (1.40× at matched K vs 1.98×), and it
+>    leads the frozen arm at 88.64 vs 141.60 — a 1.60× lead. *(The causal-encoder run
+>    reported the trained arm as wholly immune at 0.95×. That is withdrawn: it degrades,
+>    just more slowly.)*
 > 3. **Neither arm is usable as a 996-way router as-is.** Best true-top-level top-1 accuracy
->    is 0.492, and mean rank 169.08 against a chance line of 498.5 — well above chance, nowhere
+>    is 0.495, and mean rank 88.64 against a chance line of 498.5 — well above chance, nowhere
 >    near deployable.
 >
-> *Screening tier: one embedder, one seed, one corpus (n = 1,710 test rows, 2,651 positive
-> pairs). The competitor set is templated from handwritten narrowings, not Opir's real
-> taxonomy, so this reproduces the label-space **shape** and the sibling/descendant
-> **relation** — not that paper's categories.*
+> *Screening tier: one embedder, one seed, one corpus (n = 3,910 test rows, 5,435 positive
+> pairs, 2,949 harmful rows). The competitor set is templated from handwritten narrowings,
+> not Opir's real taxonomy, so this reproduces the label-space **shape** and the
+> sibling/descendant **relation** — not that paper's categories.*
 
 
 
 
-**MEASURED — the HEADLINE run: EmbeddingGemma-300M at 500/class.** Numbers below are
-from `artifacts/results.json` for the real dual-encoder backbone
-(`google/embeddinggemma-300m`, 768-dim, n_per_class = n_benign = 500). The earlier
-MiniLM@150 substitute run is retained in §10.3 for comparison.
+**MEASURED — the HEADLINE run: EmbeddingGemma-300M at 500/class, fixed bidirectional
+encoder (2026-08-21).** Numbers below are from `artifacts/results_embeddinggemma.json`
+for the real dual-encoder backbone (`google/embeddinggemma-300m`, 768-dim,
+n_per_class = 500, n_benign = 3000). The earlier MiniLM@150 substitute run is retained in
+§10.3 for comparison, and the superseded causal-encoder run in
+`artifacts/results_CAUSAL_ENCODER_SUSPENDED.json`.
 
 The falsifiers were pre-registered **before** the run, and **one of them trips** —
 reported below without softening.
@@ -1010,46 +1053,64 @@ uni-encoder are expected to lead on accuracy here):
 
 | method | macro-AP | micro-AP | macro-F1 | binary harm AUC |
 |---|---|---|---|---|
-| `bi_encoder` | 0.240 | 0.243 | 0.152 | 0.589 |
-| `uni_encoder` | 0.169 | 0.142 | 0.194 | 0.490 |
-| **`trained_head`** | **0.658** | **0.667** | **0.595** | 0.588 |
+| `bi_encoder` | 0.227 | 0.218 | 0.113 | 0.691 |
+| `bi_encoder_trained` | 0.482 | 0.516 | 0.179 | 0.614 |
+| `uni_encoder` | 0.156 | 0.116 | 0.182 | 0.586 |
+| **`trained_head`** | **0.553** | **0.597** | **0.501** | **0.718** |
+
+> **Read the AUC column against the binding confound bar, not against 0.5.** On this test
+> split the **TF-IDF content bar is 0.804** and **no method clears it** — `trained_head`
+> misses by **−0.086**, `bi_encoder` by **−0.113**. The length bar is a near-null 0.502, so
+> length is not the problem; *lexical content* is. Pre-registered falsifier **(iv) FIRES**
+> and no EXP-A number may be headlined. See §10.4.
 
 **EXP-B — held-out ZERO-SHOT** (test, held-out policies; **the headline**):
 
 | method | macro-AP | macro-F1 |
 |---|---|---|
-| **`bi_encoder`** | **0.382** | **0.223** |
-| `uni_encoder` | 0.115 | 0.129 |
+| **`bi_encoder`** | **0.385** | **0.165** |
+| `bi_encoder_trained` | 0.178 | 0.195 |
+| `uni_encoder` | 0.129 | 0.191 |
 | `trained_head` | N/A (cannot score an unseen policy) | N/A |
+
+*(Held-out policies: Financial Crime, Self Harm, Toxicity, Criminal Planning.)*
 
 **EXP-C — multi-prototype ablation** (bi-encoder on held-out policies, 1 vs. `P`
 prototypes):
 
 | policy tower | macro-AP |
 |---|---|
-| single description (`n_proto=1`) | 0.360 |
-| **multi-prototype (`n_proto=4`)** | **0.382**  (**+0.023**) |
+| single description (`n_proto=1`) | 0.354 |
+| **multi-prototype (`n_proto=4`)** | **0.385**  (**+0.030**) |
 
 **EXP-D — scaling: latency vs. #labels** (fixed text batch; seconds):
 
 | #labels | `bi_encoder` (sec) | `uni_encoder` (sec) |
 |---|---|---|
-| 16 | 0.974 | 0.983 |
-| 64 | 0.985 | 3.743 |
-| 256 | 0.984 | 11.366 |
-| **1024** | **0.977** *(flat)* | **42.92** *(**43.9×** the bi-encoder)* |
+| 16 | 1.541 | 0.460 |
+| 64 | 1.542 | 1.569 |
+| 256 | 1.542 | 8.022 |
+| **1024** | **1.543** *(flat)* | **36.11** |
 
-> **UPDATE (regeneration run): the table above is re-measured, and the quotable ratio is now
-> 43.91×.** The whole lesson was regenerated after the learned down-projection's init changed
-> from truncation to random orthonormal (see §10.0), which re-ran `scaling` along with
-> everything else. The figures above are read directly from the `scaling` block of the
-> current `artifacts/results.json`, whose own `ratio_at_max_labels` is **43.91×**, measured
-> with `contended: false` in **both** `gpu_witness` snapshots — the condition this lesson's
-> own rule (below) requires before a ratio may be quoted. The absolute seconds are **2.5×**
-> the previous run's on the bi-encoder and **2.7×** on the uni-encoder, which is what a
-> whole-machine state difference looks like and is exactly why only same-state ratios are
-> quotable. The correction history below
-> is kept in full, because the rule it establishes is what licensed quoting this number.
+> **RE-MEASURED 2026-08-21 (fixed encoder), and the RATIO is deliberately not quoted.**
+> The bi-encoder is flat to **0.10 %** across a 64× increase in label count
+> (1.5410 → 1.5426 s) while the uni-encoder rises **78×** (0.460 → 36.11 s). Both
+> `gpu_witness` snapshots record `contended: false`, so by this lesson's own rule the
+> numbers are quotable — **but the ratio is not**, and that is a rule this section now
+> imposes on itself. `ratio_at_max_labels` for this one method has read **64× → 40.30× →
+> 43.91× → 23.41×** across runs; CLAUDE.md §18.5 lists the first three as withdrawn, and a
+> quantity whose run-to-run spread is 2.7× is not a finding. **The FLATNESS is the
+> architectural claim, it is invariant across every run on record, and it is what this
+> experiment establishes.** Any single ratio is a property of one machine state.
+>
+> **The crossover is also worth stating plainly, because it cuts against the marketing.**
+> At 16 labels the uni-encoder is **3.3× FASTER** (0.460 s vs 1.541 s) — the bi-encoder
+> pays a fixed content-tower cost that only amortises once the bank is large. The two cross
+> between 16 and 64 labels. A bi-encoder is not cheaper at every scale; it is cheaper at
+> *this problem's* scale, which is the honest version of the claim.
+>
+> The correction history below is kept in full, because the rule it establishes is what
+> licensed quoting anything here at all.
 
 > **CORRECTION (2026-07-31): this table previously read 0.422 → 0.424 s and 27.06 s,
 > quoted as "64×". That ratio was wrong and was corrected to ~40×.** Those numbers were
@@ -1074,7 +1135,19 @@ prototypes):
 > | prior committed run (2026-07-31) | quiet throughout | 0.392 s | 15.78 s | **40.30×** |
 > | EXP-H run 1 | contended throughout | 0.690 s | 27.05 s | **39.23×** |
 > | EXP-H run 2 | **changed mid-benchmark** | 0.732 s | 18.39 s | **25.13×** |
-> | **current artifact** (orthonormal-init regeneration) | quiet in both witnesses | **0.977 s** | **42.92 s** | **43.91×** |
+> | orthonormal-init regeneration (causal encoder) | quiet in both witnesses | 0.977 s | 42.92 s | **43.91×** |
+> | **current artifact** (2026-08-21, fixed bidirectional) | quiet in both witnesses | **1.543 s** | **36.11 s** | **23.41×** |
+>
+> > **The fifth row is why this table now argues AGAINST quoting a ratio at all.** Five runs
+> > of the *same method* have produced 64× / 40.30× / 39.23× / 25.13× / 43.91× / 23.41×. Two
+> > of those (39.23×, 25.13×) were explained away as contention, and the rule that came out
+> > of it — quote only a run that is `contended: false` in both witnesses — was supposed to
+> > settle the matter. **It did not: 43.91× and 23.41× are BOTH quiet-in-both-witnesses runs
+> > of the same code, and they differ by 1.9×.** The rule was necessary and insufficient.
+> > What actually changed between them is the encoder's attention mode, which alters the
+> > uni-encoder's per-pair work and the bi-encoder's one-time content pass by different
+> > factors. So the operative rule is upgraded: **the ratio is not a quotable quantity in
+> > this lesson under any conditions.** Quote the flat-vs-linear shape.
 >
 > **The `gpu_witness` block explains the outlier, and the explanation is damning for the
 > benchmark rather than for the GPU.** Run 2 recorded `contended: true` *before* the
@@ -1092,22 +1165,21 @@ prototypes):
 > adjacent to each `uni` point, and is noted here as a known limitation rather than
 > silently patched.
 >
-> **What this does and does not license.** The *constant-state* runs agree to within ~12 %
-> (40.30× quiet, 39.23× contended, 43.91× quiet on the current artifact) while the
-> state-changing run is far off at 25.13×, which is consistent with the ratio being robust to
-> a **steady** machine state and broken only by a **changing** one. That reading is
-> mechanistically sensible — but it rests on **three** constant-state points, and an n=2
-> robustness inference is precisely what failed here the first time. So it is recorded as the
-> most plausible reading and **not asserted**. The operative rule stands regardless: quote
-> only a run that is `contended: false` in **both** witnesses, which makes the current
-> artifact's **43.91×** the single quotable figure.
+> **What this does and does not license — SUPERSEDED 2026-08-21.** This paragraph used to
+> argue that the constant-state runs agreed to within ~12 % (40.30× / 39.23× / 43.91×) while
+> only the state-changing run was an outlier at 25.13×, and concluded that the current
+> artifact's 43.91× was "the single quotable figure." **The fixed-encoder run at 23.41× —
+> quiet in both witnesses — falsifies that reading**, and the note above records the
+> consequence: no ratio is quotable here. The paragraph is left in place, corrected, because
+> it is the second time an n-small robustness inference about this number failed, and the
+> pattern is more useful than the claim was.
 >
 > **The scaling claim itself is unaffected and still SURVIVES**, because it never depended
-> on either number: `bi_encoder` is flat in **all four** runs (0.390→0.392, 0.689→0.690,
-> 0.731→0.732, and 0.974→0.977 on the current artifact — a 1.1 % spread across a 64×
-> increase in label count) while `uni_encoder` grows ~linearly in all four. The
-> **flat-vs-linear shape** is the robust finding; the ratio is a quiet-GPU measurement and
-> the absolute seconds are indicative only.
+> on any of these ratios: `bi_encoder` is flat in **all five** runs (0.390→0.392,
+> 0.689→0.690, 0.731→0.732, 0.974→0.977, and 1.5410→1.5426 on the current artifact — a
+> 0.10 % spread across a 64× increase in label count) while `uni_encoder` grows ~linearly in
+> all five. The **flat-vs-linear shape** is the robust finding; the absolute seconds are
+> indicative only and the ratio is not quotable at all.
 >
 > **Scope of the contamination — measured, so it is not re-litigated later.** `scaling` is
 > the *only* wall-clock block in this lesson, and therefore the only one contention can
@@ -1126,55 +1198,97 @@ prototypes):
 **EXP-E — transfer** (train on the constructed set, evaluate with no further
 fitting). **The arm below is `heldout_split`, NOT out-of-distribution** — it is
 BeaverTails `30k_test`, the same dataset, annotators, taxonomy and rendering as
-93.5% of train, with only the rows changed (§6.2). It was labelled "OOD content"
-here and that overstated it.
+**60 % of train** (7,852 of 13,065 rows: 4,852 harmful + all 3,000 benign; it was
+93.5 % before the Aegis merge), with only the rows changed (§6.2). It was labelled
+"OOD content" here and that overstated it.
 
 | method | binary harm AUC | macro-AP |
 |---|---|---|
-| `bi_encoder` | 0.615 | 0.184 |
-| `uni_encoder` | 0.571 | 0.146 |
-| **`trained_head`** | **0.636** | **0.496** |
+| `bi_encoder` | 0.655 | 0.246 |
+| `bi_encoder_trained` | 0.683 | 0.452 |
+| `uni_encoder` | 0.675 | 0.204 |
+| **`trained_head`** | **0.743** | **0.538** |
 
-| arm | source | status |
+**All three transfer arms have now RUN (2026-08-21).** The two that were `[PENDING RUN]`
+here are executed and reported below — and they are the reason the `heldout_split` result
+must not be read as generalisation.
+
+| arm | source | n | what it shifts | status |
+|---|---|---|---|---|
+| `heldout_split` | `BeaverTails/30k_test` | 2,787 | **rows only** — same dataset, annotators, taxonomy, rendering | measured (table above) |
+| `cross_annotator` | Aegis 2.0 `test` | 1,903 | **annotators + taxonomy**, same rendering | **measured** |
+| `ood_benchmark` | `intrinsec-ai/cstm-bench` | 50 | **genuinely external** — different corpus, task shape, label source | **measured** |
+
+**`cross_annotator`** (n = 1,903; 1,030 harmful):
+
+| method | binary harm AUC | macro-AP |
 |---|---|---|
-| `heldout_split` | `BeaverTails/30k_test` | measured (the table above) |
-| `cross_annotator` | Aegis 2.0 `test` | **[PENDING RUN]** — wired, not yet executed |
-| `ood_benchmark` | `intrinsec-ai/cstm-bench` | **[PENDING RUN]** — wired, not yet executed |
+| `bi_encoder` | 0.682 | 0.175 |
+| `bi_encoder_trained` | **0.694** | 0.351 |
+| `uni_encoder` | 0.439 *(below chance)* | 0.089 |
+| `trained_head` | 0.657 | **0.445** |
+
+**`ood_benchmark`** (n = **50**; 28 harmful; **one** scored column, `jailbreak`;
+scenario-level labels):
+
+| method | binary harm AUC | macro-AP |
+|---|---|---|
+| `bi_encoder` | **0.284** | 0.494 |
+| `bi_encoder_trained` | 0.510 | 0.541 |
+| `uni_encoder` | 0.396 | 0.527 |
+| `trained_head` | 0.450 | 0.507 |
+
+> **The gradient across the three arms is the actual result, and it is not flattering.**
+> Change only the rows and the trained arm holds (0.452 macro-AP). Change the annotators
+> and taxonomy and it drops to 0.351 but stays ahead of frozen cosine. Move to a genuinely
+> external benchmark and **every arm collapses to chance**: three of four binary AUCs are
+> *below* 0.5, and `bi_encoder`'s **0.284** is far enough below chance to be an inverted
+> ranker rather than a noisy one. The macro-APs near 0.5 are not a rescue — with 28 of 50
+> rows harmful the base rate *is* 0.56, so an AP of 0.494–0.541 is at or below chance.
+>
+> **Two limits on how hard that null may be pushed.** n = 50 is far under this course's
+> ≥500/class floor and only **one** column is scorable, so the OOD arm is a directional
+> signal, not a measurement — CLAUDE.md §17 rule 5 admits a released benchmark as OOD at
+> whatever size it comes in, and this one is small. And the labels are *scenario*-level
+> while the model scores *content*, a granularity mismatch recorded in the artifact under
+> `label_granularity`. The honest reading is that this lesson has **no evidence of external
+> generalisation**, not that it has evidence of failure.
 
 **EXP-F — hard-negative augmentation** (frozen bi-encoder vs. the contrastive
 adapter, on held-out hard negatives):
 
 | quantity | value |
 |---|---|
-| ECIsem (`target_consistency` / `locality` / `lexical_residual` / `diversity` / **`eci`**) | −0.059 / 0.492 / 0.454 / 0.711 / **0.449** |
+| ECIsem (`target_consistency` / `locality` / `lexical_residual` / `diversity` / **`eci`**) | −0.112 / 0.347 / 0.403 / 0.729 / **0.309** |
 | FPR@recall0.90 — frozen bi-encoder | **1.000** |
-| **FPR@recall0.90 — contrastive adapter** | **0.458** |
-| **delta (frozen − adapter)** | **+0.542** (adapter is better) |
-| hard negatives mined / counterfactuals / false-neg dropped | 240 / 8,985 / 22 |
+| **FPR@recall0.90 — contrastive adapter** | **0.300** |
+| **delta (frozen − adapter)** | **+0.700** (adapter is better) |
+| hard negatives mined / counterfactuals / false-neg dropped | 340 / 20,164 / 76 |
 
-> **The frozen baseline here is pinned at the worst value the metric can take, and
-> falsifier (iii) therefore clears a floor.** `FPR@recall0.90 = 1.000` means that at
-> the threshold needed for 90% recall the frozen bi-encoder flags **every single**
-> hard negative. There is no value above 1.000, so *any* adapter that is not also
-> degenerate produces a positive delta and the falsifier survives by construction.
-> The +0.542 is real, and it is a win over a floor.
+> **The benign-pool fix was applied, and it did NOT move the floor.** `BG_N_BENIGN` was
+> raised 500 → **3000** precisely so the miner would stop selecting most of its own pool:
+> `n_mined = 340` = 17 seen policies × `HARDNEG_PER_POLICY=20`, now drawn from a train
+> split of ~2,100 benign rows, so the selection is **~16 %** of the pool instead of ~69 %.
+> That was the diagnosed cause. **The frozen baseline is still pinned at exactly 1.000.**
 >
-> **The cause is on the data side, not the method side.** `hardneg.n_mined = 240` =
-> 12 seen policies × `HARDNEG_PER_POLICY=20`, drawn from a train split holding only
-> ~350 benign rows (500 × 70%). "The 20 benign texts closest to each policy" was
-> selecting **~69% of the entire pool** — ANCE-style dense mining is only meaningful
-> when the pool is orders of magnitude larger than the selection, so the miner was a
-> near no-op and the frozen arm had no boundary to sit on. `BG_N_BENIGN` has been
-> raised 500 → **3000** for exactly this reason (§9); at that size 240 mined is ~11%
-> of a ~2,100-row pool. **The numbers in this table are from the 500-benign run and
-> must be re-measured.**
+> So the previous note's explanation — that the miner was a near no-op and the frozen arm
+> therefore had no boundary to sit on — is **falsified by its own fix**. A ten-fold larger,
+> properly-mined negative pool leaves the frozen bi-encoder flagging *every* hard negative
+> at the 90 %-recall threshold. That is a statement about frozen cosine on this corpus, not
+> about the miner.
+>
+> **Falsifier (iii) was amended before this run to handle exactly this case**, and the
+> amendment now binds: the frozen baseline must be **strictly below 1.000** or the result
+> is recorded as **UNINFORMATIVE** rather than as a survival. It is 1.000. **The verdict is
+> UNINFORMATIVE** — see §10.4. The +0.700 delta is real and is a win over a floor, and a
+> win over a floor is not evidence for the method.
 
 **Pre-registered falsifiers.** Three were registered before the original run and are
 verdicted in §10.4. **Four experiments shipped a verdict with no falsifier written
 before the run** — EXP-A, EXP-C, EXP-G and EXP-H; EXP-G and EXP-H were added after
-the falsifier block and it was never extended. They are pre-registered here, dated
-**2026-08-08**, **before** the Aegis/benign-raise re-run, and they are unverdicted
-until that run exists.
+the falsifier block and it was never extended. They were pre-registered here, dated
+**2026-08-08**, **before** the Aegis/benign-raise re-run. **That run happened on
+2026-08-21 and all seven are now verdicted in §10.4** — including one that fires.
 
 - **(i) Scaling.** If uni-encoder latency does **not** grow with #labels while the
   bi-encoder stays flat (EXP-D), the scaling claim is **FALSE**.
@@ -1231,29 +1345,37 @@ rescue a failed ordering.
 > Renumbered to 10.3 so the next reader cannot inherit the trap. Cross-references
 > elsewhere in this file were updated with it.
 
-| quantity | MiniLM @150/class | **EmbeddingGemma @500/class** |
+| quantity | MiniLM @150/class | **EmbeddingGemma @500/class (fixed, 2026-08-21)** |
 |---|---|---|
-| EXP-D scaling at 1024 labels | bi 0.044 s / uni 1.786 s = **40.6×** *(was quoted 43×)* | bi **0.977** s / uni **42.92** s = **43.9×** *(was quoted 64×, then 40.3× from an earlier run)* |
-| EXP-B zero-shot (bi, macro-AP) | 0.408 | **0.382** |
-| EXP-A seen (bi, macro-AP) | 0.355 | **0.240** |
-| EXP-F adapter FPR@recall0.90 | 0.850 → 0.613 | **1.000 → 0.458** |
-| length confound | 0.517 | 0.526 |
+| EXP-D scaling at 1024 labels | bi 0.044 s / uni 1.786 s | bi **1.543** s / uni **36.11** s |
+| EXP-B zero-shot (bi, macro-AP) | 0.408 | **0.385** |
+| EXP-A seen (bi, macro-AP) | 0.355 | **0.227** |
+| EXP-F adapter FPR@recall0.90 | 0.850 → 0.613 | **1.000 → 0.300** |
+| length confound | 0.517 | **0.505** |
 
-**The bigger, purpose-built backbone scored LOWER on accuracy.** That is unexpected and
-it is reported rather than buried — but it must **not** be attributed to the backbone,
-because this comparison changes **three things at once**:
+*(The ratio column that used to sit in row 1 — 40.6× vs 43.9× — is removed. See EXP-D:
+this ratio is not a quotable quantity, and comparing two of its values across backbones
+was the specific error the note below withdraws.)*
+
+**The bigger, purpose-built backbone scored LOWER on accuracy**, and the encoder fix did
+not change that: 0.227 vs MiniLM's 0.355 on seen policies, 0.385 vs 0.408 zero-shot. That
+is unexpected and it is reported rather than buried — but it must **not** be attributed to
+the backbone, because this comparison changes **four things at once**:
 
 1. the **encoder** (MiniLM → EmbeddingGemma-300M),
-2. **n_per_class** (150 → 500), and
-3. **which policies were held out** — the seen/held-out split is chosen from the
-   populated columns, and at 500/class it selected *Animal Abuse, Sexually Explicit,
-   Violence, Toxicity* instead of *Drug Weapon, Non Violent Unethical, Violence,
+2. **n_per_class** (150 → 500) *and the benign pool* (500 → 3000),
+3. **the corpus** (N=5,726 at 93.5 % BeaverTails → N=13,065 with Aegis 2.0 at 37 %), and
+4. **which policies were held out** — the seen/held-out split is chosen from the
+   populated columns, and the 21-column run selected *Financial Crime, Self Harm,
+   Toxicity, Criminal Planning* instead of *Drug Weapon, Non Violent Unethical, Violence,
    Toxicity*. Different held-out policies have different base rates and different
    intrinsic difficulty, so the two zero-shot numbers are **not measuring the same task**.
 
-That violates this course's own one-change-at-a-time rule. **No backbone conclusion may
-be drawn from it.** A clean test would pin the held-out column set and n_per_class and
-vary only the encoder — pre-registered here as the follow-up, not claimed now.
+That violates this course's own one-change-at-a-time rule, and the fixed-encoder re-run
+made it *worse* rather than better by moving the corpus at the same time. **No backbone
+conclusion may be drawn from it.** A clean test would pin the held-out column set, the
+corpus and n_per_class and vary only the encoder — pre-registered here as the follow-up,
+not claimed now.
 
 What the change *does* establish cleanly is the **architectural** result: the bi-encoder's
 cached policy tower keeps per-request cost **flat** in the label count while the
@@ -1271,7 +1393,8 @@ construction, and it is the finding.
 > | backbone | quoted ratio | ratio from the same row's own latencies | source |
 > |---|---|---|---|
 > | MiniLM @150 | 43× | **40.6×** (1.786 / 0.044) | arithmetic on this table's own figures |
-> | EmbeddingGemma @500 | 64× | **43.9×** (42.924 / 0.9775) | `artifacts/results.json` (`scaling`) |
+> | EmbeddingGemma @500 (causal) | 64× | **43.9×** (42.924 / 0.9775) | `results_CAUSAL_ENCODER_SUSPENDED.json` |
+> | EmbeddingGemma @500 (**fixed**) | — | **23.4×** (36.105 / 1.5426) | `results_embeddinggemma.json` (`scaling`) |
 >
 > **40.6× versus 43.9× is nothing like the claimed 43× → 64× growth**, so the claim that
 > scaling the backbone up widens the bi-encoder's advantage is **not supported and is
@@ -1297,21 +1420,35 @@ construction, and it is the finding.
 
 ### 10.4 Verdicts against those falsifiers
 
+**All seven are verdicted below against the 2026-08-21 fixed-encoder run. One FIRES.**
+
 | falsifier | outcome | evidence |
 |---|---|---|
-| **(i) Scaling** | **SURVIVES — claim upheld** | bi-encoder is flat at 0.974 → 0.977 s from 16 → 1024 labels; uni-encoder rises 0.983 → 42.92 s, **43.9×** the bi-encoder at 1024. The predicted flat-vs-linear split is exactly what was measured. *(Corrected 2026-07-31 from a mis-stated 64×, then re-measured at 43.91× by the orthonormal-init regeneration — see the EXP-D table. The verdict is unchanged across all of it; only the ratio moved.)* |
-| **(ii) Zero-shot** | ⚠️ **TRIPS as literally written** | bi-encoder held-out macro-AP = **0.382 ≤ 0.5**. By the pre-registered rule, the claim is FALSE. |
-| **(iii) Hard-negative sharpening** | **SURVIVES — against a floor** | FPR@recall0.90 falls **1.000 → 0.458** with the contrastive adapter (a 0.542 reduction). But **1.000 is the literal maximum the metric can take**: the frozen baseline flags *every* hard negative at the 90%-recall threshold, so any non-degenerate adapter produces a positive delta and this falsifier cannot fail. It is a true statement about a very low bar. Cause and fix in the EXP-F note above (the miner was drawing ~69% of the benign pool; `BG_N_BENIGN` 500 → 3000). **Re-measure before quoting.** |
-| **(iv)–(vii)** | **[PENDING RUN]** | Pre-registered 2026-08-08, before the re-run. No verdict may be written until that run exists. |
+| **(i) Scaling** | **SURVIVES — claim upheld** | bi-encoder is flat at **1.5410 → 1.5426 s** from 16 → 1024 labels (0.10 % spread); uni-encoder rises **0.460 → 36.11 s**. The predicted flat-vs-linear split is exactly what was measured. *(The ratio is deliberately not quoted — see EXP-D. It has read 64× / 40.30× / 39.23× / 25.13× / 43.91× / 23.41× across six runs and is not a quotable quantity. The verdict never depended on it.)* |
+| **(ii) Zero-shot** | ⚠️ **TRIPS as literally written** | bi-encoder held-out macro-AP = **0.385 ≤ 0.5**. By the pre-registered rule, the claim is FALSE. The threshold is still mis-specified (see below) and still not renegotiated after the fact. |
+| **(iii) Hard-negative sharpening** | **UNINFORMATIVE** *(the 2026-08-08 amendment fires)* | FPR@recall0.90 falls **1.000 → 0.300** (a 0.700 reduction) — but the amendment requires the frozen baseline to be **strictly below 1.000**, and it is exactly 1.000. Recorded as UNINFORMATIVE, not as a survival. The diagnosed cause (miner drawing ~69 % of the benign pool) **was fixed** — `BG_N_BENIGN` 500 → 3000, selection now ~16 % of pool — and the baseline did not move. See EXP-F. |
+| **(iv) EXP-A, seen policies** | ❌ **FIRES — the falsifier is TRIGGERED** | **No method clears the binding confound bar.** Bar = TF-IDF **content** at **0.804** (test split, directionless). Margins: `trained_head` **−0.086** (0.718), `bi_encoder` **−0.113** (0.691), `bi_encoder_trained` **−0.190** (0.614), `uni_encoder` **−0.218** (0.586). `results['margins'][m]['clears'] == false` for **every** m, which is the literal firing condition. **No EXP-A number may be headlined.** |
+| **(v) EXP-C, multi-prototype** | **SURVIVES** | 4 paraphrases raise held-out zero-shot macro-AP **0.354 → 0.385 = +0.030**, clearing the pre-registered **+0.01**. |
+| **(vi) EXP-G, accuracy at label scale** | **SURVIVES** | `bi_encoder` mean_rank_true / chance **improves** monotonically as K grows 21 → 900: **0.473 → 0.252 → 0.172 → 0.148**. The claim "accuracy is maintained at scale" is not falsified under the competitive rule. *(The tautological flat macro-AP is excluded, as the pre-registration requires.)* |
+| **(vii) EXP-H, related vs unrelated** | **SURVIVES** | At matched K=900, `bi_encoder` mean_rank_true is **131.72 under EXP-H vs 66.62 under EXP-G — 1.98× worse**. Taxonomic adjacency does make a large label bank harder, so EXP-H measures something EXP-G did not. |
 
-> **SUSPENDED 2026-08-17 — (ii) and (iii) only.** Both are decided by accuracy figures
-> (macro-AP; FPR@recall0.90) measured with EmbeddingGemma running **causal**, so neither
-> verdict is currently admissible; they revert to undecided until the re-run. **(i)
-> Scaling is unaffected and stands** — it is a latency-vs-label-count measurement and does
-> not depend on the attention mode. The base-rate table below is likewise suspended: the
-> per-column positive counts are corpus properties and survive, but the **0.382** they are
-> divided into does not. See
-> [`audits/AUDIT_2026-08-17_embeddinggemma_causal.md`](../../audits/AUDIT_2026-08-17_embeddinggemma_causal.md).
+> **(iv) is the most important line in this table and it should not be read past.** It says
+> that a TF-IDF bag-of-words classifier separates this corpus's harmful rows from its benign
+> rows **better than any of the four semantic methods do** (0.804 vs a best of 0.718). The
+> length bar is a near-null **0.502** and the count bar is inert, so this is not a length
+> artifact — it is lexical content doing the work. Everything in EXP-A is therefore a
+> *within-family* comparison of methods that all sit below the surface-statistics bar, and
+> the seen-label orderings in §10.0 must be read as such.
+>
+> **A prior reading of this line is WITHDRAWN.** An earlier note called the harm detector
+> "close to useless" at ~0.59 against a 0.526 confound — a margin of ~0.06. On the fixed
+> bidirectional encoder the binary harm AUCs are **0.718** (`trained_head`) and **0.691**
+> (`bi_encoder`) against a **length** confound of **0.505**, a margin of roughly **0.21**.
+> The detector is materially better than that reading said, and "close to useless" is not a
+> fair description of it. **But the margin that matters is the one against the *binding*
+> bar, not the length bar**, and against 0.804 every method is still short. Both halves go
+> in the record: the old pessimism was wrong about the instrument, and the new numbers
+> still do not clear the pre-registered bar.
 
 **On (ii) — reporting the trip, and a specification error I will not hide behind.**
 The falsifier is recorded as tripped because that is what the pre-registered rule
@@ -1319,28 +1456,30 @@ says, and rules are not renegotiated after seeing data. But the threshold itself
 **mis-specified**: `0.5` is a chance level for **AUC**, not for **average precision**.
 AP's chance level is the **base rate**.
 
-**CORRECTED 2026-08-08 — the base rates quoted here were wrong, and the correction
-goes in this lesson's favour.** They read `0.118 / 0.180 / 0.342 / 0.102 → chance
-macro-AP ≈ 0.185 → 2.1× chance`, carried over from the MiniLM@150 run with an honest
-hedge that they were unverified. The hedge was right. Measured on the actual test
-split at the shipped config (held-out = `animal_abuse`, `sexually_explicit`,
-`violence`, `toxicity`):
+**UPDATED 2026-08-21 — the held-out policy set CHANGED with the Aegis merge, so the base
+rates are recomputed rather than carried.** The 2026-08-08 correction computed chance-AP
+for `animal_abuse / sexually_explicit / violence / toxicity`; at 21 columns the split
+selects **`financial_crime` / `self_harm` / `toxicity` / `criminal_planning`**, and only
+`toxicity` is common to both. Carrying the old 0.1344 forward would have been the exact
+cross-run contamination this paragraph was written to stop. Measured on the current test
+split (n = 3,910), from `achieved.per_column_positives_test`:
 
-| policy | previously quoted | **measured (test split)** |
+| held-out policy | positives / 3,910 | base rate |
 |---|---|---|
-| animal_abuse | 0.118 | **0.0591** |
-| sexually_explicit | 0.180 | **0.0930** |
-| violence | 0.342 | **0.3175** |
-| toxicity | 0.102 | **0.0678** |
-| **chance macro-AP** | 0.185 | **0.1344** |
-| **the measured 0.382 is** | 2.1× chance | **2.84× chance** |
+| financial_crime | 295 | **0.0755** |
+| self_harm | 211 | **0.0540** |
+| toxicity | 402 | **0.1028** |
+| criminal_planning | 469 | **0.1199** |
+| **chance macro-AP** | — | **0.0880** |
+| **the measured 0.385 is** | — | **4.37× chance** |
 
-So the measured **0.382** is **2.84× chance**, and it beats the uni-encoder's
-**0.115** (below chance) on the same policies while the trained head cannot score
-them at all. The hedge is retired: per-column positive counts for **both** the
-corpus and the test split are now written to `results.json` under
-`achieved.per_column_positives` / `achieved.per_column_positives_test`, so this
-ratio is re-derivable from the artifact instead of carried between runs.
+So the measured **0.385** is **4.37× chance** — a larger multiple than the superseded
+run's 2.84×, though the two are not comparable head-to-head because the held-out set is
+not the same set. It beats the uni-encoder's **0.129** and the trained projection's
+**0.178** on the same policies, while the trained head cannot score them at all. Per-column
+positive counts for **both** the corpus and the test split are written to the artifact
+under `achieved.per_column_positives` / `achieved.per_column_positives_test`, so this
+ratio is re-derivable from the file instead of carried between runs.
 
 *(This paragraph previously also quoted **0.408** and **0.178** — the MiniLM@150
 substitute run's figures — inside a section whose every other number is
@@ -1358,11 +1497,24 @@ only to the *next* run — it does not retroactively rescue this one.
 
 ## 11. Honest caveats
 
-- **The encoder was not the encoder claimed (2026-08-17).** EmbeddingGemma ran causal,
-  so every accuracy number here is SUSPENDED; the scaling result and the trained head's
-  structural inability to score a held-out policy survive. This belongs at the top of the
-  caveat list because it outranks all of the ones below it:
+- **No method clears the binding confound bar (2026-08-21).** The TF-IDF content bar on
+  the test split is **0.804** and the best binary harm AUC is **0.718**. Pre-registered
+  falsifier (iv) fires and no EXP-A number may be headlined. This belongs at the top of the
+  caveat list because it outranks all of the ones below it — see §10.4.
+- **There is no evidence of external generalisation.** The only genuinely out-of-corpus
+  arm (`intrinsec-ai/cstm-bench`, n=50, one scored column) puts every method at or below
+  chance. The `heldout_split` numbers change *rows only* and must not be read as OOD.
+- **The encoder ran causal until 2026-08-17, and one conclusion inverted when it was
+  fixed.** Every accuracy number here is from the re-run on the fixed bidirectional
+  encoder. The seen-label ordering reproduced, but EXP-G's trained-vs-frozen conclusion
+  **reversed** and EXP-H's embedding-geometry claim was withdrawn. The suspended artifact
+  is kept at `artifacts/results_CAUSAL_ENCODER_SUSPENDED.json`; the diagnosis is in
   [`audits/AUDIT_2026-08-17_embeddinggemma_causal.md`](../../audits/AUDIT_2026-08-17_embeddinggemma_causal.md).
+- **8 of 21 policy columns are pool-limited below the 500/class request** (`jailbreak`
+  106, `high_risk_gov_decisions` 75, `intellectual_property` 76, `malware` 149,
+  `terrorism` 293, `animal_abuse` 357, `child_abuse` 425, `unauthorized_advice` 459).
+  Per-column metrics on those columns rest on small n. `allenai/wildguardmix` is gated on
+  this host and contributes 0 rows.
 - **Screening tier, not evaluation.** One embedder, one seed, a constructed corpus
   — a directional demo, not the n ≥ 7 seeds + rigor contract CLAUDE.md reserves
   the word "winner" for. Do not over-read the orderings.

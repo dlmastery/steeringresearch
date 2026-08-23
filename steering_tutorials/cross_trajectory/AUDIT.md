@@ -187,6 +187,18 @@ EmbeddingGemma. The old justification (§18.5: "gated, this host has no HF token
 (1.2 GB safetensors, verified). So both shipped arms are **non-compliant substitutes**,
 not necessities. `CT_EMBED=embeddinggemma` is now wired and is `[PENDING RUN]`.
 
+> **CLOSED 2026-08-21 — and it took two attempts.** The mandated encoder ran and now
+> carries the headline (README §9.0, `artifacts/results_embeddinggemma.json`,
+> `embedder_compliance: "COMPLIANT"`, 500/class on both conditions). The **first** attempt
+> loaded EmbeddingGemma through `AutoModel` + attention-mask mean pooling, which executes
+> 2 of the model's 5 declared modules and silently skips two trained Dense projection
+> heads and the final `Normalize` — right shape, no error, wrong vector space. It is
+> quarantined at `results_embeddinggemma_TRUNCATED_ENCODER_SUSPENDED.json`. **A verdict
+> flipped between the two runs**: `attn_pool` cleared the binding bar under the truncated
+> encoder (+0.0159) and fails under the full stack (−0.0270). Compliance moved the
+> lesson's result *against* itself — only `mean_agg` of the three aggregators now clears
+> on HARD.
+
 ### Also corrected
 
 - `data.py`'s docstring claimed the hard classes were "length/count-matched". Count yes
@@ -204,6 +216,33 @@ not necessities. `CT_EMBED=embeddinggemma` is now wired and is `[PENDING RUN]`.
 **Open / not done here:** no run was executed. Every §9 number remains the old
 `Attack_600`-only, 298/class, `longest`-5-sessions MiniLM run. The enlarged pool, the
 mandated encoder, the corrected OOD selection and the gemma re-run are all `[PENDING RUN]`.
+
+> **STATUS 2026-08-21 — three of those four are now RUN, in one arm.** The EmbeddingGemma
+> run (README §9.0) exercised the enlarged pool, the mandated encoder and `uniform` OOD
+> selection together:
+>
+> | item | status | what it showed |
+> |---|---|---|
+> | enlarged pool | **RUN** | 500/class on both conditions, `meets_500_floor: true` — but `hard` has only **339 / 341** distinct groups behind those 500s, exactly the inflation this addendum's item 3 warned about. Read the group count |
+> | mandated encoder | **RUN** (second attempt; the first was silently truncated — see item 6 above) | on HARD only `mean_agg` clears the 0.9149 `content` bar (+0.0678); `attn_pool` (−0.0270) and `gnn_agg` (−0.0191) **fail the binding falsifier**. On EASY the content bar is **0.9998** and **all four methods fail** |
+> | corrected OOD selection | **RUN** | `uniform`, 75.7% of sessions still discarded. Transfer 0.411–0.485 — **no better** than the `longest`-5 MiniLM run, so the selection rule does not account for the OOD null. Predictions are no longer degenerate |
+> | gemma re-run | **STILL `[PENDING RUN]`** | deliberately deprioritised in favour of the compliant encoder. §9.3 stays inadmissible |
+>
+> **One correction to carry forward.** The truncated run reproduced MiniLM's constant
+> `mean_agg` OOD output (AUC exactly 0.5000, CI [0.5000, 0.5000], `is_constant: true`),
+> and that agreement was briefly taken as the degeneracy being confirmed on a second
+> encoder. It was the same defect twice. On the full stack `mean_agg` is 0.4849 with 20
+> distinct scores. **That corroboration is withdrawn**; the MiniLM degeneracy stands as a
+> single-arm observation.
+>
+> **Also still open, and not fixed by any run:** `embed_ct.py`'s module-level docstring
+> (lines 34–38) still describes the `embeddinggemma` path as "plain `transformers`
+> AutoModel + attention-mask mean pooling -- no sentence-transformers dependency". That
+> is the *suspended* recipe. The function it documents (`_get_embeddinggemma_embedder`)
+> was rewritten to the full sentence-transformers stack and asserts the Dense heads are
+> present, so the code is correct and only the file's own header is stale — but a
+> docstring describing a suspended loading path is exactly the kind of anchor §18.8 says
+> must not be left to be remembered.
 
 *Internal QA pass — independent external review pending (auditor and implementer share a
 model family). No git command was run and no model was loaded while applying these fixes;

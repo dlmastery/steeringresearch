@@ -532,18 +532,24 @@ the lesson is built to demonstrate are not resolvable.** The right next
 experiment is an α sweep down to where a single prior is coherent, then rebuild
 the ladder there — not more rungs at this α.
 
-*(`AUDIT.md` on this lesson is **stale**: its check #3 verifies the README
-against refusal 0.667/0.333/0.667/0.50 at n≈12, numbers that no longer exist in
-`results.json` (now 0.20/0.06/0.073/0.04 at n=150). It should be re-run.)*
+*(**This note is itself now stale and is corrected.** It read: "`AUDIT.md` on this lesson
+is stale: its check #3 verifies the README against refusal 0.667/0.333/0.667/0.50 at
+n≈12, numbers that no longer exist in `results.json`." `AUDIT.md` was re-run and those
+figures are **WITHDRAWN — absent** in it; its check #3 now verifies the README against the
+current 0.20/0.06/0.073/0.04 at n=150 and passes. The audit does not yet cover §8c's
+near-orthogonal arm, which landed after it.)*
 
 ---
 
 ## 8c. The near-orthogonal arm — clause 3, with a stopping condition
 
-**Status: code complete, CPU-verified, NOT YET RUN.** Every number in this
-section is a *prediction* or a *definition*; there is no measured table here
-because the 4090 was busy. `artifacts/near_ortho_results.json` does not exist
-until someone runs it, and its absence is the honest state of this claim.
+**Status: RUN 2026-08-22 at the 500/class floor. The result is a NULL —
+0 of 4 ladder candidates kept, 0 of 5 cosine cells stacked.** Measured tables are
+in [§8c-results](#8c-results--the-measurement-a-null-on-this-substrate) below;
+`artifacts/near_ortho_results.json` exists and every number here is read from it.
+The predictions and definitions that follow were written **before** the run and are
+left unrevised — the arithmetic ones turned out exact, and the behavioural ones did
+not get a chance to be tested, for reasons the results section states plainly.
 
 The §9 rule has three clauses. §8b measured two. The third —
 
@@ -654,6 +660,79 @@ the next candidate is judged as if it had never been added. The forbidden all-on
 hybrid is therefore **unreachable by construction** — no configuration in this
 run can carry a prior that failed its own gate.
 
+### 8c-results — the measurement, a null on this substrate
+
+Run 2026-08-22, `DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated`, L12,
+α=0.08, seed 0, 40 new tokens, off-family judge `Qwen/Qwen2.5-3B-Instruct`
+(`is_self_judge: false`). **The 500/class floor is MET on both classes**: 500 harmful
+and 500 benign per cell, `pool_capped: false`, `env_capped: false`. The planner trimmed
+the extract slice **300 → 292** from a 792/class pool so the disjoint eval slice could
+reach 500 exactly, as §8d says it would. **The 20-prompt benign arm this lesson used to
+ship is gone; the hard data-floor violation is fixed.**
+
+#### Arm 2 — the ladder
+
+| rung | added | cos to refusal | measured N5 budget | harmful refusal | harmful gibberish | benign refusal | verdict |
+|---|---|---|---|---|---|---|---|
+| **R0** | *(unsteered reference)* | — | 0.000 | 0.200 | **0.462** | 0.330 | — |
+| **L0** | A refusal@L12 | 1.00 | 0.0768 | **0.164** | 0.618 | 0.252 | BASE |
+| **L1** | + `w1` | 0.20 | 0.1204 | 0.072 | **0.890** | 0.072 | **DROP** — COHERENCE + COMPETE |
+| **L2** | + `w2` | 0.20 | 0.1195 | **0.026** | **0.948** | 0.032 | **DROP** — COHERENCE + COMPETE |
+
+Stopped at L2 on `CONSECUTIVE_DROPS`. **Directions kept beyond the base: 0 of 4.**
+`w3` and `w4` were never generated against — the ladder stops rather than spending GPU
+on candidates whose predecessors both failed.
+
+#### Arm 1 — the cosine sweep
+
+| cos (measured) | pair refusal `[A,W]` | best constituent | vs best | stacks? |
+|---|---|---|---|---|
+| −0.00 | 0.070 | A (0.164) | **−0.094** | no |
+| 0.25 | 0.054 | A (0.164) | **−0.110** | no |
+| 0.50 | 0.050 | A (0.164) | **−0.114** | no |
+| 0.75 | 0.050 | A (0.164) | **−0.114** | no |
+| 0.95 | 0.064 | A (0.164) | **−0.100** | no |
+
+**0 of 5 cells beat their best constituent.** Every cell also fires
+`competes_marginal_vs_standalone` — `W`'s marginal contribution inside the pair is more
+negative than its standalone effect. The curve is **flat and negative across the whole
+cosine dial**, so the §9 boundary this arm was built to locate **has no location on this
+substrate**. That is the same conclusion the site clause reached in `run_hillclimb`.
+
+#### What the pre-registration got exactly right
+
+**The pure arithmetic was correct to three decimals.** Predicted pre-flight budgets were
+0.124 / 0.158 / 0.187 / **0.213**; measured predictions in the artifact are
+0.12394 / 0.15758 / 0.18659 / **0.21287**, and **`w4` was refused at pre-flight on
+`BUDGET_EXCEEDED`** exactly as §8c predicted, before a token was generated. The
+measured/predicted N5 ratio on the rungs that ran is **0.96–0.97** — slightly *below* 1,
+where the section predicted slightly above. The O(α²) sequential-hook compounding
+argument therefore does not describe the sign of the residual, and the note is corrected
+here rather than left to read as confirmed.
+
+The near-orthogonality premium is confirmed as arithmetic: the `cos=0.20` family fits
+**3** directions under a 0.20 ceiling where an exactly orthogonal family fits **5**.
+
+#### The caveat that dominates every DROP above, and it is not optional
+
+**The UNSTEERED gibberish rate is 0.462.** Nearly half of this model's outputs are judged
+incoherent *before anything is injected*. The `COHERENCE` rule fires when gibberish rises
+more than 0.05 above the last kept rung — and the base rung L0 already sits at 0.618. So
+every coherence-driven DROP on this page says **as much about the abliterated substrate
+as about the added direction**. This is a null **about this substrate**, not a
+falsification of the §9 near-orthogonal clause: a clause predicting a stacking regime
+cannot be tested on a base with no coherence headroom to stack into.
+
+Note also that steering **lowers** harmful refusal at every rung (0.200 unsteered → 0.164
+at L0 → 0.026 at L2). The direction is not producing refusal; it is producing incoherence,
+which the judge does not score as refusal. That is the same failure mode the `realignment`
+lesson's headline was falsified on, and it is stated here before anyone reads the falling
+numbers as competition between priors.
+
+**SCREENING tier**: single seed, one α, and the judge sits below its own 0.85 AUC validity
+bar (`../JUDGE_VALIDITY.md`). The α sweep §8b called for remains the right next
+experiment, and this arm strengthens rather than weakens that recommendation.
+
 ### Run it
 
 ```bash
@@ -689,12 +768,16 @@ Knobs: `NORTHO_N_HARM`, `NORTHO_N_BENIGN`, `NORTHO_N_EXTRACT`, `NORTHO_LADDER_K`
 Outputs: `artifacts/near_ortho_results.json`, `near_ortho_partial.json`,
 `near_ortho_directions.npz`, `near_ortho.png`.
 
-**Honesty note carried forward from §8b.** The `w_i` are **orthogonality
-controls**, not second concepts — this pool carries exactly one labelled
-contrast. And §8b's biggest result stands as a prior on this arm: at α=0.08 the
-refusal direction and an exactly orthogonal one were *indistinguishable*, so if
-this sweep also comes back flat across cosine, the honest reading is that the
-substrate has no coherence headroom, not that the §9 clause is false. The α sweep
+**Honesty note carried forward from §8b — and the conditional in it FIRED.** The `w_i`
+are **orthogonality controls**, not second concepts — this pool carries exactly one
+labelled contrast. §8b's biggest result stood as a prior on this arm: at α=0.08 the
+refusal direction and an exactly orthogonal one were *indistinguishable*, so *"if this
+sweep also comes back flat across cosine, the honest reading is that the substrate has no
+coherence headroom, not that the §9 clause is false."*
+
+**It did come back flat** (0 of 5 cells, vs-best-constituent between −0.094 and −0.114
+across the entire dial), so that reading is now the operative one and is not a
+post-hoc rescue — it was written down before the run, in this paragraph, and the α sweep
 §8b called for is still the right next experiment.
 
 ---
@@ -703,7 +786,10 @@ substrate has no coherence headroom, not that the §9 clause is false. The α sw
 
 The rubric is ≥500 per class for any headline number. This lesson was shipping a
 **20-prompt benign arm**. The fix is `data_floor.py`, which makes the floor a
-build-time object rather than something to remember:
+build-time object rather than something to remember — **and as of the 2026-08-22
+near-orthogonal run the fix is confirmed in a real artifact**, not just in config:
+`data_floor.meets_floor: true`, 500 harmful / 500 benign achieved, `pool_capped: false`,
+`env_capped: false`. The hard violation is closed for this arm.
 
 - **Defaults sit at the floor.** `STACK_HC_N_HARM` / `STACK_HC_N_BENIGN` and
   `NORTHO_N_HARM` / `NORTHO_N_BENIGN` all default to 500.
@@ -727,7 +813,9 @@ So 500/class of held-out eval is reachable, but only just: with a 300/class
 extract slice the disjoint remainder is **492**, eight short.
 
 - **`run_near_orthogonal`** has no pre-registered extract size, so its planner
-  trims the extract **300 → 292** and reaches **500/500 exactly**.
+  trims the extract **300 → 292** and reaches **500/500 exactly**. *(Confirmed in the
+  2026-08-22 artifact: `split_plan.n_extract: 292`, `trimmed_extract: true`,
+  `n_eval: 500`, `meets_target: true`.)*
 - **`run_hillclimb`** does not: `PREREGISTRATION_hillclimb.md` names "300 harmful
   vs 300 benign" and the committed `refusal_vector.pt` was built at n=300.
   Silently re-cutting a pre-registered split to buy 8 prompts is the worse trade,
@@ -755,9 +843,18 @@ That is a real, documented corpus limit — not a defaulted 20.
   (corpus §3.1); we stage same-site competition with two additive operations to
   stay within lesson 2's mechanism. The *conclusion* (same site + incompatible op
   ⇒ compete) is the same.
-- **Self-grading circularity.** The judge is the same 1B model — an
-  "Internal QA pass — independent external review pending" result, never an
-  external claim (CLAUDE.md §14).
+- **Judge provenance — CORRECTED.** This bullet used to read "the judge is the same 1B
+  model", which is not true of the arms with results on this page. `run_hillclimb` and
+  `run_near_orthogonal` both stamp `judge_id: Qwen/Qwen2.5-3B-Instruct`,
+  `is_self_judge: false`, `off_family: true` into their artifacts. The real limitation is
+  different and is not fixed by being off-family: **the judge sits below its own 0.85 AUC
+  validity bar** (`../JUDGE_VALIDITY.md`), so every judge-dependent number here remains an
+  "Internal QA pass — independent external review pending" result, never an external claim
+  (CLAUDE.md §14).
+- **The substrate has almost no coherence headroom, and it dominates the coherence
+  gates.** The unsteered abliterated model is judged GIBBERISH on **0.462** of harmful
+  prompts before any injection. Any rule of the form "drop the rung if gibberish rises"
+  is therefore partly measuring the base model. Every DROP in §8c inherits this.
 - **Order-dependence.** Same-site hooks fire sequentially, so a same-site stack
   is order-sensitive — itself a reason such stacks are fragile.
 
@@ -767,6 +864,7 @@ That is a real, documented corpus limit — not a defaulted 20.
 
 - Lesson 1 — [the probe (READ)](../hello_world/README.md)
 - Lesson 2 — [conditional steering (WRITE + gate)](../hello_world_steering/README.md)
-- Lesson 3 — [HyperSteer (generate vectors)](../hypersteer/)
+- Lesson 3 — [ReFT-r1 (generate vectors)](../reft_r1/README.md) *(link corrected: the
+  earlier `hypersteer/` draft was retired to git history — see CLAUDE.md §17)*
 - Mechanism analysis — [`corpus/steering-stackable-vs-competing-analysis.md`](../../corpus/steering-stackable-vs-competing-analysis.md)
 - Project stacking discipline — **CLAUDE.md section 9**

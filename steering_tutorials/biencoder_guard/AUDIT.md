@@ -59,9 +59,9 @@ relies on.
 | Scaling claim is operationalized, not asserted | **PASS** | `scaling_latency` times bi (embed once + matmul over K cached vecs) vs uni (K joint embeds per text) across `LABEL_SCALES`; the ordering is a measured falsifier (EXP-D), not a narrative. |
 | Zero-shot claim is testable | **PASS** | `split_seen_heldout` withholds policy columns from all training; EXP-B scores them for bi/uni and reports `trained_head` as `N/A`. Falsifier: macro-AP ≤ 0.5 ⇒ claim FALSE. |
 | Hard-negative pipeline matches the cited recipe | **PASS (with stand-ins)** | dense mining → ECIsem diagnostic → CausalNeg (templated) → ARHN filter → InfoNCE adapter, each mapped to its paper. The ARHN policy-support check and CausalNeg perturbations are **cheap lexical/templated stand-ins** for the papers' LLM-based steps — disclosed in README §7 and code comments. |
-| Rubric compliance (>=500/class) | **PASS (config)** | `N_PER_CLASS=500`, `N_BENIGN=500`; wildguard skip is graceful (BeaverTails+toxic-chat suffice). To confirm on the real GPU run that the pools actually reach 500. |
+| Rubric compliance (>=500/class) | **PARTIAL — confirmed on the real run, and 8 of 21 columns fall short** | `N_PER_CLASS=500`, `N_BENIGN=3000` (raised from 500). The 2026-08-21 run reached **10,065 harmful / 3,000 benign, N=13,065**, so the corpus-level floor is met — but `achieved.requested_vs_achieved` records **8 columns short of 500**: `intellectual_property` 76, `high_risk_gov_decisions` 75, `jailbreak` 106, `malware` 149, `terrorism` 293, `animal_abuse` 357, `child_abuse` 425, `unauthorized_advice` 459. That is a pool ceiling, disclosed per column in the artifact, and it means per-column metrics on those eight rest on small n. `wildguardmix` is **gated** (403) and contributes 0 rows. |
 | No LLM judge (detection task) | **PASS** | `results.json` records `"judge": null`; no generation. |
-| Claim honesty | **PASS — but this row's own description was stale and is corrected** | **It previously read "README §10 marks all tables `[PENDING GPU RUN]`". That has not been true since the GPU run landed, and the current status is neither *pending* nor *reported* — it is MEASURED-THEN-SUSPENDED.** §10's tables carry real measured numbers (frozen bi-encoder macro-AP 0.240, contrastive 0.575, zero-shot held-out 0.169, trained head 0.658), and every one of them is **SUSPENDED, not retracted and not pending**, per `artifacts/results_CAUSAL_ENCODER_SUSPENDED.json:SUSPENDED_CAUSAL_ENCODER` ("SUSPENDED - do not cite. Not reversed; suspended.") and [`audits/AUDIT_2026-08-17_embeddinggemma_causal.md`](../../audits/AUDIT_2026-08-17_embeddinggemma_causal.md). Cause: under transformers 4.55.0 — which has no reference to `use_bidirectional_attention` — EmbeddingGemma-300M, a **bidirectional** encoder, silently ran **causal**; proved behaviourally (hidden states over a shared 9-token prefix bit-identical, max abs diff 0.0, across sequences with different suffixes; the same test under 5.15.0 gives 5.74). A crippled encoder is a *sufficient* explanation for the lesson's negative conclusions, so those conclusions revert to **undecided** pending a full re-run — they are not evidence either way. The distinction matters: *pending* means no number exists; *suspended* means a number exists and may not be cited. The falsifier pre-registration and the §11 screening-tier / frozen-embedder / cross-encoder-lite / handwritten-paraphrase disclosures are unaffected and still stand. |
+| Claim honesty | **PASS — this row has now been stale twice and is corrected a second time** | **History, kept because the pattern is the point.** It first read "README §10 marks all tables `[PENDING GPU RUN]`" — untrue once the GPU run landed. It was then corrected to MEASURED-THEN-SUSPENDED: §10's tables carried real numbers produced by an encoder that, under transformers 4.55.0 (no reference to `use_bidirectional_attention`), silently ran **causal** instead of bidirectional — proved behaviourally, hidden states bit-identical over a shared 9-token prefix, max abs diff 0.0, versus 5.74 under 5.15.0. **The re-run on the fixed bidirectional encoder landed 2026-08-21 and the suspension is LIFTED.** Current status: §10 reports `artifacts/results_embeddinggemma.json`; the suspended artifact is retained at `results_CAUSAL_ENCODER_SUSPENDED.json` and is **not reversed**. What the re-run settled: the seen-label ordering **reproduced** (trained_head 0.553 > bi_encoder_trained 0.482 > bi_encoder 0.227 > uni_encoder 0.156), so the causal bug was not a sufficient explanation for the lesson's negative conclusions after all — but EXP-G's trained-vs-frozen ordering **inverted** and EXP-H's embedding-geometry claim was **withdrawn**, so it was a sufficient explanation for two specific ones. Claim honesty now hinges on a different item entirely: **falsifier (iv) FIRES** — no method clears the 0.804 TF-IDF content bar — and §10.4 states it. |
 | Citation ids + titles verified | **PASS** | all seven arXiv ids WebFetch-verified by the lead; two drifted titles (#1, #3) and the #7 method-vs-title distinction corrected in README + this file; `[UNVERIFIED]` tags dropped (cf. the non_identifiability wrong-author finding, avoided here). |
 
 ## Concerns (not blockers)
@@ -81,13 +81,22 @@ relies on.
 
 ## Overall verdict
 
-**PASS.** All seven arXiv ids are WebFetch-verified by the lead (titles/authors
-corrected where they had drifted), and the EmbeddingGemma-300M model card is the
-correct backbone reference. The code is a faithful operationalization of the
-bi-encoder guardrail *pattern* with honest, pre-registered falsifiers and clearly
-disclosed simplifications (frozen general embedder, cross-encoder-lite baseline,
-handwritten paraphrases). No gating items remain; the numbers are pending the GPU
-run and marked as such.
+**PASS on apparatus; the LESSON'S OWN HEADLINE CLAIM does not clear its bar.** All seven
+arXiv ids are WebFetch-verified by the lead (titles/authors corrected where they had
+drifted), and the EmbeddingGemma-300M model card is the correct backbone reference. The
+code is a faithful operationalization of the bi-encoder guardrail *pattern* with honest,
+pre-registered falsifiers and clearly disclosed simplifications (frozen general embedder,
+cross-encoder-lite baseline, handwritten paraphrases).
+
+**Updated 2026-08-21 — the numbers are no longer pending.** The full run on the fixed
+bidirectional encoder is in `artifacts/results_embeddinggemma.json`, and all seven
+pre-registered falsifiers are verdicted in README §10.4: **(i) (v) (vi) (vii) survive,
+(ii) trips as literally written, (iii) is UNINFORMATIVE** (the frozen baseline is pinned
+at exactly 1.000 and the 2026-08-08 amendment fires), and **(iv) FIRES** — no method's
+binary harm AUC clears the binding TF-IDF content bar of 0.804 (best is 0.718). By the
+lesson's own pre-registration that bars headlining any EXP-A number. The three transfer
+arms all ran; the only genuinely external one (`cstm-bench`, n=50) puts every method at or
+below chance, so this lesson has **no evidence of external generalisation**.
 
 *Internal QA pass — independent external review pending (auditor shares a model
 family with the author).*
