@@ -719,15 +719,33 @@ Two observations from that run **survive** and are worth carrying into the new o
   *worse than useless* — 157/200 ids collide across configs, so it would have
   manufactured 157 fake shared groups without failing.
 - **The binding bar is high and the margin, not the AUC, is the result.** A TF-IDF
-  unigram model reaches 0.8584 on HARD. Any headline must be the margin above that.
+  unigram model reaches **0.8826 / 0.8832** on HARD. Any headline must be the margin
+  above that — and the headline arm's margin is **+0.010**.
+- **Nothing generalises out of distribution.** On `cstm-bench`, four of five methods
+  score below chance (0.399–0.486) and the best reaches 0.606 against a 0.858 bar. Read
+  every in-domain number in §9 against that.
 - **Order-sensitivity is a property of three of the five models, not of "stateful"
   models generally.** `hier_attn`'s softmax pooling and `trajectory_mlp`'s summary
-  statistics are permutation-invariant; only `seq_gru` genuinely reads order.
-- **The OOD set is small (108 scenarios) and is a genuine distribution shift** —
-  agentic enterprise sessions, not ActorAttack question chains. Expect degradation;
-  it is reported per cell as `ood_drop`, beside the in-domain number.
+  statistics are permutation-invariant; only `seq_gru` genuinely reads order — **and
+  under the gemma embedder even `seq_gru` does not**, which is what falsified F3 there.
+- **The two embedder arms are not a controlled ablation.** At an identical seed the HARD
+  condition drew 754 distinct groups under embgemma and 751 under gemma, so data
+  selection is coupled to the embedder setting. Treat them as two runs.
+- **The headline arm's artifact was overwritten.** `results.json` holds the gemma arm
+  only; the embgemma numbers survive in `artifacts/embgemma_run_2026-08-21.log`. Until a
+  single process writes both arms, the headline is log-sourced, not artifact-sourced.
+- **The gemma OOD cell does not exist** — it died with a CUDA OOM (12.12 GiB requested on
+  a 16 GiB card), recorded in `results.json` under `ood.embedders.gemma.error`. The OOD
+  null rests on one embedder.
+- **Two methods collapsed under gemma embeddings**: `hier_attn` returns exactly 0.500 on
+  all five folds (degenerate constant predictor) and `seq_gru` on two of five. Those are
+  training failures, not evidence about the architectures.
+- **The OOD set is small (108 rows over 54 scenarios) and is a genuine distribution
+  shift** — agentic enterprise sessions, not ActorAttack question chains. Expect
+  degradation; it is reported per cell as `drop_vs_hard`, beside the in-domain number.
 - **`ScaleAI/mhj` is gated on this host**, so CLAUDE.md rule 5's named benchmark is
-  not actionable here. Recorded, not silently omitted.
+  not actionable here and `cstm-bench` is a **substitute**. Recorded, not silently
+  omitted.
 - **Inspired-by, not a paper reproduction.** The architecture (per-turn embedding +
   sequence classifier) operationalizes the *idea* shared by the cited multi-turn
   defenses; it is not a faithful reimplementation of any one paper's model (see

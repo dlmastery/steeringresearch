@@ -215,7 +215,13 @@ PREREGISTRATION = {
 # --- Paths -------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent
 ARTIFACTS = ROOT / "artifacts"
-RESULTS_PATH = ARTIFACTS / "results.json"
+# PER-EMBEDDER. This was BARE while the seqs_*_<embedder>.npz caches were already
+# keyed, and on 2026-08-22 the gemma arm OVERWROTE the embgemma results because of
+# it -- the fourth instance of this defect (meerkat, cross_trajectory,
+# rogue_scalpel, here). common/artifact_paths.py had flagged this lesson as
+# "safe only while it has exactly one arm"; a second arm was then run anyway.
+from steering_tutorials.common.artifact_paths import keyed_path as _keyed_path
+RESULTS_PATH = _keyed_path(ARTIFACTS, "results", ".json", EMBEDDERS.split(",")[0].strip())
 # Per-(condition, embedder) sequence caches are named at the call site:
 #   artifacts/seqs_<condition>_<embedder>.npz
 # (the old module-level EMB_CACHE / ROC_PNG / BAR_PNG / TRAJ_PNG constants were dead

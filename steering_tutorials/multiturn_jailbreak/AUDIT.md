@@ -23,6 +23,42 @@
 > staleness defect relocated to the audit layer. The rows below are kept verbatim as
 > the record of what was believed on 2026-07-20.
 
+> ## ADDENDUM, 2026-08-22 — the fixed configuration has now RUN
+>
+> The six rubric failures above were fixed in code and then **executed**: `embgemma`
+> (headline) on 2026-08-21, `gemma` on 2026-08-22. What the run settles, and what it
+> opens:
+>
+> - **The 0.8584 content bar quoted in the Confound-honesty row was a CPU pre-run
+>   estimate.** The executed draws put it at **0.8826** (embgemma) and **0.8832**
+>   (gemma). The correction goes *against* the lesson: the bar is higher, so the
+>   falsifier is harder. `trajectory_mlp` clears it by **+0.010** and +0.058 respectively;
+>   every other method fails it.
+> - **All three pre-registered falsifiers survive under embgemma. F3 is FALSIFIED under
+>   gemma** — shuffling turn order makes `seq_gru` *better* (0.829 shuffled vs 0.785
+>   true). The "only a stateful model can see it" reading is unavailable under that
+>   embedder, and the README says so.
+> - **The OOD arm the row above marked FAIL now exists and returns a null**: four of five
+>   methods score below chance on `cstm-bench` (0.399–0.486). `ScaleAI/mhj`, the benchmark
+>   CLAUDE.md rule 5 names, remains **gated** on this host, so cstm-bench is a
+>   **substitute** at 108 rows — the rule-5 gap is narrowed, not closed.
+> - **Two NEW defects, neither of which existed before the run:**
+>   1. **The headline artifact was overwritten.** `results.json` now holds the `gemma`
+>      arm only; the embgemma numbers survive solely in
+>      `artifacts/embgemma_run_2026-08-21.log`. This is the §18.8 "an artifact that
+>      cannot be regenerated from the code beside it" defect, reintroduced at the
+>      headline. Fix: run both embedders in one process.
+>   2. **Data selection is coupled to the embedder setting.** At an identical seed
+>      (`MJ_SEED=0`) the HARD condition drew **754** distinct groups under embgemma and
+>      **751** under gemma. The two arms are therefore **not a controlled ablation** and
+>      must not be reported as an embedder comparison. EASY drew 1,088 in both, which
+>      localises the coupling to HARD's group-disjoint attack-prefix split.
+> - **The gemma OOD cell failed with a CUDA OOM** and is recorded as an error string in
+>   the artifact rather than omitted — correct disposition, but it means the OOD null
+>   rests on one embedder.
+> - **`hier_attn` under gemma is degenerate**, returning exactly 0.500 on all five folds;
+>   `seq_gru` on two of five. Reported as training failures, not as architecture results.
+
 **Auditor role:** independent paper verifier. Scope: do the cited papers exist,
 does the code implement what the lesson claims, is the data provenance and the
 "inspired-by vs. reproduction" framing honest. No git, no code/README edits were
