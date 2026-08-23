@@ -1,0 +1,16 @@
+{
+  "fingerprint": "5fbc2bde734524ed53e72833da2f004747a380376311c0d2cc8d524b2ea3a0de",
+  "model_id": "DavidAU/gemma-3-1b-it-heretic-extreme-uncensored-abliterated",
+  "layer": 12,
+  "n_extract": 300,
+  "n_eval": 150,
+  "seed": 0,
+  "max_new_tokens": 48,
+  "matched_alpha": 0.08,
+  "sweep_alphas": [
+    0.06,
+    0.08,
+    0.1
+  ],
+  "judge_id": "Qwen/Qwen2.5-3B-Instruct"
+}

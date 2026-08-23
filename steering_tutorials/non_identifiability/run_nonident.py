@@ -280,13 +280,43 @@ def summarize_nonidentifiability(
         verdict = ("NOT SUPPORTED (screening): fewer than two effective "
                    "directions — the effect did not reproduce across recipes")
 
+    # --- PRICE THE CONTROL. Added 2026-08-22. -------------------------------
+    # The registered criterion asks only whether directions cluster within
+    # `effective_fraction` of the BEST one. It records control_refusal and never
+    # COMPARES to it, so it can return SUPPORTED while every purpose-built
+    # direction underperforms a RANDOM vector in the PC span -- which is exactly
+    # what the n=150 run found (best 0.260 vs control 0.340).
+    #
+    # "Four directions agree" is only evidence of non-identifiability if those
+    # directions DO something. Four directions agreeing below random is four
+    # recipes failing the same way.
+    #
+    # The registered threshold logic is UNCHANGED -- moving it after seeing the
+    # data would be the HARKing this repo forbids. The control comparison is an
+    # ADDITIONAL check the criterion never made, and the verdict STRING now
+    # carries the disqualification so a reader cannot take "SUPPORTED" at face
+    # value. Same treatment as STA's binding_bar and trajguard's multivariate bar.
+    ctrl = float(rate.get(control_name, float("nan")))
+    beats_control = bool(best_refusal == best_refusal and ctrl == ctrl
+                         and best_refusal > ctrl)
+    if not beats_control and ctrl == ctrl:
+        verdict = (
+            "DISQUALIFIED by the control: %s. The best purpose-built direction "
+            "reaches refusal %.3f while the RANDOM control (%s) reaches %.3f. "
+            "Directions agreeing with each other BELOW a random vector is not "
+            "non-identifiability -- it is several recipes failing alike. The "
+            "registered clustering criterion is reported unchanged above."
+            % (verdict, best_refusal, control_name, ctrl))
+
     return {
         "best_refusal": float(best_refusal),
         "effective_threshold": float(threshold),
         "effective_names": effective,
         "min_cosine_effective": (None if np.isnan(min_cos) else float(min_cos)),
         "refusal_spread": float(spread),
-        "control_refusal": float(rate.get(control_name, float("nan"))),
+        "control_refusal": ctrl,
+        "beats_control": beats_control,
+        "control_margin": (float(best_refusal - ctrl) if ctrl == ctrl else None),
         "verdict": verdict,
     }
 
