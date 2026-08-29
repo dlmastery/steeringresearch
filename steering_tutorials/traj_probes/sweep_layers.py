@@ -73,9 +73,18 @@ def main() -> int:
             rows = []
 
     settings = ExtractSettings()
+    # Load the model ONCE and reuse it across layers. Constructing a fresh
+    # extractor per layer reloads Gemma with the previous copy still resident
+    # and SEGFAULTS on the second load (exit 139, observed after L4 finished).
+    # The layer is a per-extract argument, not a property of the model, so
+    # nothing is shared that should not be.
+    shared = HFActivationExtractor(C.MODEL_ID, settings, cache_dir=C.ARTIFACTS)
+    shared._ensure_model()
+    _model, _tok = shared._model, shared._tok
     for L in layers:
         t0 = time.time()
-        ex = HFActivationExtractor(C.MODEL_ID, settings, cache_dir=C.ARTIFACTS)
+        ex = HFActivationExtractor(C.MODEL_ID, settings, cache_dir=C.ARTIFACTS,
+                                   model=_model, tok=_tok)
         bundle = ex.extract(corpus, L)
         probe = LinearTrajProbe()
         r = probe.fit_predict_cv(bundle, n_folds=C.N_FOLDS, seed=C.SEED)
