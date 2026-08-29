@@ -208,6 +208,15 @@ def _cv_indices_from_fold_map(group_id, fold_of: dict, n_folds: int) -> list:
     """
     g = np.asarray([str(x) for x in group_id])
     fidx = np.asarray([fold_of.get(x, -1) for x in g])
+    # A total key miss must FAIL, not return an empty split list that reads
+    # downstream as "this k has too little data". That is exactly how a
+    # traj_uid/group_id key mismatch silently emptied this entire curve once.
+    if len(g) and not (fidx >= 0).any():
+        raise KeyError(
+            "fold map covers NONE of the %d lookup keys (e.g. %r); it was built "
+            "with a different key than it is being read with. Empty folds here "
+            "are a key bug, not a small-k data limitation."
+            % (len(g), g[0]))
     out = []
     for f in range(n_folds):
         te = np.flatnonzero(fidx == f)
@@ -246,7 +255,14 @@ def early_abort_curve(bundle: ActivationBundle, n_folds: int = 5,
         Xk = np.asarray(bundle.X[mask], dtype=np.float64)
         yk = y_all[mask]
         stepk = step_all[mask]
-        gk = bundle.group_id[mask]
+        # `fold_of` is keyed by TRAJ_UID (see _trajectory_fold_assignment,
+        # which builds it from _trajectory_labels). group_id is a DIFFERENT
+        # string on this corpus -- 'atbench::1' vs '1' -- so looking up by
+        # group_id missed every key, produced zero usable folds, and the
+        # whole curve reported 'fewer than 2 usable folds' as though it were
+        # a property of the data. One group per trajectory here, so the two
+        # are 1:1; the key must simply be the one the map was built with.
+        gk = bundle.traj_uid[mask]
         splits = _cv_indices_from_fold_map(gk, fold_of, n_folds)
         if len(splits) < 2:
             row["note"] = "fewer than 2 usable folds at this k"
