@@ -478,12 +478,27 @@ class ATBenchLoader:
         return corpus
 
 
-def load_corpus(n_per_class=None, seed=None, corpus=None, max_turns=None):
-    """Convenience wrapper defaulting to the config anchor."""
+def load_corpus(n_per_class=None, seed=None, corpus=None, max_turns=None,
+                allow_step_leak: bool = False):
+    """Convenience wrapper defaulting to the config anchor.
+
+    Gates on the DETERMINISTIC STEP-INDEX REGION by default. On ATBench the
+    longest safe trajectory is 18 turns and the longest unsafe one is 62, so an
+    uncapped corpus hands a probe 570 rows whose label follows from position
+    alone -- and `probes.StepResidualiser` removes LINEAR position only, so
+    nothing downstream would notice. The gate lives HERE, at the load path, so
+    it cannot be skipped by a caller who forgot it (leakage.py).
+
+    Pass allow_step_leak=True only to study the region deliberately.
+    """
     loader = ATBenchLoader(corpus=corpus, max_turns=max_turns)
-    return loader.load(
+    out = loader.load(
         n_per_class=C.N_PER_CLASS if n_per_class is None else n_per_class,
         seed=C.SEED if seed is None else seed)
+    from steering_tutorials.traj_probes.leakage import (
+        assert_no_deterministic_region)
+    assert_no_deterministic_region(out, acknowledge=allow_step_leak)
+    return out
 
 
 def summarise(corpus):

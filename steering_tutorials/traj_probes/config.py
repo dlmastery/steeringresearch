@@ -41,9 +41,15 @@ substrate in plain sight, and it is why `auc_residualised` is not optional
 decoration on `ProbeResult` -- a probe that reads length alone has a real edge
 here and would look like a finding.
 
-MAX_TURNS exists for the same reason from the other side: a 62-turn trajectory
-is ~5x the median cost to replay, and truncation is a knob a reader must be able
-to see. It defaults to 0 (no truncation) so the default run is the honest one.
+MAX_TURNS is NOT merely a cost knob, and it does NOT default to 0. Measured
+2026-08-29: the longest SAFE trajectory is 18 turns and the longest UNSAFE one is
+62, so every turn at step index >= 18 is unsafe BY CONSTRUCTION -- 570 of 8,981
+rows (6.3%) whose label is decided before an activation is read. Step index looks
+harmless globally (AUC 0.5686) because the leak is LOCAL and perfect, and
+`StepResidualiser` removes LINEAR position only, so CONTROL 1 cannot reach a
+threshold like this. The cap is therefore a CORRECTNESS setting: at 16 the
+highest step index is 15, the region is empty, and 92.9% of rows survive. See
+leakage.py, which gates on it. Raising it above 18 re-opens the leak.
 """
 from __future__ import annotations
 
@@ -123,9 +129,10 @@ SEED = _env_int("TP_SEED", 0)
 N_FOLDS = _env_int("TP_N_FOLDS", 5)
 BOOTSTRAP = _env_int("TP_BOOTSTRAP", 10000)
 
-# 0 == keep every turn. Any other value truncates a trajectory to its FIRST
-# MAX_TURNS turns, which changes the corpus, so it is part of the cache key.
-MAX_TURNS = _env_int("TP_MAX_TURNS", 0)
+# Truncates a trajectory to its FIRST MAX_TURNS turns, which changes the corpus,
+# so it is part of the cache key. 0 == keep every turn and RE-OPEN the step-index
+# leak documented above (leakage.py refuses that corpus unless acknowledged).
+MAX_TURNS = _env_int("TP_MAX_TURNS", 16)
 
 # Group-aware CV unit. "trajectory" is the only defensible default on ATBench --
 # see data.py's GROUPING section for the measurement that rules the alternatives

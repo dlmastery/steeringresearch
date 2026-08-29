@@ -57,3 +57,4 @@ steering_tutorials/*/artifacts/_run_checkpoint.json
 # running CAUSAL (audits/AUDIT_2026-08-17_embeddinggemma_causal.md). Invalid, and
 # regenerable -- kept out of the tree rather than shipped as if they were evidence.
 _causal_invalid_caches/
+steering_tutorials/traj_probes/artifacts/corpus_*.json.gz
