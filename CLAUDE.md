@@ -797,13 +797,18 @@ All of these are BLOCKED ONLY BY HOST MEMORY on the old box, not by missing code
 3. Unrun alpha sweeps — **CORRECTED 2026-08-17, this entry was STALE in two ways**:
    - `fine_grained` — **its sweep HAS run.** `artifacts/results.json` carries a populated
      `sweep` key plus `dense` / `best_sparse` / `thresholds`. Remove it from this list.
-   - `non_identifiability` — **CORRECTED AGAIN 2026-08-21: the sweep is not merely
-     unrun, it is NOT WIRED.** `run_nonident.py` references only `C.MATCHED_ALPHA`
-     (lines 319, 353); `C.ALPHAS = [0.06, 0.08, 0.10]` appears NOWHERE in the runner
-     and is dead config. So this is a **NEEDS-CODE** item, not a NEEDS-GPU one —
-     running the lesson as it stands would never produce a sweep, however much GPU
-     it is given. Three passes were needed to get this entry right, and each time
-     the error was the same: the list recorded an INTENTION as though it were code.
+   - `non_identifiability` — **CLOSED 2026-08-29. The sweep RAN, on 2026-08-22.**
+     `artifacts/results_n150_a060-080-100.json` carries `alpha_sweep` (3 cells),
+     `alpha_sweep_alphas [0.06, 0.08, 0.10]`, `n_eval 150`, `capped false`,
+     `partial false`, off-family judge `Qwen/Qwen2.5-3B-Instruct`, tier
+     "pre-registered n", beside `sweep_run_2026-08-22.log` and its plot.
+     FOUR passes were needed, and the fourth error was mine and was the same
+     shape as the first three: on 2026-08-29 I grepped the RUNNER, saw
+     `SWEEP_ALPHAS` referenced, concluded "wired, so NEEDS-GPU", and reported it
+     as pending — without opening the results file sitting in the directory I
+     had just listed. Checking the code is not checking the result. **Verify
+     contents, never a remembered status, and never a status you re-derived from
+     one layer of the artifact.**
    - `rogue_scalpel` — **its guard LADDER has run** at n=200 (baseline / attacked /
      +clamp / +lock / +dual). What is actually open is (a) the `negative_add` attack
      mode — the artifact records `attack_mode: "project_out"` — and (b) a *per-layer*
