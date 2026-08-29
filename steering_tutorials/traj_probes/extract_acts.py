@@ -64,7 +64,7 @@ def main() -> int:
     settings = ExtractSettings()
     cache_dir = C.ARTIFACTS
     cache_dir.mkdir(parents=True, exist_ok=True)
-    data_fp = data_fingerprint(corpus, settings.as_dict())
+    data_fp = data_fingerprint(corpus, settings)
     out_path = bundle_cache_path(cache_dir, C.MODEL_ID, settings, layer, data_fp)
 
     ex = HFActivationExtractor(C.MODEL_ID, settings, cache_dir=cache_dir)
