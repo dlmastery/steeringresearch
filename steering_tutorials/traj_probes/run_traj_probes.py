@@ -158,21 +158,23 @@ def _probe_result_to_dict(r: ProbeResult) -> dict:
     }
 
 
-def _fit_score(Xtr, ytr, Xte, seed: int) -> np.ndarray:
+PROBE_C = 1.0          # single source of truth; probes._fit_fold takes it as an arg
+
+
+def _fit_score(Xtr, ytr, Xte, seed: int, C: float = PROBE_C) -> np.ndarray:
     """Standardise on train only, L2 logistic regression, score test.
 
-    Deliberately identical to `probes._fit_fold` (same C, solver, max_iter) --
-    the early-abort curve must use the SAME probe as the `linear` arm, just
-    fewer rows per trajectory.
+    DELEGATES to `probes._fit_fold` rather than reimplementing it. The
+    early-abort curve must use the SAME estimator as the `linear` arm, and a
+    second copy of the hyper-parameters is a copy that drifts: change C or the
+    solver in probes.py and a duplicate here would keep the old value while
+    still being labelled "the same probe". Reaching past the underscore is the
+    lesser evil -- the alternative is two definitions of the estimator whose
+    agreement nothing checks.
     """
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.preprocessing import StandardScaler
+    from steering_tutorials.traj_probes.probes import _fit_fold
 
-    sc = StandardScaler().fit(Xtr)
-    clf = LogisticRegression(C=1.0, max_iter=2000, solver="lbfgs",
-                             random_state=seed)
-    clf.fit(sc.transform(Xtr), ytr)
-    return clf.decision_function(sc.transform(Xte))
+    return _fit_fold(Xtr, ytr, Xte, C, seed)
 
 
 # ---------------------------------------------------------------------------
