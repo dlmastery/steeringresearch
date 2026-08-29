@@ -42,12 +42,18 @@ over TextCraft, WebShop, ALFWorld and tau-bench. **We do not reproduce their
 numbers and this README will never print ours beside theirs.** What can transfer
 is the *method and its controls* — not the magnitude of any AUC.
 
-> **Status: no results yet.** The data loader, the leakage gate, the probe
-> controls and the activation extractor are built and CPU-self-tested. The GPU
-> pass (extract Gemma-3-1B activations over the pinned corpus, fit the probes,
-> write `artifacts/results_*.json`) has **not been run**. Every number below that
-> would come from that pass is marked `[PENDING RUN]`. Nothing in this file is
-> invented to fill that gap.
+> **Status: the GPU pass has run, and the result is NEGATIVE.** Gemma-3-1B
+> layer-12 activations over the pinned ATBench corpus (8,341 turn-rows, 997
+> trajectories, group-aware 5-fold CV, 594.5s wall clock), 2026-08-29 —
+> `artifacts/results_atbench_gemma-3-1b-it_L12.json`. The pre-registered
+> content-bar falsifier (Section 8) **FIRED**: the activation probe is real
+> (it clears both the step-index floor and the random-label ceiling by a wide
+> margin) but it loses to a plain bag-of-words bar at every horizon measured
+> (Section 7). **This is not a refutation of arXiv:2607.06503** — it is one
+> model (1B vs 7B–70B), one layer, one pooling scheme, one corpus; the honest
+> statement is that we cannot claim the reproduction, not that the method
+> fails (Section 7's limitations subsection). A per-layer sweep is
+> **[RUNNING]**; layer 4 is in and also below the bar.
 
 ---
 
@@ -62,7 +68,8 @@ is the *method and its controls* — not the magnitude of any AUC.
 Reproduction A is the one the rest of this README is really about, because an
 early-abort cascade is *defined* by operating at high precision on a small
 high-confidence subset — which turns out to be exactly where this corpus's worst
-leak lives (Section 3).
+leak lives (Section 3). It has now run, and the short version is: real signal,
+still a loss (Section 7) against its own pre-registered bar (Section 8).
 
 ---
 
@@ -187,11 +194,13 @@ where the region lives.
 | `leakage.py` | measures and gates the step-index deterministic region described in Section 3. A build-time check, not a runtime hope. |
 | `probes.py` | `LinearTrajProbe`, `StepIndexProbe`, group-aware CV, the clustered bootstrap CI, and all three controls (step-index residualisation, content bar, Hewitt-Liang random-label ceiling). |
 | `activations.py` | `HFActivationExtractor`: one causal forward pass per trajectory (not one per prefix — see the module docstring's O(n) vs O(n^2) argument, and `verify_prefix_equivalence`, which *measures* causality rather than assuming it), a resumable row journal (a reap costs one trajectory, not the run), and a two-fingerprint cache (behaviour + data). |
+| `extract_acts.py` | the GPU half, split out on its own so a reap is cheap (~10s/trajectory, ~2.8h for the full 997): loads the corpus, runs `HFActivationExtractor`, journals every trajectory as it completes, caches by (behaviour, data) fingerprint. |
+| `run_traj_probes.py` | reproduction A/B: fits all four arms (`linear`, `step_only`, `content_bar`, `random_label`) on one cached activation bundle and one fixed set of group-aware CV folds, then the early-abort curve at k in (1,2,3,4,6,8) reusing that SAME fold assignment (recomputing folds per k would silently compare different train/test partitions and call the difference "early abort"). Writes `artifacts/results_atbench_<model>_L<layer>.json`. |
+| `sweep_layers.py` | rules the layer axis in/out before the layer-12 negative is reported as a property of the residual stream rather than of the layer: one model load per layer, journalled, scored against the SAME trajectory-level content bar. Writes `artifacts/layer_sweep_atbench_<model>.json`. |
 
-No orchestrating runner (`run_traj_probes.py` or similar, tying load → extract →
-probe → `results_*.json` into one command) exists yet in this package as of this
-writing. The "Run it" commands below are the self-tests of the modules that do
-exist.
+The "Run it" commands below are the self-tests of the individual modules; the
+end-to-end GPU commands (extract → fit → sweep) are given separately at the end
+of this section.
 
 ---
 
@@ -229,13 +238,131 @@ To materialise the full pinned corpus (500/class request, capped at
 C:/Users/evija/anaconda3/python.exe -c "from steering_tutorials.traj_probes.data import load_corpus, summarise; print(summarise(load_corpus()))"
 ```
 
-The GPU pass — `HFActivationExtractor(config.MODEL_ID).extract(corpus, config.LAYER)`
-followed by `LinearTrajProbe().fit_predict_cv(bundle)` at every step k — is
-**`[PENDING RUN]`**; no `artifacts/results_*.json` exists yet.
+The GPU pass has run. To reproduce it end to end (extract, then fit, then the
+optional layer sweep):
+
+```
+# extract Gemma-3-1B layer-12 activations over the pinned corpus (foreground,
+# resumable — a reap costs one trajectory, not the run)
+C:/Users/evija/anaconda3/python.exe -u -m steering_tutorials.traj_probes.extract_acts
+
+# fit all four arms + the early-abort curve, write results_atbench_*.json
+C:/Users/evija/anaconda3/python.exe -u -m steering_tutorials.traj_probes.run_traj_probes
+
+# layer sweep (layer 4 done; TP_SWEEP_LAYERS=4,8,16,20,24 to pick layers)
+C:/Users/evija/anaconda3/python.exe -u -m steering_tutorials.traj_probes.sweep_layers
+```
+
+Results: `artifacts/results_atbench_gemma-3-1b-it_L12.json`,
+`artifacts/content_bar_by_k.json`, `artifacts/layer_sweep_atbench_gemma-3-1b-it.json`.
+See Section 7.
 
 ---
 
-## 7. What would falsify this (pre-registered)
+## 7. Results: the probe is real, and it still loses
+
+Gemma-3-1B, layer 12, ATBench, 8,341 turn-rows over 997 trajectories, group-aware
+5-fold CV, 594.5s wall clock, 2026-08-29
+(`artifacts/results_atbench_gemma-3-1b-it_L12.json`). **This is a negative
+result and it is stated as one here, not in Section 8.**
+
+| arm | AUC | 95% CI |
+|---|---|---|
+| linear activation probe (raw) | 0.7503 | [0.7339, 0.7668] |
+| after step-index residualisation (CONTROL 1) | 0.7507 | unchanged by residualisation |
+| step-index floor (`StepIndexProbe`) | 0.5036 | [0.4871, 0.5208] |
+| random-label ceiling (CONTROL 3, Hewitt-Liang) | 0.5062 | — |
+| TF-IDF unigram content bar (CONTROL 2) | 0.8671 | — |
+| `clears_content_bar` | **FALSE** | — |
+
+The probe measures something real, not an artefact of the two things most
+likely to fake one: it is not **capacity** (the random-label ceiling sits at
+0.5062, near chance, while the real probe scores 0.7503 — far outside that
+ceiling's own CI width); and it is not **position** (residualising out linear
+step-index moves the AUC from 0.7503 to 0.7507, i.e. not at all — the
+`MAX_TURNS=16` cap from Section 3 already did its job, since the step-index
+floor itself sits at chance, 0.5036). It is simply **worse than unigrams over
+the same text**: 0.7503 vs 0.8671. The one apples-to-apples unit match the
+falsifier actually calls for — content bar is trajectory-level, so the linear
+probe must be pooled to trajectory level too (`max`-pooled, `auc_residualised`'s
+sibling in the results file) rather than compared at its raw row-level headline
+— gives **0.7453 vs 0.8671**, the same verdict by a wider margin.
+
+**The early-abort curve**, each point benchmarked against a content bar computed
+on the SAME first-k turns (`artifacts/content_bar_by_k.json`), so no cell is
+compared against a bar that read more text than the probe did:
+
+| k | 1 | 2 | 3 | 4 | 6 | 8 | 16 |
+|---|---|---|---|---|---|---|---|
+| probe AUC | 0.5741 | 0.6078 | 0.6090 | 0.6383 | 0.6830 | 0.7163 | 0.7503 |
+| content bar AUC | 0.7272 | 0.7438 | 0.7524 | 0.7906 | 0.8520 | 0.8690 | 0.8671 |
+| margin | -0.153 | -0.136 | -0.143 | -0.152 | -0.169 | -0.153 | -0.117 |
+
+The probe loses **at every k**, by a stable -0.117 to -0.169 — this is not an
+aggregate effect hiding a horizon where it wins.
+
+**What does and does not reproduce.** The paper's *qualitative* claim
+reproduces: failure is predictable above chance from the very first turn
+(0.5741, k=1) and rises monotonically with horizon. What does not reproduce is
+the residual stream beating the surface — every paper here reports the probe
+as the interesting number; on this run the unigram bar is the better detector
+at every horizon.
+
+**Do not read this as a refutation of arXiv:2607.06503.** That paper runs
+Qwen-2.5-7B / Qwen3-32B / Llama-3.3-70B over TextCraft and WebShop; this run is
+Gemma-3-1B, layer 12, last-token pooling, over ATBench. Model scale, layer,
+pooling, or corpus could each carry the reproduction on their own, and none of
+the four has been ruled out yet (the layer sweep below is the first). The
+honest statement is **"we cannot claim the reproduction here,"** not "the
+method fails." This README will not print these numbers beside the papers'.
+
+### Known limitations of this run
+
+- **One model.** Gemma-3-1B-it, 1B parameters, against 7B–70B in the
+  reproduction papers.
+- **One pooling scheme.** Last-token activation at each turn boundary; no other
+  pooling (mean, max) has been tried.
+- **One corpus.** ATBench only; the reproduction papers use TextCraft, WebShop,
+  ALFWorld and tau-bench.
+- **The layer sweep is `[RUNNING]`, not concluded.** `sweep_layers.py` scores
+  each layer against the SAME trajectory-level content bar computed once at
+  layer 12. Layer 4 is in: AUC 0.7208, residualised 0.7198, margin **-0.1463**
+  vs the 0.8671 bar — also below it (`artifacts/layer_sweep_atbench_gemma-3-1b-it.json`).
+  Layers 8/16/20/24 are not yet measured; **no final layer verdict is claimed.**
+
+### What broke, and how it was caught
+
+Three instrument bugs surfaced during this run. None of them crashed — each
+produced confident, well-formed, wrong output, the same shape as every prior
+defect in this program (Section 18.8 of the project's `CLAUDE.md`):
+
+1. **The 4,096-token extraction cap silently dropped rows in a
+   label-correlated way.** 327 unsafe rows were truncated away against 13 safe
+   — from trajectories that were 86% unsafe against a 49.8% corpus base rate,
+   i.e. precisely the late turns of the failing class. The run's own log said
+   "28 turns truncated," understating a 340-row loss by 12x. Fixed by moving
+   the cap into the loader as `config.MAX_TURN_CHARS=1200` (so the model and
+   the content bar read the exact same string); at that cap every trajectory
+   fits inside 4,096 tokens (max observed: 4,025) and 0 rows are dropped.
+2. **That fix appeared to do nothing.** `ATBenchLoader.cache_path` was keyed on
+   `(corpus, n, seed, max_turns)` and not on the new character cap, so it kept
+   serving a pre-cap cache while the config stamp printed
+   `MAX_TURN_CHARS=1200` right beside it.
+3. **The early-abort curve was silently empty at every k.** `fold_of` was built
+   keyed by `traj_uid` (e.g. `'1'`) but read by `group_id` (e.g.
+   `'atbench::1'`) — a total key mismatch — and the failure reported itself as
+   "fewer than 2 usable folds," which reads like sparse data, not a bug. Its
+   own self-test passed *with the bug present*, because the synthetic fixture
+   set `traj_uid == group_id` and so was structurally incapable of catching a
+   key-format mismatch. A total key miss now raises instead of silently
+   returning nothing.
+
+The common shape: right output format, no error, wrong content — the failure
+mode this whole program keeps finding, never the loud kind.
+
+---
+
+## 8. What would falsify this (pre-registered)
 
 - **Reproduction A/B fail** if `LinearTrajProbe`'s `auc_residualised` at early
   step indices (k <= 4, on the `MAX_TURNS=16`-capped corpus, so Section 3's
@@ -243,25 +370,33 @@ followed by `LinearTrajProbe().fit_predict_cv(bundle)` at every step k — is
   by a margin outside the bootstrap CI. If the residualised probe is
   indistinguishable from a probe that only ever sees the step counter, the
   residual stream has added nothing reproduction A/B did not already get from
-  position.
+  position. **Did not fire**: at k=1 the probe already reads 0.5741, outside
+  the step-index floor's CI ([0.4871, 0.5208]); the gap widens with k
+  (Section 7).
 - **The content bar sinks the claim** if `content_bar_control`'s bag-of-words AUC
   (pooled to one score per trajectory, the same unit the activation probe is
   compared at) matches or beats the activation probe's residualised AUC. A
   "trajectory" probe that cannot beat unigrams over the same text has not shown
-  the internal state carries anything the surface didn't.
+  the internal state carries anything the surface didn't. **FIRED**:
+  trajectory-pooled probe 0.7453 (row-level headline 0.7503) vs bar 0.8671, at
+  every k in the early-abort curve (Section 7). This is the headline verdict of
+  this lesson.
 - **The random-label ceiling disqualifies a raw number** if `LinearTrajProbe`'s
   real AUC does not clear `random_label_control`'s ceiling by more than the
   ceiling's own CI width — that would mean the probe's capacity alone explains
-  the score at this n, independent of any real signal.
+  the score at this n, independent of any real signal. **Did not fire**: 0.7503
+  vs a ceiling of 0.5062 (Section 7) — capacity alone does not explain this
+  probe's score.
 - **Reproduction C is not evaluable at all here** unless a future pass adds
   synthetic (and honestly-labelled-as-invented) tool-dependency edges — ATBench
   itself carries none, and `Turn.consumes_from` must not be filled from
   argument-string pattern matching, which would be inventing the very label
   being measured (`data.py`'s `_render_turn` docstring is explicit about this).
+  Still out of scope; unchanged by this run.
 
 ---
 
-## 8. Repository
+## 9. Repository
 
 Lesson package: [`steering_tutorials/traj_probes/`](.)
 Sibling (text-embedding side of the same family):
