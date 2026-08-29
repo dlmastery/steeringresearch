@@ -1,0 +1,23 @@
+{
+ "name": "biencoder_cross_annotator_n1903_s0",
+ "source": "nvidia/Aegis-AI-Content-Safety-Dataset-2.0",
+ "source_type": "huggingface",
+ "licence": "cc-by-4.0",
+ "redistributable": true,
+ "non_commercial": false,
+ "split": "test",
+ "seed": 0,
+ "n_rows": 1903,
+ "fields": [
+  "_source",
+  "group",
+  "is_harmful",
+  "policies",
+  "text"
+ ],
+ "slice_fingerprint": "7d511b735cac558c",
+ "bytes_gz": 409308,
+ "file": "biencoder_cross_annotator_n1903_s0.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "biencoder_guard cross_annotator transfer arm: Aegis 2.0 test split."
+}

@@ -1,0 +1,36 @@
+{
+ "name": "hard_harmful_jailbreakv28k_n250_s0",
+ "source": "JailBreakV-28K/JailBreakV-28K",
+ "source_type": "huggingface",
+ "licence": "mit",
+ "redistributable": true,
+ "non_commercial": false,
+ "split": "",
+ "seed": 0,
+ "n_rows": 250,
+ "fields": [
+  "group_id",
+  "label",
+  "obfuscation",
+  "policy",
+  "prompt",
+  "source"
+ ],
+ "slice_fingerprint": "f0842cb51353f939",
+ "bytes_gz": 39423,
+ "file": "hard_harmful_jailbreakv28k_n250_s0.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "The obfuscated-harmful side of the adversarial OOD eval set (HARD_DATASETS.md): real JailBreakV-28K redteam_query rows wrapped in a text-native jailbreak format (Template/Persuade/Logic). Read from the already-committed artifacts/hard_prompts.json, not re-sampled. Meant to be scored zero-shot by a probe trained on sets 1/2 above -- recall here is the honest robustness number.",
+ "extra": {
+  "hard_prompts_header": {
+   "harmful_source": "JailBreakV-28K/JailBreakV-28K:JailBreakV_28K/JailBreakV_28K.csv (text formats ['Template', 'Persuade', 'Logic']; label 1)",
+   "benign_source": "Paul/XSTest:xstest_prompts.csv (safe prompts; label 0)",
+   "natural_note": "HARD set: label-1 prompts are genuine harmful intent OBFUSCATED by jailbreak wrappers (persona/DAN, persuasion, euphemistic reframing); label-0 prompts are superficially-alarming but benign (XSTest safe). Meant to be evaluated ZERO-SHOT by a JBB/Toxic-Chat-trained probe to measure detection recall under obfuscation.",
+   "n_per_class": 250,
+   "seed": 0,
+   "dedup_count": 500,
+   "truncation_maxchars": 4000,
+   "group_id_scheme": "sha1(lowercased, whitespace-collapsed prompt)[:16]"
+  }
+ }
+}

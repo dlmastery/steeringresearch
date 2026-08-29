@@ -1,0 +1,44 @@
+{
+ "name": "concepts_500_s0",
+ "source": "lmsys/toxic-chat",
+ "source_type": "huggingface",
+ "licence": "cc-by-nc-4.0",
+ "redistributable": true,
+ "non_commercial": true,
+ "split": "",
+ "seed": 0,
+ "n_rows": 1142,
+ "fields": [
+  "_licence",
+  "_source",
+  "concept",
+  "n_available",
+  "prompt",
+  "split"
+ ],
+ "slice_fingerprint": "a4ff0500474d2b52",
+ "bytes_gz": 121581,
+ "file": "concepts_500_s0.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "Every row derives from lmsys/toxic-chat (Lin et al. 2023, arXiv:2310.17389, cc-by-nc-4.0, NON-COMMERCIAL) -- concept rows from toxic prompts folded to a coarse harm category via openai_moderation, baseline rows from non-toxic prompts. No other upstream source is used by load_concepts. concept_names are the ones that clear MIN_CONCEPT_AVAILABLE=100 available prompts; dropped concepts (with their pool sizes) and the zero-shot held_out concept are recorded in extra. requested n_per_concept=500 vs. per-concept pool sizes {'sexual': 388, 'harassment': 143, 'violence': 111} -- every kept concept's pool is SMALLER than the request, so this slice is effectively the FULL available pool per concept, not n_per_concept capped.",
+ "non_commercial_notice": "This slice is NON-COMMERCIAL (cc-by-nc-4.0). It may be used for research and teaching only, and that restriction travels with it.",
+ "extra": {
+  "concept_names": [
+   "sexual",
+   "harassment",
+   "violence"
+  ],
+  "dropped": {
+   "hate": 24,
+   "self_harm": 27
+  },
+  "held_out": "harassment",
+  "n_per_concept_requested": 500,
+  "pool_sizes": {
+   "sexual": 388,
+   "harassment": 143,
+   "violence": 111
+  },
+  "capped_by_pool_not_request": true
+ }
+}

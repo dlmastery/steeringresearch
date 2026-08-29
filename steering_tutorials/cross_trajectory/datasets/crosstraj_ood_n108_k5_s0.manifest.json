@@ -1,0 +1,37 @@
+{
+ "name": "crosstraj_ood_n108_k5_s0",
+ "source": "intrinsec-ai/cstm-bench",
+ "source_type": "huggingface",
+ "licence": "mit",
+ "redistributable": true,
+ "non_commercial": false,
+ "split": "dilution+cross_session",
+ "seed": 0,
+ "n_rows": 108,
+ "fields": [
+  "_source",
+  "_source_tag",
+  "group",
+  "label",
+  "trajectories"
+ ],
+ "slice_fingerprint": "660fad749a37f110",
+ "bytes_gz": 714918,
+ "file": "crosstraj_ood_n108_k5_s0.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "cross_trajectory OOD arm (CSTM-Bench, both splits). n_scenarios=108 n_attack=52 n_benign=56 selection=uniform k=5. Screening-tier: n~108.",
+ "extra": {
+  "meta": {
+   "selection": "uniform",
+   "ood_k": 5,
+   "n_scenarios": 108,
+   "n_attack": 52,
+   "n_benign": 56,
+   "sessions_available_mean": 20.59259259259259,
+   "sessions_available_min": 14,
+   "sessions_available_max": 29,
+   "sessions_kept_mean": 5.0,
+   "sessions_discarded_frac": 0.7571942446043165
+  }
+ }
+}

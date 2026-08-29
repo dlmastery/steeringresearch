@@ -1,0 +1,48 @@
+{
+ "name": "crosstraj_hard_n500_k5_s0",
+ "source": "SafeMTData/SafeMTData",
+ "source_type": "huggingface",
+ "licence": "mit",
+ "redistributable": true,
+ "non_commercial": false,
+ "split": "hard",
+ "seed": 0,
+ "n_rows": 1000,
+ "fields": [
+  "_source",
+  "_source_tag",
+  "group",
+  "label",
+  "trajectories"
+ ],
+ "slice_fingerprint": "93c705010fc232ed",
+ "bytes_gz": 172374,
+ "file": "crosstraj_hard_n500_k5_s0.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "cross_trajectory hard condition: n_pos=500 n_neg=500 k=5. Positives are SafeMTData/SafeMTData; negatives are SafeMTData/SafeMTData (disjoint-group prefix half). Composition: {'attack': 500, 'attack_prefix': 500}.",
+ "extra": {
+  "composition": {
+   "attack": 500,
+   "attack_prefix": 500
+  },
+  "meta": {
+   "condition": "hard",
+   "requested_n_pos": 500,
+   "requested_n_neg": 500,
+   "n_pos": 500,
+   "n_neg": 500,
+   "n_distinct_groups": 680,
+   "n_distinct_groups_pos": 339,
+   "n_distinct_groups_neg": 341,
+   "group_overlap_pos_neg": 0,
+   "attack_configs": [
+    "Attack_600",
+    "SafeMTData_1K"
+   ],
+   "k": 5,
+   "seed": 0,
+   "pool_fingerprint": "3859ca6a172e91076c551d3d5d7b755cefd8fd61b3781a9cc8da478fd1b3c865",
+   "meets_500_floor": true
+  }
+ }
+}

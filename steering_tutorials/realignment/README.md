@@ -206,9 +206,20 @@ Reused verbatim from lesson 2 (`hello_world_steering`), imported — never copie
   generation time with the norm-relative add hook.
 - `judge.Judge` — grades each generation `REFUSAL` / `COMPLIANCE` / `GIBBERISH`
   (a cheap deterministic gibberish gate first, then a one-word model verdict).
-- `data.load_harmful_benign` — downloads the JailbreakBench `Goal`-column CSVs via
-  `hf_hub_download` (works behind an SSL middlebox) and returns a matched
+- `common.data.load_harmful_benign` — the SHARED >=500/class loader. This lesson
+  has no `data.py` of its own; it imports
+  `steering_tutorials.common.data.load_harmful_benign` and returns a matched
   `{"harmful": [...], "benign": [...]}` split.
+  **Corrected 2026-08-29.** This bullet previously said the data was the
+  JailbreakBench `Goal` column. At `N_PER_CLASS=500` it is **100%
+  `lmsys/toxic-chat`** (harmful = toxicity 1, benign = toxicity 0 and
+  length-matched); the JailbreakBench top-up path exists in `common/data.py` but
+  only fires when the deduped toxic-chat pool falls below `n_per_class`, and the
+  pool holds 693 after dedup, so it never activates at this n. That matters
+  beyond tidiness: JailbreakBench is **MIT**, `lmsys/toxic-chat` is
+  **cc-by-nc-4.0 (NON-COMMERCIAL)**, so the old text understated the licence of
+  the lesson's own data. The exact slice ships at
+  `common/datasets/harmful_benign_n500_s0.jsonl.gz`.
 
 Everything that touches a model lives under each script's `main()`, so importing
 either module is inert (no torch import, no model load) — which is exactly what

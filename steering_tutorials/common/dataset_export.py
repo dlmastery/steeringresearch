@@ -45,6 +45,13 @@ REDISTRIBUTABLE = {
     "AI45Research/ATBench": "apache-2.0",
     "nvidia/Aegis-AI-Content-Safety-Dataset-2.0": "cc-by-4.0",
     "jackhhao/jailbreak-classification": "apache-2.0",
+    # verified 2026-08-29 by me, not taken on report. NOTE the hub's canonical
+    # id capitalises differently from the form the lessons use
+    # ("JailbreakV-28K/JailBreakV-28k"); HF resolves ids case-insensitively and
+    # a dict does not, so lookups here are case-folded (see _norm) rather than
+    # relying on either spelling being the one a caller happens to pass.
+    "JailBreakV-28K/JailBreakV-28K": "mit",
+    "Paul/XSTest": "cc-by-4.0",
 }
 
 # Gated on the hub. NOT redistributable here even where the licence is
@@ -62,20 +69,36 @@ _NC = ("This slice is NON-COMMERCIAL (cc-by-nc-4.0). It may be used for "
        "research and teaching only, and that restriction travels with it.")
 
 
+def _norm(s: str) -> str:
+    """Case-folded id. HuggingFace resolves ids case-insensitively; a dict does
+    not. `JailbreakV-28K/JailBreakV-28k` (the hub's canonical spelling) and
+    `JailBreakV-28K/JailBreakV-28K` (what the lesson passes) are the SAME
+    dataset, and a case-sensitive lookup would refuse one of them with a message
+    about licences that has nothing to do with licences.
+    """
+    return str(s).strip().lower()
+
+
+_REDIST_CI = {_norm(k): v for k, v in REDISTRIBUTABLE.items()}
+_GATED_CI = {_norm(k): v for k, v in GATED.items()}
+
+
 def licence_of(source: str) -> str:
-    if source in REDISTRIBUTABLE:
-        return REDISTRIBUTABLE[source]
-    if source in GATED:
-        return GATED[source][0]
+    k = _norm(source)
+    if k in _REDIST_CI:
+        return _REDIST_CI[k]
+    if k in _GATED_CI:
+        return _GATED_CI[k][0]
     return "UNKNOWN"
 
 
 def assert_redistributable(source: str) -> str:
     """Return the licence, or raise. The only door to writing data to disk."""
-    if source in REDISTRIBUTABLE:
-        return REDISTRIBUTABLE[source]
-    if source in GATED:
-        lic, why = GATED[source]
+    k = _norm(source)
+    if k in _REDIST_CI:
+        return _REDIST_CI[k]
+    if k in _GATED_CI:
+        lic, why = _GATED_CI[k]
         raise SystemExit(
             "REFUSING to export %r into a PUBLIC repo.\n"
             "  licence : %s\n"
@@ -147,7 +170,8 @@ def write_refetch_manifest(lesson_dir, name: str, source: str, *,
                            row_ids=None, n_rows=None, seed=None,
                            loader_hint: str = "", notes: str = "") -> dict:
     """For a GATED source: record HOW to get the rows, never the rows."""
-    lic, why = GATED.get(source, (licence_of(source), "not gated; see notes"))
+    lic, why = _GATED_CI.get(_norm(source),
+                             (licence_of(source), "not gated; see notes"))
     d = Path(lesson_dir) / "datasets"
     d.mkdir(parents=True, exist_ok=True)
     man = {

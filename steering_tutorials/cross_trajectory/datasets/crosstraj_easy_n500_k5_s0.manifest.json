@@ -1,0 +1,48 @@
+{
+ "name": "crosstraj_easy_n500_k5_s0",
+ "source": "SafeMTData/SafeMTData",
+ "source_type": "huggingface",
+ "licence": "mit",
+ "redistributable": true,
+ "non_commercial": false,
+ "split": "easy",
+ "seed": 0,
+ "n_rows": 1000,
+ "fields": [
+  "_source",
+  "_source_tag",
+  "group",
+  "label",
+  "trajectories"
+ ],
+ "slice_fingerprint": "84827388ddaad9c1",
+ "bytes_gz": 211552,
+ "file": "crosstraj_easy_n500_k5_s0.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "cross_trajectory easy condition: n_pos=500 n_neg=500 k=5. Positives are SafeMTData/SafeMTData; negatives are HuggingFaceH4/ultrachat_200k. Composition: {'ultrachat': 500, 'attack': 500}.",
+ "extra": {
+  "composition": {
+   "ultrachat": 500,
+   "attack": 500
+  },
+  "meta": {
+   "condition": "easy",
+   "requested_n_pos": 500,
+   "requested_n_neg": 500,
+   "n_pos": 500,
+   "n_neg": 500,
+   "n_distinct_groups": 904,
+   "n_distinct_groups_pos": 404,
+   "n_distinct_groups_neg": 500,
+   "group_overlap_pos_neg": 0,
+   "attack_configs": [
+    "Attack_600",
+    "SafeMTData_1K"
+   ],
+   "k": 5,
+   "seed": 0,
+   "pool_fingerprint": "0cc5fcb9f90e44d5edaa69310f8dd1e5a3b07b43d66bea63f6eaa6bc8891c3cd",
+   "meets_500_floor": true
+  }
+ }
+}

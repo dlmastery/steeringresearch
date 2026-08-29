@@ -1,0 +1,32 @@
+{
+ "name": "meerkat_pool_natt500_nben500_s0",
+ "source": "SafeMTData/SafeMTData",
+ "source_type": "huggingface",
+ "licence": "mit",
+ "redistributable": true,
+ "non_commercial": false,
+ "split": "pool",
+ "seed": 0,
+ "n_rows": 1000,
+ "fields": [
+  "_source",
+  "_source_tag",
+  "group",
+  "label",
+  "text"
+ ],
+ "slice_fingerprint": "91b891878b3bbf23",
+ "bytes_gz": 42188,
+ "file": "meerkat_pool_natt500_nben500_s0.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "meerkat trace pool (the >=500/class reservoir sample_repository draws sparse repositories from). n_attack=500 n_benign=500. Composition: {'attack': 500, 'ultrachat': 500}.",
+ "extra": {
+  "composition": {
+   "attack": 500,
+   "ultrachat": 500
+  },
+  "repo_size": 400,
+  "n_repos": 20,
+  "base_rate": 0.05
+ }
+}

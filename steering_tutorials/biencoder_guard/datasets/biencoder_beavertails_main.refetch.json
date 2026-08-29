@@ -1,0 +1,15 @@
+{
+ "name": "biencoder_beavertails_main",
+ "source": "PKU-Alignment/BeaverTails",
+ "source_type": "huggingface",
+ "licence": "UNKNOWN",
+ "redistributable": false,
+ "reason_withheld": "not gated; see notes",
+ "n_rows": 7852,
+ "row_ids": null,
+ "seed": 0,
+ "loader_hint": "python -c \"from steering_tutorials.biencoder_guard import data as D, config as C; D.load_corpus(n_per_class=500, n_benign=3000, seed=0)\" -- then filter rows whose corpus['sources'][i] in ('beavertails','beavertails_benign')",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "how_to_obtain": "Accept the dataset's terms on its HuggingFace page, then `huggingface-cli login` and re-run the lesson's loader. The rows are NOT included here: republishing a gated dataset would bypass the access decision its uploader made.",
+ "notes": "UNVETTED, not GATED: PKU-Alignment/BeaverTails is absent from both dataset_export.REDISTRIBUTABLE and .GATED, so export_slice refuses it (unchecked licence != permissive). This is the LARGEST single source in the main corpus (7852/13065 rows here, ~60%). FLAGGED for the licence owner of common/dataset_export.py to read PKU-Alignment/BeaverTails' HF card and classify it -- out of this script's scope to add. No row ids are recorded: BeaverTails is streamed and has no stable per-row id in the loader; the loader_hint reproduces the exact selection instead."
+}

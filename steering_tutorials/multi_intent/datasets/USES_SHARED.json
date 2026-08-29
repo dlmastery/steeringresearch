@@ -1,0 +1,11 @@
+{
+ "_purpose": "This lesson has no distinct dataset of its own -- it draws the per-harm-category concept pools from steering_tutorials.common.data.load_concepts, which is exported ONCE at common/datasets/. This file is a pointer, not a copy.",
+ "shared_loader": "steering_tutorials.common.data.load_concepts",
+ "called_from": "data.py:load_multi_intent -> run_multi_intent.py",
+ "shared_data_file": "../../common/datasets/concepts_500_s0.jsonl.gz",
+ "shared_manifest_file": "../../common/datasets/concepts_500_s0.manifest.json",
+ "seed": 0,
+ "n_per_concept_requested": 500,
+ "resolution_note": "RESOLVED 2026-08-29. This pointer originally named concepts_150_s0.jsonl.gz, which UNDERSTATED this lesson's real n_per_concept (config.py requests 500; every kept concept's pool -- sexual 388, harassment 143, violence 111 -- is below 500, so the real draw is effectively the full pool per concept). Flagged to ds-common, who shipped concepts_500_s0.jsonl.gz (1142 rows, fp a4ff0500474d2b52) as the exact match: requested n_per_concept=500 vs. pool sizes {sexual:388, harassment:143, violence:111}, so every kept concept is the FULL available pool, not a 500-cap subsample. concepts_150_s0 still exists in common/datasets/ as a strict SUBSET (154 fewer sexual/harassment/violence rows) -- do not use it for this lesson; it undercounts what multi_intent's results.json numbers were actually computed from.",
+ "config_source": "multi_intent/config.py: N_PER_CONCEPT (env MULTI_INTENT_N_PER_CONCEPT, default 500), N_BENIGN_BASELINE=40, SEED=0"
+}

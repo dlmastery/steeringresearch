@@ -1,0 +1,25 @@
+{
+ "name": "jbb_starter_n100",
+ "source": "JailbreakBench/JBB-Behaviors",
+ "source_type": "huggingface",
+ "licence": "mit",
+ "redistributable": true,
+ "non_commercial": false,
+ "split": "harmful-behaviors+benign-behaviors",
+ "seed": null,
+ "n_rows": 200,
+ "fields": [
+  "label",
+  "prompt"
+ ],
+ "slice_fingerprint": "4954f4be3d62a42f",
+ "bytes_gz": 6108,
+ "file": "jbb_starter_n100.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "The exact 100 harmful (label 1) + 100 benign (label 0) prompts data.py.load_safety_dataset() returns -- the SMOKE/starter arm train_probe.py trains on by default. 100/class is BELOW the >=500/class rubric (CLAUDE.md Sec.17 item 1); never quote this as a headline number, see data_large.py for the real training set. Deterministic and unseeded: the full matched CSV pair, no sampling.",
+ "extra": {
+  "n_harmful": 100,
+  "n_benign": 100,
+  "role": "smoke/starter set, cross-checked against >=500/class rubric"
+ }
+}

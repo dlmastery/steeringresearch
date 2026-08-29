@@ -1,0 +1,66 @@
+{
+ "name": "toxicchat_disguised_n181_s0",
+ "source": "lmsys/toxic-chat",
+ "source_type": "huggingface",
+ "licence": "cc-by-nc-4.0",
+ "redistributable": true,
+ "non_commercial": true,
+ "split": "all",
+ "seed": 0,
+ "n_rows": 362,
+ "fields": [
+  "_source",
+  "category",
+  "group_id",
+  "label",
+  "substrate",
+  "text"
+ ],
+ "slice_fingerprint": "76c346e9d254c2b7",
+ "bytes_gz": 108360,
+ "file": "toxicchat_disguised_n181_s0.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "TrajGuard disguised substrate: harmful=jailbreaking==1 (an attack wrapper around harmful intent) definition, benign=toxicity==0 AND jailbreaking==0 length-matched. n_harmful=181 n_benign=181 pool_limited=False (config.py POOL_MEASURED={'overt': 512, 'disguised': 181, 'mixed': 693}).",
+ "non_commercial_notice": "This slice is NON-COMMERCIAL (cc-by-nc-4.0). It may be used for research and teaching only, and that restriction travels with it.",
+ "extra": {
+  "substrate_header": {
+   "substrate": "disguised",
+   "substrate_definition": "jailbreaking==1 (an attack wrapper around harmful intent)",
+   "n_per_class_requested": 181,
+   "n_pool_harmful": 181,
+   "n_pool_benign": 8889,
+   "n_effective_target": 181,
+   "n_harmful": 181,
+   "n_benign": 181,
+   "pool_limited": false,
+   "rule1_floor": 500,
+   "rule1_compliant": false,
+   "per_category_counts_harmful": {
+    "sexual": 80,
+    "harassment": 66,
+    "violence": 23,
+    "hate": 7,
+    "self_harm": 5
+   },
+   "median_char_length": {
+    "harmful": 754,
+    "benign": 760
+   },
+   "length_confound_note": "benign is length-matched (decile-bin stratified) to harmful, so a near-0.50 prompt-LENGTH AUC is a control that was APPLIED, not a property of the data, and implies nothing about prompt CONTENT -- see prompt_confound_report()",
+   "natural_base_rates": {
+    "toxic_fraction": 0.0734,
+    "jailbreaking_fraction": 0.0201
+   },
+   "source_stats": {
+    "n_rows_raw": 10165,
+    "n_toxic_raw": 746,
+    "n_jailbreaking_raw": 204,
+    "natural_toxic_rate": 0.0734,
+    "natural_jailbreaking_rate": 0.0201,
+    "n_dropped_duplicates": 580,
+    "n_dropped_ambiguous": 0
+   },
+   "seed": 0
+  }
+ }
+}

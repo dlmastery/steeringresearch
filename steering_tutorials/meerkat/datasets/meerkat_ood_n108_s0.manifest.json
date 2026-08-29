@@ -1,0 +1,23 @@
+{
+ "name": "meerkat_ood_n108_s0",
+ "source": "intrinsec-ai/cstm-bench",
+ "source_type": "huggingface",
+ "licence": "mit",
+ "redistributable": true,
+ "non_commercial": false,
+ "split": "dilution+cross_session",
+ "seed": 0,
+ "n_rows": 108,
+ "fields": [
+  "_source",
+  "_source_tag",
+  "group",
+  "label",
+  "text"
+ ],
+ "slice_fingerprint": "6c92c5b0a3210933",
+ "bytes_gz": 2983232,
+ "file": "meerkat_ood_n108_s0.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "meerkat OOD arm (CSTM-Bench, both splits, whole-scenario traces). n=108 attack=52 benign=56. Screening-tier (n~108)."
+}

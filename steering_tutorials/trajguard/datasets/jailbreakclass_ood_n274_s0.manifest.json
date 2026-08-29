@@ -1,0 +1,49 @@
+{
+ "name": "jailbreakclass_ood_n274_s0",
+ "source": "jackhhao/jailbreak-classification",
+ "source_type": "huggingface",
+ "licence": "apache-2.0",
+ "redistributable": true,
+ "non_commercial": false,
+ "split": "default",
+ "seed": 0,
+ "n_rows": 548,
+ "fields": [
+  "_source",
+  "group_id",
+  "label",
+  "text"
+ ],
+ "slice_fingerprint": "26885c10ffa7f3d1",
+ "bytes_gz": 152089,
+ "file": "jailbreakclass_ood_n274_s0.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "TrajGuard OOD arm, shared verbatim by BOTH substrates (overt + disguised) per matching trajectory_meta_ood_*.json config snapshots. n_positive=274 n_negative=274 length_cap_quantile=0.90 pool_limited=True.",
+ "extra": {
+  "ood_header": {
+   "source": "jackhhao/jailbreak-classification",
+   "file": "default/jailbreak_dataset_full.csv",
+   "role": "OOD (out-of-distribution transfer), NOT a MAIN set",
+   "length_cap_quantile": 0.9,
+   "length_cap_chars": 1311,
+   "n_pool_jailbreak_unique": 629,
+   "n_pool_jailbreak_after_length_cap": 274,
+   "n_pool_benign_unique": 1323,
+   "n_per_class_requested": 400,
+   "n_effective_target": 274,
+   "n_positive": 274,
+   "n_negative": 274,
+   "pool_limited": true,
+   "rule1_compliant": false,
+   "median_char_length": {
+    "jailbreak": 732,
+    "benign": 567
+   },
+   "source_stats": {
+    "n_rows_raw": 1998,
+    "n_dropped_ambiguous": 0
+   },
+   "seed": 0
+  }
+ }
+}

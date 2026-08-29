@@ -1,0 +1,65 @@
+{
+ "name": "toxicchat_n374_s0",
+ "source": "lmsys/toxic-chat",
+ "source_type": "huggingface",
+ "licence": "cc-by-nc-4.0",
+ "redistributable": true,
+ "non_commercial": true,
+ "split": "train",
+ "seed": 0,
+ "n_rows": 748,
+ "fields": [
+  "category",
+  "group_id",
+  "label",
+  "prompt",
+  "source_dataset"
+ ],
+ "slice_fingerprint": "6d2c8cedb90df6cb",
+ "bytes_gz": 91523,
+ "file": "toxicchat_n374_s0.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "The literal rows train_large.py trained the reported probe on, read from the already-committed artifacts/large_prompts.json (not re-sampled). Requested 750/class, ACHIEVED 374/class -- toxic-chat's own deduped toxic pool (374) is the ceiling, per DATASETS.md's principled-sampling writeup (rubric item 2: pool-limited concept lessons must say so honestly). Natural toxic base rate 0.0756, 160 exact/near-dup rows dropped, 0 ambiguous (label appeared under both classes) dropped.",
+ "non_commercial_notice": "This slice is NON-COMMERCIAL (cc-by-nc-4.0). It may be used for research and teaching only, and that restriction travels with it.",
+ "extra": {
+  "large_prompts_header": {
+   "dataset": "lmsys/toxic-chat@0124",
+   "source_file": "data/0124/toxic-chat_annotation_train.csv",
+   "split_used": "train",
+   "label_scheme": {
+    "1": "harmful (toxicity==1)",
+    "0": "benign (toxicity==0)"
+   },
+   "collapse_rule": "none needed -- labels are native prompt-level (human annotation on the user input), cf. WildJailbreak types",
+   "natural_base_rate": {
+    "n_rows_raw": 5082,
+    "n_toxic_raw": 384,
+    "n_benign_raw": 4698,
+    "toxic_fraction": 0.0756,
+    "note": "we rebalanced to 1:1 for TRAINING; real-world prior is this minority toxic_fraction -- read PR-AUC/calibration against it"
+   },
+   "n_unique_after_dedup": 4922,
+   "n_dropped_duplicates": 160,
+   "n_dropped_ambiguous": 0,
+   "n_dropped_ambiguous_note": "prompts whose normalized text appeared under BOTH labels (genuinely ambiguous)",
+   "harmful_pool": 374,
+   "benign_pool": 4548,
+   "per_category_counts": {
+    "harassment": 69,
+    "sexual": 205,
+    "violence": 63,
+    "self-harm": 8,
+    "sexual/minors": 9,
+    "hate": 17,
+    "violence/graphic": 1,
+    "self-harm/intent": 1,
+    "self-harm/instructions": 1
+   },
+   "truncation_maxchars": 4000,
+   "n_per_class_requested": 750,
+   "n_per_class_actual": 374,
+   "seed": 0,
+   "dedup_grouping": "group_id = sha1(normalized_text)[:16]; surface near-dups (case/space/punct) share a group_id and are collapsed; use for group-aware train/test splits"
+  }
+ }
+}

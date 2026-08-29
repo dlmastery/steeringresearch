@@ -1,0 +1,76 @@
+{
+ "name": "harmful_benign_n500_s0",
+ "source": "lmsys/toxic-chat",
+ "source_type": "huggingface",
+ "licence": "cc-by-nc-4.0",
+ "redistributable": true,
+ "non_commercial": true,
+ "split": "all",
+ "seed": 0,
+ "n_rows": 1000,
+ "fields": [
+  "_licence",
+  "_source",
+  "category",
+  "group_id",
+  "label",
+  "prompt"
+ ],
+ "slice_fingerprint": "30c7866a1d987fc6",
+ "bytes_gz": 166132,
+ "file": "harmful_benign_n500_s0.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "Composed of lmsys/toxic-chat (Lin et al. 2023, arXiv:2310.17389, cc-by-nc-4.0, NON-COMMERCIAL) as the primary/only source for BOTH classes at this n_per_class, plus a JailbreakBench/JBB-Behaviors (mit) length-matched top-up to the harmful class that only activates if the deduped toxic-chat toxic pool is smaller than n_per_class -- at n_per_class=500 that pool (~693 unique) already clears 500, so the JBB top-up did not fire in THIS run (see extra.composition.topup_log). Exported source= is the strictest licence actually present (cc-by-nc-4.0), so the whole slice carries the non-commercial notice regardless of which rows are JBB. Every row also carries its own _source/_licence.",
+ "non_commercial_notice": "This slice is NON-COMMERCIAL (cc-by-nc-4.0). It may be used for research and teaching only, and that restriction travels with it.",
+ "extra": {
+  "composition": {
+   "harmful": {
+    "lmsys/toxic-chat@0124": 500
+   },
+   "benign": {
+    "lmsys/toxic-chat@0124": 500
+   },
+   "topup_log": []
+  },
+  "header": {
+   "primary_source": "lmsys/toxic-chat@0124",
+   "split_used": "all",
+   "n_harmful": 500,
+   "n_benign": 500,
+   "n_per_class_requested": 500,
+   "natural_toxic_rate": 0.0734,
+   "natural_base_rate_detail": {
+    "n_rows_raw": 10165,
+    "n_toxic_raw": 746,
+    "toxic_fraction": 0.0734
+   },
+   "dedup_dropped": 580,
+   "dropped_ambiguous": 0,
+   "harmful_pool_after_topup": 693,
+   "benign_pool": 8889,
+   "per_source_counts_sampled": {
+    "lmsys/toxic-chat@0124": 500
+   },
+   "topup_log": [],
+   "per_category_counts_harmful": {
+    "sexual": 280,
+    "violence": 80,
+    "hate": 17,
+    "harassment": 103,
+    "self_harm": 20
+   },
+   "median_char_length": {
+    "harmful": 165,
+    "benign": 166
+   },
+   "length_confound_note": "benign is length-matched (decile-bin stratified) to harmful; compare median_char_length per class",
+   "max_chars": 2000,
+   "seed": 0,
+   "dedup_grouping": "group_id = sha1(normalized_text)[:16]; surface near-dups (case/space/punct) collapse; no group_id spans both classes",
+   "label_scheme": {
+    "harmful": "toxic-chat toxicity==1 or a jailbreak top-up",
+    "benign": "toxic-chat toxicity==0"
+   }
+  }
+ }
+}

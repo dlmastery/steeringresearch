@@ -1,0 +1,37 @@
+{
+ "name": "atbench_n500_s0_t16_c8000",
+ "source": "AI45Research/ATBench",
+ "source_type": "huggingface",
+ "licence": "apache-2.0",
+ "redistributable": true,
+ "non_commercial": false,
+ "split": "test",
+ "seed": 0,
+ "n_rows": 997,
+ "fields": [
+  "failure_mode",
+  "group_id",
+  "label",
+  "rationale",
+  "real_world_harm",
+  "risk_source",
+  "turns",
+  "uid"
+ ],
+ "slice_fingerprint": "267c532671b27ded",
+ "bytes_gz": 1300275,
+ "file": "atbench_n500_s0_t16_c8000.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "One row per trajectory (uid, label, group_id, risk_source, failure_mode, real_world_harm, rationale, turns[index,role,content,action]). Turns are pre-truncated to config.MAX_TURN_CHARS (8000 chars/turn) and config.MAX_TURNS (first 16 turns/trajectory) -- the exact truncation the model and every content-bar control in this lesson read, per data.py's MAX_TURN_CHARS docstring. At 8000 chars (with a 16,384-token extraction budget, config.MAX_TOKENS) this clips only 1.46% of turns (122 of 8,341) and drops NO rows -- it is outlier control on a handful of enormous tool dumps (p99 50,915 chars), not sampling, so this slice is COMPLETE at the turn level, not a subsample. (Supersedes the earlier 1200-char cap, which truncated ~10% of all turns; that slice has been deleted.) `rationale` is the corpus's post-hoc verdict explanation and must never be fed to a probe (data.py: 'it describes the answer'). Sampled without replacement, balanced per class, seed=0, from the ATBench config of AI45Research/ATBench (arXiv:2604.02022 -- ATBench: A Diverse and Realistic Agent Trajectory Benchmark for Safety Evaluation and Diagnosis).",
+ "extra": {
+  "pool_fingerprint": "4f5c67e98c765acc",
+  "corpus_config": "ATBench",
+  "n_per_class_requested": 500,
+  "max_turns": 16,
+  "max_turn_chars": 8000,
+  "max_tokens": 16384,
+  "label_provenance": "ATBench `label` field (1 = unsafe), a TRAJECTORY-level safety annotation from arXiv:2604.02022 -- ATBench: A Diverse and Realistic Agent Trajectory Benchmark for Safety Evaluation and Diagnosis. Benign rows carry risk_source == failure_mode == real_world_harm == 'benign'. `reason` is the corpus's post-hoc explanation of the verdict, carried as `rationale`; it describes the answer and must never reach a probe.",
+  "step_label_provenance": "NONE. ATBench labels the whole trajectory and never says which turn went wrong, so mistake_step/mistake_agent are None on every trajectory and any per-step claim in this series is a claim about a label the corpus does not carry.",
+  "dataset_paper": "arXiv:2604.02022 -- ATBench: A Diverse and Realistic Agent Trajectory Benchmark for Safety Evaluation and Diagnosis"
+ }
+}

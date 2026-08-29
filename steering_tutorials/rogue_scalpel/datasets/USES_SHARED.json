@@ -1,0 +1,11 @@
+{
+ "_purpose": "This lesson has NO distinct dataset of its own -- it draws the project-standard >=500/class harmful-vs-benign set from steering_tutorials.common.data, which is exported ONCE at common/datasets/ and shared across every lesson that uses it. This file is a pointer, not a copy, so a 500/class slice is not duplicated into ten lessons' repos.",
+ "shared_loader": "steering_tutorials.common.data.load_harmful_benign",
+ "called_from": "run_rogue_scalpel.py",
+ "n_per_class": 500,
+ "seed": 0,
+ "config_source": "config.N_PER_CLASS (500) / config.SEED (0)",
+ "shared_data_file": "../../common/datasets/harmful_benign_n500_s0.jsonl.gz",
+ "shared_manifest_file": "../../common/datasets/harmful_benign_n500_s0.manifest.json",
+ "note": "load_harmful_benign(n,seed) is a thin wrapper over build_harmful_benign(n,seed) returning just the prompt lists (rec['harmful'], rec['benign']); both APIs draw the identical underlying rows at matching (n_per_class, seed), so this lesson's data is byte-identical to the shared export."
+}

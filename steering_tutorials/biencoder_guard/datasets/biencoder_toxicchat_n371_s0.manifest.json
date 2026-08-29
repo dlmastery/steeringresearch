@@ -1,0 +1,284 @@
+{
+ "name": "biencoder_toxicchat_n371_s0",
+ "source": "lmsys/toxic-chat",
+ "source_type": "huggingface",
+ "licence": "cc-by-nc-4.0",
+ "redistributable": true,
+ "non_commercial": true,
+ "split": "train",
+ "seed": 0,
+ "n_rows": 371,
+ "fields": [
+  "_source",
+  "_source_tag",
+  "group",
+  "is_harmful",
+  "policies",
+  "text"
+ ],
+ "slice_fingerprint": "391db04e752dd480",
+ "bytes_gz": 58957,
+ "file": "biencoder_toxicchat_n371_s0.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "biencoder_guard main-corpus slice from lmsys/toxic-chat (n_per_class=500 n_benign=3000 requested). Composition: {'toxicchat': 371}.",
+ "non_commercial_notice": "This slice is NON-COMMERCIAL (cc-by-nc-4.0). It may be used for research and teaching only, and that restriction travels with it.",
+ "extra": {
+  "composition": {
+   "toxicchat": 371
+  },
+  "policies": [
+   {
+    "id": "animal_abuse",
+    "name": "Animal Abuse",
+    "description": "Content that encourages, describes, or facilitates cruelty, neglect, or harm to animals.",
+    "paraphrases": [
+     "Text promoting the mistreatment or torture of animals.",
+     "Requests that help someone hurt, abuse, or neglect an animal.",
+     "Material glorifying cruelty toward pets, livestock, or wildlife.",
+     "Instructions or encouragement for harming living creatures."
+    ],
+    "group": "beavertails"
+   },
+   {
+    "id": "child_abuse",
+    "name": "Child Abuse",
+    "description": "Content that sexualizes, exploits, endangers, or abuses children.",
+    "paraphrases": [
+     "Material that exploits or endangers minors.",
+     "Requests involving the sexual abuse or grooming of children.",
+     "Text that facilitates harm to a child.",
+     "Any content abusing, endangering, or exploiting a minor."
+    ],
+    "group": "beavertails"
+   },
+   {
+    "id": "controversial_topics",
+    "name": "Controversial Topics",
+    "description": "Inflammatory or one-sided content on divisive political or social topics meant to provoke.",
+    "paraphrases": [
+     "Politically charged content designed to inflame division.",
+     "One-sided propaganda on hot-button social issues.",
+     "Text that pushes a partisan agenda in a provocative way.",
+     "Divisive commentary intended to stir political conflict."
+    ],
+    "group": "beavertails"
+   },
+   {
+    "id": "discrimination_stereotype",
+    "name": "Discrimination Stereotype",
+    "description": "Content that demeans or stereotypes people based on a protected attribute.",
+    "paraphrases": [
+     "Text that stereotypes or belittles a group by race, gender, religion, etc.",
+     "Prejudiced content promoting unfair treatment of a protected class.",
+     "Material reinforcing harmful stereotypes about a group of people.",
+     "Discriminatory statements targeting someone's identity."
+    ],
+    "group": "beavertails"
+   },
+   {
+    "id": "drug_weapon",
+    "name": "Drug Weapon",
+    "description": "Content that facilitates the illicit manufacture, acquisition, or use of drugs or weapons.",
+    "paraphrases": [
+     "Instructions for making or obtaining illegal drugs or weapons.",
+     "Help acquiring banned substances, firearms, or explosives.",
+     "Text explaining how to synthesize narcotics or build a weapon.",
+     "Requests that facilitate drug abuse or weapon trafficking."
+    ],
+    "group": "beavertails"
+   },
+   {
+    "id": "financial_crime",
+    "name": "Financial Crime",
+    "description": "Content that facilitates fraud, theft, money laundering, or other financial crime.",
+    "paraphrases": [
+     "Help committing fraud, scams, or theft of money or property.",
+     "Instructions for laundering money or running a financial scam.",
+     "Text that facilitates embezzlement, forgery, or credit-card fraud.",
+     "Requests enabling property crime or financial deception."
+    ],
+    "group": "beavertails"
+   },
+   {
+    "id": "hate_speech",
+    "name": "Hate Speech",
+    "description": "Hateful, dehumanizing, or offensive language directed at a person or group.",
+    "paraphrases": [
+     "Slurs or dehumanizing language aimed at a group.",
+     "Offensive content expressing hatred toward people.",
+     "Text that attacks or vilifies someone with hateful language.",
+     "Abusive, demeaning speech targeting an individual or community."
+    ],
+    "group": "beavertails"
+   },
+   {
+    "id": "misinformation",
+    "name": "Misinformation",
+    "description": "False or misleading claims about ethics, law, health, or safety presented as fact.",
+    "paraphrases": [
+     "Fabricated claims about laws, health, or safety.",
+     "Misleading information that could cause real-world harm.",
+     "False assertions presented as established fact.",
+     "Deceptive content spreading dangerous misinformation."
+    ],
+    "group": "beavertails"
+   },
+   {
+    "id": "non_violent_unethical",
+    "name": "Non Violent Unethical",
+    "description": "Non-violent but clearly unethical behavior such as lying, cheating, or manipulation.",
+    "paraphrases": [
+     "Help with deceitful, dishonest, or manipulative conduct.",
+     "Text encouraging cheating, lying, or betraying trust.",
+     "Requests to enable unethical (though non-violent) actions.",
+     "Content facilitating dishonest or exploitative behavior."
+    ],
+    "group": "beavertails"
+   },
+   {
+    "id": "privacy_violation",
+    "name": "Privacy Violation",
+    "description": "Content that exposes private information or helps surveil or stalk a person.",
+    "paraphrases": [
+     "Requests to reveal someone's private personal information.",
+     "Help doxxing, tracking, or surveilling an individual.",
+     "Text that violates a person's privacy or confidentiality.",
+     "Instructions for stalking or unmasking someone's identity."
+    ],
+    "group": "beavertails"
+   },
+   {
+    "id": "self_harm",
+    "name": "Self Harm",
+    "description": "Content that encourages, instructs, or glorifies self-harm or suicide.",
+    "paraphrases": [
+     "Text encouraging someone to hurt or kill themselves.",
+     "Instructions or methods for self-injury or suicide.",
+     "Content that glorifies or normalizes self-harm.",
+     "Requests seeking help to end one's own life."
+    ],
+    "group": "beavertails"
+   },
+   {
+    "id": "sexually_explicit",
+    "name": "Sexually Explicit",
+    "description": "Explicit sexual or adult content.",
+    "paraphrases": [
+     "Graphic sexual or pornographic material.",
+     "Explicit adult content describing sexual acts.",
+     "Text of an overtly sexual, NSFW nature.",
+     "Pornographic or sexually explicit requests."
+    ],
+    "group": "beavertails"
+   },
+   {
+    "id": "terrorism",
+    "name": "Terrorism",
+    "description": "Content that supports, plans, or facilitates terrorism or organized crime.",
+    "paraphrases": [
+     "Support or planning for terrorist acts.",
+     "Help facilitating organized crime or a violent extremist plot.",
+     "Text promoting or coordinating terrorism.",
+     "Requests aiding a terrorist or criminal organization."
+    ],
+    "group": "beavertails"
+   },
+   {
+    "id": "violence",
+    "name": "Violence",
+    "description": "Content that incites, threatens, or provides help for physical violence against people.",
+    "paraphrases": [
+     "Threats or incitement of physical violence.",
+     "Help planning or carrying out an attack on a person.",
+     "Text encouraging assault, murder, or bodily harm.",
+     "Requests that aid and abet violent acts."
+    ],
+    "group": "beavertails"
+   },
+   {
+    "id": "jailbreak",
+    "name": "Jailbreak",
+    "description": "An adversarial prompt that tries to bypass, override, or trick the model's safety rules.",
+    "paraphrases": [
+     "A prompt engineered to evade the assistant's safety guardrails.",
+     "An attempt to jailbreak or override the model's restrictions.",
+     "Manipulative instructions designed to unlock forbidden behavior.",
+     "An adversarial attack that tricks the model into ignoring its policies."
+    ],
+    "group": "adversarial"
+   },
+   {
+    "id": "toxicity",
+    "name": "Toxicity",
+    "description": "Toxic, abusive, or harassing language in a user message.",
+    "paraphrases": [
+     "Rude, abusive, or harassing user input.",
+     "A message with toxic or hostile language.",
+     "Insulting or aggressive content aimed at someone.",
+     "Harassing, offensive, or hateful phrasing in a request."
+    ],
+    "group": "toxicity"
+   },
+   {
+    "id": "criminal_planning",
+    "name": "Criminal Planning",
+    "description": "Content that plans, assists, or confesses to a crime not covered by a more specific policy.",
+    "paraphrases": [
+     "Help planning or carrying out a criminal act.",
+     "A confession to, or coordination of, illegal activity.",
+     "Requests that assist someone in breaking the law.",
+     "Text that facilitates general criminal conduct."
+    ],
+    "group": "aegis"
+   },
+   {
+    "id": "unauthorized_advice",
+    "name": "Unauthorized Advice",
+    "description": "Authoritative medical, legal, or financial advice given without qualification or caveat.",
+    "paraphrases": [
+     "Unqualified medical, legal, or financial guidance presented as expert advice.",
+     "Professional-sounding advice a licensed expert should give.",
+     "Definitive health, legal, or investment instructions given to an individual.",
+     "Specific advice that requires professional credentials to give safely."
+    ],
+    "group": "aegis"
+   },
+   {
+    "id": "malware",
+    "name": "Malware",
+    "description": "Content that creates, distributes, or deploys malicious software or cyber intrusions.",
+    "paraphrases": [
+     "Help writing viruses, ransomware, or other malicious code.",
+     "Instructions for hacking into a system or network.",
+     "Requests to build or spread malware.",
+     "Text that facilitates a cyber attack or unauthorized system access."
+    ],
+    "group": "aegis"
+   },
+   {
+    "id": "intellectual_property",
+    "name": "Intellectual Property",
+    "description": "Content that infringes copyright or trademark, or that plagiarizes protected work.",
+    "paraphrases": [
+     "Reproducing copyrighted work without permission.",
+     "Help plagiarizing someone else's writing.",
+     "Requests to infringe a trademark or pirate protected material.",
+     "Text that copies protected content as if it were original."
+    ],
+    "group": "aegis"
+   },
+   {
+    "id": "high_risk_gov_decisions",
+    "name": "High Risk Gov Decisions",
+    "description": "Content that steers high-stakes government or public-policy decisions such as law enforcement, military, or immigration determinations.",
+    "paraphrases": [
+     "Guidance driving consequential government or public-policy determinations.",
+     "Advice on law-enforcement, military, or immigration decisions about people.",
+     "Recommendations for high-stakes state decisions affecting individuals' rights.",
+     "Input intended to decide a governmental action with serious consequences."
+    ],
+    "group": "aegis"
+   }
+  ]
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "name": "biencoder_ood_cstm_n50_s0",
+ "source": "intrinsec-ai/cstm-bench",
+ "source_type": "huggingface",
+ "licence": "mit",
+ "redistributable": true,
+ "non_commercial": false,
+ "split": "dilution+cross_session",
+ "seed": 0,
+ "n_rows": 50,
+ "fields": [
+  "_source",
+  "group",
+  "is_harmful",
+  "policies",
+  "text"
+ ],
+ "slice_fingerprint": "34a3a1156605f640",
+ "bytes_gz": 92730,
+ "file": "biencoder_ood_cstm_n50_s0.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "biencoder_guard ood_benchmark transfer arm: CSTM-Bench, scenario-level jailbreak label. n=50. Screening-tier (n~50)."
+}

@@ -320,8 +320,16 @@ STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct python -m steering_tutorials.rogue_sc
 ```
 
 Uses `google/gemma-3-1b-it` (a **gated** model — accept the license and
-`huggingface-cli login` first). JailbreakBench data downloads automatically via
-`hf_hub_download`. Runs on CPU too, just slower.
+`huggingface-cli login` first). Prompts come from the shared loader
+`steering_tutorials.common.data.load_harmful_benign` and download automatically.
+Runs on CPU too, just slower.
+
+**Corrected 2026-08-29:** this paragraph previously said "JailbreakBench data".
+At `N_PER_CLASS=500` the shared loader returns **100% `lmsys/toxic-chat`**
+(**cc-by-nc-4.0, NON-COMMERCIAL**); the JailbreakBench (MIT) top-up only fires
+if the deduped toxic-chat pool falls below `n_per_class`, which it does not at
+this n. The exact slice ships at
+`common/datasets/harmful_benign_n500_s0.jsonl.gz`.
 
 Depends on lesson 2 for its plumbing (`model_utils`, `steer_vector`, `judge`) —
 those import cleanly; no lesson-2 artifacts are required.
