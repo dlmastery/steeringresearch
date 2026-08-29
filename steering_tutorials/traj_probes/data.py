@@ -218,6 +218,13 @@ def _render_turn(raw, index, uid, unknown_roles):
             parts.append("action: %s" % action_str)
         content = "\n".join(parts)
     content = "" if content is None else str(content)
+    # Cap the rendered turn. See config.MAX_TURN_CHARS: uncapped, a few giant
+    # (and almost entirely unsafe) tool dumps overflow the extraction token
+    # budget and their rows are dropped, which makes the row loss track the
+    # label. Truncating HERE means the model and the content bar read the same
+    # string, which types.AgentTrajectory.text requires.
+    if C.MAX_TURN_CHARS and len(content) > C.MAX_TURN_CHARS:
+        content = content[:C.MAX_TURN_CHARS]
 
     return Turn(
         index=index,
@@ -313,12 +320,21 @@ class ATBenchLoader:
 
     # -- paths
     def cache_path(self, n_per_class, seed):
+        """Every input that CHANGES THE ROWS must appear in this key.
+
+        MAX_TURN_CHARS was added to the renderer and NOT to this key, and the
+        loader then served a stale cache built before the cap existed: the text
+        was uncapped, silently, with the new setting printed in the config
+        stamp. A key that fingerprints only some of its inputs is the same
+        defect 18.9 records as still open elsewhere in this repo.
+        """
         if self._cache_path is not None:
             return self._cache_path
         from steering_tutorials.common.artifact_paths import keyed_path
         return keyed_path(C.ARTIFACTS, "corpus", ".json.gz", self.corpus,
                           "n%d" % n_per_class, "s%d" % seed,
-                          "t%d" % self.max_turns)
+                          "t%d" % self.max_turns,
+                          "c%d" % C.MAX_TURN_CHARS)
 
     # -- selection
     def _select_uids(self, rows, n_per_class, seed):

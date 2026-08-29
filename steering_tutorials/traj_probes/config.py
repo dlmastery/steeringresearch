@@ -60,7 +60,8 @@ from steering_tutorials.common.artifact_paths import assert_no_bare_sibling, key
 
 __all__ = [
     "CORPUS", "CORPUS_CHOICES", "MODEL_ID", "MODEL_TAG", "LAYER",
-    "N_PER_CLASS", "SEED", "N_FOLDS", "BOOTSTRAP", "MAX_TURNS", "GROUP_BY",
+    "N_PER_CLASS", "SEED", "N_FOLDS", "BOOTSTRAP", "MAX_TURNS",
+    "MAX_TURN_CHARS", "GROUP_BY",
     "ARTIFACTS", "RESULTS_PATH", "CORPUS_CACHE_PATH", "ACTIVATION_CACHE_PATH",
     "HF_DATASET", "HF_CONFIG", "HF_SPLIT", "DATASET_LICENCE", "DATASET_PAPER",
     "CACHE_REFRESH", "ensure_artifacts", "preflight", "as_dict",
@@ -134,6 +135,20 @@ BOOTSTRAP = _env_int("TP_BOOTSTRAP", 10000)
 # leak documented above (leakage.py refuses that corpus unless acknowledged).
 MAX_TURNS = _env_int("TP_MAX_TURNS", 16)
 
+# Caps EACH TURN's rendered text. This is a CORRECTNESS setting, like MAX_TURNS.
+# ATBench holds a handful of enormous `tool` dumps -- per-turn chars are p90
+# 1,088 but p99 50,915, the largest 53,255 -- and they are almost all label=1.
+# With them present a 4,096-token extraction budget silently DROPS the overflow
+# rows, and because the giant turns are unsafe the loss is label-correlated: 327
+# unsafe rows dropped against 13 safe, from trajectories that are 86% unsafe
+# against a 49.8% base rate. Nothing crashes; the bundle just quietly loses the
+# late turns of the failing class. At 1,200 chars every trajectory fits in 4,096
+# tokens (max 4,025), so NO row is dropped and the loss cannot correlate with
+# anything. Applied in the LOADER so the model and the content bar read the same
+# truncated string -- truncating only the model input would make the confound
+# comparison meaningless.
+MAX_TURN_CHARS = _env_int("TP_MAX_TURN_CHARS", 1200)
+
 # Group-aware CV unit. "trajectory" is the only defensible default on ATBench --
 # see data.py's GROUPING section for the measurement that rules the alternatives
 # out. Rows in an ActivationBundle are TURNS, so grouping by trajectory is doing
@@ -154,7 +169,8 @@ HERE = Path(__file__).resolve().parent
 ARTIFACTS = HERE / "artifacts"
 
 _MODEL_VARIANTS = (CORPUS, MODEL_TAG, "L%d" % LAYER)
-_POOL_VARIANTS = (CORPUS, "n%d" % N_PER_CLASS, "s%d" % SEED, "t%d" % MAX_TURNS)
+_POOL_VARIANTS = (CORPUS, "n%d" % N_PER_CLASS, "s%d" % SEED, "t%d" % MAX_TURNS,
+                  "c%d" % MAX_TURN_CHARS)
 
 RESULTS_PATH = keyed_path(ARTIFACTS, "results", ".json", *_MODEL_VARIANTS)
 # gzipped: the parsed 1,000-trajectory corpus is ~18 MB of text as raw JSON.
@@ -195,7 +211,8 @@ def as_dict():
         "dataset_paper": DATASET_PAPER,
         "model_id": MODEL_ID, "model_tag": MODEL_TAG, "layer": LAYER,
         "n_per_class": N_PER_CLASS, "seed": SEED, "n_folds": N_FOLDS,
-        "bootstrap": BOOTSTRAP, "max_turns": MAX_TURNS, "group_by": GROUP_BY,
+        "bootstrap": BOOTSTRAP, "max_turns": MAX_TURNS,
+        "max_turn_chars": MAX_TURN_CHARS, "group_by": GROUP_BY,
         "results_path": str(RESULTS_PATH),
         "corpus_cache_path": str(CORPUS_CACHE_PATH),
         "activation_cache_path": str(ACTIVATION_CACHE_PATH),
