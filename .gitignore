@@ -58,3 +58,5 @@ steering_tutorials/*/artifacts/_run_checkpoint.json
 # regenerable -- kept out of the tree rather than shipped as if they were evidence.
 _causal_invalid_caches/
 steering_tutorials/traj_probes/artifacts/corpus_*.json.gz
+steering_tutorials/traj_probes/artifacts/_stale_prefix_bundles/
+steering_tutorials/traj_probes/artifacts/acts_*.npz*

@@ -1,0 +1,96 @@
+{
+ "config": {
+  "corpus": "atbench",
+  "hf_dataset": "AI45Research/ATBench",
+  "hf_config": "ATBench",
+  "hf_split": "test",
+  "dataset_licence": "apache-2.0 (dataset card front-matter, AI45Research/ATBench)",
+  "dataset_paper": "arXiv:2604.02022 -- ATBench: A Diverse and Realistic Agent Trajectory Benchmark for Safety Evaluation and Diagnosis",
+  "model_id": "models/google/gemma-3-1b-it",
+  "model_tag": "gemma-3-1b-it",
+  "layer": 12,
+  "n_per_class": 500,
+  "seed": 0,
+  "n_folds": 5,
+  "bootstrap": 10000,
+  "max_turns": 16,
+  "max_turn_chars": 1200,
+  "group_by": "trajectory",
+  "results_path": "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\traj_probes\\artifacts\\results_atbench_gemma-3-1b-it_L12.json",
+  "corpus_cache_path": "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\traj_probes\\artifacts\\corpus_atbench_n500_s0_t16_c1200.json.gz",
+  "activation_cache_path": "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\traj_probes\\artifacts\\acts_atbench_gemma-3-1b-it_L12_n500_s0.npz"
+ },
+ "content_bar_auc": 0.8671,
+ "layers": [
+  {
+   "layer": 4,
+   "auc": 0.7208,
+   "auc_residualised": 0.7198,
+   "auc_ci": [
+    0.7044,
+    0.737
+   ],
+   "content_bar_auc": 0.8671,
+   "clears_content_bar": false,
+   "margin_vs_bar": -0.1463,
+   "n_rows": 8341,
+   "seconds": 364.6
+  },
+  {
+   "layer": 8,
+   "auc": 0.7378,
+   "auc_residualised": 0.7361,
+   "auc_ci": [
+    0.7213,
+    0.7541
+   ],
+   "content_bar_auc": 0.8671,
+   "clears_content_bar": false,
+   "margin_vs_bar": -0.1292,
+   "n_rows": 8341,
+   "seconds": 277.3
+  },
+  {
+   "layer": 16,
+   "auc": 0.7349,
+   "auc_residualised": 0.734,
+   "auc_ci": [
+    0.7182,
+    0.751
+   ],
+   "content_bar_auc": 0.8671,
+   "clears_content_bar": false,
+   "margin_vs_bar": -0.1322,
+   "n_rows": 8341,
+   "seconds": 336.7
+  },
+  {
+   "layer": 20,
+   "auc": 0.7281,
+   "auc_residualised": 0.728,
+   "auc_ci": [
+    0.7108,
+    0.7445
+   ],
+   "content_bar_auc": 0.8671,
+   "clears_content_bar": false,
+   "margin_vs_bar": -0.139,
+   "n_rows": 8341,
+   "seconds": 355.1
+  },
+  {
+   "layer": 24,
+   "auc": 0.7357,
+   "auc_residualised": 0.7354,
+   "auc_ci": [
+    0.7187,
+    0.7526
+   ],
+   "content_bar_auc": 0.8671,
+   "clears_content_bar": false,
+   "margin_vs_bar": -0.1314,
+   "n_rows": 8341,
+   "seconds": 343.1
+  }
+ ]
+}
