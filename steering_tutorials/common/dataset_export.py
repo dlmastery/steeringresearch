@@ -31,7 +31,7 @@ import json
 import os
 from pathlib import Path
 
-__all__ = ["REDISTRIBUTABLE", "GATED", "licence_of", "assert_redistributable",
+__all__ = ["REDISTRIBUTABLE", "GATED", "NO_LICENCE_STATED", "licence_of", "assert_redistributable",
            "export_slice", "write_refetch_manifest", "slice_fingerprint"]
 
 # --- verified 2026-08-29 via HfApi.dataset_info(...).cardData['license'] ------
@@ -52,6 +52,7 @@ REDISTRIBUTABLE = {
     # relying on either spelling being the one a caller happens to pass.
     "JailBreakV-28K/JailBreakV-28K": "mit",
     "Paul/XSTest": "cc-by-4.0",
+    "PKU-Alignment/BeaverTails": "cc-by-nc-4.0",   # NON-COMMERCIAL
 }
 
 # Gated on the hub. NOT redistributable here even where the licence is
@@ -63,6 +64,21 @@ GATED = {
     "ScaleAI/mhj": ("cc-by-nc-4.0", "gated AND non-commercial"),
     "walledai/HarmBench": ("mit", "MIT but GATED -- the gate governs, not the licence"),
     "lmsys/lmsys-chat-1m": ("other", "gated; per-record terms"),
+}
+
+# CHECKED, and the card states NO licence. This is a THIRD state, distinct from
+# both "permissive" and "never looked at": absence of a licence is not
+# permission, it is default copyright, so these may not be redistributed even
+# though the hub does not gate them. Recorded explicitly so a later reader can
+# tell a verified absence from an unexamined one -- absence of evidence is the
+# defect, not a clean bill (CLAUDE.md 18.6).
+NO_LICENCE_STATED = {
+    "adityaasinha28/control_arena_agentdojo":
+        "no license field in the dataset card (checked 2026-08-29); ungated, "
+        "but silence is default copyright, not permission",
+    "adityaasinha28/control_arena_shade":
+        "no license field in the dataset card (checked 2026-08-29); ungated, "
+        "but silence is default copyright, not permission",
 }
 
 _NC = ("This slice is NON-COMMERCIAL (cc-by-nc-4.0). It may be used for "
@@ -81,6 +97,7 @@ def _norm(s: str) -> str:
 
 _REDIST_CI = {_norm(k): v for k, v in REDISTRIBUTABLE.items()}
 _GATED_CI = {_norm(k): v for k, v in GATED.items()}
+_NOLIC_CI = {_norm(k): v for k, v in NO_LICENCE_STATED.items()}
 
 
 def licence_of(source: str) -> str:
@@ -89,6 +106,8 @@ def licence_of(source: str) -> str:
         return _REDIST_CI[k]
     if k in _GATED_CI:
         return _GATED_CI[k][0]
+    if k in _NOLIC_CI:
+        return "NO-LICENCE-STATED"
     return "UNKNOWN"
 
 
@@ -106,6 +125,15 @@ def assert_redistributable(source: str) -> str:
             "Ship a refetch manifest instead (write_refetch_manifest), which "
             "records the row ids and fingerprint without redistributing the "
             "rows themselves." % (source, lic, why))
+    if k in _NOLIC_CI:
+        raise SystemExit(
+            "REFUSING to export %r into a PUBLIC repo.\n"
+            "  licence : NONE STATED\n"
+            "  reason  : %s\n"
+            "Silence is not a permissive licence -- an unlicensed work is "
+            "default-copyright, so the absence of terms grants nothing. Ship a "
+            "refetch manifest instead."
+            % (source, _NOLIC_CI[k]))
     raise SystemExit(
         "REFUSING to export %r: it is in neither REDISTRIBUTABLE nor GATED, so "
         "its licence has not been checked. Read the licence from the dataset "

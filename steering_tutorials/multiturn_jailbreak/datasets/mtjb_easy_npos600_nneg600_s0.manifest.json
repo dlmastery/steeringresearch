@@ -1,0 +1,85 @@
+{
+ "name": "mtjb_easy_npos600_nneg600_s0",
+ "source": "SafeMTData/SafeMTData",
+ "source_type": "huggingface",
+ "licence": "mit",
+ "redistributable": true,
+ "non_commercial": false,
+ "split": "easy",
+ "seed": 0,
+ "n_rows": 1200,
+ "fields": [
+  "_source",
+  "_source_tag",
+  "category",
+  "group_key",
+  "label",
+  "turns"
+ ],
+ "slice_fingerprint": "00a8fd98ee63230b",
+ "bytes_gz": 300945,
+ "file": "mtjb_easy_npos600_nneg600_s0.jsonl.gz",
+ "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
+ "notes": "multiturn_jailbreak easy condition: n_pos=600 n_neg=600 neg_source=ultrachat distinct_groups=1088. Composition: {'attack': 600, 'ultrachat': 600}.",
+ "extra": {
+  "composition": {
+   "attack": 600,
+   "ultrachat": 600
+  },
+  "meta": {
+   "condition": "easy",
+   "n": 1200,
+   "n_pos_achieved": 600,
+   "n_neg_achieved": 600,
+   "n_pos_requested": 600,
+   "n_neg_requested": 600,
+   "n_distinct_groups": 1088,
+   "neg_source": "ultrachat",
+   "attack_configs": [
+    "Attack_600",
+    "SafeMTData_1K"
+   ],
+   "config_mix": {
+    "SafeMTData_1K": 423,
+    "-": 600,
+    "Attack_600": 177
+   },
+   "turncount_pos": {
+    "3": 40,
+    "4": 62,
+    "5": 228,
+    "6": 269,
+    "7": 1
+   },
+   "turncount_neg": {
+    "3": 40,
+    "4": 62,
+    "5": 228,
+    "6": 269,
+    "7": 1
+   },
+   "category_pos": {
+    "chemical_biological": 28,
+    "cybercrime_intrusion": 35,
+    "general": 423,
+    "harassment_bullying": 20,
+    "harmful": 15,
+    "illegal": 48,
+    "misinformation_disinformation": 31
+   },
+   "category_neg": {
+    "chemical_biological": 12,
+    "cybercrime_intrusion": 19,
+    "general": 494,
+    "harassment_bullying": 14,
+    "harmful": 27,
+    "illegal": 14,
+    "misinformation_disinformation": 20
+   },
+   "benign_rows_scanned": 120001,
+   "fingerprint_sha256": "b2bb1c6b100b8b3b0b931781133674b20bd24042c8321607194a34bc57625356",
+   "meets_rule1": true,
+   "rule1_floor": 500
+  }
+ }
+}

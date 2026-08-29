@@ -2,14 +2,15 @@
  "name": "biencoder_heldout_split",
  "source": "PKU-Alignment/BeaverTails",
  "source_type": "huggingface",
- "licence": "UNKNOWN",
+ "licence": "cc-by-nc-4.0",
  "redistributable": false,
- "reason_withheld": "not gated; see notes",
+ "reason_withheld": "ungated and cc-by-nc-4.0, so it COULD ship with a non-commercial notice; withheld here only because the lesson consumes it through a loader rather than a fixed slice",
  "n_rows": 2787,
  "row_ids": null,
  "seed": 0,
  "loader_hint": "python -c \"from steering_tutorials.biencoder_guard import data as D; D.load_heldout_split(seed=0)\"",
  "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
  "how_to_obtain": "Accept the dataset's terms on its HuggingFace page, then `huggingface-cli login` and re-run the lesson's loader. The rows are NOT included here: republishing a gated dataset would bypass the access decision its uploader made.",
- "notes": "biencoder_guard heldout_split transfer arm: BeaverTails 30k_test. Same unvetted-licence situation as the main corpus's beavertails rows -- NOT exported, refetch manifest only."
+ "notes": "biencoder_guard heldout_split transfer arm: BeaverTails 30k_test. Same unvetted-licence situation as the main corpus's beavertails rows -- NOT exported, refetch manifest only.",
+ "non_commercial": true
 }

@@ -2,9 +2,9 @@
  "name": "shade_n1000_s0",
  "source": "adityaasinha28/control_arena_shade",
  "source_type": "huggingface",
- "licence": "UNKNOWN",
+ "licence": "NO-LICENCE-STATED",
  "redistributable": false,
- "reason_withheld": "not gated; see notes",
+ "reason_withheld": "no license field in the dataset card (checked 2026-08-29); ungated, but silence is default copyright, not permission",
  "n_rows": 1000,
  "row_ids": [
   "shade:1218",
@@ -1012,5 +1012,6 @@
  "loader_hint": "python -c \"from steering_tutorials.streaming_trajectory_aggregation.corpora import get_loaders; get_loaders()['shade'].load(n_per_class=500, seed=0)\"",
  "licence_verified": "2026-08-29 via HfApi.dataset_info cardData",
  "how_to_obtain": "Accept the dataset's terms on its HuggingFace page, then `huggingface-cli login` and re-run the lesson's loader. The rows are NOT included here: republishing a gated dataset would bypass the access decision its uploader made.",
- "notes": "STA shade corpus: licence is explicitly 'unstated' by the loader's own Corpus dataclass, so export_slice would refuse it (neither REDISTRIBUTABLE nor GATED). NOT exported -- rows never written, only the 1000 Trajectory.uids that identify this exact pool. Per-step labels on this corpus are Gemini-3.1-Pro judge output, not human ground truth (a second, independent reason this is not a citable public dataset)."
+ "notes": "STA shade corpus: licence is explicitly 'unstated' by the loader's own Corpus dataclass, so export_slice would refuse it (neither REDISTRIBUTABLE nor GATED). NOT exported -- rows never written, only the 1000 Trajectory.uids that identify this exact pool. Per-step labels on this corpus are Gemini-3.1-Pro judge output, not human ground truth (a second, independent reason this is not a citable public dataset).",
+ "licence_note": "The dataset card states NO licence. That is not the same as permissive: an unlicensed work is default-copyright, so nothing here grants redistribution. Recorded as CHECKED-AND-ABSENT rather than unexamined."
 }

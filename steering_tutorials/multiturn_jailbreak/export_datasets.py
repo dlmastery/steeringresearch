@@ -16,8 +16,9 @@ Each row is one CONVERSATION = a list of user-turn strings, label 1=attack/
                               MJ_NEG_SOURCE=tomgibbs is a config OPTION
                               (tom-gibbs/multi-turn_jailbreak_attack_datasets, mit)
                               never exercised by the shipped results -- not exported.
-  hard  positives "attack"    SafeMTData/SafeMTData
-        negatives "attack_prefix"  SafeMTData/SafeMTData (disjoint-group prefix half)
+  hard  positives "attack_full"    SafeMTData/SafeMTData (last W turns, incl. payload)
+        negatives "attack_prefix"  SafeMTData/SafeMTData (first W turns of a
+                                   DIFFERENT, disjoint-group attack -- benign lead-up)
   ood   cstm-bench/<split>/<class>  intrinsec-ai/cstm-bench (mit), both splits
 
 Run: python -m steering_tutorials.multiturn_jailbreak.export_datasets
@@ -43,7 +44,11 @@ SRC_OOD = "intrinsec-ai/cstm-bench"
 
 
 def _hf_source_for(tag: str) -> str:
-    if tag == "attack" or tag == "attack_prefix":
+    # "easy" tags positives "attack"; "hard" tags them "attack_full" (last W turns,
+    # includes the payload) vs "attack_prefix" (first W turns of a DIFFERENT attack,
+    # a disjoint-group benign lead-up) -- see data._build_hard. All three are the
+    # same upstream dataset.
+    if tag in ("attack", "attack_full", "attack_prefix"):
         return SRC_ATTACK
     if tag == "ultrachat":
         return SRC_ULTRACHAT
