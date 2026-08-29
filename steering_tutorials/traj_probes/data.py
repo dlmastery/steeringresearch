@@ -501,6 +501,44 @@ def load_corpus(n_per_class=None, seed=None, corpus=None, max_turns=None,
     return out
 
 
+# The paper's own published corpus statistics, arXiv:2604.02022 abstract
+# (WebFetch-verified 2026-08-29): "1,000 trajectories (503 safe and 497 unsafe),
+# averaging 9.01 turns and 3.95k tokens."
+PAPER_STATS = {"n": 1000, "n_safe": 503, "n_unsafe": 497, "mean_turns": 9.01}
+
+
+def verify_against_paper(corpus, tol: float = 0.02) -> dict:
+    """Check the loaded corpus reproduces ATBench's PUBLISHED statistics.
+
+    This is an anchor check on the PARSER, not a formality. ATBench agent turns
+    carry {role, thought, action} and have NO `content` key, while user and
+    environment turns carry {role, content}. A parser that reads
+    turn["content"] and skips on KeyError silently drops all 4,492 agent turns
+    -- half the corpus, and the half that carries the failure -- and would
+    report a mean near 4.5 instead of 9.01. Reproducing the published mean is
+    therefore direct evidence the agent turns survived.
+
+    Only meaningful on a full, UNCAPPED load: MAX_TURNS truncates by design, so
+    a capped corpus is expected to disagree and is reported, not asserted.
+    """
+    got_turns = corpus.turn_count_summary()
+    out = {"paper": dict(PAPER_STATS),
+           "got": {"n": len(corpus.trajectories),
+                   "n_safe": corpus.achieved_n_neg,
+                   "n_unsafe": corpus.achieved_n_pos,
+                   "mean_turns": round(got_turns.get("mean", 0.0), 3)},
+           "full_pool": len(corpus.trajectories) == PAPER_STATS["n"]}
+    d = abs(out["got"]["mean_turns"] - PAPER_STATS["mean_turns"])
+    out["mean_turns_abs_delta"] = round(d, 4)
+    out["mean_turns_matches"] = d <= tol
+    out["note"] = ("mean turn count reproduces the paper => agent turns were "
+                   "parsed, not dropped" if out["mean_turns_matches"] else
+                   "mean turn count DISAGREES with the paper: either the "
+                   "corpus was truncated (MAX_TURNS) or the turn parser is "
+                   "dropping a role")
+    return out
+
+
 def summarise(corpus):
     """An ASCII provenance block. Print this above any number, always."""
     counts = {}
