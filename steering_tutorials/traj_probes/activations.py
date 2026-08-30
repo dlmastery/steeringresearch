@@ -343,6 +343,58 @@ def _forward_residual(model, ids, layer: int, keep=None):
     return sub, {p: i for i, p in enumerate(pos)}
 
 
+def _forward_residual_pooled(model, ids, layer: int, bounds, pooling: str):
+    """One forward pass; -> [n_turns, hidden] float32, pooled ON THE DEVICE.
+
+    Returns one row PER TURN INDEX (aligned to `bounds`, so row k is turn k),
+    with rows for turns whose boundary is None left as zeros -- callers skip
+    those by the same `bounds[k] is None` test they already use.
+
+    Exists so mean_turn / mean_prefix never materialise the whole sequence in
+    float32 on the GPU. The arithmetic is done in float32 on the device, which
+    matches what the CPU path computed, and only [n_turns, hidden] comes back.
+    """
+    import torch
+
+    try:
+        from ..hello_world_steering.model_utils import residual_layers
+    except (ImportError, ValueError):  # pragma: no cover
+        from steering_tutorials.hello_world_steering.model_utils import residual_layers
+
+    device = next(model.parameters()).device
+    layers = residual_layers(model)
+    idx = max(0, min(int(layer), len(layers) - 1))
+    cap = {}
+
+    def hook(_m, _i, out):
+        cap["h"] = (out[0] if isinstance(out, tuple) else out).detach()
+
+    handle = layers[idx].register_forward_hook(hook)
+    try:
+        with torch.no_grad():
+            t = torch.tensor([list(ids)], dtype=torch.long, device=device)
+            model(t)
+    finally:
+        handle.remove()
+    h = cap.pop("h")[0]
+    out = torch.zeros((len(bounds), h.shape[1]), dtype=torch.float32,
+                      device=h.device)
+    prev = None
+    for k, b in enumerate(bounds):
+        if b is None:
+            continue
+        b = int(b)
+        if pooling == "mean_prefix":
+            lo = 0
+        else:                                   # mean_turn
+            lo = 0 if prev is None else min(prev + 1, b)
+        out[k] = h[lo:b + 1].float().mean(dim=0)
+        prev = b
+    res = out.cpu().numpy().astype(np.float32)
+    del h, out
+    return res
+
+
 # ---------------------------------------------------------------------------
 # 3. Fingerprints
 # ---------------------------------------------------------------------------
@@ -831,14 +883,22 @@ class HFActivationExtractor:
                         model, ids, layer,
                         keep=[b for b in bounds if b is not None])
                 else:
-                    H, posmap = _forward_residual(model, ids, layer), None
+                    # mean_turn / mean_prefix need spans, not points, so the
+                    # boundary-only trick does not apply. Pool on the DEVICE in
+                    # the model's own dtype and bring back only the pooled rows:
+                    # a full float32 copy of a 16k-token sequence is what made
+                    # this OOM at MAX_TOKENS=16384.
+                    H, posmap = _forward_residual_pooled(
+                        model, ids, layer, bounds, self.settings.pooling), "span"
                 rows, steps = [], []
                 for k, turn in enumerate(traj.turns):
                     if k >= len(bounds) or bounds[k] is None:
                         continue
                     if wanted_roles is not None and turn.role not in wanted_roles:
                         continue
-                    if posmap is not None:
+                    if posmap == "span":
+                        rows.append(H[k])
+                    elif posmap is not None:
                         rows.append(H[posmap[int(bounds[k])]])
                     else:
                         rows.append(self._pool(H, bounds, k))
