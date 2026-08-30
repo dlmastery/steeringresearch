@@ -452,6 +452,119 @@ default is a cap chosen for the wrong reason.
 
 ---
 
+## 7b. The POOLING axis, which I swept last and should have swept first
+
+Section 7's headline reads the **last token** of each turn. That was a default,
+exactly like layer 12 was, and it went unexamined while the layer axis got a
+six-point sweep. Sweeping it changes the verdict
+(`artifacts/pooling_sweep_atbench_gemma-3-1b-it_L12.json`):
+
+| pooling | trajectory AUC | residualised | margin vs 0.8418 bar | verdict |
+|---|---|---|---|---|
+| `mean_turn` | **0.8565** | 0.8543 | **+0.0147** | **parity** |
+| `last` (the default) | 0.8070 | 0.8068 | -0.0347 | loses |
+| `mean_prefix` | 0.7339 | 0.7329 | -0.1079 | worst |
+
+Reading the whole turn instead of its final position moves the result from
+"significantly below a unigram bar" to "statistically indistinguishable from
+it". **The headline negative was partly a property of a default, not of the
+residual stream.**
+
+**PARITY, NOT A WIN — and the sweep's own flag nearly said otherwise.** A paired
+bootstrap over trajectories gives **[-0.0127, +0.0422]**, which *includes* zero
+(P(probe > bar) = 0.852). The sweep printed `clears=True` on the +0.0147 point
+estimate; that field is now named `clears_content_bar_point_estimate` in both
+the code and the artifact, because a boolean built from two point estimates with
+no interval is how an overclaim ships.
+
+Not a length artifact: max-turn-length alone gives 0.5803 and total character
+length 0.5875, against the probe's 0.8565.
+
+**A prediction of mine that was wrong.** `mean_prefix` averages every token up to
+turn k, so its pool grows with k and it encodes step index *by construction*. I
+flagged it as confounded and expected the confound to **inflate** it. It came
+last, by a wide margin. Averaging over the whole prefix dilutes the signal far
+more than the leak flatters it — a confound is not automatically an advantage.
+
+---
+
+## 7c. Reproduction A's actual cascade — and a retraction
+
+`types.CascadeResult` sat in this lesson's spine **defined and never used**, so
+reproduction A was not reproduced at all: an AUC-vs-k curve is a different claim
+wearing the same name. The recall-controlled early-abort cascade now exists
+(`cascade.py`, `artifacts/cascade_atbench_gemma-3-1b-it_L12.json`).
+
+Token saving at **matched achieved recall** (two targets differ by exactly
+0.0000, none by more than 0.0040):
+
+| target recall | activation (`last`) | **content bar** | step index (length) |
+|---|---|---|---|
+| 0.99 | 0.5521 | **0.6867** | 0.4178 |
+| 0.95 | 0.4306 | **0.5221** | 0.4178 |
+| 0.90 | 0.3720 | **0.4468** | 0.2413 |
+| 0.80 | 0.2952 | **0.3302** | 0.2413 |
+| 0.70 | 0.2325 | **0.2513** | 0.2413 |
+
+The activation cascade **dominates the step-index baseline** at 4 of 5 targets
+(>= on *both* recall and saving) — and **loses to the content bar at 5 of 5**.
+
+**RETRACTION.** On first seeing only the step-index comparison, this README's
+author wrote that losing a ranking comparison "does not make a probe useless for
+the operational task the paper actually claims", and called them different
+questions. That was generalising from the *weak* baseline: aborting on length is
+a 0.58-AUC feature, and beating it is a low bar. Once the binding control was
+put through the same machinery, the operational verdict matched the ranking one.
+**Both tasks give the same answer: real signal, beats length, loses to
+unigrams.**
+
+The comparison is fair in a way the step-index one is not. The step baseline's
+thresholds are integers, so its achieved recall plateaus at 0.6539 and three of
+its rows are the same operating point. All three arms share fold assignment,
+threshold calibration and aggregation, differing **only** in the feature, and
+the content bar's vocabulary and IDF are fit on calibration folds' first-k-turn
+text alone, never on the fold being scored.
+
+**Two controls that make the cascade readable at all.** Recall control is
+satisfiable by any scorer — abort everyone and you catch everyone — so recall
+alone proves nothing. On synthetic fixtures at target 0.90, a separable bundle
+falsely aborts **0.0000** of safe episodes where pure noise aborts **0.9500**,
+and mean relative catch time is 0.2440 vs 0.4022. Selectivity and earliness are
+what separate a probe from an aborting machine.
+
+### And the pooling that fixed the ranking does NOT fix the cascade
+
+Every row above uses the `last`-pooled bundle, which Section 7b shows is the
+*weakest* non-degenerate pooling on the ranking task. So the obvious objection
+was that the cascade negative might be the same default artifact. It is not.
+Token saving at matched recall, `mean_turn` against the same fixed bars:
+
+| target | `mean_turn` | `last` | **content bar** |
+|---|---|---|---|
+| 0.99 | 0.5636 | 0.5521 | **0.6867** |
+| 0.95 | 0.4352 | 0.4306 | **0.5221** |
+| 0.90 | 0.3359 | 0.3720 | **0.4468** |
+| 0.80 | 0.2735 | 0.2952 | **0.3302** |
+| 0.70 | 0.2199 | 0.2325 | **0.2513** |
+
+`mean_turn` loses to the content bar at **0 of 5**, and averages **-0.011**
+token saving against `last` — slightly WORSE on the cascade despite being
+clearly BETTER on ranking (0.8565 vs 0.8070).
+
+**That dissociation is the most useful thing in this section.** Ranking AUC and
+operational token-saving do not order the two poolings the same way. A feature
+that separates trajectories better in aggregate is not thereby better at
+deciding *when* to abort one, and this lesson would have reported the opposite
+if it had swept pooling on the ranking task alone and assumed it carried over.
+**AUC is not a sufficient proxy for operational value**, which is precisely why
+reproduction A specifies a cascade rather than a classifier score.
+
+So the conclusion firms up rather than softening: the probe loses to unigrams on
+the operational task at **every pooling tried**, including the one that reaches
+parity on ranking.
+
+---
+
 ## 8. What would falsify this (pre-registered)
 
 - **Reproduction A/B fail** if `LinearTrajProbe`'s `auc_residualised` at early

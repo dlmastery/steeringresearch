@@ -149,7 +149,8 @@ except (ImportError, ValueError):  # pragma: no cover
 
 __all__ = [
     "find_bundle", "per_round_oof_scores", "per_round_content_bar_scores",
-    "run_cascade", "content_bar_cascade_note", "run", "_self_test",
+    "run_cascade", "content_bar_cascade_note", "run", "run_additional_pooling",
+    "_self_test",
 ]
 
 # Measured on artifacts/acts_gemma-3-1b-it_L12_last_*.npz, 2026-08-30: 997
@@ -246,7 +247,8 @@ def _trajectory_lengths(bundle: ActivationBundle):
 # ---------------------------------------------------------------------------
 # 3. Per-round out-of-fold activation-probe scores
 # ---------------------------------------------------------------------------
-def per_round_oof_scores(bundle: ActivationBundle, n_folds: int = 5, seed: int = 0):
+def per_round_oof_scores(bundle: ActivationBundle, n_folds: int = 5, seed: int = 0,
+                         fold_of: dict | None = None):
     """-> (dict[k] = {"traj_uid", "score", "y", "n_folds_used"}, fold_of).
 
     Round k's rows are exactly the ones with `step_index == k - 1` (the
@@ -258,8 +260,20 @@ def per_round_oof_scores(bundle: ActivationBundle, n_folds: int = 5, seed: int =
     `run_traj_probes._fit_score` (-> `probes._fit_fold`) rather than
     reimplementing it, so this cascade's probe is provably the SAME probe as
     the rest of the lesson's reporting.
+
+    `fold_of` may be supplied explicitly to REUSE a fold assignment computed
+    on a DIFFERENT bundle of the same corpus (e.g. a different pooling) rather
+    than re-deriving one from this bundle's own trajectory order --
+    `_trajectory_fold_assignment` is deterministic given (bundle, n_folds,
+    seed), but two bundles built by two separate extraction runs are not
+    guaranteed to list their trajectories in the same first-seen order, and
+    `group_folds`'s shuffle is over THAT order, so re-deriving per bundle is
+    not provably identical across pooling arms. Passing the SAME `fold_of` in
+    is the only way to guarantee the comparison is not just seeded the same,
+    but actually IS the same partition.
     """
-    fold_of = _trajectory_fold_assignment(bundle, n_folds, seed)
+    if fold_of is None:
+        fold_of = _trajectory_fold_assignment(bundle, n_folds, seed)
     step = np.asarray(bundle.step_index)
     y_all = np.asarray(bundle.y).astype(np.int64)
     traj = np.asarray([str(u) for u in bundle.traj_uid])
@@ -674,6 +688,123 @@ def run() -> dict:
 
 
 # ---------------------------------------------------------------------------
+# 5b. Add an activation-cascade arm at a DIFFERENT pooling, without touching
+#     the content-bar / step-index arms already on disk (they do not depend
+#     on pooling -- they are fixed bars over the same corpus/folds, and the
+#     lead asked that they be reused, not recomputed).
+#   TP_CASCADE_ADD_POOLING=mean_turn python -m steering_tutorials.traj_probes.cascade
+# ---------------------------------------------------------------------------
+def run_additional_pooling(pooling: str,
+                           target_recalls=DEFAULT_TARGET_RECALLS) -> dict:
+    """Score the activation arm on a second pooling's bundle and merge it into
+    the EXISTING results file as `activation_cascade_<pooling>`, leaving every
+    other key byte-for-byte as it was read.
+
+    The fold assignment is derived from the ORIGINAL ("last"-pooling) bundle,
+    not from the new one -- `_trajectory_fold_assignment` is deterministic
+    given (bundle, n_folds, seed), but is a function of that bundle's own
+    trajectory ORDER, and two separately-extracted bundles are not guaranteed
+    to list trajectories in the same order (`group_folds`'s shuffle acts on
+    that order). Reusing the SAME `fold_of` dict, not just the same seed, is
+    what actually guarantees "same folds" rather than merely "seeded the same
+    way".
+    """
+    C.ensure_artifacts()
+    last_bundle, last_path, _last_meta = find_bundle(
+        C.ARTIFACTS, C.MODEL_TAG, C.LAYER, pooling="last")
+    new_bundle, new_path, _new_meta = find_bundle(
+        C.ARTIFACTS, C.MODEL_TAG, C.LAYER, pooling=pooling)
+
+    fold_of = _trajectory_fold_assignment(last_bundle, C.N_FOLDS, C.SEED)
+    n_turns, labels = _trajectory_lengths(new_bundle)
+    last_n_turns, last_labels = _trajectory_lengths(last_bundle)
+    if set(labels) != set(last_labels):
+        raise RuntimeError(
+            "pooling=%r bundle (%s) and the 'last' bundle (%s) do not cover "
+            "the SAME trajectories (%d vs %d) -- refusing to reuse a fold "
+            "assignment across two different trajectory sets."
+            % (pooling, new_path.name, last_path.name, len(labels), len(last_labels)))
+    mismatched_labels = [u for u in labels if labels[u] != last_labels[u]]
+    if mismatched_labels:
+        raise RuntimeError(
+            "pooling=%r bundle disagrees with the 'last' bundle on the LABEL "
+            "of %d trajector(y/ies) (e.g. %r) -- these cannot be the same "
+            "corpus." % (pooling, len(mismatched_labels), mismatched_labels[0]))
+    _print("[cascade] pooling=%s bundle: %s (X=%s) -- trajectory set and "
+          "labels match the 'last' bundle used for fold_of"
+          % (pooling, new_path.name, new_bundle.X.shape))
+
+    t0 = time.time()
+    oof_by_round, _fold_of_returned = per_round_oof_scores(
+        new_bundle, n_folds=C.N_FOLDS, seed=C.SEED, fold_of=fold_of)
+    act_scores = _scores_by_round_from_oof(oof_by_round)
+    results = []
+    for r in target_recalls:
+        ab, th = _peak_score_cascade(act_scores, labels, fold_of, r, C.N_FOLDS)
+        results.append(_aggregate_cascade(
+            ab, labels, n_turns, r, th,
+            "activation probe, layer %d, pooling=%s" % (int(new_bundle.layer), pooling)))
+    elapsed = time.time() - t0
+
+    out_path = keyed_path(C.ARTIFACTS, "cascade", ".json", C.CORPUS, C.MODEL_TAG,
+                          "L%d" % int(new_bundle.layer))
+    if not out_path.exists():
+        raise FileNotFoundError(
+            "run the primary cascade (pooling=last, `run()`) first -- %s does "
+            "not exist yet to merge into." % out_path)
+    payload = json.loads(out_path.read_text(encoding="utf-8"))
+
+    key = "activation_cascade_%s" % pooling
+    payload[key] = [_cascade_result_to_dict(r) for r in results]
+    payload.setdefault("additional_pooling_bundle_paths", {})[pooling] = str(new_path)
+    payload.setdefault("additional_pooling_elapsed_sec", {})[pooling] = elapsed
+    payload.setdefault(
+        "additional_pooling_n_folds_used_by_round", {})[pooling] = {
+            int(k): int(d["n_folds_used"]) for k, d in oof_by_round.items()}
+
+    tmp = out_path.with_suffix(out_path.suffix + ".tmp")
+    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    os.replace(str(tmp), str(out_path))
+    _print("[cascade] wrote %s (added %r, %.1fs; every other key unchanged)"
+          % (out_path, key, elapsed))
+
+    cbar_dicts = payload["content_bar_cascade"]["results"]
+    step_dicts = payload["step_index_baseline"]
+
+    _print("")
+    _print("recall-controlled cascade -- pooling=%s vs the EXISTING 'last'-pooling "
+          "content-bar and step-index arms (reused verbatim, not recomputed)"
+          % pooling)
+    _print("%6s | %8s %8s %8s | %8s %8s %8s | %8s %8s %8s"
+          % ("target", "act_rec", "act_abrt", "act_save",
+             "cbar_rec", "cbar_abrt", "cbar_save",
+             "step_rec", "step_abrt", "step_save"))
+    for r_act, cbar_d, step_d in zip(results, cbar_dicts, step_dicts):
+        _print("%6.2f | %8.4f %8.4f %8.4f | %8.4f %8.4f %8.4f | %8.4f %8.4f %8.4f"
+              % (r_act.target_recall, r_act.achieved_recall, r_act.frac_aborted,
+                 r_act.token_saving, cbar_d["achieved_recall"], cbar_d["frac_aborted"],
+                 cbar_d["token_saving"], step_d["achieved_recall"], step_d["frac_aborted"],
+                 step_d["token_saving"]))
+    dominates_cbar = all(
+        r.achieved_recall >= cbar_d["achieved_recall"] - 1e-9
+        and r.token_saving >= cbar_d["token_saving"]
+        for r, cbar_d in zip(results, cbar_dicts))
+    beats_cbar_savings = all(r.token_saving > cbar_d["token_saving"]
+                            for r, cbar_d in zip(results, cbar_dicts))
+    recall_gaps = [r.achieved_recall - cbar_d["achieved_recall"]
+                  for r, cbar_d in zip(results, cbar_dicts)]
+    _print("")
+    _print("recall gaps (pooling=%s minus content-bar), by target: %s"
+          % (pooling, ["%+.4f" % g for g in recall_gaps]))
+    _print("activation (pooling=%s) beats the content bar on token_saving at "
+          "EVERY target: %s" % (pooling, beats_cbar_savings))
+    _print("activation (pooling=%s) DOMINATES the content bar (>= on BOTH "
+          "recall and token_saving) at EVERY target: %s"
+          % (pooling, dominates_cbar))
+    return payload
+
+
+# ---------------------------------------------------------------------------
 # 6. CPU self-test -- NO model, NO GPU, NO network. Synthetic bundle only.
 #   TP_SELFTEST=1 python -m steering_tutorials.traj_probes.cascade
 # ---------------------------------------------------------------------------
@@ -930,6 +1061,10 @@ def _self_test() -> None:  # noqa: C901 - a test, read top to bottom
 def main() -> None:
     if os.environ.get("TP_SELFTEST") == "1":
         _self_test()
+        return
+    add_pooling = os.environ.get("TP_CASCADE_ADD_POOLING")
+    if add_pooling:
+        run_additional_pooling(add_pooling)
         return
     run()
 
