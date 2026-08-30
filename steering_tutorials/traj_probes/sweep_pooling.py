@@ -126,7 +126,12 @@ def main() -> int:
             "trajectory_auc_residualised": round(res, 4),
             "content_bar_auc": round(bar, 4),
             "margin_vs_bar": round(auc - bar, 4),
-            "clears_content_bar": bool(auc > bar),
+            # POINT ESTIMATE ONLY -- no interval. mean_turn came out at
+            # +0.0147 over the bar, which this flag calls True, while a paired
+            # bootstrap over trajectories gives [-0.0127, +0.0422]: the margin
+            # is NOT distinguishable from zero. Read this field as "the point
+            # estimate is above the bar", never as "it beats the bar".
+            "clears_content_bar_point_estimate": bool(auc > bar),
             "confounded_with_step_index": pool == "mean_prefix",
             "n_rows": int(bundle.X.shape[0]),
             "seconds": round(time.time() - t0, 1),
@@ -147,19 +152,19 @@ def main() -> int:
     print("POOLING SWEEP (Gemma-3-1B / ATBench L%d; trajectory unit, bar %.4f)"
           % (C.LAYER, bar))
     print("%-12s %-9s %-14s %-9s %s"
-          % ("pooling", "auc", "residualised", "margin", "clears"))
+          % ("pooling", "auc", "residualised", "margin", "above bar (point est.)"))
     for d in sorted(rows, key=lambda r: -r["trajectory_auc"]):
         print("%-12s %-9.4f %-14.4f %+0.4f    %s"
               % (d["pooling"], d["trajectory_auc"],
                  d["trajectory_auc_residualised"], d["margin_vs_bar"],
-                 d["clears_content_bar"]))
+                 d["clears_content_bar_point_estimate"]))
     honest = [d for d in rows if not d["confounded_with_step_index"]]
     if honest:
         b = max(honest, key=lambda d: d["trajectory_auc"])
         print("")
         print("best UNCONFOUNDED pooling: %s at %.4f; bar %.4f -> %s"
               % (b["pooling"], b["trajectory_auc"], bar,
-                 "CLEARS" if b["clears_content_bar"]
+                 "CLEARS" if b["clears_content_bar_point_estimate"]
                  else "still BELOW -- the negative is not a pooling artifact"))
     print("wrote %s" % out_path.name)
     return 0

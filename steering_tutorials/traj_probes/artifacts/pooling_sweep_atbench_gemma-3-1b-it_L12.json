@@ -1,0 +1,40 @@
+{
+ "config": {
+  "corpus": "atbench",
+  "hf_dataset": "AI45Research/ATBench",
+  "hf_config": "ATBench",
+  "hf_split": "test",
+  "dataset_licence": "apache-2.0 (dataset card front-matter, AI45Research/ATBench)",
+  "dataset_paper": "arXiv:2604.02022 -- ATBench: A Diverse and Realistic Agent Trajectory Benchmark for Safety Evaluation and Diagnosis",
+  "model_id": "models/google/gemma-3-1b-it",
+  "model_tag": "gemma-3-1b-it",
+  "layer": 12,
+  "n_per_class": 500,
+  "seed": 0,
+  "n_folds": 5,
+  "bootstrap": 10000,
+  "max_turns": 16,
+  "max_turn_chars": 8000,
+  "max_tokens": 16384,
+  "group_by": "trajectory",
+  "results_path": "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\traj_probes\\artifacts\\results_atbench_gemma-3-1b-it_L12.json",
+  "corpus_cache_path": "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\traj_probes\\artifacts\\corpus_atbench_n500_s0_t16_c8000.json.gz",
+  "activation_cache_path": "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\traj_probes\\artifacts\\acts_atbench_gemma-3-1b-it_L12_n500_s0.npz"
+ },
+ "content_bar_auc": 0.8418,
+ "unit": "trajectory (max-pooled)",
+ "poolings": [
+  {
+   "pooling": "mean_turn",
+   "layer": 12,
+   "trajectory_auc": 0.8565,
+   "trajectory_auc_residualised": 0.8543,
+   "content_bar_auc": 0.8418,
+   "margin_vs_bar": 0.0147,
+   "clears_content_bar": true,
+   "confounded_with_step_index": false,
+   "n_rows": 8341,
+   "seconds": 642.4
+  }
+ ]
+}
