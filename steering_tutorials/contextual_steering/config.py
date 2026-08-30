@@ -134,9 +134,32 @@ MAX_NEW_TOKENS = 48
 ROOT = Path(__file__).resolve().parent
 ARTIFACTS = ROOT / "artifacts"
 # The lesson-1 probe checkpoint reused as the "probe" gate (the LEARNED sensing
-# vector). Same artifact the sibling `flas` lesson loads. None here would let
-# ProbeGate resolve this exact path itself; we make it explicit for transparency.
-PROBE_PATH = ROOT.parent / "hello_world" / "artifacts" / "probe.pt"
+# vector). Same artifact the sibling `flas` lesson loads.
+#
+# WHICH CHECKPOINT, AND WHY IT WAS WRONG UNTIL 2026-08-30.
+# hello_world ships two probes with the SAME architecture (128x1152 -> 32 -> 1)
+# trained on DIFFERENT corpora, and NEITHER DOMINATES -- each wins in its own
+# domain and degrades out of it. Measured on identical feature sets:
+#
+#   feature set                     n     probe.pt   probe_large.pt   agree
+#   features.npz    (JBB)          200    0.9925     0.8315           0.76
+#   features_large  (toxic-chat)   748    0.9033     0.9904           0.71
+#
+# They disagree on 24-29% of gate DECISIONS, so the choice is not cosmetic.
+#
+# This lesson draws its prompts from `common.data` at N_PER_CLASS=500, i.e. the
+# TOXIC-CHAT distribution (see N_PER_CLASS above). It was loading `probe.pt`,
+# the JailbreakBench-trained probe, which is OUT OF DOMAIN here and scores
+# 0.9033 against probe_large's 0.9904 on exactly this data. Repointed to the
+# domain-matched checkpoint.
+#
+# Do NOT read this as "probe_large is the better probe" -- on JBB features it
+# is the worse one, 0.8315 vs 0.9925. The rule is: match the probe to the
+# corpus the CONSUMER actually sees. The env override keeps that a visible
+# choice rather than a buried default.
+PROBE_PATH = Path(os.environ.get(
+    "CTX_PROBE_PATH",
+    str(ROOT.parent / "hello_world" / "artifacts" / "probe_large.pt")))
 VECTOR_PATH = ARTIFACTS / "steering_vector.pt"
 RESULTS_PATH = ARTIFACTS / "results.json"
 COMPARISON_PNG = ARTIFACTS / "fixed_vs_contextual.png"
