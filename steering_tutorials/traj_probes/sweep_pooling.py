@@ -20,7 +20,13 @@ THE THREE POOLINGS, AND WHY ONE OF THEM CANNOT BE HEADLINED
 
 Each pooling is scored against the SAME layer-independent content bar and at the
 SAME trajectory unit, so the rows are comparable to each other and to the layer
-sweep. A pooling clears only if it beats the bar.
+sweep.
+
+THE MARGIN COLUMN IS A POINT ESTIMATE AND NOTHING MORE. mean_turn lands at
++0.0147 over the bar, which looks like a win and is not: a paired bootstrap over
+trajectories gives [-0.0127, +0.0422], including zero. The honest word for that
+row is PARITY. Nothing here reports an interval, so nothing here settles a
+comparison -- run the bootstrap before quoting any of it as a verdict.
 
 Costs one extraction per pooling (the bundle cache key includes pooling), so
 about 8 minutes each on this host, journalled against a reap.
@@ -143,7 +149,7 @@ def main() -> int:
                                    "poolings": rows}, indent=1),
                        encoding="utf-8")
         os.replace(tmp, out_path)
-        print("%-12s auc=%.4f  residualised=%.4f  margin=%+.4f  clears=%s (%.0fs)%s"
+        print("%-12s auc=%.4f  residualised=%.4f  margin=%+.4f  above-bar(point)=%s (%.0fs)%s"
               % (pool, auc, res, auc - bar, auc > bar, time.time() - t0,
                  "   <- CONFOUNDED, read the residualised column"
                  if pool == "mean_prefix" else ""))
