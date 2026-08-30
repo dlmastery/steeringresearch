@@ -31,10 +31,24 @@
    "trajectory_auc_residualised": 0.8543,
    "content_bar_auc": 0.8418,
    "margin_vs_bar": 0.0147,
-   "clears_content_bar": true,
    "confounded_with_step_index": false,
    "n_rows": 8341,
-   "seconds": 642.4
+   "seconds": 642.4,
+   "clears_content_bar_point_estimate": true,
+   "margin_ci_note": "POINT ESTIMATE. Paired bootstrap over trajectories for mean_turn gives [-0.0127, +0.0422], which INCLUDES zero (P(probe>bar)=0.852). The honest word for that row is PARITY, not a win."
+  },
+  {
+   "pooling": "mean_prefix",
+   "layer": 12,
+   "trajectory_auc": 0.7339,
+   "trajectory_auc_residualised": 0.7329,
+   "content_bar_auc": 0.8418,
+   "margin_vs_bar": -0.1079,
+   "confounded_with_step_index": true,
+   "n_rows": 8341,
+   "seconds": 574.0,
+   "clears_content_bar_point_estimate": false,
+   "margin_ci_note": "POINT ESTIMATE. Paired bootstrap over trajectories for mean_turn gives [-0.0127, +0.0422], which INCLUDES zero (P(probe>bar)=0.852). The honest word for that row is PARITY, not a win."
   }
  ]
 }

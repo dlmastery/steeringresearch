@@ -1,0 +1,39 @@
+{
+ "name": "models/google/gemma-3-1b-it",
+ "real": {
+  "n": 20000,
+  "dim": 1152,
+  "mean_norm": 0.9476,
+  "centroid_norm": 0.286,
+  "centroid_over_mean_norm": 0.3018,
+  "participation_ratio": 526.38,
+  "participation_ratio_over_dim": 0.4569,
+  "top1_variance_share": 0.0285,
+  "top10_variance_share": 0.0668,
+  "centroid_rotation_displacement": 0.4045,
+  "centroid_displacement_over_mean_norm": 0.4268
+ },
+ "rotation": {
+  "auc_rotated_vs_original": 1.0,
+  "auc_after_centering": 0.3666,
+  "theta": 1.5707963267948966
+ },
+ "isotropic_control": {
+  "n": 20000,
+  "dim": 1152,
+  "mean_norm": 0.9476,
+  "centroid_norm": 0.0065,
+  "centroid_over_mean_norm": 0.0068,
+  "participation_ratio": 1089.24,
+  "participation_ratio_over_dim": 0.9455,
+  "top1_variance_share": 0.0013,
+  "top10_variance_share": 0.0132,
+  "centroid_rotation_displacement": 0.0091,
+  "centroid_displacement_over_mean_norm": 0.0097
+ },
+ "isotropic_control_rotation": {
+  "auc_rotated_vs_original": 0.4901,
+  "auc_after_centering": 0.3551,
+  "theta": 1.5707963267948966
+ }
+}

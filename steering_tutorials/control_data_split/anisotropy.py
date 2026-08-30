@@ -199,9 +199,19 @@ def main() -> int:
                                out["rotation"]["auc_after_centering"],
                                out["isotropic_control_rotation"]["auc_after_centering"]))
     print("")
-    print("READING: the rotation is detectable only insofar as the real cloud is")
-    print("anisotropic and off-origin. The isotropic control is what ASIDE would")
-    print("look like on a model whose embeddings had no preferred directions.")
+    r_det = out["rotation"]
+    print("READING: the rotation is linearly detectable because the embedding")
+    print("cloud sits OFF THE ORIGIN -- not because it is anisotropic. Centering")
+    print("the same matrix drops the probe from %.4f to %.4f, onto the isotropic"
+          % (r_det["auc_rotated_vs_original"], r_det["auc_after_centering"]))
+    print("control's %.4f. A linear probe reads a difference in MEANS, and a"
+          % out["isotropic_control_rotation"]["auc_rotated_vs_original"])
+    print("rotation maps a zero mean to a zero mean, so a centred cloud -- however")
+    print("structured -- is invisible to it. The centroid here is %.1f%% of a"
+          % (100 * out["real"]["centroid_over_mean_norm"]))
+    print("typical token vector's norm, which is what makes ASIDE work on THIS")
+    print("model. It is a property of the embedding matrix, not of the method,")
+    print("and a model with centred embeddings would get nothing from it.")
     print("wrote %s" % p.name)
     return 0
 
