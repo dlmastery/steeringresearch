@@ -375,6 +375,35 @@ the research harness** (`src/steering`). Lessons and design rules:
 - **`flas/`** — lesson 3b, **GENERATE+**: flow-based activation steering — a
   concept-conditioned velocity field integrated over a flow (flow-time = a
   continuous strength dial). (github.com/flas-ai/FLAS.)
+- **`traj_probes/`** — the long-horizon **READ** lesson: linear probes on the
+  model's own residual stream at every turn boundary of an agent trajectory,
+  against the two controls that decide whether the reading means anything
+  (step-index residualisation; a bag-of-words bar on the SAME text). Substrate
+  is ATBench (arXiv:2604.02022, apache-2.0, 1,000 trajectories). Reproduces
+  arXiv:2607.06503 (early abort) and cites arXiv:2605.25310 (tool-call edges,
+  NOT evaluable on this corpus). **Result 2026-08-29 is a NEGATIVE**: probe
+  0.8070 vs a 0.8418 unigram bar, CI [-0.0656, -0.0036], across six layers.
+  **Reproduction A is PARTIAL** — the recall-controlled cascade
+  (`types.CascadeResult`) is defined and never run, and only one probe
+  architecture at one pooling was tested.
+- **`control_data_split/`** — the **DEMERGE** stream: instruction/data fusion is
+  architectural, not a training accident. Turns arXiv:2606.27567's impossibility
+  theorem into a MEASURED bound (err* = (1-TV)/2, reported beside its
+  finite-sample floor) and implements ASIDE's parameter-free pi/2 rotation
+  (arXiv:2503.10566, ICLR 2026) exactly. Geometry is reproducible without
+  training; the SEP/ASR numbers are NOT, because they need SFT on the modified
+  forward. Also catalogues SecOPD (2608.21500), CaMeL (2503.18813), DRIP
+  (2511.00447), Meta SecAlign (2507.02735), COPA (2608.19982), PICO (2504.21029)
+  — all eight ids WebFetch-verified 2026-08-29.
+- **Every lesson now ships its DATA.** `common/dataset_export.py` writes each
+  lesson's exact deterministic slice (jsonl.gz + manifest with fingerprint,
+  licence and composition) or a refetch manifest for sources that may not be
+  redistributed; `common/verify_datasets.py` re-parses and re-fingerprints all
+  of it from the files and exits non-zero. 21 slices / 18,633 rows / 7.94 MB.
+  The licence gate is STRUCTURAL and has three states: permissive, GATED (a
+  gate governs even where the licence is permissive — `walledai/HarmBench` is
+  MIT and gated), and NO-LICENCE-STATED (checked and absent, which is not the
+  same as unexamined and is not permission).
 - **Further lessons** (`multi_intent`, `rogue_scalpel`, `realignment`, `stacking`,
   and the planned CONTROL/CERTIFY/PROVE tiers) are catalogued in
   `steering_tutorials/README.md` — the course map with all lesson plans.
@@ -572,6 +601,68 @@ three ways. The scoop is TWO papers, not seven, and both were already known here
 - **flas v2.** Mis-scaled dial fixed (norm-relative); the corrected sweep is a *clean*
   negative — at T=0.02 coherence is intact yet refusal already falls 0.32→0.26.
 - **Voice F1.** On SVD, **age alone → ROC-AUC 0.871**; 200/1853 speakers have >1 session.
+
+## 18.11 SESSION CHECKPOINT — 2026-08-29 (NEWEST — read before 18.10)
+
+### Two new streams, one negative result, and a control that damaged its own experiment
+
+**`traj_probes` — long-horizon failure from the residual stream. NEGATIVE, and
+PARTIAL.** Gemma-3-1B over ATBench (997 trajectories, 8,341 turn-rows): probe
+**0.8070** vs a **0.8418** unigram bar on the same text, margin **-0.035**,
+paired-bootstrap CI **[-0.0656, -0.0036]**, P(probe>bar)=0.014. Real signal
+(random-label 0.5124, step floor 0.5036, residualisation moves it ~0.001) that
+still loses. Six layers swept, all below the bar, so DEPTH is ruled out.
+
+**THE CONTROL THAT BROKE ITS OWN EXPERIMENT — the lesson of this session.**
+`MAX_TURN_CHARS` was set to 1,200 to make trajectories fit a **hard-coded**
+`max_tokens=4096` that was never a config value, never stamped, never swept. At
+that cap ~10% of ALL turns were clipped, when the target was a handful of 53k
+tool dumps. It was not symmetric: the probe reads the LAST TOKEN of each turn,
+so clipping changes what it reads, while TF-IDF still recovers its unigrams.
+Corrected to 8,000 chars / 16,384 tokens (1.46% of turns, 0 rows dropped) the
+result changed THREE ways:
+  * margin -0.122 -> **-0.035** (probe up, bar down)
+  * a HORIZON TREND appeared: margin shrinks monotonically -0.137 (k=4) ->
+    -0.035 (k=16). The old README said it was "stable at every k" — WITHDRAWN.
+  * the LAYER PROFILE sharpened: flat (spread 0.041) -> a distinct L12 peak
+    (spread 0.060).
+One over-tight control was hiding two real findings. **A control can be tuned
+until it damages the thing it protects, and a cap chosen to satisfy a hidden
+default is chosen for the wrong reason.** The user caught this, not me.
+
+**WHAT IS STILL NOT DONE IN `traj_probes`, stated plainly:** only ONE probe
+architecture (logistic regression) at ONE pooling ("last") was ever run.
+`types.CascadeResult` is defined and NEVER USED, so reproduction A's actual
+recall-controlled cascade — per-round abort thresholds, token savings at a
+recall target — is NOT reproduced; the AUC-vs-k curve is a different claim.
+`mean_turn`/`mean_prefix` pooling are implemented and never swept. Reproduction
+C is not evaluable on ATBench (no dependency edges). "The layer axis is ruled
+out" is true and MUCH narrower than "the method fails here".
+
+**`control_data_split` — new DEMERGE stream.** ASIDE's rotation implemented
+exactly (orthogonal, norm-preserving, R^4=I but R^2!=I, instruction rows
+bit-identical to vanilla) and the ISE-offset contrast DEMONSTRATED rather than
+cited: an offset is undone by one additive bias, the rotation's displacement is
+input-dependent. arXiv:2606.27567's impossibility theorem is turned into a
+MEASURED bound, always reported beside its same-distribution floor (0.0108 at
+n=300 but 0.1650 at n=20 — a small corpus manufactures separability). Eight ids
+WebFetch-verified; CaMeL's SaTML venue and ASIDE's pi/2 angle are NOT on their
+abstract pages and are marked, not repeated.
+
+**Datasets now ship.** 21 slices / 18,633 rows / 7.94 MB, audited from the FILES
+by `common/verify_datasets.py`. Licence gate is structural with a THIRD state:
+NO-LICENCE-STATED (checked and absent != unexamined != permission). Two READMEs
+were understating the licence of their own data — `realignment` and
+`rogue_scalpel` described JailbreakBench (MIT) when the loader returns 100%
+`lmsys/toxic-chat` (cc-by-nc-4.0, NON-COMMERCIAL) at n=500.
+
+### Host note that changed
+RAM was NOT the blocker it looked like: Gemma-3-1B loads and runs at 4.3 GB
+free. What the 7.5 GB gate in 18.6 actually buys is SPEED. But raising the token
+budget to 16,384 to stop truncating DID cause a CUDA OOM, fixed by transferring
+only the ~16 boundary rows instead of the whole [seq, hidden] in fp32 — verified
+bit-identical (max|delta| 0.000e+00). An efficiency note becomes a blocker the
+moment a limit moves.
 
 ## 18.10 SESSION CHECKPOINT — 2026-08-22 (NEWEST — read before 18.9)
 

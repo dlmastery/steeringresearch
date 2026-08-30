@@ -174,6 +174,14 @@ on its own (it re-derives or imports what it needs from earlier lessons).
 classifier this lesson uses. Neither paper is wrong to cite as *inspiration*, but the lesson should
 not claim closer correspondence than that. Detail: `cross_trajectory/AUDIT_2026-08.md` §4.
 
+| [`traj_probes`](traj_probes/README.md) | long-horizon agent failure from the model's OWN RESIDUAL STREAM rather than from trajectory text: linear probes at every turn boundary, an early-abort horizon curve, and the two controls that decide whether any of it means anything (step-index residualisation + a bag-of-words bar on the same text) | [Doomed from the Start: Early Abort of LLM Agent Episodes via a Recall-Controlled Probe Cascade (arXiv:2607.06503)](https://arxiv.org/abs/2607.06503) · [Tool-Call Dependency Structure is Linearly Decodable in LLM Agent Residual Streams (arXiv:2605.25310)](https://arxiv.org/abs/2605.25310) · Goal-Drift Probes (ICML 2026 AIWILD) **[UNVERIFIED]** · data: [ATBench (arXiv:2604.02022)](https://arxiv.org/abs/2604.02022) | ✅ RUN 2026-08-29 — **negative**, and PARTIAL: see below |
+
+### 🧬 Demerge — separating the control plane from the data plane
+
+| Lesson | Teaches | Reference paper | Status |
+|---|---|---|---|
+| [`control_data_split`](control_data_split/README.md) | why instruction/data fusion is architectural, not a training accident: the impossibility theorem turned into a MEASURABLE bound on any provenance detector, plus ASIDE's parameter-free 90-degree rotation of data-token embeddings implemented exactly | [ASIDE: Architectural Separation of Instructions and Data in Language Models (arXiv:2503.10566, ICLR 2026)](https://arxiv.org/abs/2503.10566) · [On the Inseparability of Instructions and Data in Shared-Embedding Sequence Models (arXiv:2606.27567)](https://arxiv.org/abs/2606.27567) · [SecOPD (arXiv:2608.21500)](https://arxiv.org/abs/2608.21500) · [Defeating Prompt Injections by Design / CaMeL (arXiv:2503.18813)](https://arxiv.org/abs/2503.18813) · [DRIP (arXiv:2511.00447)](https://arxiv.org/abs/2511.00447) · [Meta SecAlign (arXiv:2507.02735)](https://arxiv.org/abs/2507.02735) · [COPA (arXiv:2608.19982)](https://arxiv.org/abs/2608.19982) · [PICO (arXiv:2504.21029)](https://arxiv.org/abs/2504.21029) | 🧪 geometry built + verified; SFT arms NOT run |
+
 ### 📜 Certify — provable guarantees
 
 | Lesson | Teaches | Reference paper | Status |
@@ -194,6 +202,31 @@ not claim closer correspondence than that. Detail: `cross_trajectory/AUDIT_2026-
 ---
 
 ## Honest results
+
+**`traj_probes` (2026-08-29) — a negative, and an INCOMPLETE reproduction.**
+On Gemma-3-1B over ATBench the residual-stream probe reaches **0.8070**
+(trajectory unit) against a **0.8418** unigram bar on the same text: margin
+**-0.035**, paired-bootstrap 95% CI **[-0.0656, -0.0036]**. The probe is real
+(random-label ceiling 0.5124, step-index floor 0.5036, residualisation moves it
+~0.001) and still loses. Six layers were swept; every one is below the bar, so
+depth is ruled out. The margin **shrinks monotonically with horizon**
+(-0.137 at k=4 to -0.035 at k=16).
+
+Two caveats that belong in the same breath as the number:
+1. An earlier pass used a per-turn character cap of 1,200 that clipped ~10% of
+   all turns. It inflated the margin to -0.122 AND flattened both the horizon
+   trend and the layer profile. Those results were discarded. The cap is now
+   8,000 (1.46% of turns clipped).
+2. **Only ONE probe architecture and ONE pooling were tested** — logistic
+   regression on last-token activations. `CascadeResult` is defined in the
+   lesson's spine and never used, so reproduction A's actual recall-controlled
+   cascade (per-round abort thresholds, token savings at a recall target) is
+   NOT reproduced; the horizon curve is a different claim. `mean_turn` and
+   `mean_prefix` pooling are implemented and never swept. Reproduction C is
+   not evaluable on ATBench at all (no tool-dependency edges). So "the layer
+   axis is ruled out" is true and much narrower than "the method fails here".
+
+
 
 > **The through-line:** *learned* interventions survive a real judge on hard data;
 > *simple fixed* diff-of-means vectors largely don't — and the earlier rosy numbers
