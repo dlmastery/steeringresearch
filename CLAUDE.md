@@ -876,7 +876,43 @@ Inventory: **7 verified off-family**, **1 confirmed self-judged (`gavel`)**, **8
 prompt_activation_duality, reft_r1, rogue_scalpel, stacking/run_stacking). *Absence of
 evidence is the defect, not a clean bill.*
 
-### PENDING — what to run next on the new machine
+### PENDING — AUDITED AGAINST THE ARTIFACTS 2026-08-30. FIVE OF EIGHT WERE
+### ALREADY DONE. Read this before believing any "what is left" list here.
+
+This list was written as a plan and then never reconciled with the runs that
+executed it. Every entry below was re-checked by opening the artifact, not by
+re-reading the entry:
+
+| # | item | VERIFIED STATUS 2026-08-30 |
+|---|---|---|
+| 1 | `gavel/rejudge.py` "code written, needs a GPU run" | **DONE.** `rejudge_generations.json`, `rejudge_verdicts_Qwen_Qwen2.5-3B-Instruct.json`, `rejudge_verdicts_self.json` and `judge_comparison.json` (carrying `off_family` and `self_superseded`) are all on disk. |
+| 2 | `realignment` benign half "only 25/200 measured" | **DONE.** Every one of the 5 sweep cells records `n_benign: 200` with its own `over_refusal` (0.455 at alpha 0, 0.070 at 0.15). Nothing is carried from a prior run. |
+| 3 | `non_identifiability` alpha sweep | **DONE** (closed 2026-08-29; ran 2026-08-22). |
+| 4 | `meerkat` "bge never run, all numbers are MiniLM" | **DONE.** `results_bge.json`, `results_embeddinggemma.json` AND `results_minilm.json` all exist -- all three encoders. |
+| 5 | `probe_tuning` "layer sweep has NO code and NO artifact" | **DONE.** `sweep_layers_common_n500_*.json` holds **150 cells** over pooling x window x centre-layer, plus `shuffle_control`, `winner` and `appendix_d_flagged_cells`. |
+| 6 | `hello_world` 4B arm "crashes on dim mismatch" | **PARTLY DONE, and the real defect is different** -- see below. |
+| 7 | re-run the 8 UNKNOWN-judge lessons under the new stamping | **OPEN.** |
+| 8 | research axes (budget_f, span, HC-3's L17/L20 cells) | **OPEN.** |
+
+**THE ACTUAL OPEN DEFECT, which this list buried under items that were finished.**
+`hello_world/artifacts/metrics_4b.json` exists and reports ROC-AUC **0.9975** --
+on **`n_test: 40`**. 18.10 already recorded that every probe in that directory
+was validated on 40 items, and those probes gate every conditional arm in the
+course. A 0.99 AUC on 40 items is not a result; it is a smoke test wearing one,
+and it is upstream of more lessons than any item in the table above.
+
+**The pattern, and it has now cost three separate corrections.** Entries here
+recorded an INTENTION as though it were code (items 1, 5), or a status
+re-derived from one layer of the artifact rather than the artifact itself (item
+3: I grepped the runner, saw `SWEEP_ALPHAS` referenced, and reported "wired, so
+NEEDS-GPU" without opening the results file in the directory I had just listed).
+A "what is left" list that is not reconciled against the artifacts is worse than
+no list: it sends work at problems that are solved and hides the ones that are
+not.
+
+### ORIGINAL LIST (superseded, kept so the corrections above have something to
+### point at)
+
 
 All of these are BLOCKED ONLY BY HOST MEMORY on the old box, not by missing code:
 
