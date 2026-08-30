@@ -3,15 +3,14 @@
 **Do not quote it.** It was produced on 2026-07-24 with a different probe gate
 than the lesson now uses, and it has not been regenerated.
 
-## What changed
+## What changed, and why
 
 `config.PROBE_PATH` used to load `hello_world/artifacts/probe.pt`. It now loads
-`probe_large.pt`. That is not a cosmetic swap — the two checkpoints disagree on
-**24–29% of gate decisions**.
+`probe_large.pt`. Not a cosmetic swap — the two checkpoints disagree on **24–29%
+of gate decisions**.
 
-The reason for the change, measured rather than assumed. Both probes have the
-same architecture (128×1152 → 32 → 1) and differ only in training corpus, and
-**neither dominates**:
+Both probes have the same architecture (128×1152 → 32 → 1) and differ only in
+training corpus. Scored on identical feature sets, **neither dominates**:
 
 | feature set | n | `probe.pt` | `probe_large.pt` | decision agreement |
 |---|---|---|---|---|
@@ -20,48 +19,76 @@ same architecture (128×1152 → 32 → 1) and differ only in training corpus, a
 
 Each wins in its own domain and degrades out of it. This lesson draws prompts
 from `common.data` at `N_PER_CLASS=500` — the **toxic-chat** distribution — and
-was gating them with the JailbreakBench-trained probe, which is out of domain
-here and scores 0.9033 against 0.9904 on exactly that data.
+was gating them with the JailbreakBench-trained probe, out of domain here.
 
 So the fix follows from what the *consumer* sees, not from which probe has the
 larger validation set. "Use the better-validated probe" would have been wrong:
 on JailbreakBench features `probe_large` is worse by 0.16 AUC.
 
-## Why it has not been re-run
+## Why it has not been regenerated: SIX failures, THREE distinct causes
 
-Four attempts on 2026-08-30, all failing at the model-load boundary:
+Treating these as one flaky host wasted four attempts. They are different walls
+with different symptoms, and the symptom identifies the wall:
 
-1. background — segfault, exit 139
-2. background — reaped
-3. foreground, `CTX_N_EVAL_PER_CLASS=25` — silent exit, no traceback
-4. foreground, `CTX_N_EVAL_PER_CLASS=25 STEER_LOAD_4BIT=1` — silent exit
+| # | invocation | symptom | actual cause |
+|---|---|---|---|
+| 1 | background, off-family judge | segfault 139 | two models resident |
+| 2 | background, off-family judge | reaped | job length |
+| 3 | foreground, `n=25`, off-family | **silent exit, no traceback** | physical memory |
+| 4 | foreground, `n=25`, 4-bit, off-family | **silent exit, no traceback** | physical memory |
+| 5 | background, off-family, both gates checked | **`OSError 1455`** | Windows **commit** limit |
+| 6 | background, off-family, both gates passing | segfault 139 | two models resident |
+| 7 | foreground, `n=25`, **self-judge (one model)** | ran ~10 min, then reaped | job length only |
 
-Host state measured immediately after: **physical 7.47 GB against the 7.5 GB
-gate** recorded in `CLAUDE.md` §18.6, with Chrome holding 10.0 GB. A silent exit
-with no traceback at this point is that section's documented signature for
-physical memory exhausted mid-mmap of the judge shards — the off-family judge
-(`Qwen/Qwen2.5-3B-Instruct`, required by §17 rule 3 for any reported number)
-loads immediately after the target model.
+**The diagnostic, now recorded in CLAUDE.md §18.5:** a *silent* exit is the
+physical wall; an *`OSError 1455` traceback* is the commit wall; a *segfault at
+the judge load* is two-models-resident. Attempts 3 and 4 tried 4-bit and smaller
+eval caps — both reduce *physical* footprint — against a limit that was not
+physical.
 
-This is a host block, not a defect in the change. `CTX_N_EVAL_PER_CLASS` was
-added to `config.py` during these attempts, because §18.5's own playbook requires
-every `run_*.py` to take an env cap so an eval fits one foreground window and
-this lesson had none.
+Attempt 7 is the one that matters: with a single model the run **generates
+normally on the same host in the same minute**, and only fails by exceeding the
+harness's background-job window. So this is not "the host lacks memory". It is
+that the off-family judge (`Qwen/Qwen2.5-3B-Instruct`, required by §17 rule 3
+for any reported number) is a *second* resident model.
+
+## The durable fix, and it already exists in this repo
+
+`gavel/rejudge.py` solves exactly this: **three phases, one model resident at a
+time** — generate with the target and cache the generations, exit; load only the
+judge and grade the cache; merge. `run_contextual.py` constructs
+`Judge(model, tok)` at line ~273, *before* generation, so both models are
+resident for the whole run.
+
+Splitting it the same way is the fix, and it makes the off-family judge possible
+here rather than dependent on luck.
+
+**A tiny smoke run was deliberately NOT written over `results.json`.** An
+`n=10`, self-judged toy would replace a real-if-stale artifact with one that
+cannot support any claim, which is worse than the honest marker you are reading.
 
 ## To regenerate
 
-With physical memory above ~7.5 GB (close browser tabs):
+Check **both** gates first — §18.5 says both, and reading one of them is how
+this rule gets violated:
+
+```
+phys >= 7.5 GB  AND  commit >= 8.5 GB
+```
+
+Then:
 
 ```
 STEER_JUDGE_MODEL=Qwen/Qwen2.5-3B-Instruct \
   C:/Users/evija/anaconda3/python.exe -u -m steering_tutorials.contextual_steering.run_contextual
 ```
 
-Add `CTX_N_EVAL_PER_CLASS=<n>` to shrink it — but a capped run is **screening
-tier** and must be labelled as such, never quoted as the pre-registered
-`N_EVAL_PER_CLASS=150`.
+`CTX_N_EVAL_PER_CLASS=<n>` shrinks it (added during these attempts, because
+§18.5's own playbook requires every `run_*.py` to take an env cap and this
+lesson had none). A capped run is **screening tier** and must be labelled so,
+never quoted as the pre-registered `N_EVAL_PER_CLASS=150`.
 
-To reproduce the old numbers instead of regenerating, pin the old gate
-explicitly: `CTX_PROBE_PATH=../hello_world/artifacts/probe.pt`.
+To reproduce the OLD numbers rather than regenerate:
+`CTX_PROBE_PATH=../hello_world/artifacts/probe.pt`.
 
-Delete this file once `results.json` is regenerated.
+Delete this file once `results.json` is regenerated with the off-family judge.
