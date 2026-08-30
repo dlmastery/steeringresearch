@@ -68,7 +68,13 @@ N_PER_CLASS = 500          # >= 500/class from common.data — the whole point
 N_EXTRACT_PER_CLASS = 300  # build the vector + calibrate the schedule (was 200)
 # Generation is the expensive part (RAM/VRAM + greedy decode), so the eval set is
 # CAPPED below N_PER_CLASS. Raise it for a fuller (slower) run.
-N_EVAL_PER_CLASS = 150  # was 60
+# Env-overridable so the eval fits one foreground window. This host REAPS long
+# background jobs (CLAUDE.md 18.5) and killed this very run twice at the model-
+# load boundary, so the 18.5 playbook's rule -- "every run_*.py takes an env cap
+# to shrink an eval into one foreground window" -- was missing here and is now
+# supplied. A capped run is SCREENING tier and must be labelled as such in the
+# results file, never quoted as the pre-registered n.
+N_EVAL_PER_CLASS = int(os.environ.get("CTX_N_EVAL_PER_CLASS", "150"))
 SEED = 0
 
 # --- Steering strength -------------------------------------------------------
