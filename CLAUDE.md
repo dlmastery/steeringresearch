@@ -979,6 +979,14 @@ All of these are BLOCKED ONLY BY HOST MEMORY on the old box, not by missing code
 - Windows **COMMIT LIMIT**, not free RAM, is usually binding. `OSError 1455` = commit
   exhausted. A **silent exit with no traceback** = physical memory gone mid-mmap of judge
   shards. Gate on BOTH (commit >= 8.5 GB, physical >= 7.5 GB).
+  **BOTH means both, and reading one of them is how this rule gets violated by someone
+  who has just quoted it.** 2026-08-30: I checked physical (9.40 GB, PASS), launched a
+  two-model run, and it died with `OSError 1455` -- commit was 6.88 GB, below its own
+  gate, printed on the same line I had just read. The two failures look different and
+  that is the tell: a SILENT death is the physical wall, a 1455 TRACEBACK is the commit
+  wall. Four earlier attempts that session died silently (physical) and I had been
+  tuning for the wrong resource the whole time. Check both, print both, and let the
+  PASS/FAIL be computed rather than eyeballed.
 - The harness **REAPS** long background jobs. Checkpoint at the granularity of the most
   expensive irreversible step, not what is convenient to write.
 - Latency ratios formed across two machine states are meaningless — see the withdrawn
