@@ -1,31 +1,31 @@
 {
   "arms": {
     "content_bar": {
-      "auc": 0.8670744466800805,
-      "auc_raw": 0.8670744466800805,
+      "auc": 0.8417625754527163,
+      "auc_raw": 0.8417625754527163,
       "method": "content_bar",
       "n_folds": 5,
       "n_trajectories": 997,
       "notes": "unigram TF-IDF centroid bar (CLAUDE.md section 17 confound discipline; common.confound.content_bar), directionless, on the SAME text AgentTrajectory.text renders for the model. Paired against the linear arm's own content_bar_auc/clears_content_bar above."
     },
     "linear": {
-      "auc": 0.7502699811961978,
+      "auc": 0.7694071339440256,
       "auc_ci": [
-        0.7338595749972142,
-        0.7667878713538344
+        0.7526093794821662,
+        0.7858761002436285
       ],
-      "auc_residualised": 0.750732715740565,
+      "auc_residualised": 0.7681486592946561,
       "clears_content_bar": false,
-      "content_bar_auc": 0.8670744466800805,
+      "content_bar_auc": 0.8417625754527163,
       "layer": 12,
       "method": "linear_l2",
       "n_items": 8341,
       "n_trajectories": 997,
-      "notes": "CONTROL 1: degree-1 step-index residualisation, fit on the training fold only. It removes LINEAR position information and nothing else.; CONTROL 2 unit: trajectory-level probe AUC 0.7453 vs the content bar, pooled by 'max'; the row-level headline AUC is NOT comparable to a per-trajectory bar; CONTROL 3: labels permuted BETWEEN trajectories (Hewitt and Liang, EMNLP 2019, arXiv:1909.03368); CV: 5 group folds used, 0 skipped for a single-class fold; bootstrap resamples GROUPS, n_boot=10000",
-      "random_label_auc": 0.5042198721630683
+      "notes": "CONTROL 1: degree-1 step-index residualisation, fit on the training fold only. It removes LINEAR position information and nothing else.; CONTROL 2 unit: trajectory-level probe AUC 0.8070 vs the content bar, pooled by 'max'; the row-level headline AUC is NOT comparable to a per-trajectory bar; CONTROL 3: labels permuted BETWEEN trajectories (Hewitt and Liang, EMNLP 2019, arXiv:1909.03368); CV: 5 group folds used, 0 skipped for a single-class fold; bootstrap resamples GROUPS, n_boot=10000",
+      "random_label_auc": 0.5026322885708585
     },
     "random_label": {
-      "auc": 0.5062136660290344,
+      "auc": 0.5124397512256741,
       "method": "random_label",
       "n_trajectories": 997,
       "notes": "Hewitt and Liang, EMNLP 2019, 'Designing and Interpreting Probes with Control Tasks' (arXiv:1909.03368) -- labels permuted BETWEEN trajectories, same probe/CV settings as the linear arm."
@@ -58,7 +58,7 @@
     "activation_cache_path": "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\traj_probes\\artifacts\\acts_atbench_gemma-3-1b-it_L12_n500_s0.npz",
     "bootstrap": 10000,
     "corpus": "atbench",
-    "corpus_cache_path": "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\traj_probes\\artifacts\\corpus_atbench_n500_s0_t16_c1200.json.gz",
+    "corpus_cache_path": "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\traj_probes\\artifacts\\corpus_atbench_n500_s0_t16_c8000.json.gz",
     "dataset_licence": "apache-2.0 (dataset card front-matter, AI45Research/ATBench)",
     "dataset_paper": "arXiv:2604.02022 -- ATBench: A Diverse and Realistic Agent Trajectory Benchmark for Safety Evaluation and Diagnosis",
     "group_by": "trajectory",
@@ -66,7 +66,8 @@
     "hf_dataset": "AI45Research/ATBench",
     "hf_split": "test",
     "layer": 12,
-    "max_turn_chars": 1200,
+    "max_tokens": 16384,
+    "max_turn_chars": 8000,
     "max_turns": 16,
     "model_id": "models/google/gemma-3-1b-it",
     "model_tag": "gemma-3-1b-it",
@@ -94,10 +95,10 @@
   },
   "early_abort_curve": [
     {
-      "auc": 0.5740523138832998,
+      "auc": 0.5733360160965795,
       "auc_ci": [
-        0.5385485220601756,
-        0.6092446832871546
+        0.5377828018225959,
+        0.6084751867857564
       ],
       "auc_residualised": null,
       "k": 1,
@@ -105,56 +106,56 @@
       "n_rows": 997
     },
     {
-      "auc": 0.6078209255533199,
+      "auc": 0.6064185110663984,
       "auc_ci": [
-        0.5811587587469929,
-        0.633912805855218
+        0.5800561515258653,
+        0.6322292675759206
       ],
-      "auc_residualised": 0.6068943661971831,
+      "auc_residualised": 0.605622736418511,
       "k": 2,
       "n_folds_used": 5,
       "n_rows": 1994
     },
     {
-      "auc": 0.6090458696139479,
+      "auc": 0.6029045073196573,
       "auc_ci": [
-        0.5866847531976906,
-        0.6311548741562668
+        0.579929159829776,
+        0.625373471306017
       ],
-      "auc_residualised": 0.60904989644337,
+      "auc_residualised": 0.5987416605481231,
       "k": 3,
       "n_folds_used": 5,
       "n_rows": 2990
     },
     {
-      "auc": 0.6382896981488531,
+      "auc": 0.6329173741145572,
       "auc_ci": [
-        0.6176012229594479,
-        0.6586712399524216
+        0.6116795186941174,
+        0.6537301336010563
       ],
-      "auc_residualised": 0.6372174488371671,
+      "auc_residualised": 0.6319337446098009,
       "k": 4,
       "n_folds_used": 5,
       "n_rows": 3986
     },
     {
-      "auc": 0.683009672244943,
+      "auc": 0.6964279961064992,
       "auc_ci": [
-        0.6654632266834934,
-        0.7002703878162061
+        0.678283369983333,
+        0.714478895296043
       ],
-      "auc_residualised": 0.6823239406368041,
+      "auc_residualised": 0.6958290335272599,
       "k": 6,
       "n_folds_used": 5,
       "n_rows": 5726
     },
     {
-      "auc": 0.7162761169495176,
+      "auc": 0.7300701442363158,
       "auc_ci": [
-        0.6996460487054738,
-        0.7325000210092885
+        0.7131117548034307,
+        0.7468855787798117
       ],
-      "auc_residualised": 0.7154067745521498,
+      "auc_residualised": 0.7287404146435638,
       "k": 8,
       "n_folds_used": 5,
       "n_rows": 6930
@@ -176,5 +177,5 @@
     "region_is_pure": null
   },
   "note": "Gemma-3-1B / ATBench. Do not compare these numbers to arXiv:2607.06503's Qwen/TextCraft/WebShop figures -- different model, different corpus. Only the method and controls transfer.",
-  "wall_clock_sec": 594.52
+  "wall_clock_sec": 1042.38
 }

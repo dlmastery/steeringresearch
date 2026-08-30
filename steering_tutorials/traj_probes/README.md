@@ -259,7 +259,36 @@ See Section 7.
 
 ---
 
-## 7. Results: the probe is real, and it still loses
+## 7. Results: the probe is real, it still loses, and the margin is SMALL
+
+> **All numbers below are measured at the corrected config**
+> (`MAX_TURN_CHARS=8000`, `MAX_TOKENS=16384`; 1.46% of turns clipped, 0 rows
+> dropped). An earlier pass ran at `MAX_TURN_CHARS=1200`, which clipped ~10% of
+> turns; those results were **discarded, not reported**. See bug 4 in
+> "What broke". The correction moved the headline materially, and in the
+> direction that should worry an author: the probe got **better** (0.7453 ->
+> 0.8070 at the trajectory unit) and the bar got **worse** (0.8671 -> 0.8418),
+> so most of the gap I first measured was my own truncation, not the method.
+
+**The binding comparison, at the matched trajectory unit:**
+
+| quantity | value |
+|---|---|
+| activation probe (trajectory, max-pooled) | **0.8070** |
+| TF-IDF unigram content bar (same text) | **0.8418** |
+| margin | **-0.0347** |
+| paired bootstrap on the margin, 10k resamples of trajectories | mean **-0.0345**, 95% CI **[-0.0656, -0.0036]** |
+| P(probe > bar) | 0.014 |
+| clears_content_bar | **False** |
+
+The CI excludes zero, so the bar really does beat the probe -- but its upper
+bound is **-0.0036**, a hair from zero. At `c1200` the same margin read -0.1218.
+**The effect is real and it is small**, and anyone quoting the earlier -0.12
+would be quoting an artifact of over-clipping.
+
+### The four arms (row-level headline, for reference)
+
+
 
 Gemma-3-1B, layer 12, ATBench, 8,341 turn-rows over 997 trajectories, group-aware
 5-fold CV, 594.5s wall clock, 2026-08-29
@@ -268,42 +297,69 @@ result and it is stated as one here, not in Section 8.**
 
 | arm | AUC | 95% CI |
 |---|---|---|
-| linear activation probe (raw) | 0.7503 | [0.7339, 0.7668] |
-| after step-index residualisation (CONTROL 1) | 0.7507 | unchanged by residualisation |
+| linear activation probe (raw, row-level) | 0.7694 | [0.7526, 0.7859] |
+| after step-index residualisation (CONTROL 1) | 0.7681 | unchanged by residualisation |
 | step-index floor (`StepIndexProbe`) | 0.5036 | [0.4871, 0.5208] |
-| random-label ceiling (CONTROL 3, Hewitt-Liang) | 0.5062 | — |
-| TF-IDF unigram content bar (CONTROL 2) | 0.8671 | — |
+| random-label ceiling (CONTROL 3, Hewitt-Liang) | 0.5124 | — |
+| TF-IDF unigram content bar (CONTROL 2) | 0.8418 | — |
 | `clears_content_bar` | **FALSE** | — |
 
 The probe measures something real, not an artefact of the two things most
 likely to fake one: it is not **capacity** (the random-label ceiling sits at
-0.5062, near chance, while the real probe scores 0.7503 — far outside that
+0.5124, near chance, while the real probe scores 0.7694 — far outside that
 ceiling's own CI width); and it is not **position** (residualising out linear
-step-index moves the AUC from 0.7503 to 0.7507, i.e. not at all — the
+step-index moves the AUC from 0.7694 to 0.7681, i.e. not at all — the
 `MAX_TURNS=16` cap from Section 3 already did its job, since the step-index
 floor itself sits at chance, 0.5036). It is simply **worse than unigrams over
-the same text**: 0.7503 vs 0.8671. The one apples-to-apples unit match the
+the same text**: 0.7694 vs 0.8418. The one apples-to-apples unit match the
 falsifier actually calls for — content bar is trajectory-level, so the linear
 probe must be pooled to trajectory level too (`max`-pooled, `auc_residualised`'s
 sibling in the results file) rather than compared at its raw row-level headline
-— gives **0.7453 vs 0.8671**, the same verdict by a wider margin.
+— gives **0.8070 vs 0.8418**, margin **-0.0347**. A paired bootstrap over
+trajectories (10k resamples) puts that margin at mean **-0.0345**, 95% CI
+**[-0.0656, -0.0036]**, P(probe > bar) = 0.014. The CI excludes zero, so the bar
+genuinely wins -- but its upper bound is a hair from zero, and the same margin
+read **-0.1218** before the truncation was corrected. The verdict survives; the
+*size* of it did not.
 
 **The early-abort curve**, each point benchmarked against a content bar computed
 on the SAME first-k turns (`artifacts/content_bar_by_k.json`), so no cell is
 compared against a bar that read more text than the probe did:
 
-| k | 1 | 2 | 3 | 4 | 6 | 8 | 16 |
-|---|---|---|---|---|---|---|---|
-| probe AUC | 0.5741 | 0.6078 | 0.6090 | 0.6383 | 0.6830 | 0.7163 | 0.7503 |
-| content bar AUC | 0.7272 | 0.7438 | 0.7524 | 0.7906 | 0.8520 | 0.8690 | 0.8671 |
-| margin | -0.153 | -0.136 | -0.143 | -0.152 | -0.169 | -0.153 | -0.117 |
+Both sides are at the **trajectory** unit, so each cell is a like-for-like
+comparison:
 
-The probe loses **at every k**, by a stable -0.117 to -0.169 — this is not an
-aggregate effect hiding a horizon where it wins.
+| k (turns visible) | 1 | 2 | 3 | 4 | 6 | 8 | 16 |
+|---|---|---|---|---|---|---|---|
+| probe AUC (trajectory) | 0.5733 | 0.6128 | 0.6227 | 0.6410 | 0.7353 | 0.7999 | **0.8070** |
+| content bar AUC | 0.7272 | 0.7438 | 0.7392 | 0.7784 | 0.8331 | 0.8462 | 0.8418 |
+| margin | -0.154 | -0.131 | -0.117 | -0.137 | -0.098 | **-0.046** | **-0.035** |
+
+The probe still loses at every k. But the margin **shrinks monotonically with
+horizon** from k=4 onward: -0.137 -> -0.098 -> -0.046 -> -0.035. The residual
+stream closes most of its gap on the surface as the trajectory gets longer,
+which is exactly the regime this lesson exists to study.
+
+**This trend was invisible at the over-clipped config, and I reported its
+absence as a finding.** The `c1200` README said the margin was "stable -0.117 to
+-0.169 at every k -- not an aggregate effect hiding a horizon where it wins".
+That sentence is now **withdrawn**: it was false, and it was false *because of
+the cap*. A per-turn character cap clips long trajectories hardest -- they have
+both more turns and the giant tool dumps -- so over-clipping damaged precisely
+the long-horizon cells where the probe's advantage accrues, and flattened the
+trend into a flat line. That is a mechanism consistent with the data, not a
+separately verified claim; what is verified is that the trend appears once the
+cap is loosened.
+
+Read plainly: on this corpus the internal state buys little over unigrams for
+short trajectories, and closes to near-parity by 16 turns. Whether it would
+*overtake* the bar past 16 turns is **not measured here** -- `MAX_TURNS=16` is
+capped for the leak reason in Section 3, so the question is open, and it is the
+obvious next experiment rather than an implication of this table.
 
 **What does and does not reproduce.** The paper's *qualitative* claim
 reproduces: failure is predictable above chance from the very first turn
-(0.5741, k=1) and rises monotonically with horizon. What does not reproduce is
+(0.5733, k=1) and rises monotonically with horizon. What does not reproduce is
 the residual stream beating the surface — every paper here reports the probe
 as the interesting number; on this run the unigram bar is the better detector
 at every horizon.
@@ -327,7 +383,7 @@ method fails." This README will not print these numbers beside the papers'.
 - **The layer sweep is `[RUNNING]`, not concluded.** `sweep_layers.py` scores
   each layer against the SAME trajectory-level content bar computed once at
   layer 12. Layer 4 is in: AUC 0.7208, residualised 0.7198, margin **-0.1463**
-  vs the 0.8671 bar — also below it (`artifacts/layer_sweep_atbench_gemma-3-1b-it.json`).
+  vs the 0.8418 bar — also below it (`artifacts/layer_sweep_atbench_gemma-3-1b-it.json`).
   Layers 8/16/20/24 are not yet measured; **no final layer verdict is claimed.**
 
 ### What broke, and how it was caught
@@ -397,14 +453,14 @@ default is a cap chosen for the wrong reason.
   compared at) matches or beats the activation probe's residualised AUC. A
   "trajectory" probe that cannot beat unigrams over the same text has not shown
   the internal state carries anything the surface didn't. **FIRED**:
-  trajectory-pooled probe 0.7453 (row-level headline 0.7503) vs bar 0.8671, at
+  trajectory-pooled probe 0.8070 (row-level headline 0.7694) vs bar 0.8418, at
   every k in the early-abort curve (Section 7). This is the headline verdict of
   this lesson.
 - **The random-label ceiling disqualifies a raw number** if `LinearTrajProbe`'s
   real AUC does not clear `random_label_control`'s ceiling by more than the
   ceiling's own CI width — that would mean the probe's capacity alone explains
-  the score at this n, independent of any real signal. **Did not fire**: 0.7503
-  vs a ceiling of 0.5062 (Section 7) — capacity alone does not explain this
+  the score at this n, independent of any real signal. **Did not fire**: 0.7694
+  vs a ceiling of 0.5124 (Section 7) — capacity alone does not explain this
   probe's score.
 - **Reproduction C is not evaluable at all here** unless a future pass adds
   synthetic (and honestly-labelled-as-invented) tool-dependency edges — ATBench
