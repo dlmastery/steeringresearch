@@ -894,12 +894,34 @@ re-reading the entry:
 | 7 | re-run the 8 UNKNOWN-judge lessons under the new stamping | **OPEN.** |
 | 8 | research axes (budget_f, span, HC-3's L17/L20 cells) | **OPEN.** |
 
-**THE ACTUAL OPEN DEFECT, which this list buried under items that were finished.**
-`hello_world/artifacts/metrics_4b.json` exists and reports ROC-AUC **0.9975** --
-on **`n_test: 40`**. 18.10 already recorded that every probe in that directory
-was validated on 40 items, and those probes gate every conditional arm in the
-course. A 0.99 AUC on 40 items is not a result; it is a smoke test wearing one,
-and it is upstream of more lessons than any item in the table above.
+**THE ACTUAL OPEN DEFECT, which this list buried under items that were finished
+-- stated precisely, because my first version of this paragraph overstated it.**
+
+There are FOUR probes in `hello_world/artifacts`: `probe.pt`, `probe_1b.pt`,
+`probe_4b.pt`, `probe_large.pt`. Their validation differs by an order of
+magnitude:
+
+  metrics_1b     n_train 130 / n_val 30 / n_test  40   ROC-AUC 0.9900
+  metrics_4b     n_train 130 / n_val 30 / n_test  40   ROC-AUC 0.9975
+  metrics_large  n_train 524 / n_val 112/ n_test 112   ROC-AUC 0.9649
+
+The README does NOT misreport this -- it labels the 5-fold CV figure "the
+trustworthy number", warns in as many words that "a 0.95 accuracy on 40 test
+prompts is easy to report and easy to fool yourself with", and prints both. My
+first draft here called it "a smoke test wearing a result", which is unfair to
+what is actually written.
+
+THE REAL DEFECT IS WHICH ARTIFACT IS WIRED. `contextual_steering/config.py:139`
+loads the bare `probe.pt` -- the JailbreakBench starter probe behind the n_test
+= 40 column -- while `probe_large.pt`, trained on toxic-chat and validated on
+n_test = 112, sits beside it UNUSED. So the downstream conditional arms inherit
+the small-n probe, and the better-validated one is on disk doing nothing. Note
+also that the honest number is LOWER (0.9649 vs 0.9900): the small split was
+flattering, which is the direction that matters.
+
+Fixing it is not a doc change -- repointing the gate changes every downstream
+conditional result and requires re-running those lessons, so it is recorded here
+as a live decision rather than made silently.
 
 **The pattern, and it has now cost three separate corrections.** Entries here
 recorded an INTENTION as though it were code (items 1, 5), or a status
