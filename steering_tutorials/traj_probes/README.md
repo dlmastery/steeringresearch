@@ -52,8 +52,8 @@ is the *method and its controls* — not the magnitude of any AUC.
 > (Section 7). **This is not a refutation of arXiv:2607.06503** — it is one
 > model (1B vs 7B–70B), one layer, one pooling scheme, one corpus; the honest
 > statement is that we cannot claim the reproduction, not that the method
-> fails (Section 7's limitations subsection). A per-layer sweep is
-> **[RUNNING]**; layer 4 is in and also below the bar.
+> fails (Section 7's limitations subsection). The per-layer sweep is
+> **COMPLETE**: six layers, every one below the bar, best is layer 12.
 
 ---
 
@@ -367,8 +367,9 @@ at every horizon.
 **Do not read this as a refutation of arXiv:2607.06503.** That paper runs
 Qwen-2.5-7B / Qwen3-32B / Llama-3.3-70B over TextCraft and WebShop; this run is
 Gemma-3-1B, layer 12, last-token pooling, over ATBench. Model scale, layer,
-pooling, or corpus could each carry the reproduction on their own, and none of
-the four has been ruled out yet (the layer sweep below is the first). The
+pooling, or corpus could each carry the reproduction on their own. **One of the
+four is now ruled out**: the layer sweep below covers six depths and every one
+falls below the bar. Model scale, pooling and corpus remain untested. The
 honest statement is **"we cannot claim the reproduction here,"** not "the
 method fails." This README will not print these numbers beside the papers'.
 
@@ -380,11 +381,25 @@ method fails." This README will not print these numbers beside the papers'.
   pooling (mean, max) has been tried.
 - **One corpus.** ATBench only; the reproduction papers use TextCraft, WebShop,
   ALFWorld and tau-bench.
-- **The layer sweep is `[RUNNING]`, not concluded.** `sweep_layers.py` scores
-  each layer against the SAME trajectory-level content bar computed once at
-  layer 12. Layer 4 is in: AUC 0.7208, residualised 0.7198, margin **-0.1463**
-  vs the 0.8418 bar — also below it (`artifacts/layer_sweep_atbench_gemma-3-1b-it.json`).
-  Layers 8/16/20/24 are not yet measured; **no final layer verdict is claimed.**
+- **The layer axis is ruled out.** Six layers, each scored against the SAME
+  layer-independent content bar (0.8418) and re-scored at the matched
+  trajectory unit
+  (`artifacts/layer_sweep_unitfixed_atbench_gemma-3-1b-it.json`):
+
+  | layer | 4 | 8 | **12** | 16 | 20 | 24 |
+  |---|---|---|---|---|---|---|
+  | probe AUC (trajectory) | 0.7467 | 0.7753 | **0.8070** | 0.7817 | 0.7810 | 0.7731 |
+  | margin vs bar | -0.095 | -0.067 | **-0.035** | -0.060 | -0.061 | -0.069 |
+
+  Every layer is below the bar, so the negative is **not** an artefact of
+  probing the wrong depth. Layer 12 — the config default, which this README
+  previously flagged as "a default, not a finding" — turns out to be the best
+  of the six, so the headline was not depth-unlucky either.
+
+  Note this is a *different shape* from the over-clipped run, which produced a
+  flat profile (spread 0.041, no clear peak). At the corrected config the
+  spread is 0.060 with a distinct peak at layer 12. The truncation was
+  flattening the layer structure as well as the horizon trend.
 
 ### What broke, and how it was caught
 

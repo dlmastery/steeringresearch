@@ -14,83 +14,84 @@
   "n_folds": 5,
   "bootstrap": 10000,
   "max_turns": 16,
-  "max_turn_chars": 1200,
+  "max_turn_chars": 8000,
+  "max_tokens": 16384,
   "group_by": "trajectory",
   "results_path": "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\traj_probes\\artifacts\\results_atbench_gemma-3-1b-it_L12.json",
-  "corpus_cache_path": "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\traj_probes\\artifacts\\corpus_atbench_n500_s0_t16_c1200.json.gz",
+  "corpus_cache_path": "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\traj_probes\\artifacts\\corpus_atbench_n500_s0_t16_c8000.json.gz",
   "activation_cache_path": "C:\\Users\\evija\\steeringresearch\\steering_tutorials\\traj_probes\\artifacts\\acts_atbench_gemma-3-1b-it_L12_n500_s0.npz"
  },
- "content_bar_auc": 0.8671,
+ "content_bar_auc": 0.8418,
  "layers": [
   {
    "layer": 4,
-   "auc": 0.7208,
-   "auc_residualised": 0.7198,
+   "auc": 0.7289,
+   "auc_residualised": 0.7263,
    "auc_ci": [
-    0.7044,
-    0.737
+    0.7122,
+    0.7453
    ],
-   "content_bar_auc": 0.8671,
+   "content_bar_auc": 0.8418,
    "clears_content_bar": false,
-   "margin_vs_bar": -0.1463,
+   "margin_vs_bar": -0.1128,
    "n_rows": 8341,
-   "seconds": 364.6
+   "seconds": 453.9
   },
   {
    "layer": 8,
-   "auc": 0.7378,
-   "auc_residualised": 0.7361,
+   "auc": 0.7551,
+   "auc_residualised": 0.7532,
    "auc_ci": [
-    0.7213,
-    0.7541
+    0.7383,
+    0.7714
    ],
-   "content_bar_auc": 0.8671,
+   "content_bar_auc": 0.8418,
    "clears_content_bar": false,
-   "margin_vs_bar": -0.1292,
+   "margin_vs_bar": -0.0867,
    "n_rows": 8341,
-   "seconds": 277.3
+   "seconds": 477.1
   },
   {
    "layer": 16,
-   "auc": 0.7349,
-   "auc_residualised": 0.734,
+   "auc": 0.7589,
+   "auc_residualised": 0.7565,
    "auc_ci": [
-    0.7182,
-    0.751
+    0.7422,
+    0.7749
    ],
-   "content_bar_auc": 0.8671,
+   "content_bar_auc": 0.8418,
    "clears_content_bar": false,
-   "margin_vs_bar": -0.1322,
+   "margin_vs_bar": -0.0829,
    "n_rows": 8341,
-   "seconds": 336.7
+   "seconds": 448.3
   },
   {
    "layer": 20,
-   "auc": 0.7281,
-   "auc_residualised": 0.728,
+   "auc": 0.7611,
+   "auc_residualised": 0.7601,
    "auc_ci": [
-    0.7108,
-    0.7445
+    0.7438,
+    0.7775
    ],
-   "content_bar_auc": 0.8671,
+   "content_bar_auc": 0.8418,
    "clears_content_bar": false,
-   "margin_vs_bar": -0.139,
+   "margin_vs_bar": -0.0807,
    "n_rows": 8341,
-   "seconds": 355.1
+   "seconds": 475.5
   },
   {
    "layer": 24,
-   "auc": 0.7357,
-   "auc_residualised": 0.7354,
+   "auc": 0.7586,
+   "auc_residualised": 0.7574,
    "auc_ci": [
-    0.7187,
-    0.7526
+    0.741,
+    0.7758
    ],
-   "content_bar_auc": 0.8671,
+   "content_bar_auc": 0.8418,
    "clears_content_bar": false,
-   "margin_vs_bar": -0.1314,
+   "margin_vs_bar": -0.0832,
    "n_rows": 8341,
-   "seconds": 343.1
+   "seconds": 488.1
   }
  ]
 }

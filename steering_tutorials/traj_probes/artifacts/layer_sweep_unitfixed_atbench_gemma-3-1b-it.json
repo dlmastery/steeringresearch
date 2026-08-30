@@ -1,99 +1,99 @@
 {
- "content_bar_auc": 0.8671,
+ "content_bar_auc": 0.8418,
  "unit_note": "probe AUCs here are trajectory-pooled (max), the SAME unit as the bar. sweep_layers.py's own file records ROW-level AUCs against this same bar, which is a unit mismatch; both are kept so the error stays visible.",
  "layers": [
   {
    "layer": 4,
-   "auc": 0.7208,
-   "auc_residualised": 0.7198,
+   "auc": 0.7289,
+   "auc_residualised": 0.7263,
    "auc_ci": [
-    0.7044,
-    0.737
+    0.7122,
+    0.7453
    ],
-   "content_bar_auc": 0.8671,
+   "content_bar_auc": 0.8418,
    "clears_content_bar": false,
-   "margin_vs_bar": -0.1584,
+   "margin_vs_bar": -0.0951,
    "n_rows": 8341,
-   "seconds": 364.6,
-   "row_auc": 0.7208,
-   "trajectory_auc": 0.7087,
+   "seconds": 453.9,
+   "row_auc": 0.7289,
+   "trajectory_auc": 0.7467,
    "unit": "trajectory (max-pooled), matched to the bar"
   },
   {
    "layer": 8,
-   "auc": 0.7378,
-   "auc_residualised": 0.7361,
+   "auc": 0.7551,
+   "auc_residualised": 0.7532,
    "auc_ci": [
-    0.7213,
-    0.7541
+    0.7383,
+    0.7714
    ],
-   "content_bar_auc": 0.8671,
+   "content_bar_auc": 0.8418,
    "clears_content_bar": false,
-   "margin_vs_bar": -0.1475,
+   "margin_vs_bar": -0.0665,
    "n_rows": 8341,
-   "seconds": 277.3,
-   "row_auc": 0.7378,
-   "trajectory_auc": 0.7196,
+   "seconds": 477.1,
+   "row_auc": 0.7551,
+   "trajectory_auc": 0.7753,
    "unit": "trajectory (max-pooled), matched to the bar"
   },
   {
    "layer": 12,
    "auc": NaN,
    "row_auc": NaN,
-   "trajectory_auc": 0.7453,
-   "margin_vs_bar": -0.1218,
+   "trajectory_auc": 0.807,
+   "margin_vs_bar": -0.0348,
    "clears_content_bar": false,
    "unit": "trajectory (max-pooled), matched to the bar"
   },
   {
    "layer": 16,
-   "auc": 0.7349,
-   "auc_residualised": 0.734,
+   "auc": 0.7589,
+   "auc_residualised": 0.7565,
    "auc_ci": [
-    0.7182,
-    0.751
+    0.7422,
+    0.7749
    ],
-   "content_bar_auc": 0.8671,
+   "content_bar_auc": 0.8418,
    "clears_content_bar": false,
-   "margin_vs_bar": -0.1433,
+   "margin_vs_bar": -0.0601,
    "n_rows": 8341,
-   "seconds": 336.7,
-   "row_auc": 0.7349,
-   "trajectory_auc": 0.7238,
+   "seconds": 448.3,
+   "row_auc": 0.7589,
+   "trajectory_auc": 0.7817,
    "unit": "trajectory (max-pooled), matched to the bar"
   },
   {
    "layer": 20,
-   "auc": 0.7281,
-   "auc_residualised": 0.728,
+   "auc": 0.7611,
+   "auc_residualised": 0.7601,
    "auc_ci": [
-    0.7108,
-    0.7445
+    0.7438,
+    0.7775
    ],
-   "content_bar_auc": 0.8671,
+   "content_bar_auc": 0.8418,
    "clears_content_bar": false,
-   "margin_vs_bar": -0.151,
+   "margin_vs_bar": -0.0608,
    "n_rows": 8341,
-   "seconds": 355.1,
-   "row_auc": 0.7281,
-   "trajectory_auc": 0.7161,
+   "seconds": 475.5,
+   "row_auc": 0.7611,
+   "trajectory_auc": 0.781,
    "unit": "trajectory (max-pooled), matched to the bar"
   },
   {
    "layer": 24,
-   "auc": 0.7357,
-   "auc_residualised": 0.7354,
+   "auc": 0.7586,
+   "auc_residualised": 0.7574,
    "auc_ci": [
-    0.7187,
-    0.7526
+    0.741,
+    0.7758
    ],
-   "content_bar_auc": 0.8671,
+   "content_bar_auc": 0.8418,
    "clears_content_bar": false,
-   "margin_vs_bar": -0.1628,
+   "margin_vs_bar": -0.0687,
    "n_rows": 8341,
-   "seconds": 343.1,
-   "row_auc": 0.7357,
-   "trajectory_auc": 0.7043,
+   "seconds": 488.1,
+   "row_auc": 0.7586,
+   "trajectory_auc": 0.7731,
    "unit": "trajectory (max-pooled), matched to the bar"
   }
  ]

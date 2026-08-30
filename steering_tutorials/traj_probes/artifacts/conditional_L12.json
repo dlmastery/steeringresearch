@@ -1,7 +1,7 @@
 {
  "layer": 12,
  "n_trajectories": 997,
- "probe_auc_trajectory_folds": 0.7719,
+ "probe_auc_trajectory_folds": 0.8017,
  "oracle_risk_tag_auc": 0.748,
  "benign_tagged": 248,
  "benign_tagged_unsafe": 0,
@@ -9,12 +9,12 @@
  "threat_tagged_safe": 252,
  "conditional": {
   "n": 749,
-  "probe_auc": 0.7482,
-  "content_bar_auc": 0.9216
+  "probe_auc": 0.7442,
+  "content_bar_auc": 0.8972
  },
  "content_bar_decomposition": {
   "opening_user_turn_only": 0.7264,
-  "everything_after_turn_1": 0.8711,
-  "full_trajectory": 0.8671
+  "everything_after_turn_1": 0.842,
+  "full_trajectory": 0.8418
  }
 }

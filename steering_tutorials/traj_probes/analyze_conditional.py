@@ -1,6 +1,6 @@
 """analyze_conditional.py -- what is the probe actually detecting?
 
-The headline says the activation probe (0.7503) loses to a unigram bar (0.8671).
+The headline says the activation probe (0.8070) loses to a unigram bar (0.8418).
 That is a comparison, not an explanation. This asks what the probe's score is
 made of, and tests one specific hypothesis to destruction.
 
@@ -11,35 +11,48 @@ end unsafe. Of 749 threat-tagged, 252 (33.6%) still end safe. So a detector that
 knew only "does this prompt carry a threat", and nothing whatever about what the
 agent then did, would score AUC 0.7480.
 
-Our probe scores 0.7503. Near-identical. The obvious reading is that the probe
-has learned to recognise a risky SETUP rather than to predict an emergent
-failure -- which would make "early prediction" mostly prompt classification.
+When this was first measured the probe scored 0.7503 -- near-identical to the
+oracle, and the obvious reading was that it had learned to recognise a risky
+SETUP rather than predict an emergent failure, making "early prediction" mostly
+prompt classification.
+
+That coincidence has since EVAPORATED. At the corrected truncation config the
+probe scores 0.8070 (trajectory unit) against the same 0.7480 oracle, so the
+numbers are no longer close and the deflationary reading no longer even has its
+starting observation. The test below refuted it anyway, which is why the file
+still exists: the refutation did not depend on the coincidence.
 
 THE TEST THAT SETTLES IT
 ------------------------
 Restrict to the threat-tagged subset. There the tag is constant, so it carries
 no information, and only the outcome varies. A pure threat-detector must fall to
-chance. Measured: the probe scores 0.7482 there, far above 0.5.
+chance. Measured at the corrected config: the probe scores 0.7442 there on
+n=749, far above 0.5.
 
 So the hypothesis is REFUTED. The probe is genuinely predicting outcome among
 trajectories that all start out risky, and the numeric coincidence was a
 coincidence. Recorded because the negative headline should not be allowed to
 imply a deflationary story that the data does not support.
 
-The bar, meanwhile, rises to 0.9216 on that same subset -- it beats the probe by
-MORE on the harder conditional task, not less.
+The bar, meanwhile, rises to 0.8972 on that same subset while the probe falls to
+0.7442 -- so on the HARDER conditional task the gap widens to -0.153, far beyond
+the -0.035 of the headline. Whatever the probe is reading, the surface carries it
+better once the easy benign-tagged trajectories are removed.
 
 A CAVEAT ON THE CI, found while reconciling two numbers
 -------------------------------------------------------
 This script builds CV folds at the TRAJECTORY level; `LinearTrajProbe` builds
 them at the ROW level (probes.py:370, `group_folds(bundle.group_id, ...)` over
 8,341 rows). Both are group-aware and neither leaks, but they are different
-partitions, and they disagree: 0.7719 here vs 0.7503 there.
+partitions, and they once disagreed by 0.0216 (0.7719 vs 0.7503).
 
-That 0.0216 gap is LARGER than the reported bootstrap half-width (+/-0.016). The
+That gap was LARGER than the reported bootstrap half-width (+/-0.016). The
 CI resamples groups at a FIXED fold assignment, so it does not include
 fold-construction variance. Quote the two numbers against their own pipeline,
-never across -- and read the CI as narrower than the true uncertainty.
+never across -- and read the CI as narrower than the true uncertainty. At the
+corrected config the same two pipelines give 0.8017 (here) and 0.8070
+(LinearTrajProbe), a 0.0053 gap -- much smaller than before, but the caveat
+stands because nothing guarantees it stays small.
 
 CPU-only: reads the cached bundle, loads no model. ASCII stdout.
 """
@@ -161,8 +174,10 @@ def main() -> int:
     print("  n=%d  probe %.4f  bar %.4f   [chance 0.5]"
           % (out["conditional"]["n"], out["conditional"]["probe_auc"],
              out["conditional"]["content_bar_auc"]))
-    print("  -> probe is FAR above chance, so it is NOT merely a threat detector;")
-    print("     the 0.7503/0.7480 near-identity was a coincidence.")
+    print("  -> probe is FAR above chance, so it is NOT merely a threat detector.")
+    print("     (The 0.7503-vs-0.7480 near-identity that first motivated this")
+    print("      test no longer exists at the corrected config; the refutation")
+    print("      never depended on it.)")
     print("")
     d = out["content_bar_decomposition"]
     print("where the SURFACE signal lives (TF-IDF):")
