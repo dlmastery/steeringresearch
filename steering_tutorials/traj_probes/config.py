@@ -61,7 +61,7 @@ from steering_tutorials.common.artifact_paths import assert_no_bare_sibling, key
 __all__ = [
     "CORPUS", "CORPUS_CHOICES", "MODEL_ID", "MODEL_TAG", "LAYER",
     "N_PER_CLASS", "SEED", "N_FOLDS", "BOOTSTRAP", "MAX_TURNS",
-    "MAX_TURN_CHARS", "GROUP_BY",
+    "MAX_TURN_CHARS", "MAX_TOKENS", "GROUP_BY",
     "ARTIFACTS", "RESULTS_PATH", "CORPUS_CACHE_PATH", "ACTIVATION_CACHE_PATH",
     "HF_DATASET", "HF_CONFIG", "HF_SPLIT", "DATASET_LICENCE", "DATASET_PAPER",
     "CACHE_REFRESH", "ensure_artifacts", "preflight", "as_dict",
@@ -147,7 +147,15 @@ MAX_TURNS = _env_int("TP_MAX_TURNS", 16)
 # anything. Applied in the LOADER so the model and the content bar read the same
 # truncated string -- truncating only the model input would make the confound
 # comparison meaningless.
-MAX_TURN_CHARS = _env_int("TP_MAX_TURN_CHARS", 1200)
+MAX_TURN_CHARS = _env_int("TP_MAX_TURN_CHARS", 8000)
+
+# The extraction token budget. Was a hard-coded ExtractSettings default of 4096,
+# so it was never stamped, never swept, and silently forced the turn cap down to
+# 1200 to fit -- which truncated ~10% of ALL turns rather than the pathological
+# tool dumps it was aimed at. Measured at MAX_TURN_CHARS=8000: p99 12,304 tokens,
+# max 14,634, so 16,384 overflows NOTHING and 8,192 would still overflow 23
+# trajectories. The model's context is 32,768, so this is well inside it.
+MAX_TOKENS = _env_int("TP_MAX_TOKENS", 16384)
 
 # Group-aware CV unit. "trajectory" is the only defensible default on ATBench --
 # see data.py's GROUPING section for the measurement that rules the alternatives
@@ -212,7 +220,8 @@ def as_dict():
         "model_id": MODEL_ID, "model_tag": MODEL_TAG, "layer": LAYER,
         "n_per_class": N_PER_CLASS, "seed": SEED, "n_folds": N_FOLDS,
         "bootstrap": BOOTSTRAP, "max_turns": MAX_TURNS,
-        "max_turn_chars": MAX_TURN_CHARS, "group_by": GROUP_BY,
+        "max_turn_chars": MAX_TURN_CHARS, "max_tokens": MAX_TOKENS,
+        "group_by": GROUP_BY,
         "results_path": str(RESULTS_PATH),
         "corpus_cache_path": str(CORPUS_CACHE_PATH),
         "activation_cache_path": str(ACTIVATION_CACHE_PATH),

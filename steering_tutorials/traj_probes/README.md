@@ -332,7 +332,7 @@ method fails." This README will not print these numbers beside the papers'.
 
 ### What broke, and how it was caught
 
-Three instrument bugs surfaced during this run. None of them crashed — each
+Four instrument bugs surfaced during this run. None of them crashed — each
 produced confident, well-formed, wrong output, the same shape as every prior
 defect in this program (Section 18.8 of the project's `CLAUDE.md`):
 
@@ -341,9 +341,8 @@ defect in this program (Section 18.8 of the project's `CLAUDE.md`):
    — from trajectories that were 86% unsafe against a 49.8% corpus base rate,
    i.e. precisely the late turns of the failing class. The run's own log said
    "28 turns truncated," understating a 340-row loss by 12x. Fixed by moving
-   the cap into the loader as `config.MAX_TURN_CHARS=1200` (so the model and
-   the content bar read the exact same string); at that cap every trajectory
-   fits inside 4,096 tokens (max observed: 4,025) and 0 rows are dropped.
+   the cap into the loader as `config.MAX_TURN_CHARS` (so the model and the
+   content bar read the exact same string), at which point 0 rows are dropped.
 2. **That fix appeared to do nothing.** `ATBenchLoader.cache_path` was keyed on
    `(corpus, n, seed, max_turns)` and not on the new character cap, so it kept
    serving a pre-cap cache while the config stamp printed
@@ -356,9 +355,29 @@ defect in this program (Section 18.8 of the project's `CLAUDE.md`):
    set `traj_uid == group_id` and so was structurally incapable of catching a
    key-format mismatch. A total key miss now raises instead of silently
    returning nothing.
+4. **The fix for (1) was itself set far too aggressively, and that was the
+   worst of the four** — because it did not merely lose data, it could have
+   biased the headline comparison in the probe's disfavour. The first cap was
+   `MAX_TURN_CHARS=1200`, chosen only so trajectories would fit a **hard-coded**
+   4,096-token `ExtractSettings` default that was never a config knob, never
+   stamped, and never swept. Per-turn length is p50 347 / p90 1,088 / p99
+   50,915 / max 53,255 chars, so a 1,200 cap clips roughly **10% of all turns**
+   when its only target was a handful of giant tool dumps. That is data
+   truncation for its own sake, and it is not symmetric between the two arms:
+   the probe reads the **last token** of each turn, so clipping changes what it
+   reads, while TF-IDF still recovers the discriminative unigrams from the
+   surviving text. A negative result measured that way is partly an artifact of
+   the cap. Corrected: `MAX_TURN_CHARS=8000` with `MAX_TOKENS=16384` (now a
+   real, stamped, fingerprinted config value), which clips **1.46% of turns
+   (122 of 8,341)**, drops no rows, and sits well inside the model's 32,768
+   context. **Every number in Section 7 is measured at the corrected config.**
+   The `c1200` results were discarded, not reported.
 
 The common shape: right output format, no error, wrong content — the failure
-mode this whole program keeps finding, never the loud kind.
+mode this whole program keeps finding, never the loud kind. Bug 4 adds a second
+lesson the others do not carry: a *control* can be over-tightened until it
+damages the thing it was protecting, and a cap chosen to satisfy a hidden
+default is a cap chosen for the wrong reason.
 
 ---
 

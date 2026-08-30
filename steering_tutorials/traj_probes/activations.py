@@ -82,13 +82,15 @@ from pathlib import Path
 
 import numpy as np
 
+import steering_tutorials.traj_probes.config as _C
+
 # --- sibling / cousin imports, tolerant of script-vs-package invocation ------
 try:  # package form
     from .types import ActivationBundle
 except ImportError:  # pragma: no cover - direct-script form
     _HERE = Path(__file__).resolve().parent
     sys.path.insert(0, str(_HERE.parent.parent))
-    from steering_tutorials.traj_probes.types import ActivationBundle
+from steering_tutorials.traj_probes.types import ActivationBundle
 
 try:
     from ..common.artifact_paths import keyed_path
@@ -398,7 +400,7 @@ class ExtractSettings:
     """Everything that changes the NUMBERS, and therefore the cache identity."""
 
     pooling: str = "last"
-    max_tokens: int = 4096
+    max_tokens: int = _C.MAX_TOKENS
     row_roles: tuple = ()        # () = a row for every turn
     layer: int = 12
 
