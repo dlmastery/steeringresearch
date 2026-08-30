@@ -297,8 +297,17 @@ def verify_prefix_equivalence(model, tok, text: str, boundaries,
     }
 
 
-def _forward_residual(model, ids, layer: int) -> np.ndarray:
-    """One forward pass; -> [seq, hidden] float32 residual after `layer`."""
+def _forward_residual(model, ids, layer: int, keep=None):
+    """One forward pass; -> [seq, hidden] float32 residual after `layer`.
+
+    With `keep` (an iterable of token positions), returns ONLY those rows plus a
+    {position: row_index} map, and never materialises the full sequence in
+    float32. That matters at long context: a 16k-token trajectory is
+    16384 x 1152 floats = 75 MB per `.float()` copy on the GPU, on top of
+    attention, and the "last" pooling needs about SIXTEEN of those rows. Keeping
+    the whole thing was what made the layer sweep OOM at MAX_TOKENS=16384 while
+    the same corpus ran fine at 4096.
+    """
     import torch
 
     try:
@@ -322,7 +331,16 @@ def _forward_residual(model, ids, layer: int) -> np.ndarray:
             model(t)
     finally:
         handle.remove()
-    return cap["h"][0].float().cpu().numpy().astype(np.float32)
+    h = cap.pop("h")[0]
+    if keep is None:
+        out = h.float().cpu().numpy().astype(np.float32)
+        del h
+        return out
+    pos = sorted({int(k) for k in keep if k is not None})
+    sel = torch.as_tensor(pos, dtype=torch.long, device=h.device)
+    sub = h.index_select(0, sel).float().cpu().numpy().astype(np.float32)
+    del h, sel
+    return sub, {p: i for i, p in enumerate(pos)}
 
 
 # ---------------------------------------------------------------------------
@@ -806,15 +824,26 @@ class HFActivationExtractor:
                 if not ids or all(b is None for b in bounds):
                     _eprint("[acts] skipping %s: no usable turn boundary" % traj.uid)
                     continue
-                H = _forward_residual(model, ids, layer)   # [seq, hidden]
+                # "last" needs only the boundary rows, so do not drag the whole
+                # sequence back in float32 (see _forward_residual).
+                if self.settings.pooling == "last":
+                    H, posmap = _forward_residual(
+                        model, ids, layer,
+                        keep=[b for b in bounds if b is not None])
+                else:
+                    H, posmap = _forward_residual(model, ids, layer), None
                 rows, steps = [], []
                 for k, turn in enumerate(traj.turns):
                     if k >= len(bounds) or bounds[k] is None:
                         continue
                     if wanted_roles is not None and turn.role not in wanted_roles:
                         continue
-                    rows.append(self._pool(H, bounds, k))
+                    if posmap is not None:
+                        rows.append(H[posmap[int(bounds[k])]])
+                    else:
+                        rows.append(self._pool(H, bounds, k))
                     steps.append(turn.index)
+                del H
                 if not rows:
                     continue
                 journal.append(traj.uid, np.stack(rows), traj.label,
