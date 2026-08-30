@@ -180,7 +180,7 @@ not claim closer correspondence than that. Detail: `cross_trajectory/AUDIT_2026-
 
 | Lesson | Teaches | Reference paper | Status |
 |---|---|---|---|
-| [`control_data_split`](control_data_split/README.md) | why instruction/data fusion is architectural, not a training accident: the impossibility theorem turned into a MEASURABLE bound on any provenance detector, plus ASIDE's parameter-free 90-degree rotation of data-token embeddings implemented exactly | [ASIDE: Architectural Separation of Instructions and Data in Language Models (arXiv:2503.10566, ICLR 2026)](https://arxiv.org/abs/2503.10566) · [On the Inseparability of Instructions and Data in Shared-Embedding Sequence Models (arXiv:2606.27567)](https://arxiv.org/abs/2606.27567) · [SecOPD (arXiv:2608.21500)](https://arxiv.org/abs/2608.21500) · [Defeating Prompt Injections by Design / CaMeL (arXiv:2503.18813)](https://arxiv.org/abs/2503.18813) · [DRIP (arXiv:2511.00447)](https://arxiv.org/abs/2511.00447) · [Meta SecAlign (arXiv:2507.02735)](https://arxiv.org/abs/2507.02735) · [COPA (arXiv:2608.19982)](https://arxiv.org/abs/2608.19982) · [PICO (arXiv:2504.21029)](https://arxiv.org/abs/2504.21029) | 🧪 geometry built + verified; SFT arms NOT run |
+| [`control_data_split`](control_data_split/README.md) | why instruction/data fusion is architectural, not a training accident: the impossibility theorem turned into a MEASURABLE bound on any provenance detector, plus ASIDE's parameter-free 90-degree rotation of data-token embeddings implemented exactly | [ASIDE: Architectural Separation of Instructions and Data in Language Models (arXiv:2503.10566, ICLR 2026)](https://arxiv.org/abs/2503.10566) · [On the Inseparability of Instructions and Data in Shared-Embedding Sequence Models (arXiv:2606.27567)](https://arxiv.org/abs/2606.27567) · [SecOPD (arXiv:2608.21500)](https://arxiv.org/abs/2608.21500) · [Defeating Prompt Injections by Design / CaMeL (arXiv:2503.18813)](https://arxiv.org/abs/2503.18813) · [DRIP (arXiv:2511.00447)](https://arxiv.org/abs/2511.00447) · [Meta SecAlign (arXiv:2507.02735)](https://arxiv.org/abs/2507.02735) · [COPA (arXiv:2608.19982)](https://arxiv.org/abs/2608.19982) · [PICO (arXiv:2504.21029)](https://arxiv.org/abs/2504.21029) | ✅ geometry RUN 2026-08-30 — ISE contrast reproduces; separability metric SATURATES; SFT arms NOT run |
 
 ### 📜 Certify — provable guarantees
 
@@ -217,14 +217,24 @@ Two caveats that belong in the same breath as the number:
    all turns. It inflated the margin to -0.122 AND flattened both the horizon
    trend and the layer profile. Those results were discarded. The cap is now
    8,000 (1.46% of turns clipped).
-2. **Only ONE probe architecture and ONE pooling were tested** — logistic
-   regression on last-token activations. `CascadeResult` is defined in the
-   lesson's spine and never used, so reproduction A's actual recall-controlled
-   cascade (per-round abort thresholds, token savings at a recall target) is
-   NOT reproduced; the horizon curve is a different claim. `mean_turn` and
-   `mean_prefix` pooling are implemented and never swept. Reproduction C is
-   not evaluable on ATBench at all (no tool-dependency edges). So "the layer
-   axis is ruled out" is true and much narrower than "the method fails here".
+2. **The pooling axis was swept last and changed the ranking verdict.**
+   `mean_turn` reaches **0.8565** against the 0.8418 bar (margin +0.015,
+   paired-bootstrap CI **[-0.0127, +0.0422]** — *includes zero*, so the word is
+   **parity**, not a win); `last` 0.8070 loses; `mean_prefix` 0.7339 is worst,
+   despite being the arm confounded with step index — I predicted the confound
+   would inflate it and it came last. So the ranking negative was partly a
+   property of a default, not of the residual stream.
+3. **Reproduction A's actual cascade now exists, and it is a second negative.**
+   `CascadeResult` had sat defined-but-unused. Built, the activation cascade
+   **dominates a step-index (abort-on-length) baseline at 4 of 5 targets** and
+   **loses to the content-bar cascade at 5 of 5**, at matched achieved recall
+   (two targets differ by exactly 0.0000). Running it at `mean_turn` does *not*
+   close that gap — it loses 5 of 5 too, and is slightly *worse* than `last`.
+   **Ranking AUC and operational token-saving order the poolings differently**,
+   which is precisely why the paper specifies a cascade rather than a
+   classifier score.
+4. Reproduction C is not evaluable on ATBench at all (no tool-dependency
+   edges), and is declared so rather than approximated.
 
 
 
@@ -333,6 +343,31 @@ The remaining lessons (`flas`, `non_identifiability`, `fine_grained`,
 verdict in their own `README.md`. See per-lesson pages for the full picture.
 
 ---
+
+**`control_data_split` (2026-08-30) — one reproduction, one null instrument.**
+
+*Reproduces, without any training:* the ISE contrast. `cos(offset, vanilla)` is
+**0.991 → 1.000** at every layer while `cos(rotation, vanilla)` dips to **0.50**
+and **0.61**. An additive offset is absorbed by the network; the 90° rotation is
+not. That is ASIDE's central geometric argument, shown as arithmetic rather than
+cited.
+
+*Does not test what it was built to test:* the angle sweep. Rotated separability
+is **1.0000 at every layer and every angle**, so the rotated-minus-vanilla gap
+is byte-identical across 45°/90°/135°. That identity is arithmetic — the gap is
+(1.0 − vanilla) whatever θ is — so the metric is **saturated** and the π/2 claim
+remains **untested here**. Reading "the gap is the same at every angle" as "π/2
+is numerology" would be reading a dead instrument as a measurement. It saturates
+because *our* role labels are per-document rather than per-token as in ASIDE's
+templates, so every token of a data-role document moves together.
+
+*A mechanism the paper does not measure:* on Gemma-3-1B, **centering the
+embedding matrix destroys the rotation's linear detectability** (AUC 1.0000 →
+0.3666, onto an isotropic control's 0.4901). The off-origin centroid — about 30%
+of a typical token vector's norm — is the *entire* layer-0 signal. Anisotropy is
+irrelevant to a linear probe: rotation maps a zero mean to a zero mean, so a
+centred cloud is invisible however structured it is. A model with centred
+embeddings would get nothing from ASIDE at layer 0.
 
 ## Rigor & honesty (the measurement stack)
 
