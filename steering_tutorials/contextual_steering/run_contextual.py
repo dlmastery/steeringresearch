@@ -70,6 +70,8 @@ RESULTS SCHEMA (kept in sync with README + plots)
 """
 from __future__ import annotations
 
+import os
+
 import json
 import sys
 
@@ -251,6 +253,146 @@ def _gate_table(results: dict) -> str:
 # --------------------------------------------------------------------------- #
 # The pipeline — everything below loads / runs the model.
 # --------------------------------------------------------------------------- #
+# ---------------------------------------------------------------------------
+# PHASES -- one model resident at a time.
+# ---------------------------------------------------------------------------
+# This host cannot reliably hold the target model AND an off-family judge in one
+# process: six consecutive attempts died three different ways (silent exit =
+# physical memory; OSError 1455 = Windows commit limit; segfault 139 = two models
+# resident). The single-model path generated normally on the same host in the
+# same minute, so the blocker is the SECOND resident model, not headroom.
+#
+# `gavel/rejudge.py` already solves this and this mirrors it:
+#
+#   CTX_PHASE=generate  load ONLY the target, generate every arm, cache the
+#                       (prompt, response, alpha, class) records, exit.
+#   CTX_PHASE=judge     load ONLY the judge, grade the cached generations.
+#   CTX_PHASE=merge     no model at all: recompute the arm stats from the graded
+#                       cache and write results.json.
+#   CTX_PHASE=all       the original single-process path (default), fine wherever
+#                       two models fit.
+#
+# Splitting also makes each phase short enough to survive this harness's
+# background-job reaper, which killed the single-model run at ~10 minutes.
+PHASE = os.environ.get("CTX_PHASE", "all").strip().lower()
+GEN_CACHE_PATH = C.ARTIFACTS / "phase_generations.json"
+
+
+class _DeferredJudge:
+    """Phase-1 stand-in. Grades nothing and says so.
+
+    Returns "PENDING" rather than a real verdict, so a cache that somehow
+    reaches `merge` ungraded produces obviously-broken rates instead of
+    plausible ones. `merge` refuses a cache containing PENDING anyway.
+    """
+
+    judge_id = "DEFERRED"
+
+    def verdict(self, prompt, resp):
+        return "PENDING"
+
+    def stamp(self) -> dict:
+        return {"judge_id": "DEFERRED", "is_self_judge": None,
+                "judge_model_id": None, "off_family": None}
+
+
+def phase_judge() -> dict:
+    """Load ONLY the judge; grade the cached generations in place."""
+    from steering_tutorials.hello_world_steering.judge import Judge
+
+    if not GEN_CACHE_PATH.exists():
+        raise SystemExit("no %s -- run CTX_PHASE=generate first"
+                         % GEN_CACHE_PATH.name)
+    blob = json.loads(GEN_CACHE_PATH.read_text(encoding="utf-8"))
+    # Judge(None, None) is safe ONLY off-family: judge.py loads its own model in
+    # that branch and never touches the one passed. With a self-judge it would
+    # need the target, which is exactly the second model this split avoids.
+    judge = Judge(None, None)
+    if getattr(judge, "is_self_judge", False):
+        raise SystemExit(
+            "CTX_PHASE=judge needs an OFF-FAMILY judge: set "
+            "STEER_JUDGE_MODEL. A self-judge would require the target model, "
+            "which is the second resident model this split exists to avoid.")
+    n = 0
+    for arm, recs in blob["records"].items():
+        for r in recs:
+            r["verdict"] = judge.verdict(r["prompt"], r["response"])
+            n += 1
+            if n % 25 == 0:
+                print("[judge] %d graded" % n, file=sys.stderr)
+    blob["judge_stamp"] = judge.stamp()
+    tmp = GEN_CACHE_PATH.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+    os.replace(tmp, GEN_CACHE_PATH)
+    print("[judge] graded %d generations with %s -> %s"
+          % (n, blob["judge_stamp"].get("judge_model_id"), GEN_CACHE_PATH.name),
+          file=sys.stderr)
+    return blob
+
+
+def phase_merge() -> dict:
+    """No model. Recompute arm stats from the graded cache and write results."""
+    if not GEN_CACHE_PATH.exists():
+        raise SystemExit("no %s -- run CTX_PHASE=generate then =judge"
+                         % GEN_CACHE_PATH.name)
+    blob = json.loads(GEN_CACHE_PATH.read_text(encoding="utf-8"))
+    pending = sum(1 for recs in blob["records"].values()
+                  for r in recs if r.get("verdict") == "PENDING")
+    if pending:
+        raise SystemExit(
+            "%d generations are still PENDING -- run CTX_PHASE=judge before "
+            "merging. Refusing to compute rates over ungraded output." % pending)
+
+    def _stats(recs):
+        h = [r for r in recs if r["class"] == "harmful"]
+        b = [r for r in recs if r["class"] == "benign"]
+        return _arm_stats([r["verdict"] for r in h], [r["verdict"] for r in b],
+                          [r["alpha"] for r in h], [r["alpha"] for r in b])
+
+    head = blob["head"]
+    arms = {name: _stats(recs) for name, recs in blob["records"].items()
+            if not name.startswith("contextual::")}
+    gates_out = {}
+    for gate in blob["gates_to_run"]:
+        key = "contextual::%s" % gate
+        g = dict(blob["gate_meta"][gate])
+        g["arm"] = _stats(blob["records"][key])
+        gates_out[gate] = g
+    arms["contextual"] = gates_out[head]["arm"]
+
+    examples = []
+    fixed_by_prompt = {r["prompt"]: r for r in blob["records"]["fixed"]}
+    for r in blob["records"]["contextual::%s" % head]:
+        if len([e for e in examples if e["class"] == r["class"]]) >= 4:
+            continue
+        f = fixed_by_prompt.get(r["prompt"], {})
+        examples.append({
+            "prompt": r["prompt"], "class": r["class"], "proj": r["proj"],
+            "fixed_alpha": f.get("alpha"), "fixed": f.get("response"),
+            "fixed_verdict": f.get("verdict"),
+            "ctx_alpha": r["alpha"], "contextual": r["response"],
+            "ctx_verdict": r["verdict"]})
+
+    results = dict(blob["static"])
+    results.update({
+        "judge": blob["judge_stamp"].get("judge_id", "unknown"),
+        **blob["judge_stamp"],
+        "arms": arms, "gates": gates_out, "examples": examples,
+        "phased": True,
+        "phase_note": ("Generated and judged in SEPARATE processes, one model "
+                       "resident at a time (CTX_PHASE=generate/judge/merge). "
+                       "Identical arithmetic to the single-process path; the "
+                       "split exists because this host cannot hold the target "
+                       "and an off-family judge simultaneously."),
+    })
+    tmp = C.RESULTS_PATH.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(results, indent=1), encoding="utf-8")
+    os.replace(tmp, C.RESULTS_PATH)
+    print(_summary_table(results), file=sys.stderr)
+    print("[merge] wrote %s" % C.RESULTS_PATH.name, file=sys.stderr)
+    return results
+
+
 def main() -> dict:
     import random
 
@@ -270,7 +412,8 @@ def main() -> dict:
     # --- Load the model we steer, and the judge -------------------------------
     model, tok = load_model(C.MODEL_ID)
     layer = min(C.LAYER, num_layers(model) - 1)
-    judge = Judge(model, tok)   # off-family judge if STEER_JUDGE_MODEL is set
+    # In `generate` the judge is DEFERRED so only one model is resident.
+    judge = _DeferredJudge() if PHASE == "generate" else Judge(model, tok)
 
     # --- Data: ≥500/class, split into disjoint extract / eval -----------------
     data = load_harmful_benign(C.N_PER_CLASS, C.SEED)
@@ -429,6 +572,41 @@ def main() -> dict:
             "eval_projections": eval_proj[gate],
         }
 
+    if PHASE == "generate":
+        # Cache everything `merge` needs so it can rebuild results.json with no
+        # model loaded at all: the raw records plus the pre-generation state.
+        recs_out = dict(per_arm_recs)
+        for gate, recs in ctx_recs_by_gate.items():
+            recs_out["contextual::%s" % gate] = recs
+        gate_meta = {g: {k: v for k, v in gates_out[g].items() if k != "arm"}
+                     for g in gates_out}
+        blob = {
+            "records": recs_out,
+            "gate_meta": gate_meta,
+            "gates_to_run": list(C.GATES_TO_RUN),
+            "head": head,
+            "static": {
+                "model_id": C.MODEL_ID, "layer": int(layer),
+                "alpha_base": C.ALPHA_BASE,
+                "n_extract_per_class": len(ex_harm),
+                "n_eval_per_class": len(ev_harm),
+                "seed": int(C.SEED), "gate": head,
+                "schedule": scheds[head],
+                "eval_projections": eval_proj[head],
+                "probe_path": str(C.PROBE_PATH),
+                "plots": {"comparison": C.COMPARISON_PNG.name,
+                          "schedule": C.SCHEDULE_PNG.name},
+            },
+        }
+        tmp = GEN_CACHE_PATH.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+        os.replace(tmp, GEN_CACHE_PATH)
+        total = sum(len(v) for v in recs_out.values())
+        print("[generate] cached %d generations -> %s (verdicts PENDING; run "
+              "CTX_PHASE=judge next)" % (total, GEN_CACHE_PATH.name),
+              file=sys.stderr)
+        return blob
+
     # The headline gate fills the legacy `contextual` arm / schedule slots so the
     # existing plots, summary table, README and dashboard keep reading them.
     arms["contextual"] = gates_out[head]["arm"]
@@ -494,4 +672,10 @@ def main() -> dict:
 
 
 if __name__ == "__main__":
+    if PHASE == "judge":
+        phase_judge()
+        raise SystemExit(0)
+    if PHASE == "merge":
+        phase_merge()
+        raise SystemExit(0)
     main()
