@@ -252,7 +252,13 @@ def extract_hidden_states(model, tokenizer, texts, is_data_mask, layers,
                     tok_mask[i, :] = enc["attention_mask"][i].bool()
             _hook_state["mask"] = tok_mask
             with torch.no_grad():
-                out = model(**enc, output_hidden_states=True)
+                # Use the BASE transformer, not the causal-LM wrapper. The
+                # lm_head projects every position to the 262k-token vocabulary
+                # -- [batch, seq, 262144] is ~4 GiB at batch 16 / seq 512, and
+                # it OOMed the angle sweep on a 16 GB card. We only ever read
+                # hidden_states, so the logits are pure waste.
+                base = getattr(model, "model", model)
+                out = base(**enc, output_hidden_states=True)
             attn = enc["attention_mask"].unsqueeze(-1).float()
             denom = attn.sum(1).clamp(min=1.0)
             for l in layers:
