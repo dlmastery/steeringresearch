@@ -1,0 +1,71 @@
+{
+ "reference": "arXiv:2609.09448 (Mammen, Joswin, Medicherla, 8 Sep 2026)",
+ "layer": 12,
+ "layer_note": "paper uses the FINAL layer; L12 of 26 used here from the cached bundle",
+ "n_trajectories": 997,
+ "n_folds": 5,
+ "seed": 0,
+ "content_bar_auc": 0.8418,
+ "arms": {
+  "content_bar_tfidf": {
+   "auc": 0.8418,
+   "n_features": "unigram vocab"
+  },
+  "LTD_28_kinematic": {
+   "auc": 0.7217,
+   "n_features": 28,
+   "vs_bar": {
+    "mean": -0.1197,
+    "ci95": [
+     -0.159,
+     -0.0807
+    ],
+    "p_a_gt_b": 0.0,
+    "excludes_zero": true
+   }
+  },
+  "LTD_without_turn_count": {
+   "auc": 0.7215,
+   "n_features": 27
+  },
+  "turn_count_only": {
+   "auc": 0.4839,
+   "n_features": 1,
+   "note": "the step-index confound, priced explicitly"
+  },
+  "ARP_pca64_platt": {
+   "auc": 0.8143,
+   "n_features": 64,
+   "vs_bar": {
+    "mean": -0.0276,
+    "ci95": [
+     -0.058,
+     0.0026
+    ],
+    "p_a_gt_b": 0.036,
+    "excludes_zero": false
+   }
+  },
+  "ARP_no_pca": {
+   "auc": 0.841,
+   "n_features": 1152
+  },
+  "LTD_plus_ARP": {
+   "auc": 0.8169,
+   "vs_bar": {
+    "mean": -0.0249,
+    "ci95": [
+     -0.0551,
+     0.005
+    ],
+    "p_a_gt_b": 0.051,
+    "excludes_zero": false
+   }
+  }
+ },
+ "for_comparison_from_earlier_runs": {
+  "last_token_snapshot_L12": 0.807,
+  "mean_turn_L12": 0.8565,
+  "note": "trajectory unit, same corpus and bar; see README section 7/7b"
+ }
+}

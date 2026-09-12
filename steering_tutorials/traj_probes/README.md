@@ -565,6 +565,63 @@ parity on ranking.
 
 ---
 
+## 7d. The September 2026 successor, tested against the control it never ran
+
+> **Reference (WebFetch-verified 2026-09-11):** [Do Agents Know When They
+> Succeed? Calibrating Agent Confidence from Internal Representations
+> (arXiv:2609.09448)](https://arxiv.org/abs/2609.09448) — Mammen, Joswin,
+> Medicherla, 8 Sep 2026. Two residual-stream probes for success prediction:
+> **LTD** (28 kinematic features from how the final-layer state *moves*
+> between turns) and **ARP** (mean of action-endpoint states, PCA-64, logistic,
+> Platt). Reported 0.842 AUROC on Qwen-14B/SQL vs 0.743 for their best baseline.
+
+This is the direct successor to this lesson, and it was reproduced on the
+cached activations (`ltd.py`, no GPU) the day it was found.
+
+**The gap in their evaluation is the thing to know.** Their baselines are
+*Calibrated Logprob* and *HTC* — both built from **token probabilities**. There
+is **no bag-of-words / TF-IDF text baseline anywhere in the paper**. That is the
+control that decides every verdict here, and it beat our snapshot probe. So the
+question this lesson can ask that theirs cannot: do LTD and ARP beat unigrams
+over the same text?
+
+| layer | LTD (28 feats) | ARP (PCA-64 + Platt) | LTD + ARP |
+|---|---|---|---|
+| **12** | 0.7217 (−0.120, excl. 0) | **0.8143** (−0.028, **includes 0**) | 0.8169 (−0.025, incl. 0) |
+| 16 | 0.7154 (−0.126) | 0.7869 (−0.055) | 0.7894 |
+| 20 | 0.7057 (−0.136) | 0.7878 (−0.054) | 0.7924 |
+| 24 | 0.6538 (−0.188) | 0.7781 (−0.064) | 0.7773 |
+
+*(trajectory unit; margin vs the 0.8418 bar; paired bootstrap over trajectories.
+Earlier arms for comparison: last-token snapshot L12 0.8070, `mean_turn` L12
+0.8565.)*
+
+**LTD — the paper's headline idea — loses to unigrams at every layer**, by
+0.12–0.19 with CIs excluding zero. It is the weakest probe run on this corpus,
+below even the plain per-turn snapshot. The turn-count feature is *included*
+and priced separately (0.4839 alone — chance), so this is not the step-index
+confound resurfacing.
+
+**ARP reaches parity at L12 and never beats the bar** — the same outcome as
+`mean_turn`, which it closely resembles (both mean-pool over turns). It
+degrades with depth, matching the layer profile in Section 7.
+
+*"Consistently outperform surface-level baselines"* is true of the baselines
+they ran, and false of the cheapest surface baseline there is.
+
+**Deviations from the paper, stated:** L24 is used as near-final (Gemma-3-1B
+has 26 layers); role transitions are stratified by (user/assistant/tool) pairs
+rather than their reasoning/commitment/action/feedback types; their logprob
+baselines are not reproduced (token probabilities were never cached). 1B model
+here vs 7–14B there — magnitudes do not transfer; the method and its control do.
+
+**Reproduction C is still not evaluable.** The refresh checked ATBench-Claw,
+ATBench-Codex, TraceSafe-Bench and Salesforce's tracelab corpus: none annotates
+tool-call dependency edges. Full notes:
+[`corpus/LIT_2026-09_traj_probes_refresh.md`](../../corpus/LIT_2026-09_traj_probes_refresh.md).
+
+---
+
 ## 8. What would falsify this (pre-registered)
 
 - **Reproduction A/B fail** if `LinearTrajProbe`'s `auc_residualised` at early

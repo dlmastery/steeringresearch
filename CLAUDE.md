@@ -383,9 +383,15 @@ the research harness** (`src/steering`). Lessons and design rules:
   arXiv:2607.06503 (early abort) and cites arXiv:2605.25310 (tool-call edges,
   NOT evaluable on this corpus). **Result 2026-08-29 is a NEGATIVE**: probe
   0.8070 vs a 0.8418 unigram bar, CI [-0.0656, -0.0036], across six layers.
-  **Reproduction A is PARTIAL** — the recall-controlled cascade
-  (`types.CascadeResult`) is defined and never run, and only one probe
-  architecture at one pooling was tested.
+  **Reproduction A completed 2026-08-30**: the recall-controlled cascade
+  dominates a length baseline 4/5 but loses to the content-bar cascade 5/5, at
+  both `last` and `mean_turn` pooling. **Sept 2026 refresh (2026-09-11)**: the
+  successor paper arXiv:2609.09448 (LTD kinematic features + ARP) was
+  reproduced on the cached activations against the TF-IDF bar its own paper
+  never ran — LTD loses at every layer (0.65–0.72 vs 0.8418), ARP reaches
+  parity at L12 (0.8143). Reproduction C still has no corpus with dependency
+  edges (ATBench-Claw/Codex, TraceSafe, tracelab all checked). See
+  `corpus/LIT_2026-09_traj_probes_refresh.md`.
 - **`control_data_split/`** — the **DEMERGE** stream: instruction/data fusion is
   architectural, not a training accident. Turns arXiv:2606.27567's impossibility
   theorem into a MEASURED bound (err* = (1-TV)/2, reported beside its
